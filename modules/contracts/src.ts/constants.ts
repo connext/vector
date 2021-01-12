@@ -1,83 +1,34 @@
+import { HDNode } from "@ethersproject/hdnode";
+import { Wallet } from "@ethersproject/wallet";
+import { JsonRpcProvider } from "@ethersproject/providers";
+import { network, ethers }from "hardhat";
 import pino from "pino";
-import { Options } from "yargs";
 
-// While debugging tests, you can change this to be "info" or "debug"
-export const logger = pino({ level: process.env.LOG_LEVEL || "silent" });
+// Get defaults from env
+const chainProviders = JSON.parse(process.env.CHAIN_PROVIDERS ?? "{}");
+const chainId = Object.keys(chainProviders)[0];
+const url = Object.values(chainProviders)[0];
+const mnemonic = process.env.SUGAR_DADDY ?? "candy maple cake sugar pudding cream honey rich smooth crumble sweet treat";
 
-export const defaults = {
-  mnemonic:
-    "candy maple cake sugar pudding cream honey rich smooth crumble sweet treat",
-  providerUrl: "http://localhost:8545",
-  addressBookPath: "./address-book.json",
-};
+export const defaultLogLevel = process.env.LOG_LEVEL || "info";
+export const logger = pino({ level: defaultLogLevel });
 
-export const cliOpts = {
-  addressBook: {
-    alias: "address-book",
-    description: "The path to your address book file",
-    type: "string",
-    default: defaults.addressBookPath,
-  },
-  bobAddress: {
-    alias: "bob",
-    description: "The counterparty to create a channel with",
-    type: "string",
-  },
-  amount: {
-    alias: "amount",
-    description: "The amount of tokens or ETH to send",
-    type: "string",
-    default: "1",
-  },
-  ethProvider: {
-    alias: "eth-provider",
-    description: "The URL of an Ethereum provider",
-    type: "string",
-    default: defaults.providerUrl,
-  },
-  fromMnemonic: {
-    alias: "from-mnemonic",
-    description: "The mnemonic for an account which will send funds",
-    type: "string",
-    default: defaults.mnemonic,
-  },
-  mnemonic: {
-    alias: "mnemonic",
-    description: "The mnemonic for an account which will pay for gas",
-    type: "string",
-    default: defaults.mnemonic,
-  },
-  transferName: {
-    alias: "transfer-name",
-    description: "Name of transfer to add to registry",
-    type: "string",
-    default: "HashlockTransfer",
-  },
-  toAddress: {
-    alias: "to-address",
-    description: "The address to which funds will be sent",
-    type: "string",
-  },
-  force: {
-    alias: "force",
-    description: "Deploy contract even if it's already deployed",
-    type: "boolean",
-    default: false,
-  },
-  silent: {
-    alias: "silent",
-    description: "Don't log anything to console",
-    type: "boolean",
-    default: false,
-  },
-  tokenAddress: {
-    alias: "token-address",
-    description: "The address of the token",
-    type: "string",
-  },
-  privateKey: {
-    alias: "private-key",
-    description: "An ethereum private key",
-    type: "string",
-  },
-} as { [key: string]: Options };
+export const networkName = network.name;
+
+export const provider = url
+  ? new JsonRpcProvider(url as string, parseInt(chainId))
+  : ethers.provider as JsonRpcProvider;
+
+const hdNode = HDNode.fromMnemonic(mnemonic).derivePath("m/44'/60'/0'/0");
+
+export const wallets: Wallet[] = Array(20)
+  .fill(0)
+  .map((_, idx) => {
+    const wallet = new Wallet(hdNode.derivePath(idx.toString()).privateKey, provider);
+    return wallet;
+  });
+
+export const chainIdReq = provider.getNetwork().then(net => net.chainId);
+export const alice = wallets[0];
+export const bob = wallets[1];
+export const rando = wallets[2];

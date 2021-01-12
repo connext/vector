@@ -1,6 +1,6 @@
 ////////////////////////////////////////
 
-import { Static, TStringLiteral, Type } from "@sinclair/typebox";
+import { Static, TLiteral, Type } from "@sinclair/typebox";
 
 import { ChannelRpcMethod, ChannelRpcMethods } from "../vectorProvider";
 
@@ -64,14 +64,14 @@ const SetupEngineParamsSchema = Type.Object({
   counterpartyIdentifier: TPublicIdentifier,
   chainId: TChainId,
   timeout: TIntegerString,
-  meta: TBasicMeta,
+  meta: Type.Optional(TBasicMeta),
 });
 
 // Deposit engine params
 const DepositEngineParamsSchema = Type.Object({
   channelAddress: TAddress,
   assetId: TAddress,
-  meta: TBasicMeta,
+  meta: Type.Optional(TBasicMeta),
 });
 
 // Request collateral engine params
@@ -90,16 +90,16 @@ const CreateConditionalTransferParamsSchema = Type.Object({
   recipientChainId: Type.Optional(TChainId),
   recipientAssetId: Type.Optional(TAddress),
   timeout: Type.Optional(TIntegerString),
-  meta: TBasicMeta,
+  meta: Type.Optional(TBasicMeta),
   type: Type.String(), // Type.Union([TransferNameSchema, TAddress]),
-  details: Type.Any(), // initial state w.o balance object
+  details: Type.Dict(Type.Any()), // initial state w.o balance object
 });
 
 // Resolve conditional transfer engine params
 const ResolveTransferParamsSchema = Type.Object({
   channelAddress: TAddress,
   transferId: TBytes32,
-  meta: TBasicMeta,
+  meta: Type.Optional(TBasicMeta),
   transferResolver: TransferResolverSchema,
 });
 
@@ -112,7 +112,7 @@ const WithdrawParamsSchema = Type.Object({
   fee: Type.Optional(TIntegerString),
   callTo: Type.Optional(TAddress),
   callData: Type.Optional(Type.String()),
-  meta: TBasicMeta,
+  meta: Type.Optional(TBasicMeta),
 });
 
 //////////////////
@@ -138,9 +138,18 @@ const DefundTransferParamsSchema = Type.Object({
   transferId: TBytes32,
 });
 
-// Eth-sign a message
+// Utility-sign a message
 const SignUtilityMessageParamsSchema = Type.Object({
   message: Type.String(),
+});
+
+// Ping-pong
+const SendIsAliveParamsSchema = Type.Object({ channelAddress: TAddress, skipCheckIn: Type.Boolean() });
+
+// Restore channel from counterparty
+const RestoreStateParamsSchema = Type.Object({
+  counterpartyIdentifier: TPublicIdentifier,
+  chainId: TChainId,
 });
 
 // Rpc request schema
@@ -148,9 +157,7 @@ const RpcRequestEngineParamsSchema = Type.Object({
   id: Type.Number({ minimum: 1 }),
   jsonrpc: Type.Literal("2.0"),
   method: Type.Union(
-    Object.values(ChannelRpcMethods).map((methodName) => Type.Literal(methodName)) as [
-      TStringLiteral<ChannelRpcMethod>,
-    ],
+    Object.values(ChannelRpcMethods).map((methodName) => Type.Literal(methodName)) as [TLiteral<ChannelRpcMethod>],
   ),
   params: Type.Optional(Type.Any()),
   // NOTE: Safe to make params an object here, in engine the
@@ -165,6 +172,9 @@ export namespace EngineParams {
 
   export const SignUtilityMessageSchema = SignUtilityMessageParamsSchema;
   export type SignUtilityMessage = Static<typeof SignUtilityMessageParamsSchema>;
+
+  export const SendIsAliveSchema = SendIsAliveParamsSchema;
+  export type SendIsAlive = Static<typeof SendIsAliveParamsSchema>;
 
   export const GetTransferStateByRoutingIdSchema = GetTransferStateByRoutingIdParamsSchema;
   export type GetTransferStateByRoutingId = Static<typeof GetTransferStateByRoutingIdParamsSchema>;
@@ -192,6 +202,9 @@ export namespace EngineParams {
 
   export const SetupSchema = SetupEngineParamsSchema;
   export type Setup = Static<typeof SetupEngineParamsSchema>;
+
+  export const RestoreStateSchema = RestoreStateParamsSchema;
+  export type RestoreState = Static<typeof RestoreStateParamsSchema>;
 
   export const DepositSchema = DepositEngineParamsSchema;
   export type Deposit = Static<typeof DepositEngineParamsSchema>;

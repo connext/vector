@@ -7,16 +7,17 @@ import {
   IChannelSigner,
   Result,
   UpdateParams,
-  InboundChannelUpdateError,
-  OutboundChannelUpdateError,
   Values,
   IVectorChainReader,
   FullTransferState,
   IExternalValidation,
+  MessagingError,
+  VectorError,
 } from "@connext/vector-types";
 import pino from "pino";
 
-import { extractContextFromStore, validateChannelUpdateSignatures } from "./utils";
+import { InboundChannelUpdateError, OutboundChannelUpdateError } from "./errors";
+import { extractContextFromStore, validateChannelSignatures } from "./utils";
 import { validateAndApplyInboundUpdate, validateParamsAndApplyUpdate } from "./validate";
 
 // Function responsible for handling user-initated/outbound channel updates.
@@ -44,7 +45,7 @@ export async function outbound(
   if (storeRes.isError) {
     return Result.fail(
       new OutboundChannelUpdateError(OutboundChannelUpdateError.reasons.StoreFailure, params, undefined, {
-        message: storeRes.getError()?.message,
+        storeError: storeRes.getError()?.message,
         method,
       }),
     );
@@ -62,6 +63,7 @@ export async function outbound(
     previousState,
     activeTransfers,
     signer.publicIdentifier,
+    logger,
   );
   if (updateRes.isError) {
     logger.warn(
@@ -95,7 +97,7 @@ export async function outbound(
       {
         method,
         update: update.nonce,
-        counterparty: (error as InboundChannelUpdateError).update.nonce,
+        counterparty: (error as InboundChannelUpdateError).context.update.nonce,
       },
       `Behind, syncing and retrying`,
     );
@@ -110,6 +112,7 @@ export async function outbound(
       chainReader,
       externalValidationService,
       signer,
+      logger,
     );
     if (syncedResult.isError) {
       // Failed to sync channel, throw the error
@@ -136,9 +139,16 @@ export async function outbound(
     // Error is for some other reason, do not retry update.
     logger.error({ method, error }, "Error receiving response, will not save state!");
     return Result.fail(
-      new OutboundChannelUpdateError(OutboundChannelUpdateError.reasons.CounterpartyFailure, params, previousState, {
-        counterpartyError: error.message,
-      }),
+      new OutboundChannelUpdateError(
+        error.message === MessagingError.reasons.Timeout
+          ? OutboundChannelUpdateError.reasons.CounterpartyOffline
+          : OutboundChannelUpdateError.reasons.CounterpartyFailure,
+        params,
+        previousState,
+        {
+          counterpartyError: VectorError.jsonify(error),
+        },
+      ),
     );
   }
 
@@ -147,18 +157,19 @@ export async function outbound(
   const { update: counterpartyUpdate } = counterpartyResult.getValue();
 
   // verify sigs on update
-  const sigRes = await validateChannelUpdateSignatures(
+  const sigRes = await validateChannelSignatures(
     updatedChannel,
     counterpartyUpdate.aliceSignature,
     counterpartyUpdate.bobSignature,
     "both",
+    logger,
   );
   if (sigRes.isError) {
     const error = new OutboundChannelUpdateError(
       OutboundChannelUpdateError.reasons.BadSignatures,
       params,
       previousState,
-      { error: sigRes.getError().message },
+      { recoveryError: sigRes.getError()?.message },
     );
     logger.error({ method, error: error.message }, "Error receiving response, will not save state!");
     return Result.fail(error);
@@ -178,7 +189,7 @@ export async function outbound(
         params,
         { ...updatedChannel, latestUpdate: counterpartyUpdate },
         {
-          error: e.message,
+          saveChannelError: e.message,
         },
       ),
     );
@@ -224,7 +235,9 @@ export async function inbound(
 
   const storeRes = await extractContextFromStore(storeService, update.channelAddress);
   if (storeRes.isError) {
-    return returnError(InboundChannelUpdateError.reasons.StoreFailure);
+    return returnError(InboundChannelUpdateError.reasons.StoreFailure, undefined, undefined, {
+      storeError: storeRes.getError()?.message,
+    });
   }
 
   // eslint-disable-next-line prefer-const
@@ -265,8 +278,9 @@ export async function inbound(
   // If we are behind by more than 3, we cannot sync from their latest
   // update, and must use restore
   if (diff >= 3) {
-    return returnError(InboundChannelUpdateError.reasons.StaleChannel, update, channelFromStore, {
+    return returnError(InboundChannelUpdateError.reasons.RestoreNeeded, update, channelFromStore, {
       counterpartyLatestUpdate: previousUpdate,
+      ourLatestNonce: prevNonce,
     });
   }
 
@@ -288,18 +302,26 @@ export async function inbound(
       activeTransfers,
       (message: string) =>
         Result.fail(
-          new InboundChannelUpdateError(InboundChannelUpdateError.reasons.SyncFailure, previousUpdate, previousState, {
-            error: message,
-          }),
+          new InboundChannelUpdateError(
+            message !== InboundChannelUpdateError.reasons.CannotSyncSetup
+              ? InboundChannelUpdateError.reasons.SyncFailure
+              : InboundChannelUpdateError.reasons.CannotSyncSetup,
+            previousUpdate,
+            previousState,
+            {
+              syncError: message,
+            },
+          ),
         ),
       storeService,
       chainReader,
       externalValidation,
       signer,
+      logger,
     );
     if (syncRes.isError) {
       const error = syncRes.getError() as InboundChannelUpdateError;
-      return returnError(error.message, error.update, error.state, error.context);
+      return returnError(error.message, error.context.update, error.context.state as FullChannelState, error.context);
     }
 
     const { updatedChannel: syncedChannel, updatedActiveTransfers: syncedActiveTransfers } = syncRes.getValue();
@@ -318,9 +340,11 @@ export async function inbound(
     update,
     previousState,
     activeTransfers,
+    logger,
   );
   if (validateRes.isError) {
-    return returnError(validateRes.getError()!.message, update, previousState, validateRes.getError()?.context);
+    const { state: errState, params: errParams, update: errUpdate, ...usefulContext } = validateRes.getError()?.context;
+    return returnError(validateRes.getError()!.message, update, previousState, usefulContext);
   }
 
   const { updatedChannel, updatedActiveTransfers, updatedTransfer } = validateRes.getValue();
@@ -330,7 +354,7 @@ export async function inbound(
     await storeService.saveChannelState(updatedChannel, updatedTransfer);
   } catch (e) {
     return returnError(InboundChannelUpdateError.reasons.SaveChannelFailed, update, previousState, {
-      error: e.message,
+      saveChannelError: e.message,
     });
   }
 
@@ -352,8 +376,8 @@ export async function inbound(
 // update to send to the counterparty
 type OutboundSync = {
   update: ChannelUpdate<any>;
-  syncedChannel: FullChannelState<any>;
-  updatedChannel: FullChannelState<any>;
+  syncedChannel: FullChannelState;
+  updatedChannel: FullChannelState;
   updatedTransfer?: FullTransferState;
   updatedActiveTransfers: FullTransferState[];
 };
@@ -367,27 +391,48 @@ const syncStateAndRecreateUpdate = async (
   chainReader: IVectorChainReader,
   externalValidationService: IExternalValidation,
   signer: IChannelSigner,
+  logger?: pino.BaseLogger,
 ): Promise<Result<OutboundSync, OutboundChannelUpdateError>> => {
   // When receiving an update to sync from your counterparty, you
   // must make sure you can safely apply the update to your existing
   // channel, and regenerate the requested update from the user-supplied
   // parameters.
 
-  const counterpartyUpdate = receivedError.update;
+  const counterpartyUpdate = receivedError.context.update;
+
+  // make sure you *can* sync
+  const diff = counterpartyUpdate.nonce - (previousState?.nonce ?? 0);
+  if (diff !== 1) {
+    return Result.fail(
+      new OutboundChannelUpdateError(OutboundChannelUpdateError.reasons.RestoreNeeded, attemptedParams, previousState, {
+        counterpartyUpdate,
+        latestNonce: previousState.nonce,
+      }),
+    );
+  }
+
   const syncRes = await syncState(
     counterpartyUpdate,
     previousState,
     activeTransfers,
     (message: string) =>
       Result.fail(
-        new OutboundChannelUpdateError(OutboundChannelUpdateError.reasons.SyncFailure, attemptedParams, previousState, {
-          error: message,
-        }),
+        new OutboundChannelUpdateError(
+          message !== InboundChannelUpdateError.reasons.CannotSyncSetup
+            ? OutboundChannelUpdateError.reasons.SyncFailure
+            : OutboundChannelUpdateError.reasons.CannotSyncSetup,
+          attemptedParams,
+          previousState,
+          {
+            syncError: message,
+          },
+        ),
       ),
     storeService,
     chainReader,
     externalValidationService,
     signer,
+    logger,
   );
   if (syncRes.isError) {
     return Result.fail(syncRes.getError() as OutboundChannelUpdateError);
@@ -406,16 +451,24 @@ const syncStateAndRecreateUpdate = async (
     syncedChannel,
     syncedActiveTransfers,
     signer.publicIdentifier,
+    logger,
   );
 
   if (validationRes.isError) {
+    const {
+      state: errState,
+      params: errParams,
+      update: errUpdate,
+      ...usefulContext
+    } = validationRes.getError()?.context;
     return Result.fail(
       new OutboundChannelUpdateError(
         OutboundChannelUpdateError.reasons.RegenerateUpdateFailed,
         attemptedParams,
         syncedChannel,
         {
-          error: validationRes.getError()!.message,
+          regenerateUpdateError: validationRes.getError()!.message,
+          regenerateUpdateContext: usefulContext,
         },
       ),
     );
@@ -434,6 +487,7 @@ const syncState = async (
   chainReader: IVectorChainReader,
   externalValidation: IExternalValidation,
   signer: IChannelSigner,
+  logger?: pino.BaseLogger,
 ) => {
   // NOTE: We do not want to sync a setup update here, because it is a
   // bit of a pain -- the only time it is valid is if we are trying to
@@ -442,7 +496,7 @@ const syncState = async (
   // channel properly, we will have to handle the retry in the calling
   // function, so just ignore for now.
   if (toSync.type === UpdateType.setup) {
-    return handleError("Cannot sync setup update");
+    return handleError(InboundChannelUpdateError.reasons.CannotSyncSetup);
   }
 
   // As you receive an update to sync, it should *always* be double signed.
@@ -463,6 +517,7 @@ const syncState = async (
     toSync,
     previousState,
     activeTransfers,
+    logger,
   );
   if (validateRes.isError) {
     return handleError(validateRes.getError()!.message);

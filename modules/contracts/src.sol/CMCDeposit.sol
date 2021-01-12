@@ -72,6 +72,8 @@ contract CMCDeposit is CMCCore, CMCAsset, ICMCDeposit {
         if (LibAsset.isEther(assetId)) {
             require(msg.value == amount, "CMCDeposit: VALUE_MISMATCH");
         } else {
+            // If ETH is sent along, it will be attributed to bob
+            require(msg.value == 0, "CMCDeposit: ETH_WITH_ERC_TRANSFER");
             require(
                 LibERC20.transferFrom(
                     assetId,

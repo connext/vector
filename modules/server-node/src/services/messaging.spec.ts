@@ -1,4 +1,4 @@
-import { IChannelSigner, Result, LockError, MessagingError, InboundChannelUpdateError } from "@connext/vector-types";
+import { IChannelSigner, Result, NodeError, MessagingError, UpdateType, VectorError } from "@connext/vector-types";
 import {
   createTestChannelUpdate,
   delay,
@@ -6,13 +6,17 @@ import {
   getRandomChannelSigner,
   NatsMessagingService,
   mkAddress,
+  createTestChannelState,
+  getTestLoggers,
 } from "@connext/vector-utils";
 import pino from "pino";
 
 import { config } from "../config";
+import { ServerNodeLockError } from "../helpers/errors";
 
 describe("messaging", () => {
-  const logger = pino();
+  console.log("config.logLevel: ", config.logLevel);
+  const { log: logger } = getTestLoggers("messaging", (config.logLevel ?? "fatal") as pino.Level);
   let messagingA: NatsMessagingService;
   let messagingB: NatsMessagingService;
   let signerA: IChannelSigner;
@@ -71,7 +75,7 @@ describe("messaging", () => {
       fromIdentifier: signerA.publicIdentifier,
     });
 
-    const err = new InboundChannelUpdateError(InboundChannelUpdateError.reasons.SyncFailure, update);
+    const err = new Error("failure");
 
     await messagingB.onReceiveProtocolMessage(
       signerB.publicIdentifier,
@@ -79,7 +83,7 @@ describe("messaging", () => {
         expect(result.isError).to.not.be.ok;
         expect(result.getValue()).to.containSubset({ update });
         expect(inbox).to.be.a("string");
-        await messagingB.respondWithProtocolError(inbox, err);
+        await messagingB.respondWithProtocolError(inbox, err as any);
       },
     );
 
@@ -88,10 +92,10 @@ describe("messaging", () => {
     const res = await messagingA.sendProtocolMessage(update);
     expect(res.isError).to.be.true;
     const errReceived = res.getError()!;
-    Object.keys(errReceived).map((key: string) => {
-      const val = (errReceived as any)[key] ?? undefined;
-      expect(val).to.be.deep.eq((err as any)[key]);
-    });
+    const expected = VectorError.fromJson(VectorError.jsonify(err));
+    expect(errReceived.message).to.be.eq(expected.message);
+    expect(errReceived.context).to.be.deep.eq(expected.context);
+    expect(errReceived.type).to.be.deep.eq(expected.type);
   });
 
   describe("other methods", () => {
@@ -122,8 +126,12 @@ describe("messaging", () => {
       },
       {
         name: "lock send failure messages properly from A --> B",
-        message: Result.fail(new LockError("sender failure", mkAddress("0xccc"), { type: "release" })),
-        response: Result.fail(new LockError("responder failure", mkAddress("0xccc"), { type: "acquire" })),
+        message: Result.fail(
+          new ServerNodeLockError("sender failure" as any, mkAddress("0xccc"), "", { type: "release" }),
+        ),
+        response: Result.fail(
+          new ServerNodeLockError("responder failure" as any, mkAddress("0xccc"), "", { type: "acquire" }),
+        ),
         type: "Lock",
       },
       {
@@ -158,6 +166,20 @@ describe("messaging", () => {
         response: Result.fail(new Error("responder failure")),
         type: "RequestCollateral",
       },
+      {
+        name: "restoreState should work from A --> B",
+        message: Result.ok({
+          chainId: 1337,
+        }),
+        response: Result.ok({ channel: createTestChannelState(UpdateType.setup).channel, activeTransfers: [] }),
+        type: "RestoreState",
+      },
+      {
+        name: "restoreState send failure messages properly from A --> B",
+        message: Result.fail(new MessagingError("sender failure" as any, { test: "context" })),
+        response: Result.fail(new Error("responder failure")),
+        type: "RestoreState",
+      },
     ];
 
     for (const { name, message, response, type } of tests) {
@@ -176,10 +198,10 @@ describe("messaging", () => {
               expect(result.getValue()).to.be.deep.eq(message.getValue());
             } else {
               const errReceived = result.getError()!;
-              Object.keys(errReceived).map((key: string) => {
-                const val = (errReceived as any)[key] ?? undefined;
-                expect(val).to.be.deep.eq((message.getError() as any)[key]);
-              });
+              const expected = VectorError.fromJson(VectorError.jsonify(message.getError()!));
+              expect(errReceived.message).to.be.eq(expected.message);
+              expect(errReceived.context).to.be.deep.eq(expected.context);
+              expect(errReceived.type).to.be.deep.eq(expected.type);
             }
             await (messagingB as any)[respondKey](inbox, response as any);
           },
@@ -199,10 +221,10 @@ describe("messaging", () => {
           expect(test.getValue()).to.be.deep.eq(response.getValue());
         } else {
           const errReceived = test.getError()!;
-          Object.keys(errReceived).map((key: string) => {
-            const val = (errReceived as any)[key] ?? undefined;
-            expect(val).to.be.deep.eq((response.getError() as any)[key]);
-          });
+          const expected = VectorError.fromJson(VectorError.jsonify(response.getError()!));
+          expect(errReceived.message).to.be.eq(expected.message);
+          expect(errReceived.context).to.be.deep.eq(expected.context);
+          expect(errReceived.type).to.be.deep.eq(expected.type);
         }
       });
     }

@@ -19,21 +19,18 @@ import { BigNumber } from "@ethersproject/bignumber";
 import { HashZero, Zero } from "@ethersproject/constants";
 import { Contract } from "@ethersproject/contracts";
 import { sha256 as soliditySha256 } from "@ethersproject/solidity";
+import { deployments } from "hardhat";
 
-import { deployContracts } from "../../actions";
-import { AddressBook } from "../../addressBook";
-import { alice, provider } from "../constants";
-import { getTestAddressBook } from "../utils";
+import { alice, provider } from "../../constants";
+import { getContract } from "../../utils";
 
-describe("HashlockTransfer", function() {
+describe("HashlockTransfer", function () {
   this.timeout(120_000);
-  let addressBook: AddressBook;
   let transfer: Contract;
 
-  before(async () => {
-    addressBook = await getTestAddressBook();
-    await deployContracts(alice, addressBook, [["HashlockTransfer", []]]);
-    transfer = addressBook.getContract("HashlockTransfer");
+  beforeEach(async () => {
+    await deployments.fixture(); // Start w fresh deployments
+    transfer = await getContract("HashlockTransfer", alice);
   });
 
   const createlockHash = (preImage: string): string => soliditySha256(["bytes32"], [preImage]);
@@ -105,6 +102,7 @@ describe("HashlockTransfer", function() {
     expect(registry.stateEncoding).to.be.eq("tuple(bytes32 lockHash, uint256 expiry)");
     expect(registry.resolverEncoding).to.be.eq("tuple(bytes32 preImage)");
     expect(registry.definition).to.be.eq(transfer.address);
+    expect(registry.encodedCancel).to.be.eq(encodeTransferResolver({ preImage: HashZero }, registry.resolverEncoding));
   });
 
   describe("Create", () => {
@@ -113,6 +111,13 @@ describe("HashlockTransfer", function() {
       const { state, balance } = await createInitialState(preImage);
       const res = await createTransfer(balance, state);
       expect((res as any)[0]).to.be.true;
+    });
+
+    it("should fail create if sender balance is zero", async () => {
+      const preImage = getRandomBytes32();
+      const { state, balance } = await createInitialState(preImage);
+      balance.amount[0] = "0";
+      await expect(createTransfer(balance, state)).revertedWith("HashlockTransfer: ZER0_SENDER_BALANCE");
     });
 
     it("should fail create if receiver balance is nonzero", async () => {
@@ -132,7 +137,7 @@ describe("HashlockTransfer", function() {
     it("should fail create if expiry is nonzero and expired", async () => {
       const preImage = getRandomBytes32();
       const { state, balance } = await createInitialState(preImage);
-      state.expiry = Math.floor((Date.now() - 10000) / 1000).toString();
+      state.expiry = Math.floor((Date.now() - 1000000) / 1000).toString();
       await expect(createTransfer(balance, state)).revertedWith("HashlockTransfer: EXPIRED_TIMELOCK");
     });
 
@@ -185,13 +190,11 @@ describe("HashlockTransfer", function() {
       );
     });
 
-    it("should fail if cancelling with a non-zero preimage", async () => {
+    it("should fail if the payment is expired and trying to resolve", async () => {
       const preImage = getRandomBytes32();
       const { state, balance } = await createInitialState(preImage);
       state.expiry = "1";
-      await expect(resolveTransfer(balance, state, { preImage: getRandomBytes32() })).revertedWith(
-        `HashlockTransfer: NONZERO_LOCKHASH`,
-      );
+      await expect(resolveTransfer(balance, state, { preImage })).revertedWith("HashlockTransfer: PAYMENT_EXPIRED");
     });
   });
 });

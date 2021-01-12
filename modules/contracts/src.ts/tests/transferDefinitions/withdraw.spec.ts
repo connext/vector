@@ -20,21 +20,18 @@ import {
 import { BigNumber } from "@ethersproject/bignumber";
 import { AddressZero, HashZero, Zero } from "@ethersproject/constants";
 import { Contract } from "@ethersproject/contracts";
+import { deployments } from "hardhat";
 
-import { deployContracts } from "../../actions";
-import { AddressBook } from "../../addressBook";
-import { alice, bob } from "../constants";
-import { getTestAddressBook } from "../utils";
+import { alice, bob } from "../../constants";
+import { getContract } from "../../utils";
 
-describe("Withdraw", function() {
+describe("Withdraw", function () {
   this.timeout(120_000);
-  let addressBook: AddressBook;
   let withdraw: Contract;
 
   before(async () => {
-    addressBook = await getTestAddressBook();
-    await deployContracts(alice, addressBook, [["Withdraw", []]]);
-    withdraw = addressBook.getContract("Withdraw");
+    await deployments.fixture(); // Start w fresh deployments
+    withdraw = await getContract("Withdraw", alice);
   });
 
   const createInitialState = async (
@@ -111,6 +108,9 @@ describe("Withdraw", function() {
     );
     expect(registry.resolverEncoding).to.be.eq("tuple(bytes responderSignature)");
     expect(registry.definition).to.be.eq(withdraw.address);
+    expect(registry.encodedCancel).to.be.eq(
+      encodeTransferResolver({ responderSignature: mkSig("0x0") }, registry.resolverEncoding),
+    );
   });
 
   describe("Create", () => {
@@ -189,7 +189,7 @@ describe("Withdraw", function() {
       const { balance, state } = await createInitialState(getRandomBytes32());
       const responderSignature = await signChannelMessage(getRandomBytes32(), bob.privateKey);
       await expect(resolveTransfer(balance, state, { responderSignature })).revertedWith(
-        "Withdraw.resolve: INVALID_RESPONDER_SIG",
+        "Withdraw: INVALID_RESPONDER_SIG",
       );
     });
 

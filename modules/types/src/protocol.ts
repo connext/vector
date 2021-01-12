@@ -2,22 +2,22 @@ import {
   ChannelUpdate,
   CreateTransferParams,
   DepositParams,
-  FullChannelState,
   FullTransferState,
   ResolveTransferParams,
   SetupParams,
   UpdateType,
+  FullChannelState,
 } from "./channel";
-import { InboundChannelUpdateError, OutboundChannelUpdateError, Result } from "./error";
+import { ProtocolError, Result } from "./error";
 import { ProtocolEventName, ProtocolEventPayloadsMap } from "./event";
 
 export interface IVectorProtocol {
   signerAddress: string;
   publicIdentifier: string;
-  setup(params: SetupParams): Promise<Result<FullChannelState, OutboundChannelUpdateError>>;
-  deposit(params: DepositParams): Promise<Result<FullChannelState, OutboundChannelUpdateError>>;
-  create(params: CreateTransferParams): Promise<Result<FullChannelState, OutboundChannelUpdateError>>;
-  resolve(params: ResolveTransferParams): Promise<Result<FullChannelState, OutboundChannelUpdateError>>;
+  setup(params: SetupParams): Promise<Result<FullChannelState, ProtocolError>>;
+  deposit(params: DepositParams): Promise<Result<FullChannelState, ProtocolError>>;
+  create(params: CreateTransferParams): Promise<Result<FullChannelState, ProtocolError>>;
+  resolve(params: ResolveTransferParams): Promise<Result<FullChannelState, ProtocolError>>;
   on<T extends ProtocolEventName>(
     event: T,
     callback: (payload: ProtocolEventPayloadsMap[T]) => void | Promise<void>,
@@ -55,7 +55,7 @@ export type VectorChannelMessage<T extends UpdateType = any> = {
 };
 
 export type VectorErrorMessage = Omit<VectorChannelMessage, "data"> & {
-  error: InboundChannelUpdateError; // returned by the person receiving an update
+  error: ProtocolError; // returned by the person receiving an update
 };
 
 export type VectorMessage = VectorChannelMessage | VectorErrorMessage;

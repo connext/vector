@@ -1,22 +1,18 @@
 import { expect } from "@connext/vector-utils";
 import { AddressZero, HashZero, Zero } from "@ethersproject/constants";
 import { Contract } from "@ethersproject/contracts";
+import { deployments } from "hardhat";
 
-import { deployContracts } from "../actions";
-import { AddressBook } from "../addressBook";
-
-import { alice } from "./constants";
-import { getTestAddressBook } from "./utils";
+import { alice } from "../constants";
+import { getContract } from "../utils";
 
 describe("ChannelMastercopy", function () {
   this.timeout(120_000);
-  let addressBook: AddressBook;
   let mastercopy: Contract;
 
   beforeEach(async () => {
-    addressBook = await getTestAddressBook();
-    await deployContracts(alice, addressBook, [["ChannelMastercopy", []]]);
-    mastercopy = addressBook.getContract("ChannelMastercopy");
+    await deployments.fixture(); // Start w fresh deployments
+    mastercopy = await getContract("ChannelMastercopy", alice);
   });
 
   it("should deploy without error", async () => {

@@ -4,7 +4,17 @@ import pino from "pino";
 import { INodeService } from "@connext/vector-types";
 
 import { env, fundIfBelow, getRandomIndex } from "../utils";
-import { chainId1, chainId2, deposit, setup, transfer, wallet1, wallet2, withdraw } from "../utils/channel";
+import {
+  chainId1,
+  chainId2,
+  deposit,
+  requestCollateral,
+  setup,
+  transfer,
+  wallet1,
+  wallet2,
+  withdraw,
+} from "../utils/channel";
 
 import { carolEvts, daveEvts } from "./eventSetup";
 
@@ -24,7 +34,7 @@ describe(testName, () => {
       carolEvts,
       randomIndex,
     );
-    const min = utils.parseEther("0.1");
+    const min = utils.parseEther("0.01");
 
     daveService = await RestServerNodeService.connect(
       env.daveUrl,
@@ -39,17 +49,19 @@ describe(testName, () => {
       undefined,
       0,
     );
-    await fundIfBelow(rogerService.signerAddress, constants.AddressZero, min.mul(10), wallet1);
+    // Default collateral is 0.1 ETH
+    await fundIfBelow(rogerService.signerAddress, constants.AddressZero, min.mul(15), wallet1);
     if (wallet2) {
-      await fundIfBelow(rogerService.signerAddress, constants.AddressZero, min.mul(10), wallet2);
+      await fundIfBelow(rogerService.signerAddress, constants.AddressZero, min.mul(15), wallet2);
     }
   });
 
   it("ETH: deposit, transfer C -> R -> D, withdraw", async () => {
     const assetId = constants.AddressZero;
-    const depositAmt = utils.parseEther("0.1");
-    const transferAmt = utils.parseEther("0.005");
-    const withdrawAmt = utils.parseEther("0.005");
+    const depositAmt = utils.parseEther("0.0001");
+    const transferAmt = utils.parseEther("0.00005");
+    const withdrawAmt = utils.parseEther("0.00005");
+    const carolFee = "10";
 
     const carolRogerPostSetup = await setup(carolService, rogerService, chainId1);
     const daveRogerPostSetup = await setup(daveService, rogerService, chainId1);
@@ -64,9 +76,43 @@ describe(testName, () => {
       transferAmt,
     );
     // withdraw to signing address
-    await withdraw(carolService, carolRogerPostSetup.channelAddress, assetId, withdrawAmt, carolService.signerAddress);
+    await withdraw(
+      carolService,
+      carolRogerPostSetup.channelAddress,
+      assetId,
+      withdrawAmt.sub(carolFee),
+      carolService.signerAddress,
+      carolFee,
+    );
     // withdraw to delegated recipient
     await withdraw(daveService, daveRogerPostSetup.channelAddress, assetId, withdrawAmt, Wallet.createRandom().address);
+  });
+
+  it("ETH: deposit, requestCollateral + transfer C -> R -> D (x3)", async () => {
+    const assetId = constants.AddressZero;
+    const depositAmt = utils.parseEther("0.0002");
+    const transferAmt = utils.parseEther("0.00005");
+
+    const carolRogerPostSetup = await setup(carolService, rogerService, chainId1);
+    const daveRogerPostSetup = await setup(daveService, rogerService, chainId1);
+
+    // carol deposits
+    await deposit(carolService, rogerService, carolRogerPostSetup.channelAddress, assetId, depositAmt);
+
+    for (const _ of Array(3).fill(0)) {
+      // dave collateralizes
+      await requestCollateral(daveService, rogerService, daveRogerPostSetup.channelAddress, assetId, transferAmt);
+
+      // carol transfers
+      await transfer(
+        carolService,
+        daveService,
+        carolRogerPostSetup.channelAddress,
+        daveRogerPostSetup.channelAddress,
+        assetId,
+        transferAmt,
+      );
+    }
   });
 
   it("cross-chain: deposit, transfer C -> R -> D, withdraw", async () => {
@@ -75,9 +121,9 @@ describe(testName, () => {
       return;
     }
     const assetId = constants.AddressZero;
-    const depositAmt = utils.parseEther("0.1");
-    const transferAmt = utils.parseEther("0.005");
-    const withdrawAmt = utils.parseEther("0.005");
+    const depositAmt = utils.parseEther("0.0001");
+    const transferAmt = utils.parseEther("0.00005");
+    const withdrawAmt = utils.parseEther("0.00005");
 
     const carolRogerPostSetup = await setup(carolService, rogerService, chainId1);
     const daveRogerPostSetup = await setup(daveService, rogerService, chainId2);

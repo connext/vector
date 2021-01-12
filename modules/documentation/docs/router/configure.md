@@ -4,9 +4,7 @@ This guide will take you through the e2e process of configuring and deploying a 
 
 ## Machine Setup
 
-Lets say you want to deploy a vector node + router to `https://vector.example.com` (we'll call this url `$DOMAINNAME`).
-
-!!! Info 
+!!! Info
     If you're planning to launch an instance on your local machine or to a non-Ubuntu OS, you can skip this section and instead install the following dependencies yourself:
     - `make`: Probably already installed, otherwise install w `brew install make` or `apt install make` or similar.
     - `jq`: Probably not installed yet, install w `brew install jq` or `apt install jq` or similar.
@@ -14,14 +12,9 @@ Lets say you want to deploy a vector node + router to `https://vector.example.co
 
 First step: get a server via AWS or DigitalOcean or setup some hardware at home. For best results, use the most recent LTS version of Ubuntu & make sure it has at least 32GB of disk space. Note this new server's IP address (we'll call this `$SERVER_IP`). Make sure it's able to connect to the internet via ports 80, 443, 4221, and 4222 (no action required on DigitalOcean, Security Group config needs to be setup properly on AWS).
 
-Set up DNS so that `$DOMAINNAME` points to `$SERVER_IP`. If you're using CloudFlare name servers, turn on CloudFlare's built-in SSL support & make sure it's set to "Full (strict)".
-
-!!! Info
-    If you're just testing things out, you're welcome to skip registering a domain name & instead deploy to a raw IP address. This is a quicker way to get started but isn't recommended for production. In this case, don't turn on CloudFlare's built-in SSL support.
-
 We won't need to ssh into this server right away, most of the setup will be done locally. Start by cloning the repo to your local machine if you haven't already and `cd` into it.
 
-``` bash
+```bash
 git clone git@github.com:connext/vector.git
 cd vector
 ```
@@ -64,18 +57,32 @@ Now you can login to your new server with just `ssh new-vector`.
 
 Before moving any further, you should first ensure that the required Vector contracts are deployed to your chain.
 
-We have a global [address-book](https://github.com/connext/vector/blob/master/address-book.json) in the root of the Vector repo which contains the addresses of deployed contracts indexed by chainId. If you can't find the specific chain(s) that you want to deploy a routing node to, you likely need to deploy contracts first.
+!!! Info
+    Deploying contracts only needs to happen once per chain. If you want to use Vector on a new chain, the easiest thing to do is message the Connext team on Discord & ask us to add support for the new chain. This lets us save the deployment data in a place where everyone can access it & avoids duplicate deployments. If you want to deploy things yourself (or are a member of the Connext team looking for a refresher), read on.
 
-To deploy contracts, you can use our helper script. (A CLI usable via npx is coming soon!)
+We use [`hardhat-deploy`](https://hardhat.org/plugins/hardhat-deploy.html) which manages all of our contract deployment data in `modules/contracts/deployments/`. You should check inside this folder as well as in `modules/contracts/hardhat.config.ts` to see whether your chain is supported yet.
+
+If not, you'll need to manually edit the hardhat config file to add support. You can mostly copy/paste one of the other network configurations but make sure that you've updated the network name & chain id.
+
+After editing hardhat config, run `make ethprovider` to ensure our hardhat cli script is using the most up-to-date info.
+
+We have a helper script for running hardhat tasks at `ops/hardhat.sh`, use this like you'd use the hardhat cli.
+
+!!! Info
+    You can also bypass the fancy dockerized ops by running `cd modules/contracts && npm install && npm run build && hardhat <task_name>`.
+
+To deploy contracts, run something like this:
 
 ```bash
-bash ops/deploy-contracts.sh --eth-provider="$ethProvider" --mnemonic="$mnemonic"
+ export MNEMONIC="candy maple cake sugar pudding cream honey rich smooth crumble sweet treat"
+ export ETH_PROVIDER_URL="https://eth-rinkeby.alchemyapi.io/jsonrpc/123apikey
+bash ops/hardhat.sh deploy --network rinkeby
 ```
 
 !!! Warning
-    Make sure the mnemonic cli argument is wrapped in double quotes to ensure it's all interpreted as one argument
+    Make sure the mnemonic cli argument is wrapped in double quotes to ensure it's all interpreted as one argument. Additionally, make sure you put a space in front of any commands that include important secrets to prevent them from being saved to your bash history.
 
-In the above command, `$mnemonic` controls a funded account on whatever chain you plan to deploy to, and `$ethProvider` is a provider URL for the same chain (e.g. an Infura url including an API key). Any newly deployed contracts will have their addresses added to the project root's `address-book.json`. Make sure your address-book is stored somewhere safe. The best option would be to submit a PR to our repo so that these addresses are backed up for you and so that they're readily available for everyone else to use too!
+In the above command, `$mnemonic` controls a funded account on whatever chain you plan to deploy to, and `$ethProvider` is a provider URL for the same chain (e.g. an Infura url including an API key). Any newly deployed contracts will have their addresses added to `modules/contracts/deployments/<networkname>/`. Make sure you either commit these changes or submit a PR so that the rest of the world can use these newly deployed contracts too.
 
 !!! Info
     The account that deploys the contracts does not need to be the same one as your vector node's hot wallet.
@@ -84,7 +91,7 @@ In the above command, `$mnemonic` controls a funded account on whatever chain yo
 
 After setting up dependencies, ssh into the server and enter the Vector repo:
 
-```
+```sh
 ssh new-vector
 cd vector
 ```
@@ -95,7 +102,7 @@ As we mentioned on the [Router Basics](./basics.md) page, the router sits on top
 
 Default router configuration can be found in `ops/config/router.default.json`. To setup your custom config, start out by copying this file to `router.config.json`:
 
-```
+```sh
 cp ops/config/router.default.json router.config.json
 ```
 
@@ -114,20 +121,20 @@ The router's node can be configured by adding any of the following keys to `rout
 | `rebalanceProfiles` |  `object` | Specifies the thresholds & target while collateralizing some `assetId` on some `chainId` .                               |
 |    `awsAccessId`    |  `string` | An API KEY id that specifies credentials for a remote AWS S3 bucket for storing db backups                               |
 |    `awsAccessKey`   |  `string` |  An API KEY secret that to authenticate on a remote AWS S3 bucket for storing db backups.                                |
-|     `domainName`    |  `string` |    If provided, https will be auto-configured & the stack will be exposed on port 443.                                   |
 |     `production`    | `boolean` | If `false`, ops will automatically build anything that isn't available locally. If `true, nothing will be built locally. |
+|     `logDnaKey`     | `string`  |             An API KEY secret that is used to connect to logdna for parsing and viewing router logs.                     |
 
 ### Setting Up Supported Chains
 
 To add support for one or many chains on this router, add a `chainAddresses` and `chainProviders` key to the `router.config.json` file in the root of the vector repo:
 
-``` bash
+```bash
 nano router.config.json
 ```
 
 Recall that you deployed contracts to the chain(s) you want to support [earlier in this guide](#contract-deployment). If you open up your `address-book.json`, you should find deployed addresses for your chain indexed by [chainId](https://chainid.network). Copy them over into the config file like below. Also, plug in a providerURL into your `chainProvider`s object indexed at the same chainId.
 
-``` json
+```json
 // Example Addresses
 "chainAddresses": {
     "4": {
@@ -152,7 +159,7 @@ In order to forward transfers, routers first need to have liquidity (i.e. collat
 
 An example profile just for Eth looks like the following. Note that we use a combination of `chainId` and `assetId` to represent a given asset (where `0x0` is the "base" asset of the chain):
 
-``` json
+```json
 // E.g. Eth
 {
     "chainId": 1,
@@ -165,7 +172,7 @@ An example profile just for Eth looks like the following. Note that we use a com
 
 You can add profiles by setting them under the `rebalanceProfile` key in your `router.config.json`:
 
-``` json
+```json
 "rebalanceProfiles": [
     {
       "chainId": 1,
@@ -218,10 +225,9 @@ Now that we have our configuration complete, we can spin up the router!
 
 This part is pretty easy - in the root of the vector repo, do:
 
-```
+```sh
 make restart-router
 ```
 
 !!! Tip
     `make start-$STACK` is optimized for development & will build everything that's out of date before starting the stack. `make restart-$STACK` on the other hand, won't try to build anything before starting the stack so is better to use in production.
-

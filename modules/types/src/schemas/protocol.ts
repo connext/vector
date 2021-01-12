@@ -1,8 +1,17 @@
 import { Static, Type } from "@sinclair/typebox";
 
-import { TBytes32, TransferResolverSchema, TransferStateSchema } from "../schemas";
+import { TBytes32 } from "../schemas";
 
-import { TAddress, TBalance, TBasicMeta, TIntegerString, TPublicIdentifier, TSetupUpdateDetails } from "./basic";
+import {
+  TAddress,
+  TBalance,
+  TBasicMeta,
+  TIntegerString,
+  TNetworkContext,
+  TPublicIdentifier,
+  TransferResolverSchema,
+  TransferStateSchema,
+} from "./basic";
 
 ////////////////////////////////////////
 // Protocol API Parameter schemas
@@ -11,16 +20,18 @@ import { TAddress, TBalance, TBasicMeta, TIntegerString, TPublicIdentifier, TSet
 // the given update. It is fed these parameters by the Engine.
 
 // Setup
-const SetupProtocolParamsSchema = Type.Intersect([
-  TSetupUpdateDetails,
-  Type.Object({ counterpartyIdentifier: TPublicIdentifier, meta: TBasicMeta }),
-]);
+const SetupProtocolParamsSchema = Type.Object({
+  timeout: TIntegerString,
+  networkContext: TNetworkContext,
+  counterpartyIdentifier: TPublicIdentifier,
+  meta: Type.Optional(TBasicMeta),
+});
 
 // Deposit
 const DepositProtocolParamsSchema = Type.Object({
   channelAddress: TAddress,
   assetId: TAddress,
-  meta: TBasicMeta,
+  meta: Type.Optional(TBasicMeta),
 });
 
 // Create
@@ -31,7 +42,7 @@ const CreateProtocolParamsSchema = Type.Object({
   transferDefinition: TAddress,
   transferInitialState: TransferStateSchema,
   timeout: TIntegerString,
-  meta: TBasicMeta,
+  meta: Type.Optional(TBasicMeta),
 });
 
 // Resolve
@@ -39,7 +50,7 @@ const ResolveProtocolParamsSchema = Type.Object({
   channelAddress: TAddress,
   transferId: TBytes32,
   transferResolver: TransferResolverSchema,
-  meta: TBasicMeta,
+  meta: Type.Optional(TBasicMeta),
 });
 
 // Namespace export

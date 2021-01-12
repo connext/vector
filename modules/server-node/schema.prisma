@@ -1,6 +1,7 @@
 generator client {
   provider      = "prisma-client-js"
   binaryTargets = ["native"]
+  output        = "./src/generated/db-client"
 }
 
 datasource db {
@@ -102,9 +103,10 @@ model Update {
 }
 
 model Transfer {
-  transferId String  @id
-  routingId  String
-  inDispute  Boolean
+  transferId    String @id
+  routingId     String
+  inDispute     Boolean
+  channelNonce  Int
 
   createUpdate  Update? @relation(name: "CreatedTransfer", fields: [createUpdateChannelAddressId, createUpdateNonce], references: [channelAddressId, nonce])
   resolveUpdate Update? @relation(name: "ResolvedTransfer", fields: [resolveUpdateChannelAddressId, resolveUpdateNonce], references: [channelAddressId, nonce])

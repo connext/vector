@@ -9,11 +9,12 @@ import {
 } from "@connext/vector-utils";
 import React, { useEffect, useState } from "react";
 import { constants } from "ethers";
-import { Col, Divider, Row, Statistic, Input, Typography, Table, Form, Button, List, Select, Tabs } from "antd";
+import { Col, Divider, Row, Statistic, Input, Typography, Table, Form, Button, List, Select, Tabs, Switch } from "antd";
 import { CopyToClipboard } from "react-copy-to-clipboard";
 import { EngineEvents, FullChannelState, TransferNames } from "@connext/vector-types";
 
 import "./App.css";
+import { config } from "./config";
 
 function App() {
   const [node, setNode] = useState<BrowserNode>();
@@ -52,6 +53,7 @@ function App() {
         supportedChains,
         iframeSrc,
         routerPublicIdentifier,
+        chainProviders: config.chainProviders,
       });
       await client.init();
       const channelsRes = await client.getStateChannels();
@@ -120,7 +122,7 @@ function App() {
     } else {
       console.log("Updated channel:", res.getValue());
       const idx = channels.findIndex((c) => c.channelAddress === channelAddress);
-      channels.splice(idx, res.getValue());
+      channels.splice(idx, 0, res.getValue());
       setChannels(channels);
     }
   };
@@ -381,7 +383,7 @@ function App() {
 
           <Divider orientation="left">Channels</Divider>
           <Row gutter={16}>
-            <Col span={18}>
+            <Col span={12}>
               <Form layout="horizontal" name="selectChannel" wrapperCol={{ span: 18 }} labelCol={{ span: 6 }}>
                 <Form.Item label="Channels">
                   <Select
@@ -400,7 +402,7 @@ function App() {
                 </Form.Item>
               </Form>
             </Col>
-            <Col>
+            <Col span={2}>
               <CopyToClipboard
                 text={selectedChannel?.channelAddress}
                 onCopy={() => {
@@ -411,6 +413,7 @@ function App() {
                 <Button>{copied ? "Copied!" : "Copy"}</Button>
               </CopyToClipboard>
             </Col>
+            <Col span={6}>ChainId: {selectedChannel?.networkContext.chainId}</Col>
           </Row>
 
           <Divider orientation="left">Balance & Deposit</Divider>
@@ -486,6 +489,7 @@ function App() {
                     initialValues={{
                       assetId: selectedChannel?.assetIds && selectedChannel?.assetIds[0],
                       preImage: getRandomBytes32(),
+                      numLoops: 1,
                     }}
                     onFinish={(values) => transfer(values.assetId, values.amount, values.recipient, values.preImage)}
                     onFinishFailed={onFinishFailed}
@@ -564,16 +568,21 @@ function App() {
                     labelCol={{ span: 6 }}
                     wrapperCol={{ span: 18 }}
                     name="crossChainTransfer"
-                    onFinish={(values) =>
-                      crossChainTransfer(
-                        values.amount,
-                        values.fromAssetId,
-                        values.fromChainId,
-                        values.toAssetId,
-                        values.toChainId,
-                        values.withdrawalAddress,
-                      )
-                    }
+                    onFinish={async (values) => {
+                      console.log("values.numLoops: ", values.numLoops);
+                      for (let index = 0; index < values.numLoops; index++) {
+                        console.log(`=====> START TRANSFER ${index}`);
+                        await crossChainTransfer(
+                          values.amount,
+                          values.fromAssetId,
+                          values.fromChainId,
+                          values.toAssetId,
+                          values.toChainId,
+                          values.withdrawalAddress,
+                        );
+                        console.log(`=====> FINISHED TRANSFER ${index}`);
+                      }
+                    }}
                     initialValues={{
                       fromAssetId: constants.AddressZero,
                       toAssetId: constants.AddressZero,
@@ -613,6 +622,14 @@ function App() {
                           ),
                         )}
                       </Select>
+                    </Form.Item>
+
+                    <Form.Item label="Withdrawal Address" name="withdrawalAddress">
+                      <Input placeholder="0x..." />
+                    </Form.Item>
+
+                    <Form.Item label="Number of Loops" name="numLoops">
+                      <Input />
                     </Form.Item>
 
                     <Form.Item wrapperCol={{ offset: 6 }}>

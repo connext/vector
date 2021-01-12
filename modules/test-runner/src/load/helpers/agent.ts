@@ -97,14 +97,11 @@ export class Agent {
   ): Promise<Agent> {
     // Create node on server at idx
     // NOTE: can safely be called multiple times
-    console.log("****** trying to create new agent at", index);
     const nodeRes = await nodeService.createNode({ index });
     if (nodeRes.isError) {
-      console.log("****** creating node at", index, "failed");
       throw nodeRes.getError()!;
     }
     const { publicIdentifier, signerAddress } = nodeRes.getValue();
-    console.log("****** creating node passed for", index);
 
     // Create the agent
     const agent = new Agent(publicIdentifier, signerAddress, index, rogerIdentifier, nodeService);
@@ -212,7 +209,7 @@ export class Agent {
     if (channelRes.isError) {
       throw channelRes.getError()!;
     }
-    return channelRes.getValue();
+    return channelRes.getValue()! as FullChannelState;
   }
 
   private async setupChannel(): Promise<string> {

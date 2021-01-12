@@ -631,7 +631,7 @@ OR [NodeError](https://github.com/connext/vector/blob/master/modules/types/src/e
 - `bobIdentifier`: `string` - Connext-specific identifier associated with the responded of the channel (i.e. the peer that responded to `setup`).
 - `chainId`: `number` - [Chainid](https://chainid.network) that the channel has been set up on.
 
-### Conditiona Transfer Created
+### Conditional Transfer Created
 
 `"CONDITIONAL_TRANSFER_CREATED"` - Emitted on creation of a conditional transfer.
 

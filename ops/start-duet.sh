@@ -14,23 +14,33 @@ then echo "A $stack stack is already running" && exit 0;
 fi
 
 ####################
-# Start up dependencies
+## Load Config
 
-bash "$root/ops/start-chains.sh"
-bash "$root/ops/start-messaging.sh"
+if [[ ! -f "$root/node.config.json" ]]
+then cp "$root/ops/config/node.default.json" "$root/node.config.json"
+fi
+if [[ ! -f "$root/router.config.json" ]]
+then cp "$root/ops/config/router.default.json" "$root/router.config.json"
+fi
 
-echo
-echo "Preparing to launch $stack stack"
-
-####################
-# Load Config
-
-chain_addresses=$(cat "$root/.chaindata/chain-addresses.json")
 config=$(
-  echo '{"chainAddresses":'"$chain_addresses"'}' \
-  | cat "$root/ops/config/node.default.json" - \
-  | jq -s '.[0] + .[1]'
+  cat "$root/ops/config/node.default.json" "$root/ops/config/router.default.json" \
+  | cat - "$root/node.config.json" "$root/router.config.json" \
+  | jq -s '.[0] + .[1] + .[2] + .[3]'
 )
+
+function getConfig {
+  value=$(echo "$config" | jq ".$1" | tr -d '"')
+  if [[ "$value" == "null" ]]
+  then echo ""
+  else echo "$value"
+  fi
+}
+
+messaging_url=$(getConfig messagingUrl)
+
+chain_providers=$(echo "$config" | jq '.chainProviders' | tr -d '\n\r ')
+default_providers=$(jq '.chainProviders' "$root/ops/config/node.default.json" | tr -d '\n\r ')
 
 common="networks:
       - '$project'
@@ -38,6 +48,25 @@ common="networks:
       driver: 'json-file'
       options:
           max-size: '100m'"
+
+####################
+## Start dependency stacks
+
+if [[ "$chain_providers" == "$default_providers" ]]
+then
+  bash "$root/ops/start-chains.sh"
+  config=$(
+    echo "$config" '{"chainAddresses":'"$(cat "$root/.chaindata/chain-addresses.json")"'}' \
+    | jq -s '.[0] + .[1]'
+  )
+fi
+
+if [[ -z "$messaging_url" ]]
+then bash "$root/ops/start-messaging.sh"
+fi
+
+echo
+echo "Preparing to launch $stack stack"
 
 ########################################
 ## Node config

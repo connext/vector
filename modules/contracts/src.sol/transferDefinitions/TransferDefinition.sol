@@ -23,7 +23,8 @@ abstract contract TransferDefinition is ITransferDefinition {
                 name: this.Name(),
                 stateEncoding: this.StateEncoding(),
                 resolverEncoding: this.ResolverEncoding(),
-                definition: address(this)
+                definition: address(this),
+                encodedCancel: this.EncodedCancel()
             });
     }
 }

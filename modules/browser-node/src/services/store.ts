@@ -75,7 +75,7 @@ export class BrowserStore implements IEngineStore, IChainServiceStore {
   }
 
   async saveChannelDispute(
-    channel: FullChannelState<any>,
+    channel: FullChannelState,
     channelDispute: ChannelDispute,
     transferDispute?: TransferDispute,
   ): Promise<void> {
@@ -107,7 +107,32 @@ export class BrowserStore implements IEngineStore, IChainServiceStore {
     await this.db.transactions.clear();
   }
 
-  async saveChannelState(channelState: FullChannelState<any>, transfer?: FullTransferState): Promise<void> {
+  async saveChannelStateAndTransfers(
+    channelState: FullChannelState,
+    activeTransfers: FullTransferState[],
+  ): Promise<void> {
+    await this.db.transaction("rw", this.db.channels, this.db.transfers, async () => {
+      // remove all "active" transfers
+      const currActive = await this.getActiveTransfers(channelState.channelAddress);
+      // TODO: can we "unassociate" them without deleting them?
+      await this.db.transfers.bulkDelete(currActive.map((t) => t.transferId));
+      // save channel
+      await this.db.channels.put(channelState);
+      // save all active transfers
+      await this.db.transfers.bulkPut(
+        activeTransfers.map((transfer) => {
+          return {
+            ...transfer,
+            createUpdateNonce: transfer.channelNonce + 1,
+            resolveUpdateNonce: 0,
+            routingId: transfer?.meta?.routingId,
+          };
+        }),
+      );
+    });
+  }
+
+  async saveChannelState(channelState: FullChannelState, transfer?: FullTransferState): Promise<void> {
     await this.db.transaction("rw", this.db.channels, this.db.transfers, async () => {
       await this.db.channels.put(channelState);
       if (channelState.latestUpdate.type === UpdateType.create) {
@@ -126,12 +151,12 @@ export class BrowserStore implements IEngineStore, IChainServiceStore {
     });
   }
 
-  async getChannelStates(): Promise<FullChannelState<any>[]> {
+  async getChannelStates(): Promise<FullChannelState[]> {
     const channels = await this.db.channels.toArray();
     return channels;
   }
 
-  async getChannelState(channelAddress: string): Promise<FullChannelState<any> | undefined> {
+  async getChannelState(channelAddress: string): Promise<FullChannelState | undefined> {
     const channel = await this.db.channels.get(channelAddress);
     return channel;
   }
@@ -140,7 +165,7 @@ export class BrowserStore implements IEngineStore, IChainServiceStore {
     publicIdentifierA: string,
     publicIdentifierB: string,
     chainId: number,
-  ): Promise<FullChannelState<any> | undefined> {
+  ): Promise<FullChannelState | undefined> {
     const channel = await this.db.channels
       .where("[aliceIdentifier+bobIdentifier+networkContext.chainId]")
       .equals([publicIdentifierA, publicIdentifierB, chainId])

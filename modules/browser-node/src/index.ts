@@ -1,4 +1,4 @@
-import { VectorChainService } from "@connext/vector-contracts";
+import { deployments, VectorChainService } from "@connext/vector-contracts";
 import { VectorEngine } from "@connext/vector-engine";
 import {
   ChainAddresses,
@@ -9,16 +9,15 @@ import {
   EngineEventMap,
   IChannelSigner,
   INodeService,
-  NodeError,
   OptionalPublicIdentifier,
   Result,
   NodeParams,
   NodeResponses,
   EngineParams,
-  FullChannelState,
   TransferNames,
   EngineEvents,
   ConditionalTransferCreatedPayload,
+  FullChannelState,
 } from "@connext/vector-types";
 import { constructRpcRequest, getRandomBytes32, hydrateProviders, NatsMessagingService } from "@connext/vector-utils";
 import { sha256 as soliditySha256 } from "@ethersproject/solidity";
@@ -27,6 +26,15 @@ import pino, { BaseLogger } from "pino";
 import { BrowserStore } from "./services/store";
 import { BrowserLockService } from "./services/lock";
 import { DirectProvider, IframeChannelProvider, IRpcChannelProvider } from "./channelProvider";
+import {
+  CrossChainTransferParams,
+  CrossChainTransferStatus,
+  getCrossChainTransfers,
+  removeCrossChainTransfer,
+  saveCrossChainTransfer,
+  StoredCrossChainTransfer,
+} from "./services/crossChainTransferStore";
+import { BrowserNodeError, CrossChainTransferError } from "./errors";
 
 export type BrowserNodeSignerConfig = {
   natsUrl?: string;
@@ -48,17 +56,20 @@ export class BrowserNode implements INodeService {
   private supportedChains: number[] = [];
   private routerPublicIdentifier?: string;
   private iframeSrc?: string;
+  private chainProviders: ChainProviders = {};
 
   constructor(params: {
     logger?: pino.BaseLogger;
     routerPublicIdentifier?: string;
     supportedChains?: number[];
     iframeSrc?: string;
+    chainProviders: ChainProviders;
   }) {
     this.logger = params.logger || pino();
     this.routerPublicIdentifier = params.routerPublicIdentifier;
     this.supportedChains = params.supportedChains || [];
     this.iframeSrc = params.iframeSrc;
+    this.chainProviders = params.chainProviders;
   }
 
   // method for signer-based connections
@@ -66,7 +77,7 @@ export class BrowserNode implements INodeService {
     if (!config.logger) {
       config.logger = pino();
     }
-    const node = new BrowserNode({ logger: config.logger });
+    const node = new BrowserNode({ logger: config.logger, chainProviders: config.chainProviders });
     // TODO: validate schema
     config.logger.info(
       { method: "connect", publicIdentifier: config.signer.publicIdentifier, signerAddress: config.signer.address },
@@ -93,6 +104,31 @@ export class BrowserNode implements INodeService {
       config.signer,
       config.logger.child({ module: "VectorChainService" }),
     );
+
+    // Pull live network addresses out of public deployments if not provided explicitly
+    for (const chainId of Object.keys(config.chainProviders)) {
+      if (!config.chainAddresses) {
+        config.chainAddresses = {} as any;
+      }
+      if (!config.chainAddresses[chainId]) {
+        config.chainAddresses[chainId] = {} as any;
+      }
+      if (
+        !config.chainAddresses[chainId].channelFactoryAddress &&
+        deployments[chainId] &&
+        deployments[chainId].ChannelFactory
+      ) {
+        config.chainAddresses[chainId].channelFactoryAddress = deployments[chainId].ChannelFactory.address;
+      }
+      if (
+        !config.chainAddresses[chainId].transferRegistryAddress &&
+        deployments[chainId] &&
+        deployments[chainId].TransferRegistry
+      ) {
+        config.chainAddresses[chainId].transferRegistryAddress = deployments[chainId].TransferRegistry.address;
+      }
+    }
+
     const engine = await VectorEngine.connect(
       messaging,
       lock,
@@ -101,6 +137,7 @@ export class BrowserNode implements INodeService {
       chainService,
       config.chainAddresses!,
       config.logger.child({ module: "VectorEngine" }),
+      false,
     );
     node.channelProvider = new DirectProvider(engine);
     node.publicIdentifier = config.signer.publicIdentifier;
@@ -120,7 +157,7 @@ export class BrowserNode implements INodeService {
       src: iframeSrc!,
       id: "connext-iframe",
     });
-    const rpc = constructRpcRequest("connext_authenticate", {});
+    const rpc = constructRpcRequest("connext_authenticate", { chainProviders: this.chainProviders });
     const auth = await this.channelProvider.send(rpc);
     this.logger.info({ method: "connect", response: auth }, "Received response from auth method");
     const [nodeConfig] = await this.getConfig();
@@ -130,29 +167,31 @@ export class BrowserNode implements INodeService {
       { supportedChains: this.supportedChains, routerPublicIdentifier: this.routerPublicIdentifier },
       "Checking for existing channels",
     );
-    for (const chainId of this.supportedChains) {
-      const channelRes = await this.getStateChannelByParticipants({
-        chainId,
-        counterparty: this.routerPublicIdentifier!,
-      });
-      if (channelRes.isError) {
-        throw channelRes.getError();
-      }
-      let channel = channelRes.getValue();
-      if (!channel) {
-        this.logger.info({ chainId }, "Setting up channel");
-        const address = await this.setup({
+    await Promise.all(
+      this.supportedChains.map(async (chainId) => {
+        const channelRes = await this.getStateChannelByParticipants({
           chainId,
-          counterpartyIdentifier: this.routerPublicIdentifier!,
-          timeout: "100000",
+          counterparty: this.routerPublicIdentifier!,
         });
-        if (address.isError) {
-          throw address.getError();
+        if (channelRes.isError) {
+          throw channelRes.getError();
         }
-        channel = await this.getStateChannel(address.getValue());
-      }
-      this.logger.info({ channel, chainId });
-    }
+        let channel = channelRes.getValue();
+        if (!channel) {
+          this.logger.info({ chainId }, "Setting up channel");
+          const address = await this.setup({
+            chainId,
+            counterpartyIdentifier: this.routerPublicIdentifier!,
+            timeout: "100000",
+          });
+          if (address.isError) {
+            throw address.getError();
+          }
+          channel = (await this.getStateChannel(address.getValue())).getValue();
+        }
+        this.logger.info({ channel, chainId });
+      }),
+    );
   }
 
   // IFRAME SPECIFIC
@@ -165,141 +204,282 @@ export class BrowserNode implements INodeService {
     reconcileDeposit?: boolean;
     withdrawalAddress?: string;
     meta?: any;
-  }): Promise<{ withdrawalTx?: string }> {
+    crossChainTransferId?: string;
+    startStage?: number;
+    preImage?: string;
+    withdrawalAmount?: string;
+  }): Promise<{ withdrawalTx?: string; withdrawalAmount?: string }> {
+    this.logger.info({ params }, "Starting crossChainTransfer");
+    const startStage = params.startStage ?? CrossChainTransferStatus.INITIAL;
+    const { amount, fromAssetId, fromChainId, toAssetId, toChainId, withdrawalAddress, reconcileDeposit } = params;
+
+    const storeParams: CrossChainTransferParams = {
+      amount: amount,
+      fromAssetId: fromAssetId,
+      fromChainId: fromChainId,
+      reconcileDeposit: reconcileDeposit ?? false,
+      toAssetId: toAssetId,
+      toChainId: toChainId,
+      withdrawalAddress,
+      error: false,
+    };
     const senderChannelRes = await this.getStateChannelByParticipants({
       counterparty: this.routerPublicIdentifier!,
-      chainId: params.fromChainId,
+      chainId: fromChainId,
     });
     if (senderChannelRes.isError) {
       throw senderChannelRes.getError();
     }
     const receiverChannelRes = await this.getStateChannelByParticipants({
       counterparty: this.routerPublicIdentifier!,
-      chainId: params.toChainId,
+      chainId: toChainId,
     });
     if (receiverChannelRes.isError) {
       throw receiverChannelRes.getError();
     }
-    const senderChannel = senderChannelRes.getValue() as FullChannelState;
-    const receiverChannel = receiverChannelRes.getValue() as FullChannelState;
-    if (!senderChannel || !receiverChannel) {
-      throw new Error(
-        `Channel does not exist for chainId ${!senderChannel ? params.fromChainId : params.toChainId} with ${
-          this.routerPublicIdentifier
-        }`,
+    const senderChannel = senderChannelRes.getValue();
+    if (!senderChannel) {
+      throw new CrossChainTransferError(
+        CrossChainTransferError.reasons.MissingSenderChannel,
+        this.publicIdentifier,
+        params,
+      );
+    }
+    const receiverChannel = receiverChannelRes.getValue();
+    if (!receiverChannel) {
+      throw new CrossChainTransferError(
+        CrossChainTransferError.reasons.MissingReceiverChannel,
+        this.publicIdentifier,
+        params,
       );
     }
 
-    const crossChainTransferId = getRandomBytes32();
+    const crossChainTransferId = params.crossChainTransferId ?? getRandomBytes32();
+    saveCrossChainTransfer(crossChainTransferId, CrossChainTransferStatus.INITIAL, storeParams);
+
     const { meta, ...res } = params;
-    const updatedMeta = { ...res, crossChainTransferId, ...(meta ?? {}) };
+    const updatedMeta = { ...res, crossChainTransferId, routingId: crossChainTransferId, ...(meta ?? {}) };
 
-    if (params.reconcileDeposit) {
-      const depositRes = await this.reconcileDeposit({
-        assetId: params.fromAssetId,
-        channelAddress: senderChannel.channelAddress,
-        meta: { ...updatedMeta },
-      });
-      if (depositRes.isError) {
-        throw depositRes.getError();
-      }
-      const updated = await this.getStateChannel({ channelAddress: senderChannel.channelAddress });
-      this.logger.info({ updated }, "Deposit reconciled");
-    }
-
-    const preImage = getRandomBytes32();
-    const lockHash = soliditySha256(["bytes32"], [preImage]);
-    this.logger.info({ preImage, lockHash }, "Sending cross-chain transfer");
-    const transferParams = {
-      amount: params.amount,
-      assetId: params.fromAssetId,
-      channelAddress: senderChannel.channelAddress,
-      details: {
-        lockHash,
-        expiry: "0",
-      },
-      type: TransferNames.HashlockTransfer,
-      recipient: this.publicIdentifier,
-      recipientAssetId: params.toAssetId,
-      recipientChainId: params.toChainId,
-      meta: { ...updatedMeta },
-    };
-    const transferRes = await this.conditionalTransfer(transferParams);
-    if (transferRes.isError) {
-      throw transferRes.getError();
-    }
-    const senderTransfer = transferRes.getValue();
-    this.logger.info({ senderTransfer }, "Sender transfer successfully completed, waiting for receiver transfer...");
-    const receiverTransferData = await new Promise<ConditionalTransferCreatedPayload>((res) => {
-      this.on(EngineEvents.CONDITIONAL_TRANSFER_CREATED, (data) => {
-        if (
-          data.transfer.meta.routingId === senderTransfer.routingId &&
-          data.channelAddress === receiverChannel.channelAddress
-        ) {
-          res(data);
+    if (startStage < CrossChainTransferStatus.DEPOSITED) {
+      if (reconcileDeposit) {
+        const depositRes = await this.reconcileDeposit({
+          assetId: fromAssetId,
+          channelAddress: senderChannel.channelAddress,
+          meta: { ...updatedMeta },
+        });
+        if (depositRes.isError) {
+          saveCrossChainTransfer(crossChainTransferId, CrossChainTransferStatus.INITIAL, {
+            ...storeParams,
+            error: true,
+          });
+          throw depositRes.getError();
         }
-      });
-    });
-    if (!receiverTransferData) {
-      this.logger.error(
-        { routingId: senderTransfer.routingId, channelAddress: receiverChannel.channelAddress },
-        "Failed to get receiver event",
-      );
-      throw new Error("Failed to get receiver event");
+        const updated = await this.getStateChannel({ channelAddress: senderChannel.channelAddress });
+        this.logger.info({ updated }, "Deposit reconciled");
+      }
+      saveCrossChainTransfer(crossChainTransferId, CrossChainTransferStatus.DEPOSITED, storeParams);
     }
 
-    this.logger.info({ receiverTransferData }, "Received receiver transfer, resolving...");
-    const resolveParams = {
-      channelAddress: receiverChannel.channelAddress,
-      transferId: receiverTransferData.transfer.transferId,
-      transferResolver: {
-        preImage,
-      },
-      meta: { ...updatedMeta },
-    };
-    const resolveRes = await this.resolveTransfer(resolveParams);
-    if (resolveRes.isError) {
-      throw resolveRes.getError();
+    const preImage = params.preImage ?? getRandomBytes32();
+    const lockHash = soliditySha256(["bytes32"], [preImage]);
+    storeParams.preImage = preImage;
+
+    let senderTransferId = "";
+    if (startStage < CrossChainTransferStatus.TRANSFER_1) {
+      const transferParams = {
+        amount: amount,
+        assetId: fromAssetId,
+        channelAddress: senderChannel.channelAddress,
+        details: {
+          lockHash,
+          expiry: "0",
+        },
+        type: TransferNames.HashlockTransfer,
+        recipient: this.publicIdentifier,
+        recipientAssetId: toAssetId,
+        recipientChainId: toChainId,
+        meta: { ...updatedMeta },
+      };
+      this.logger.info({ preImage, transferParams }, "Sending cross-chain transfer");
+      const transferRes = await this.conditionalTransfer(transferParams);
+      if (transferRes.isError) {
+        saveCrossChainTransfer(crossChainTransferId, CrossChainTransferStatus.DEPOSITED, {
+          ...storeParams,
+          error: true,
+        });
+        throw transferRes.getError();
+      }
+      const senderTransfer = transferRes.getValue();
+      senderTransferId = senderTransfer.transferId;
+      this.logger.info({ senderTransfer }, "Sender transfer successfully completed, waiting for receiver transfer...");
+      saveCrossChainTransfer(crossChainTransferId, CrossChainTransferStatus.TRANSFER_1, storeParams);
     }
-    const resolvedTransfer = resolveRes.getValue();
-    this.logger.info({ resolvedTransfer }, "Resolved receiver transfer");
+
+    let receiverTransferData: ConditionalTransferCreatedPayload | undefined;
+    let withdrawalAmount = params.withdrawalAmount;
+    if (startStage < CrossChainTransferStatus.TRANSFER_2) {
+      // first try to pull the transfer from store in case this was called through the reclaimPendingCrossChainTransfer function
+      const receiverTransferDataPromise = new Promise<ConditionalTransferCreatedPayload>((res) => {
+        this.on(EngineEvents.CONDITIONAL_TRANSFER_CREATED, (data) => {
+          if (
+            data.transfer.meta.routingId === crossChainTransferId &&
+            data.channelAddress === receiverChannel.channelAddress
+          ) {
+            res(data);
+          }
+        });
+      });
+      const transferRes = await this.getTransferByRoutingId({
+        channelAddress: receiverChannel.channelAddress,
+        routingId: crossChainTransferId,
+      });
+      if (transferRes.isError) {
+        throw transferRes.getError();
+      }
+      const existingReceiverTransfer = transferRes.getValue();
+      let receiverTransferId = existingReceiverTransfer?.transferId;
+      withdrawalAmount = existingReceiverTransfer?.balance.amount[0];
+      this.logger.info({ existingReceiverTransfer }, "Existing receiver transfer");
+
+      if (!existingReceiverTransfer) {
+        receiverTransferData = await receiverTransferDataPromise;
+        if (!receiverTransferData) {
+          this.logger.error(
+            { routingId: crossChainTransferId, channelAddress: receiverChannel.channelAddress },
+            "Failed to get receiver event",
+          );
+          saveCrossChainTransfer(crossChainTransferId, CrossChainTransferStatus.TRANSFER_1, {
+            ...storeParams,
+            error: true,
+          });
+          throw new CrossChainTransferError(
+            CrossChainTransferError.reasons.ReceiverEventMissed,
+            this.publicIdentifier,
+            params,
+            { senderTransfer: senderTransferId, preImage },
+          );
+        }
+        receiverTransferId = receiverTransferData.transfer.transferId;
+        withdrawalAmount = receiverTransferData.transfer.balance.amount[0];
+      }
+      storeParams.withdrawalAmount = withdrawalAmount;
+
+      this.logger.info({ receiverTransferData }, "Received receiver transfer, resolving...");
+      const resolveParams = {
+        channelAddress: receiverChannel.channelAddress,
+        transferId: receiverTransferId!,
+        transferResolver: {
+          preImage,
+        },
+        meta: { ...updatedMeta },
+      };
+      const resolveRes = await this.resolveTransfer(resolveParams);
+      if (resolveRes.isError) {
+        saveCrossChainTransfer(crossChainTransferId, CrossChainTransferStatus.TRANSFER_1, {
+          ...storeParams,
+          error: true,
+        });
+        throw resolveRes.getError();
+      }
+      const resolvedTransfer = resolveRes.getValue();
+      this.logger.info({ resolvedTransfer }, "Resolved receiver transfer");
+      saveCrossChainTransfer(crossChainTransferId, CrossChainTransferStatus.TRANSFER_2, {
+        ...storeParams,
+        withdrawalAmount,
+      });
+    }
 
     let withdrawalTx: string | undefined;
-    if (params.withdrawalAddress) {
-      const withdrawalAmount = receiverTransferData.transfer.balance.amount[0];
-      this.logger.info(
-        { withdrawalAddress: params.withdrawalAddress, withdrawalAmount },
-        "Withdrawing to configured address",
-      );
+    const withdrawalMeta = { ...res, crossChainTransferId, ...(meta ?? {}) };
+    if (withdrawalAddress) {
+      withdrawalAmount = params.withdrawalAmount ?? receiverTransferData?.transfer.balance.amount[0];
+      if (!withdrawalAmount) {
+        throw new CrossChainTransferError(
+          CrossChainTransferError.reasons.MissingWithdrawalAmount,
+          this.publicIdentifier,
+          params,
+          { senderTransfer: senderTransferId, receiverTransfer: receiverTransferData?.transfer.transferId },
+        );
+      }
+      this.logger.info({ withdrawalAddress: withdrawalAddress, withdrawalAmount }, "Withdrawing to configured address");
       const withdrawRes = await this.withdraw({
         amount: withdrawalAmount, // bob is receiver
-        assetId: params.toAssetId,
+        assetId: toAssetId,
         channelAddress: receiverChannel.channelAddress,
-        recipient: params.withdrawalAddress,
-        meta: { ...updatedMeta },
+        recipient: withdrawalAddress,
+        meta: { ...withdrawalMeta },
       });
       if (withdrawRes.isError) {
+        saveCrossChainTransfer(crossChainTransferId, CrossChainTransferStatus.TRANSFER_2, {
+          ...storeParams,
+          error: true,
+        });
         throw withdrawRes.getError();
       }
       const withdrawal = withdrawRes.getValue();
       this.logger.info({ withdrawal }, "Withdrawal completed");
       withdrawalTx = withdrawal.transactionHash;
     }
-    return { withdrawalTx };
+    removeCrossChainTransfer(crossChainTransferId);
+    return { withdrawalTx, withdrawalAmount };
+  }
+
+  // separate from init(), can eventually be called as part of that
+  async reclaimPendingCrossChainTransfers(): Promise<void> {
+    const transfers = await getCrossChainTransfers();
+    for (const transfer of transfers) {
+      if (transfer.error) {
+        this.logger.error({ transfer }, "Found errored transfer, TODO: handle these properly");
+        continue;
+      }
+      await this.reclaimPendingCrossChainTransfer(transfer);
+    }
+  }
+
+  private async reclaimPendingCrossChainTransfer(transferData: StoredCrossChainTransfer) {
+    const {
+      amount,
+      withdrawalAddress,
+      toChainId,
+      toAssetId,
+      fromChainId,
+      fromAssetId,
+      status,
+      reconcileDeposit,
+      crossChainTransferId,
+      preImage,
+      withdrawalAmount,
+    } = transferData;
+
+    await this.crossChainTransfer({
+      amount,
+      fromAssetId,
+      fromChainId,
+      toAssetId,
+      toChainId,
+      crossChainTransferId,
+      reconcileDeposit,
+      withdrawalAddress,
+      startStage: status,
+      preImage,
+      withdrawalAmount,
+    });
   }
   //////////////////
 
-  createNode(params: NodeParams.CreateNode): Promise<Result<NodeResponses.CreateNode, NodeError>> {
-    return Promise.resolve(Result.fail(new NodeError(NodeError.reasons.MultinodeProhibitted, { params })));
+  createNode(params: NodeParams.CreateNode): Promise<Result<NodeResponses.CreateNode, BrowserNodeError>> {
+    return Promise.resolve(
+      Result.fail(new BrowserNodeError(BrowserNodeError.reasons.MultinodeProhibitted, this.publicIdentifier, params)),
+    );
   }
 
   async getConfig(): Promise<NodeResponses.GetConfig> {
-    const rpc = constructRpcRequest("chan_getConfig", undefined);
+    const rpc = constructRpcRequest("chan_getConfig", {});
     return this.send(rpc);
   }
 
-  async getStatus(): Promise<Result<NodeResponses.GetStatus, NodeError>> {
-    const rpc = constructRpcRequest("chan_getStatus", undefined);
+  async getStatus(): Promise<Result<NodeResponses.GetStatus, BrowserNodeError>> {
+    const rpc = constructRpcRequest("chan_getStatus", {});
     try {
       const res = await this.send(rpc);
       return Result.ok(res);
@@ -310,7 +490,7 @@ export class BrowserNode implements INodeService {
 
   async getStateChannelByParticipants(
     params: OptionalPublicIdentifier<NodeParams.GetChannelStateByParticipants>,
-  ): Promise<Result<NodeResponses.GetChannelStateByParticipants, NodeError>> {
+  ): Promise<Result<NodeResponses.GetChannelStateByParticipants, BrowserNodeError>> {
     try {
       const rpc = constructRpcRequest<"chan_getChannelStateByParticipants">(
         ChannelRpcMethods.chan_getChannelStateByParticipants,
@@ -320,7 +500,7 @@ export class BrowserNode implements INodeService {
           chainId: params.chainId,
         },
       );
-      const res = await this.channelProvider!.send(rpc);
+      const res = await this.send(rpc);
       return Result.ok(res);
     } catch (e) {
       return Result.fail(e);
@@ -329,7 +509,7 @@ export class BrowserNode implements INodeService {
 
   async getStateChannel(
     params: OptionalPublicIdentifier<NodeParams.GetChannelState>,
-  ): Promise<Result<NodeResponses.GetChannelState, NodeError>> {
+  ): Promise<Result<NodeResponses.GetChannelState, BrowserNodeError>> {
     try {
       const rpc = constructRpcRequest<"chan_getChannelState">(ChannelRpcMethods.chan_getChannelState, params);
       const res = await this.channelProvider!.send(rpc);
@@ -339,11 +519,11 @@ export class BrowserNode implements INodeService {
     }
   }
 
-  async getStateChannels(): Promise<Result<NodeResponses.GetChannelStates, NodeError>> {
+  async getStateChannels(): Promise<Result<NodeResponses.GetChannelStates, BrowserNodeError>> {
     try {
-      const rpc = constructRpcRequest<"chan_getChannelStates">(ChannelRpcMethods.chan_getChannelStates, undefined);
+      const rpc = constructRpcRequest<"chan_getChannelStates">(ChannelRpcMethods.chan_getChannelStates, {});
       const res = await this.channelProvider!.send(rpc);
-      return Result.ok(res.map((chan) => chan.channelAddress));
+      return Result.ok(res.map((chan: FullChannelState) => chan.channelAddress));
     } catch (e) {
       return Result.fail(e);
     }
@@ -351,7 +531,7 @@ export class BrowserNode implements INodeService {
 
   async getTransferByRoutingId(
     params: OptionalPublicIdentifier<NodeParams.GetTransferStateByRoutingId>,
-  ): Promise<Result<NodeResponses.GetTransferStateByRoutingId, NodeError>> {
+  ): Promise<Result<NodeResponses.GetTransferStateByRoutingId, BrowserNodeError>> {
     try {
       const rpc = constructRpcRequest<"chan_getTransferStateByRoutingId">(
         ChannelRpcMethods.chan_getTransferStateByRoutingId,
@@ -366,7 +546,7 @@ export class BrowserNode implements INodeService {
 
   async getTransfersByRoutingId(
     params: OptionalPublicIdentifier<NodeParams.GetTransferStatesByRoutingId>,
-  ): Promise<Result<NodeResponses.GetTransferStatesByRoutingId, NodeError>> {
+  ): Promise<Result<NodeResponses.GetTransferStatesByRoutingId, BrowserNodeError>> {
     try {
       const rpc = constructRpcRequest<"chan_getTransferStatesByRoutingId">(
         ChannelRpcMethods.chan_getTransferStatesByRoutingId,
@@ -381,7 +561,7 @@ export class BrowserNode implements INodeService {
 
   async getTransfer(
     params: OptionalPublicIdentifier<NodeParams.GetTransferState>,
-  ): Promise<Result<NodeResponses.GetTransferState, NodeError>> {
+  ): Promise<Result<NodeResponses.GetTransferState, BrowserNodeError>> {
     try {
       const rpc = constructRpcRequest<"chan_getTransferState">(ChannelRpcMethods.chan_getTransferState, params);
       const res = await this.channelProvider!.send(rpc);
@@ -393,7 +573,7 @@ export class BrowserNode implements INodeService {
 
   async getActiveTransfers(
     params: OptionalPublicIdentifier<NodeParams.GetActiveTransfersByChannelAddress>,
-  ): Promise<Result<NodeResponses.GetActiveTransfersByChannelAddress, NodeError>> {
+  ): Promise<Result<NodeResponses.GetActiveTransfersByChannelAddress, BrowserNodeError>> {
     try {
       const rpc = constructRpcRequest<"chan_getActiveTransfers">(ChannelRpcMethods.chan_getActiveTransfers, params);
       const res = await this.channelProvider!.send(rpc);
@@ -405,7 +585,7 @@ export class BrowserNode implements INodeService {
 
   async getRegisteredTransfers(
     params: OptionalPublicIdentifier<NodeParams.GetRegisteredTransfers>,
-  ): Promise<Result<NodeResponses.GetRegisteredTransfers, NodeError>> {
+  ): Promise<Result<NodeResponses.GetRegisteredTransfers, BrowserNodeError>> {
     try {
       const rpc = constructRpcRequest<"chan_getRegisteredTransfers">(
         ChannelRpcMethods.chan_getRegisteredTransfers,
@@ -420,7 +600,7 @@ export class BrowserNode implements INodeService {
 
   async setup(
     params: OptionalPublicIdentifier<NodeParams.RequestSetup>,
-  ): Promise<Result<NodeResponses.RequestSetup, NodeError>> {
+  ): Promise<Result<NodeResponses.RequestSetup, BrowserNodeError>> {
     try {
       const rpc = constructRpcRequest<"chan_requestSetup">(ChannelRpcMethods.chan_requestSetup, params);
       const res = await this.channelProvider!.send(rpc);
@@ -431,18 +611,18 @@ export class BrowserNode implements INodeService {
   }
 
   // OK to leave unimplemented since browser node will never be Alice
-  async internalSetup(): Promise<Result<NodeResponses.Setup, NodeError>> {
-    throw new Error("Method not implemented");
+  async internalSetup(): Promise<Result<NodeResponses.Setup, BrowserNodeError>> {
+    return Result.fail(new BrowserNodeError(BrowserNodeError.reasons.MethodNotImplemented, this.publicIdentifier));
   }
 
   // OK to leave unimplemented since all txes can be sent from outside the browser node
-  async sendDepositTx(): Promise<Result<NodeResponses.SendDepositTx, NodeError>> {
-    throw new Error("Method not implemented.");
+  async sendDepositTx(): Promise<Result<NodeResponses.SendDepositTx, BrowserNodeError>> {
+    return Result.fail(new BrowserNodeError(BrowserNodeError.reasons.MethodNotImplemented, this.publicIdentifier));
   }
 
   async reconcileDeposit(
     params: OptionalPublicIdentifier<NodeParams.Deposit>,
-  ): Promise<Result<NodeResponses.Deposit, NodeError>> {
+  ): Promise<Result<NodeResponses.Deposit, BrowserNodeError>> {
     try {
       const rpc = constructRpcRequest<"chan_deposit">(ChannelRpcMethods.chan_deposit, params);
       const res = await this.channelProvider!.send(rpc);
@@ -454,7 +634,7 @@ export class BrowserNode implements INodeService {
 
   async requestCollateral(
     params: OptionalPublicIdentifier<NodeParams.RequestCollateral>,
-  ): Promise<Result<NodeResponses.RequestCollateral, NodeError>> {
+  ): Promise<Result<NodeResponses.RequestCollateral, BrowserNodeError>> {
     try {
       const rpc = constructRpcRequest<"chan_requestCollateral">(ChannelRpcMethods.chan_requestCollateral, params);
       await this.channelProvider!.send(rpc);
@@ -466,7 +646,7 @@ export class BrowserNode implements INodeService {
 
   async conditionalTransfer(
     params: OptionalPublicIdentifier<NodeParams.ConditionalTransfer>,
-  ): Promise<Result<NodeResponses.ConditionalTransfer, NodeError>> {
+  ): Promise<Result<NodeResponses.ConditionalTransfer, BrowserNodeError>> {
     try {
       const rpc = constructRpcRequest<"chan_createTransfer">(ChannelRpcMethods.chan_createTransfer, params);
       const res = await this.channelProvider!.send(rpc);
@@ -482,7 +662,7 @@ export class BrowserNode implements INodeService {
 
   async resolveTransfer(
     params: OptionalPublicIdentifier<NodeParams.ResolveTransfer>,
-  ): Promise<Result<NodeResponses.ResolveTransfer, NodeError>> {
+  ): Promise<Result<NodeResponses.ResolveTransfer, BrowserNodeError>> {
     try {
       const rpc = constructRpcRequest<"chan_resolveTransfer">(ChannelRpcMethods.chan_resolveTransfer, params);
       const res = await this.channelProvider!.send(rpc);
@@ -498,7 +678,7 @@ export class BrowserNode implements INodeService {
 
   async withdraw(
     params: OptionalPublicIdentifier<NodeParams.Withdraw>,
-  ): Promise<Result<NodeResponses.Withdraw, NodeError>> {
+  ): Promise<Result<NodeResponses.Withdraw, BrowserNodeError>> {
     try {
       const rpc = constructRpcRequest<"chan_withdraw">(ChannelRpcMethods.chan_withdraw, params);
       const res = await this.channelProvider!.send(rpc);
@@ -512,15 +692,39 @@ export class BrowserNode implements INodeService {
     }
   }
 
+  async restoreState(
+    params: OptionalPublicIdentifier<NodeParams.RestoreState>,
+  ): Promise<Result<NodeResponses.RestoreState, BrowserNodeError>> {
+    try {
+      const rpc = constructRpcRequest<"chan_restoreState">(ChannelRpcMethods.chan_restoreState, params);
+      const res = await this.channelProvider!.send(rpc);
+      return Result.ok({ channelAddress: res.channelAddress });
+    } catch (e) {
+      return Result.fail(e);
+    }
+  }
+
   async signUtilityMessage(
     params: OptionalPublicIdentifier<NodeParams.SignUtilityMessage>,
-  ): Promise<Result<NodeResponses.SignUtilityMessage, NodeError>> {
+  ): Promise<Result<NodeResponses.SignUtilityMessage, BrowserNodeError>> {
     try {
       const rpc = constructRpcRequest<"chan_signUtilityMessage">(ChannelRpcMethods.chan_signUtilityMessage, params);
       const res = await this.channelProvider!.send(rpc);
       return Result.ok({
         signedMessage: res,
       });
+    } catch (e) {
+      return Result.fail(e);
+    }
+  }
+
+  async sendIsAliveMessage(
+    params: OptionalPublicIdentifier<NodeParams.SendIsAlive>,
+  ): Promise<Result<NodeResponses.SendIsAlive, BrowserNodeError>> {
+    const rpc = constructRpcRequest(ChannelRpcMethods.chan_sendIsAlive, params);
+    try {
+      const res = await this.channelProvider!.send(rpc);
+      return Result.ok({ channelAddress: res.channelAddress });
     } catch (e) {
       return Result.fail(e);
     }
@@ -534,7 +738,7 @@ export class BrowserNode implements INodeService {
   /// DISPUTE METHODS
   async sendDisputeChannelTx(
     params: OptionalPublicIdentifier<NodeParams.SendDisputeChannelTx>,
-  ): Promise<Result<NodeResponses.SendDisputeChannelTx, NodeError>> {
+  ): Promise<Result<NodeResponses.SendDisputeChannelTx, BrowserNodeError>> {
     const rpc = constructRpcRequest(ChannelRpcMethods.chan_dispute, params);
     try {
       const res = await this.channelProvider!.send(rpc);
@@ -546,7 +750,7 @@ export class BrowserNode implements INodeService {
 
   async sendDefundChannelTx(
     params: OptionalPublicIdentifier<NodeParams.SendDefundChannelTx>,
-  ): Promise<Result<NodeResponses.SendDefundChannelTx, NodeError>> {
+  ): Promise<Result<NodeResponses.SendDefundChannelTx, BrowserNodeError>> {
     const rpc = constructRpcRequest(ChannelRpcMethods.chan_defund, params);
     try {
       const res = await this.channelProvider!.send(rpc);
@@ -558,7 +762,7 @@ export class BrowserNode implements INodeService {
 
   async sendDisputeTransferTx(
     params: OptionalPublicIdentifier<NodeParams.SendDisputeTransferTx>,
-  ): Promise<Result<NodeResponses.SendDisputeTransferTx, NodeError>> {
+  ): Promise<Result<NodeResponses.SendDisputeTransferTx, BrowserNodeError>> {
     const rpc = constructRpcRequest(ChannelRpcMethods.chan_disputeTransfer, params);
     try {
       const res = await this.channelProvider!.send(rpc);
@@ -570,7 +774,7 @@ export class BrowserNode implements INodeService {
 
   async sendDefundTransferTx(
     params: OptionalPublicIdentifier<NodeParams.SendDefundTransferTx>,
-  ): Promise<Result<NodeResponses.SendDefundTransferTx, NodeError>> {
+  ): Promise<Result<NodeResponses.SendDefundTransferTx, BrowserNodeError>> {
     const rpc = constructRpcRequest(ChannelRpcMethods.chan_defundTransfer, params);
     try {
       const res = await this.channelProvider!.send(rpc);

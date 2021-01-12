@@ -39,6 +39,8 @@ config-prod.json
 **/.bot-store/
 **/.chaindata
 **/.db-snapshots
+**/.db-snapshots-node/
+**/.db-snapshots-router/
 modules/server-node/connext-store.db
 modules/server-node/migrations/migrate.lock
 modules/contracts/typechain
@@ -73,3 +75,8 @@ cypress/videos
 **/.env
 **/react-app-env.d.ts
 .secret
+**/generated
+
+# Tests
+modules/**/.nyc_output
+modules/**/coverage

@@ -2,13 +2,16 @@ import {
   IChannelSigner,
   ChannelUpdate,
   IMessagingService,
-  InboundChannelUpdateError,
-  LockError,
+  NodeError,
   LockInformation,
-  OutboundChannelUpdateError,
   Result,
   EngineParams,
+  FullChannelState,
+  FullTransferState,
+  EngineError,
+  VectorError,
   MessagingError,
+  ProtocolError,
 } from "@connext/vector-types";
 import axios, { AxiosResponse } from "axios";
 import pino, { BaseLogger } from "pino";
@@ -149,12 +152,7 @@ export class NatsMessagingService implements IMessagingService {
     previousUpdate?: ChannelUpdate<any>,
     timeout = 30_000,
     numRetries = 0,
-  ): Promise<
-    Result<
-      { update: ChannelUpdate<any>; previousUpdate: ChannelUpdate<any> },
-      OutboundChannelUpdateError | InboundChannelUpdateError
-    >
-  > {
+  ): Promise<Result<{ update: ChannelUpdate<any>; previousUpdate: ChannelUpdate<any> }, ProtocolError>> {
     return this.sendMessage(
       Result.ok({ update: channelUpdate, previousUpdate }),
       "protocol",
@@ -169,7 +167,7 @@ export class NatsMessagingService implements IMessagingService {
   async onReceiveProtocolMessage(
     myPublicIdentifier: string,
     callback: (
-      result: Result<{ update: ChannelUpdate<any>; previousUpdate: ChannelUpdate<any> }, InboundChannelUpdateError>,
+      result: Result<{ update: ChannelUpdate<any>; previousUpdate: ChannelUpdate<any> }, ProtocolError>,
       from: string,
       inbox: string,
     ) => void,
@@ -189,8 +187,38 @@ export class NatsMessagingService implements IMessagingService {
     );
   }
 
-  async respondWithProtocolError(inbox: string, error: InboundChannelUpdateError): Promise<void> {
+  async respondWithProtocolError(inbox: string, error: ProtocolError): Promise<void> {
     return this.respondToMessage(inbox, Result.fail(error), "respondWithProtocolError");
+  }
+  ////////////
+
+  // RESTORE METHODS
+  async sendRestoreStateMessage(
+    restoreData: Result<{ chainId: number } | { channelAddress: string }, EngineError>,
+    to: string,
+    from: string,
+    timeout?: number,
+    numRetries?: number,
+  ): Promise<Result<{ channel: FullChannelState; activeTransfers: FullTransferState[] } | void, EngineError>> {
+    return this.sendMessage(restoreData, "restore", to, from, timeout, numRetries, "sendRestoreStateMessage");
+  }
+
+  async onReceiveRestoreStateMessage(
+    publicIdentifier: string,
+    callback: (
+      restoreData: Result<{ chainId: number } | { channelAddress: string }, EngineError>,
+      from: string,
+      inbox: string,
+    ) => void,
+  ): Promise<void> {
+    await this.registerCallback(`${publicIdentifier}.*.restore`, callback, "onReceiveRestoreStateMessage");
+  }
+
+  async respondToRestoreStateMessage(
+    inbox: string,
+    restoreData: Result<{ channel: FullChannelState; activeTransfers: FullTransferState[] } | void, EngineError>,
+  ): Promise<void> {
+    return this.respondToMessage(inbox, restoreData, "respondToRestoreStateMessage");
   }
   ////////////
 
@@ -224,12 +252,12 @@ export class NatsMessagingService implements IMessagingService {
 
   // REQUEST COLLATERAL METHODS
   async sendRequestCollateralMessage(
-    requestCollateralParams: Result<EngineParams.RequestCollateral, Error>,
+    requestCollateralParams: Result<EngineParams.RequestCollateral, VectorError>,
     to: string,
     from: string,
     timeout = 30_000,
     numRetries = 0,
-  ): Promise<Result<undefined, Error>> {
+  ): Promise<Result<undefined, VectorError>> {
     return this.sendMessage(
       requestCollateralParams,
       "request-collateral",
@@ -243,7 +271,7 @@ export class NatsMessagingService implements IMessagingService {
 
   async onReceiveRequestCollateralMessage(
     publicIdentifier: string,
-    callback: (params: Result<EngineParams.RequestCollateral, Error>, from: string, inbox: string) => void,
+    callback: (params: Result<EngineParams.RequestCollateral, VectorError>, from: string, inbox: string) => void,
   ): Promise<void> {
     return this.registerCallback(
       `${publicIdentifier}.*.request-collateral`,
@@ -252,44 +280,61 @@ export class NatsMessagingService implements IMessagingService {
     );
   }
 
-  async respondToRequestCollateralMessage(inbox: string, params: Result<{ message?: string }, Error>): Promise<void> {
+  async respondToRequestCollateralMessage(
+    inbox: string,
+    params: Result<{ message?: string }, VectorError>,
+  ): Promise<void> {
     return this.respondToMessage(inbox, params, "respondToRequestCollateralMessage");
   }
   ////////////
 
   // LOCK METHODS
   async sendLockMessage(
-    lockInfo: Result<LockInformation, LockError>,
+    lockInfo: Result<LockInformation, NodeError>,
     to: string,
     from: string,
     timeout = 30_000, // TODO this timeout is copied from memolock
     numRetries = 0,
-  ): Promise<Result<LockInformation, LockError>> {
+  ): Promise<Result<LockInformation, NodeError>> {
     return this.sendMessage(lockInfo, "lock", to, from, timeout, numRetries, "sendLockMessage");
   }
 
   async onReceiveLockMessage(
     publicIdentifier: string,
-    callback: (lockInfo: Result<LockInformation, LockError>, from: string, inbox: string) => void,
+    callback: (lockInfo: Result<LockInformation, NodeError>, from: string, inbox: string) => void,
   ): Promise<void> {
     return this.registerCallback(`${publicIdentifier}.*.lock`, callback, "onReceiveLockMessage");
   }
 
-  async respondToLockMessage(inbox: string, lockInformation: Result<LockInformation, LockError>): Promise<void> {
+  async respondToLockMessage(inbox: string, lockInformation: Result<LockInformation, NodeError>): Promise<void> {
     return this.respondToMessage(inbox, lockInformation, "respondToLockMessage");
   }
   ////////////
 
-  // CHECKIN METHODS
-  onReceiveCheckIn(
-    myPublicIdentifier: string,
-    callback: (nonce: string, from: string, inbox: string) => void,
-  ): Promise<void> {
-    throw new Error("Method not implemented.");
+  // ISALIVE METHODS
+  sendIsAliveMessage(
+    isAlive: Result<{ channelAddress: string; skipCheckIn?: boolean }, VectorError>,
+    to: string,
+    from: string,
+    timeout?: number,
+    numRetries?: number,
+  ): Promise<Result<{ channelAddress: string }, VectorError>> {
+    return this.sendMessage(isAlive, "isalive", to, from, timeout, numRetries, "sendIsAliveMessage");
   }
 
-  sendCheckInMessage(): Promise<Result<undefined, OutboundChannelUpdateError>> {
-    throw new Error("Method not implemented.");
+  onReceiveIsAliveMessage(
+    publicIdentifier: string,
+    callback: (
+      isAlive: Result<{ channelAddress: string; skipCheckIn?: boolean }, VectorError>,
+      from: string,
+      inbox: string,
+    ) => void,
+  ): Promise<void> {
+    return this.registerCallback(`${publicIdentifier}.*.isalive`, callback, "onReceiveIsAliveMessage");
+  }
+
+  respondToIsAliveMessage(inbox: string, params: Result<{ channelAddress: string }, VectorError>): Promise<void> {
+    return this.respondToMessage(inbox, params, "respondToIsAliveMessage");
   }
   ////////////
 
@@ -348,7 +393,7 @@ export class NatsMessagingService implements IMessagingService {
     subscribedTo.forEach((subscribedSubject) => {
       let subjectIncludesAllSubstrings = true;
       substrsToMatch.forEach((match) => {
-        if (!subscribedSubject.includes(match) && match !== ``) {
+        if (!(subscribedSubject ?? "").includes(match) && match !== ``) {
           subjectIncludesAllSubstrings = false;
         }
       });
@@ -401,8 +446,8 @@ export class NatsMessagingService implements IMessagingService {
     method: string,
   ): Promise<Result<R, any>> {
     this.assertConnected();
+    const subject = `${to}.${from}.${subjectSuffix}`;
     try {
-      const subject = `${to}.${from}.${subjectSuffix}`;
       const msgBody = safeJsonStringify(data.toJson());
       this.log.debug({ method, msgBody }, "Sending message");
       const msg = await this.connection!.request(subject, timeout, msgBody);
@@ -410,7 +455,24 @@ export class NatsMessagingService implements IMessagingService {
       const { result } = this.parseIncomingMessage<R>(msg);
       return result;
     } catch (e) {
-      return Result.fail(new MessagingError(MessagingError.reasons.Unknown, { error: e.message }));
+      this.log.error(
+        { error: e.message ?? e, subject: subjectSuffix, data: data.toJson(), method },
+        "Sending message failed",
+      );
+      const error = e.message ?? e ?? "";
+      return Result.fail(
+        new MessagingError(
+          error.includes("Request timed out") || error.includes("timeout")
+            ? MessagingError.reasons.Timeout
+            : MessagingError.reasons.Unknown,
+          {
+            messagingError: e.message ?? e,
+            subject,
+            data: data.toJson(),
+            method,
+          },
+        ),
+      );
     }
   }
 

@@ -18,10 +18,12 @@ import {
   UpdateParams,
   UpdateParamsMap,
   UpdateType,
+  ChainError,
 } from "@connext/vector-types";
 import { BigNumber } from "@ethersproject/bignumber";
-import { hashChannelCommitment, recoverAddressFromChannelMessage } from "@connext/vector-utils";
+import { hashChannelCommitment, validateChannelUpdateSignatures } from "@connext/vector-utils";
 import Ajv from "ajv";
+import { BaseLogger, Level } from "pino";
 
 const ajv = new Ajv();
 
@@ -34,6 +36,25 @@ export const validateSchema = (obj: any, schema: any): undefined | string => {
   }
   return undefined;
 };
+
+// NOTE: If you do *NOT* use this function within the protocol, it becomes
+// very difficult to write proper unit tests. When the same utility is imported
+// as:
+// `import { validateChannelUpdateSignatures } from "@connext/vector-utils"`
+// it does not properly register as a mock.
+// Is this a silly function? yes. Are tests silly? no.
+// Another note: if you move this into the `validate` file, you will have
+// problems properly mocking the fn in the validation unit tests. This likely
+// has to do with destructuring, but it is unclear.
+export async function validateChannelSignatures(
+  state: FullChannelState,
+  aliceSignature: string | undefined,
+  bobSignature: string | undefined,
+  requiredSigners: "alice" | "bob" | "both",
+  logger?: BaseLogger,
+): Promise<Result<void, Error>> {
+  return validateChannelUpdateSignatures(state, aliceSignature, bobSignature, requiredSigners, logger);
+}
 
 export const extractContextFromStore = async (
   storeService: IVectorStore,
@@ -69,7 +90,9 @@ export const extractContextFromStore = async (
 
 // Channels store `ChannelUpdate<T>` types as the `latestUpdate` field, which
 // must be converted to the `UpdateParams<T> when syncing
-export function getParamsFromUpdate<T extends UpdateType = any>(update: ChannelUpdate<T>): UpdateParams<T> {
+export function getParamsFromUpdate<T extends UpdateType = any>(
+  update: ChannelUpdate<T>,
+): Result<UpdateParams<T>, Error> {
   const { channelAddress, type, details, toIdentifier, assetId } = update;
   let paramDetails: SetupParams | DepositParams | CreateTransferParams | ResolveTransferParams;
   switch (type) {
@@ -128,14 +151,14 @@ export function getParamsFromUpdate<T extends UpdateType = any>(update: ChannelU
       break;
     }
     default: {
-      throw new Error(`Invalid update type ${type}`);
+      return Result.fail(new Error(`Invalid update type ${type}`));
     }
   }
-  return {
+  return Result.ok({
     channelAddress,
     type,
     details: paramDetails as UpdateParamsMap[T],
-  };
+  });
 }
 
 // This function signs the state after the update is applied,
@@ -145,10 +168,19 @@ export async function generateSignedChannelCommitment(
   signer: IChannelSigner,
   aliceSignature?: string,
   bobSignature?: string,
+  logger?: BaseLogger,
 ): Promise<Result<{ core: CoreChannelState; aliceSignature?: string; bobSignature?: string }, Error>> {
+  const log = (msg: string, details: any = {}, level: Level = "info") => {
+    if (!logger) {
+      return;
+    }
+    logger[level](details, msg);
+  };
   const { networkContext, ...core } = newState;
+  const hash = hashChannelCommitment(core);
 
   if (aliceSignature && bobSignature) {
+    log("Double signed, doing nothing", { aliceSignature, bobSignature, hash });
     // No need to sign, we have already signed
     return Result.ok({
       core,
@@ -159,7 +191,8 @@ export async function generateSignedChannelCommitment(
 
   // Only counterparty has signed
   try {
-    const sig = await signer.signMessage(hashChannelCommitment(core));
+    log("Signing hash", { hash, signer: signer.address, state: newState }, "debug");
+    const sig = await signer.signMessage(hash);
     const isAlice = signer.address === newState.alice;
     return Result.ok({
       core,
@@ -171,73 +204,6 @@ export async function generateSignedChannelCommitment(
   }
 }
 
-export async function validateChannelUpdateSignatures(
-  state: FullChannelState,
-  aliceSignature?: string,
-  bobSignature?: string,
-  requiredSigners: "alice" | "bob" | "both" = "both",
-): Promise<Result<void | Error>> {
-  // Generate the commitment
-  const { networkContext, ...core } = state;
-  let hash;
-  try {
-    hash = hashChannelCommitment(core);
-  } catch (e) {
-    return Result.fail(new Error("Failed to generate channel commitment hash"));
-  }
-
-  // Create a recovery helper to catch errors
-  const tryRecovery = async (sig?: string): Promise<string> => {
-    if (!sig) {
-      return "No signature provided";
-    }
-    let recovered: string;
-    try {
-      recovered = await recoverAddressFromChannelMessage(hash, sig);
-    } catch (e) {
-      recovered = e.message;
-    }
-    return recovered;
-  };
-
-  const [rAlice, rBob] = await Promise.all([tryRecovery(aliceSignature), tryRecovery(bobSignature)]);
-
-  const aliceSigned = rAlice === state.alice;
-  const bobSigned = rBob === state.bob;
-
-  const bobNeeded = requiredSigners === "bob" || requiredSigners === "both";
-  const aliceNeeded = requiredSigners === "alice" || requiredSigners === "both";
-
-  // Check if signers are required and valid
-  if (aliceNeeded && bobNeeded && aliceSigned && bobSigned) {
-    return Result.ok(undefined);
-  }
-
-  // Only one signer is required, but if there are two signatures both
-  // should be valid
-  if (aliceNeeded && aliceSigned && !bobSignature && !bobNeeded) {
-    return Result.ok(undefined);
-  }
-
-  if (bobNeeded && bobSigned && !aliceSignature && !aliceNeeded) {
-    return Result.ok(undefined);
-  }
-
-  // Only one is required, but both are provided (and should be valid)
-  if (aliceSignature && aliceSigned && bobSignature && bobSigned) {
-    return Result.ok(undefined);
-  }
-
-  // Construct an explicit error message
-  const prefix = `Expected ${requiredSigners === "both" ? "alice + bob" : requiredSigners} ${
-    aliceNeeded ? state.alice : ""
-  }${bobNeeded ? " + " + state.bob : ""}. Got: `;
-
-  const details = `${aliceNeeded ? "(alice) " + rAlice : ""}${bobNeeded ? "+ (bob) " + rBob : ""}`;
-
-  return Result.fail(new Error(prefix + details));
-}
-
 export const reconcileDeposit = async (
   channelAddress: string,
   chainId: number,
@@ -246,7 +212,7 @@ export const reconcileDeposit = async (
   processedDepositB: string,
   assetId: string,
   chainReader: IVectorChainReader,
-): Promise<Result<{ balance: Balance; totalDepositsAlice: string; totalDepositsBob: string }, Error>> => {
+): Promise<Result<{ balance: Balance; totalDepositsAlice: string; totalDepositsBob: string }, ChainError>> => {
   // First get totalDepositsAlice and totalDepositsBob
   const totalDepositedARes = await chainReader.getTotalDepositedA(channelAddress, chainId, assetId);
   if (totalDepositedARes.isError) {

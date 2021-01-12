@@ -35,6 +35,12 @@ contract Withdraw is TransferDefinition {
     string public constant override ResolverEncoding =
         "tuple(bytes responderSignature)";
 
+    function EncodedCancel() external pure override returns(bytes memory) {
+      TransferResolver memory resolver;
+      resolver.responderSignature = new bytes(65);
+      return abi.encode(resolver);
+    }
+
     function create(bytes calldata encodedBalance, bytes calldata encodedState)
         external
         pure
@@ -90,7 +96,7 @@ contract Withdraw is TransferDefinition {
                     resolver.responderSignature,
                     state.responder
                 ),
-                "Withdraw.resolve: INVALID_RESPONDER_SIG"
+                "Withdraw: INVALID_RESPONDER_SIG"
             );
             // Reduce withdraw amount by optional fee
             // It's up to the offchain validators to ensure that the withdraw commitment takes this fee into account

@@ -1,6 +1,6 @@
 {
   "name": "@connext/vector-engine",
-  "version": "0.0.38",
+  "version": "0.1.0",
   "description": "",
   "author": "Arjun Bhuptani",
   "license": "MIT",
@@ -11,19 +11,19 @@
   },
   "scripts": {
     "build": "rm -rf dist && tsc",
-    "test": "ts-mocha --check-leaks --exit --timeout 60000 'src/**/*.spec.ts'"
+    "test": "nyc ts-mocha --check-leaks --exit --timeout 60000 'src/**/*.spec.ts'"
   },
   "dependencies": {
-    "@connext/vector-contracts": "0.0.38",
-    "@connext/vector-protocol": "0.0.38",
-    "@connext/vector-types": "0.0.38",
-    "@connext/vector-utils": "0.0.38",
-    "@ethersproject/bignumber": "5.0.10",
-    "@ethersproject/bytes": "5.0.6",
-    "@ethersproject/constants": "5.0.6",
-    "@ethersproject/random": "5.0.5",
-    "@ethersproject/wallet": "5.0.8",
-    "@sinclair/typebox": "0.11.0",
+    "@connext/vector-contracts": "0.1.0",
+    "@connext/vector-protocol": "0.1.0",
+    "@connext/vector-types": "0.1.0",
+    "@connext/vector-utils": "0.1.0",
+    "@ethersproject/bignumber": "5.0.12",
+    "@ethersproject/bytes": "5.0.8",
+    "@ethersproject/constants": "5.0.7",
+    "@ethersproject/random": "5.0.6",
+    "@ethersproject/wallet": "5.0.9",
+    "@sinclair/typebox": "0.12.7",
     "ajv": "6.12.6",
     "evt": "1.9.2",
     "pino": "6.7.0",
@@ -38,6 +38,7 @@
     "chai": "4.2.0",
     "chai-as-promised": "7.1.1",
     "mocha": "8.2.0",
+    "nyc": "15.1.0",
     "ts-mocha": "8.0.0",
     "typescript": "4.0.5"
   }

@@ -2,8 +2,10 @@
 import { AddressZero } from "@ethersproject/constants";
 import { Contract } from "@ethersproject/contracts";
 import { expect } from "chai";
+import { deployments, ethers } from "hardhat";
 
-import { getTestChannel, alice, bob, getUnsetupChannel } from "..";
+import { alice, bob } from "../../constants";
+import { createChannel } from "../../utils";
 
 // NOTE: This will use a channel deployed by the `TestChannelFactory` that
 // has not been setup on deploy. Otherwise, the
@@ -12,9 +14,20 @@ describe("CMCCore.sol", function() {
   this.timeout(120_000);
   let channel: Contract;
 
+  beforeEach(async () => {
+    await deployments.fixture(); // Start w fresh deployments
+  });
+
   describe("setup", async () => {
     beforeEach(async () => {
-      channel = await getUnsetupChannel();
+      const testFactory = await (ethers as any).getContract("TestChannelFactory", alice);
+      const channelAddress = await testFactory.getChannelAddress(alice.address, bob.address);
+      await (await testFactory.createChannelWithoutSetup(alice.address, bob.address)).wait();
+      channel = new Contract(
+        channelAddress,
+        (await deployments.getArtifact("TestChannel")).abi,
+        alice,
+      );
     });
 
     it("should work", async () => {
@@ -54,7 +67,7 @@ describe("CMCCore.sol", function() {
 
   describe("getters", async () => {
     beforeEach(async () => {
-      channel = await getTestChannel();
+      channel = await createChannel();
     });
 
     it("should work", async () => {

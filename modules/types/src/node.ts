@@ -81,6 +81,10 @@ export interface INodeService {
     params: OptionalPublicIdentifier<NodeParams.SignUtilityMessage>,
   ): Promise<Result<NodeResponses.SignUtilityMessage, NodeError>>;
 
+  sendIsAliveMessage(
+    params: OptionalPublicIdentifier<NodeParams.SendIsAlive>,
+  ): Promise<Result<NodeResponses.SendIsAlive, NodeError>>;
+
   // Dispute methods
   sendDisputeChannelTx(
     params: OptionalPublicIdentifier<NodeParams.SendDisputeChannelTx>,
@@ -99,6 +103,10 @@ export interface INodeService {
   ): Promise<Result<NodeResponses.SendDefundTransferTx, NodeError>>;
 
   withdraw(params: OptionalPublicIdentifier<NodeParams.Withdraw>): Promise<Result<NodeResponses.Withdraw, NodeError>>;
+
+  restoreState(
+    params: OptionalPublicIdentifier<NodeParams.RestoreState>,
+  ): Promise<Result<NodeResponses.RestoreState, NodeError>>;
 
   once<T extends EngineEvent>(
     event: T,

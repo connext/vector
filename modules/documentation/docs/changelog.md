@@ -2,6 +2,97 @@
 
 ## Next Release
 
+## 0.1.0
+
+- \[all\] Mainnet release :tada:
+- \[all\] Improve handling of non-vector errors
+
+## 0.1.0-rc.25
+
+- \[all\] Improve error handling
+
+## 0.1.0-rc.24
+
+- \[utils\] Update `eccrypto-js` to fix sig recovery bug
+
+## 0.1.0-rc.23
+
+- \[types\] Restore signature length to 130
+- \[protocol\] Add signature logging
+
+## 0.1.0-rc.22
+
+- \[types\] Update signature regex
+
+## 0.1.0-rc.21
+
+- \[browser-node\] Require `chainProviders` to be passed into iframe
+
+## 0.1.0-rc.20
+
+- \[engine\] Retry on deposit race condition for inbound errors
+
+## 0.1.0-rc.19
+
+- \[router\] Remove obtrusive metrics
+- \[messaging\] Properly catch messaging timeouts
+- \[ops\] Fix router logdna
+
+## 0.1.0-rc.18
+
+- \[all\] Fix bad publishing
+
+## 0.1.0-rc.17
+
+- \[router\] Allow payments that exceed `reclaimThreshold` to be collateralized just in time
+- \[router\] Allow `profile.target` to be 0 (always use just in time collateralization)
+- \[messaging\] Improve error context
+
+## 0.1.0-rc.16
+
+- \[engine\] Retry on deposit race condition
+- \[router\] Cleanup collateral transaction logic + more tests
+- \[browser-node\] make crosschain transfers idempotent
+
+## 0.1.0-rc.9
+
+- \[router/server-node\] optionally skip checkin on start
+
+## 0.1.0-rc.8
+
+- \[messaging\] add `undefined` check on error handling
+
+## 0.1.0-rc.7
+
+- \[types\] relax `transferResolver` schema to allow for ethers decoded values
+
+## 0.1.0-rc.6
+
+- \[router\] fix prisma webpack
+
+## 0.1.0-rc.4
+
+- \[router\] add logdna service
+
+## 0.1.0-rc.3
+
+- \[contracts\] add deployment info for mainnet and matic mainnet
+
+## 0.1.0-rc.1
+
+- \[router\] add isAlive check before forwarding transfer to increase odds of successful transfer
+
+## 0.1.0-rc.0
+
+- \[contracts\] audit results implemented
+- \[router\] store and process queued updates
+- \[engine\] restore state from counterparty
+- \[engine\] handle `isAlive` messages
+- \[router\] fix rebalance profile getter to respect assetIds
+- \[router\] cancel transfers if they are unsuccessful
+- \[contracts\] added required `EncodedCancel` getter to transfer registry interface
+- \[engine\] add rpc schema + param conversion tests
+
 ## 0.0.38
 
 - propagate meta through updates

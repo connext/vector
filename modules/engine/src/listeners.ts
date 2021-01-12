@@ -1,4 +1,5 @@
 import { WithdrawCommitment } from "@connext/vector-contracts";
+import { Values } from "@connext/vector-types";
 import {
   ChainAddresses,
   ChannelUpdateEvent,
@@ -27,12 +28,17 @@ import {
   ChannelRpcMethods,
   EngineParams,
   ChannelRpcMethodsResponsesMap,
-  OutboundChannelUpdateError,
   Result,
   ChainError,
+  EngineError,
+  CheckInResponse,
+  VectorError,
+  IS_ALIVE_EVENT,
 } from "@connext/vector-types";
 import { BigNumber } from "@ethersproject/bignumber";
 import Pino from "pino";
+
+import { CheckInError, IsAliveError, RestoreError } from "./errors";
 
 import { EngineEvtContainer } from "./index";
 
@@ -47,9 +53,9 @@ export async function setupEngineListeners(
   logger: Pino.BaseLogger,
   setup: (
     params: EngineParams.Setup,
-  ) => Promise<
-    Result<ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_setup], OutboundChannelUpdateError | Error>
-  >,
+  ) => Promise<Result<ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_setup], EngineError>>,
+  acquireRestoreLocks: (channel: FullChannelState) => Promise<Result<void, EngineError>>,
+  releaseRestoreLocks: (channel: FullChannelState) => Promise<Result<void, EngineError>>,
 ): Promise<void> {
   // Set up listener for channel setup
   vector.on(
@@ -142,12 +148,200 @@ export async function setupEngineListeners(
   // who will submit the transaction? should both engines watch the multisig
   // indefinitely?
 
+  await messaging.onReceiveRestoreStateMessage(
+    signer.publicIdentifier,
+    async (
+      restoreData: Result<{ chainId: number } | { channelAddress: string }, EngineError>,
+      from: string,
+      inbox: string,
+    ) => {
+      // If it is from yourself, do nothing
+      if (from === signer.publicIdentifier) {
+        return;
+      }
+      const method = "onReceiveRestoreStateMessage";
+      logger.debug({ method }, "Handling message");
+
+      // releases the lock, and acks to senders confirmation message
+      const releaseLockAndAck = async (channelAddress: string, postToEvt = false) => {
+        const channel = await store.getChannelState(channelAddress);
+        if (!channel) {
+          logger.error({ channelAddress }, "Failed to find channel to release lock");
+          return;
+        }
+        await releaseRestoreLocks(channel);
+        await messaging.respondToRestoreStateMessage(inbox, Result.ok(undefined));
+        if (postToEvt) {
+          // Post to evt
+          evts[EngineEvents.RESTORE_STATE_EVENT].post({
+            channelAddress: channel.channelAddress,
+            aliceIdentifier: channel.aliceIdentifier,
+            bobIdentifier: channel.bobIdentifier,
+            chainId: channel.networkContext.chainId,
+          });
+        }
+        return;
+      };
+
+      // Received error from counterparty
+      if (restoreData.isError) {
+        // releasing the lock should be done regardless of error
+        logger.error({ message: restoreData.getError()!.message, method }, "Error received from counterparty restore");
+        await releaseLockAndAck(restoreData.getError()!.context.channelAddress);
+        return;
+      }
+
+      const data = restoreData.getValue();
+      const [key] = Object.keys(data ?? []);
+      if (key !== "chainId" && key !== "channelAddress") {
+        logger.error({ data }, "Message malformed");
+        return;
+      }
+
+      if (key === "channelAddress") {
+        const { channelAddress } = data as { channelAddress: string };
+        await releaseLockAndAck(channelAddress, true);
+        return;
+      }
+
+      // Otherwise, they are looking to initiate a sync
+      let channel: FullChannelState | undefined;
+      const sendCannotRestoreFromError = (error: Values<typeof RestoreError.reasons>, context: any = {}) => {
+        return messaging.respondToRestoreStateMessage(
+          inbox,
+          Result.fail(
+            new RestoreError(error, channel?.channelAddress ?? "", signer.publicIdentifier, { ...context, method }),
+          ),
+        );
+      };
+
+      // Get info from store to send to counterparty
+      const { chainId } = data as any;
+      try {
+        channel = await store.getChannelStateByParticipants(signer.publicIdentifier, from, chainId);
+      } catch (e) {
+        return sendCannotRestoreFromError(RestoreError.reasons.CouldNotGetChannel, {
+          storeMethod: "getChannelStateByParticipants",
+          chainId,
+          identifiers: [signer.publicIdentifier, from],
+        });
+      }
+      if (!channel) {
+        return sendCannotRestoreFromError(RestoreError.reasons.ChannelNotFound, { chainId });
+      }
+      let activeTransfers: FullTransferState[];
+      try {
+        activeTransfers = await store.getActiveTransfers(channel.channelAddress);
+      } catch (e) {
+        return sendCannotRestoreFromError(RestoreError.reasons.CouldNotGetActiveTransfers, {
+          storeMethod: "getActiveTransfers",
+          chainId,
+          channelAddress: channel.channelAddress,
+        });
+      }
+
+      // Acquire lock
+      const res = await acquireRestoreLocks(channel);
+      if (res.isError) {
+        return sendCannotRestoreFromError(RestoreError.reasons.AcquireLockError, {
+          acquireLockError: VectorError.jsonify(res.getError()!),
+        });
+      }
+
+      // Send info to counterparty
+      logger.debug(
+        {
+          channel: channel.channelAddress,
+          nonce: channel.nonce,
+          activeTransfers: activeTransfers.map((a) => a.transferId),
+        },
+        "Sending counterparty state to sync",
+      );
+      await messaging.respondToRestoreStateMessage(inbox, Result.ok({ channel, activeTransfers }));
+
+      // Release lock on timeout regardless
+      setTimeout(() => {
+        releaseRestoreLocks(channel!);
+      }, 15_000);
+    },
+  );
+
+  await messaging.onReceiveIsAliveMessage(
+    signer.publicIdentifier,
+    async (params: Result<{ channelAddress: string }, VectorError>, from: string, inbox: string) => {
+      if (from === signer.publicIdentifier) {
+        return;
+      }
+      const method = "onReceiveIsAliveMessage";
+      if (params.isError) {
+        logger.warn({ error: params.getError()?.message, method }, "Error received");
+        return;
+      }
+
+      const { channelAddress } = params.getValue();
+
+      const channel = await store.getChannelState(params.getValue().channelAddress);
+
+      if (!channel) {
+        logger.error({ channelAddress, method }, "Channel not found");
+        return messaging.respondToIsAliveMessage(
+          inbox,
+          Result.fail(new IsAliveError(IsAliveError.reasons.ChannelNotFound, channelAddress, signer.publicIdentifier)),
+        );
+      }
+
+      // // Post to evt (i.e. so router can track responses)
+      // evts[IS_ALIVE_EVENT].post({
+      //   channelAddress,
+      // });
+
+      // Just return an ack
+      return messaging.respondToIsAliveMessage(inbox, params);
+    },
+  );
+
+  await messaging.onReceiveIsAliveMessage(signer.publicIdentifier, async (params, from, inbox) => {
+    if (from === signer.publicIdentifier) {
+      return;
+    }
+    const method = "onReceiveIsAliveMessage";
+    if (params.isError) {
+      logger.error({ error: params.getError()?.message, method }, "Error received");
+      return;
+    }
+    logger.info({ params: params.getValue(), method, from }, "Handling message");
+    const channel = await store.getChannelState(params.getValue().channelAddress);
+    let response: Result<CheckInResponse, CheckInError>;
+    if (!channel) {
+      logger.error({ params: params.getValue(), method }, "Could not find channel for received isAlive message");
+      response = Result.fail(
+        new CheckInError(
+          CheckInError.reasons.ChannelNotFound,
+          params.getValue().channelAddress,
+          signer.publicIdentifier,
+        ),
+      );
+    } else {
+      response = Result.ok({
+        aliceIdentifier: channel.aliceIdentifier,
+        bobIdentifier: channel.bobIdentifier,
+        chainId: channel.networkContext.chainId,
+        channelAddress: channel.channelAddress,
+        skipCheckIn: params.getValue().skipCheckIn,
+      });
+      evts[IS_ALIVE_EVENT].post(response.getValue());
+    }
+
+    await messaging.respondToIsAliveMessage(inbox, response);
+  });
+
   await messaging.onReceiveRequestCollateralMessage(signer.publicIdentifier, async (params, from, inbox) => {
     const method = "onReceiveRequestCollateralMessage";
     if (params.isError) {
       logger.error({ error: params.getError()?.message, method }, "Error received");
+      return;
     }
-    logger.info({ params: params.getValue(), method }, "Handling message");
+    logger.info({ params: params.getValue(), method, from }, "Handling message");
 
     evts[REQUEST_COLLATERAL_EVENT].post({
       ...params.getValue(),
@@ -165,6 +359,7 @@ export async function setupEngineListeners(
     const method = "onReceiveSetupMessage";
     if (params.isError) {
       logger.error({ error: params.getError()?.message, method }, "Error received");
+      return;
     }
     const setupInfo = params.getValue();
     logger.info({ params: setupInfo, method }, "Handling message");
@@ -198,7 +393,7 @@ function handleSetup(
     latestUpdate: {
       details: { meta },
     },
-  } = event.updatedChannelState as FullChannelState<typeof UpdateType.setup>;
+  } = event.updatedChannelState as FullChannelState;
   const payload: SetupPayload = {
     channelAddress,
     aliceIdentifier,
@@ -228,7 +423,7 @@ function handleDepositReconciliation(
       assetId,
       details: { meta },
     },
-  } = event.updatedChannelState as FullChannelState<typeof UpdateType.deposit>;
+  } = event.updatedChannelState as FullChannelState;
   const payload: DepositReconciledPayload = {
     aliceIdentifier,
     bobIdentifier,
@@ -274,7 +469,7 @@ async function handleConditionalTransferCreation(
         meta: { routingId },
       },
     },
-  } = event.updatedChannelState as FullChannelState<typeof UpdateType.create>;
+  } = event.updatedChannelState as FullChannelState;
   logger.info({ channelAddress }, "Handling conditional transfer create event");
   // Emit the properly structured event
   const transfer = event.updatedTransfer;
@@ -351,7 +546,7 @@ async function handleConditionalTransferResolution(
       assetId,
       details: { transferDefinition },
     },
-  } = event.updatedChannelState as FullChannelState<typeof UpdateType.resolve>;
+  } = event.updatedChannelState as FullChannelState;
   // Emit the properly structured event
   const registryInfo = await chainService.getRegisteredTransferByDefinition(
     transferDefinition,
@@ -415,7 +610,7 @@ async function handleWithdrawalTransferCreation(
       assetId,
       fromIdentifier,
     },
-  } = event.updatedChannelState as FullChannelState<typeof UpdateType.create>;
+  } = event.updatedChannelState as FullChannelState;
   logger.info({ channelAddress, transferId, assetId, method }, "Started");
 
   // Get the recipient + amount from the transfer state
@@ -573,7 +768,7 @@ async function handleWithdrawalTransferResolution(
       assetId,
       fromIdentifier,
     },
-  } = event.updatedChannelState as FullChannelState<typeof UpdateType.resolve>;
+  } = event.updatedChannelState as FullChannelState;
   logger.info({ method, channelAddress, transferId }, "Started");
 
   // Get the withdrawal amount

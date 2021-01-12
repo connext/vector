@@ -10,20 +10,21 @@ import {
   IVectorChainReader,
   IVectorProtocol,
   IVectorStore,
-  OutboundChannelUpdateError,
   ProtocolEventName,
   ProtocolEventPayloadsMap,
   ProtocolParams,
   Result,
   UpdateParams,
   UpdateType,
-  InboundChannelUpdateError,
   TChannelUpdate,
+  ProtocolError,
+  VectorError,
 } from "@connext/vector-types";
 import { getCreate2MultisigAddress } from "@connext/vector-utils";
 import { Evt } from "evt";
 import pino from "pino";
 
+import { OutboundChannelUpdateError } from "./errors";
 import * as sync from "./sync";
 import { validateSchema } from "./utils";
 
@@ -43,6 +44,7 @@ export class Vector implements IVectorProtocol {
     private readonly chainReader: IVectorChainReader,
     private readonly externalValidationService: IExternalValidation,
     private readonly logger: pino.BaseLogger,
+    private readonly skipCheckIn: boolean,
   ) {}
 
   static async connect(
@@ -52,6 +54,7 @@ export class Vector implements IVectorProtocol {
     signer: IChannelSigner,
     chainReader: IVectorChainReader,
     logger: pino.BaseLogger,
+    skipCheckIn: boolean,
     validationService?: IExternalValidation,
   ): Promise<Vector> {
     // Set the external validation service. If none is provided,
@@ -76,6 +79,7 @@ export class Vector implements IVectorProtocol {
       chainReader,
       externalValidation,
       logger,
+      skipCheckIn,
     ).setupServices();
 
     logger.info("Vector Protocol connected 🚀!");
@@ -108,8 +112,7 @@ export class Vector implements IVectorProtocol {
       this.logger.error({
         method: "lockedOperation",
         variable: "outboundRes",
-        error: outboundRes.getError()?.message,
-        context: outboundRes.getError()?.context,
+        error: VectorError.jsonify(outboundRes.getError()!),
       });
       return outboundRes as Result<any, OutboundChannelUpdateError>;
     }
@@ -136,11 +139,12 @@ export class Vector implements IVectorProtocol {
     });
     let aliceIdentifier: string;
     let bobIdentifier: string;
+    let channel: FullChannelState | undefined;
     if (params.type === UpdateType.setup) {
       aliceIdentifier = this.publicIdentifier;
       bobIdentifier = (params as UpdateParams<"setup">).details.counterpartyIdentifier;
     } else {
-      const channel = await this.storeService.getChannelState(params.channelAddress);
+      channel = await this.storeService.getChannelState(params.channelAddress);
       if (!channel) {
         return Result.fail(new OutboundChannelUpdateError(OutboundChannelUpdateError.reasons.ChannelNotFound, params));
       }
@@ -149,9 +153,28 @@ export class Vector implements IVectorProtocol {
     }
     const isAlice = this.publicIdentifier === aliceIdentifier;
     const counterpartyIdentifier = isAlice ? bobIdentifier : aliceIdentifier;
-    const key = await this.lockService.acquireLock(params.channelAddress, isAlice, counterpartyIdentifier);
+    let key: string;
+    try {
+      key = await this.lockService.acquireLock(params.channelAddress, isAlice, counterpartyIdentifier);
+    } catch (e) {
+      return Result.fail(
+        new OutboundChannelUpdateError(OutboundChannelUpdateError.reasons.AcquireLockFailed, params, channel, {
+          lockError: e.message,
+        }),
+      );
+    }
     const outboundRes = await this.lockedOperation(params);
-    await this.lockService.releaseLock(params.channelAddress, key, isAlice, counterpartyIdentifier);
+    try {
+      await this.lockService.releaseLock(params.channelAddress, key, isAlice, counterpartyIdentifier);
+    } catch (e) {
+      return Result.fail(
+        new OutboundChannelUpdateError(OutboundChannelUpdateError.reasons.ReleaseLockFailed, params, channel, {
+          lockError: e.message,
+          outboundResult: outboundRes.toJson(),
+        }),
+      );
+    }
+
     return outboundRes;
   }
 
@@ -164,7 +187,7 @@ export class Vector implements IVectorProtocol {
     await this.messagingService.onReceiveProtocolMessage(
       this.publicIdentifier,
       async (
-        msg: Result<{ update: ChannelUpdate; previousUpdate: ChannelUpdate }, InboundChannelUpdateError>,
+        msg: Result<{ update: ChannelUpdate; previousUpdate: ChannelUpdate }, ProtocolError>,
         from: string,
         inbox: string,
       ) => {
@@ -226,7 +249,7 @@ export class Vector implements IVectorProtocol {
           this.logger,
         );
         if (inboundRes.isError) {
-          this.logger.warn({ error: inboundRes.getError()!.message }, "Failed to apply inbound update");
+          this.logger.warn({ error: VectorError.jsonify(inboundRes.getError()!) }, "Failed to apply inbound update");
           return;
         }
 
@@ -240,47 +263,48 @@ export class Vector implements IVectorProtocol {
       },
     );
 
-    // TODO: https://github.com/connext/vector/issues/54
-
-    // TODO: https://github.com/connext/vector/issues/52
-
     // sync latest state before starting
-    const channels = await this.storeService.getChannelStates();
+    // TODO: skipping this, if it works, consider just not awaiting the promise so the rest of startup can continue
+    if (!this.skipCheckIn) {
+      const channels = await this.storeService.getChannelStates();
 
-    // Handle disputes
-    // First check on current dispute status of all channels onchain
-    // Since we have no way of knowing the last time the protocol
-    // connected, we must check this on startup
-    // TODO: is there a better way to do this?
-    await Promise.all(
-      channels.map(async (channel) => {
-        const disputeRes = await this.chainReader.getChannelDispute(
-          channel.channelAddress,
-          channel.networkContext.chainId,
-        );
-        if (disputeRes.isError) {
-          this.logger.error(
-            { channelAddress: channel.channelAddress, error: disputeRes.getError()!.message },
-            "Could not get dispute",
+      // Handle disputes
+      // First check on current dispute status of all channels onchain
+      // Since we have no way of knowing the last time the protocol
+      // connected, we must check this on startup
+      // TODO: is there a better way to do this?
+      await Promise.all(
+        channels.map(async (channel) => {
+          const disputeRes = await this.chainReader.getChannelDispute(
+            channel.channelAddress,
+            channel.networkContext.chainId,
           );
-          return;
-        }
-        const dispute = disputeRes.getValue();
-        if (!dispute) {
-          return;
-        }
-        try {
-          // save dispute record
-          // TODO: implement recovery from dispute
-          await this.storeService.saveChannelDispute({ ...channel, inDispute: true }, dispute);
-        } catch (e) {
-          this.logger.error(
-            { channelAddress: channel.channelAddress, error: e.message },
-            "Failed to update dispute on startup",
-          );
-        }
-      }),
-    );
+          if (disputeRes.isError) {
+            this.logger.error(
+              { channelAddress: channel.channelAddress, error: disputeRes.getError()!.message },
+              "Could not get dispute",
+            );
+            return;
+          }
+          const dispute = disputeRes.getValue();
+          if (!dispute) {
+            return;
+          }
+          try {
+            // save dispute record
+            // TODO: implement recovery from dispute
+            await this.storeService.saveChannelDispute({ ...channel, inDispute: true }, dispute);
+          } catch (e) {
+            this.logger.error(
+              { channelAddress: channel.channelAddress, error: e.message },
+              "Failed to update dispute on startup",
+            );
+          }
+        }),
+      );
+    } else {
+      this.logger.warn("Skipping checking disputes because of skipCheckIn config");
+    }
     return this;
   }
 
@@ -288,7 +312,7 @@ export class Vector implements IVectorProtocol {
     const error = validateSchema(params, schema);
     if (error) {
       return new OutboundChannelUpdateError(OutboundChannelUpdateError.reasons.InvalidParams, params, undefined, {
-        error,
+        paramsError: error,
       });
     }
     return undefined;
@@ -306,13 +330,6 @@ export class Vector implements IVectorProtocol {
   // calling `this.executeUpdate`. This includes all parameter validation,
   // as well as contextual validation (i.e. do I have sufficient funds to
   // create this transfer, is the channel in dispute, etc.)
-
-  // TODO: https://github.com/connext/vector/issues/53
-  public async isAlive(channelAddress: string) {
-    // isAlive should ping the channel counterparty with a message that contains nonce and then wait for an ack.
-    //         it should return an error (and emit it!) if the ack is not received.
-    //         on the sync inbound side, we should properly ack this message and also emit an event when you hear it (on both sides)
-  }
 
   public async setup(params: ProtocolParams.Setup): Promise<Result<FullChannelState, OutboundChannelUpdateError>> {
     // Validate all parameters
@@ -336,7 +353,7 @@ export class Vector implements IVectorProtocol {
           { details: params, channelAddress: "", type: UpdateType.setup },
           undefined,
           {
-            error: create2Res.getError()!.message,
+            create2Error: create2Res.getError()?.message,
           },
         ),
       );

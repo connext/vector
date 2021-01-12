@@ -4,12 +4,12 @@ import { BigNumber } from "@ethersproject/bignumber";
 import { AddressZero, One } from "@ethersproject/constants";
 import { Contract } from "@ethersproject/contracts";
 import { parseEther } from "@ethersproject/units";
+import { deployments } from "hardhat";
 
-import { deployContracts } from "../../actions";
-import { alice, bob } from "../constants";
-import { getTestAddressBook, getTestChannel } from "../utils";
+import { alice, bob } from "../../constants";
+import { getContract, createChannel } from "../../utils";
 
-describe("CMCDeposit.sol", function() {
+describe("CMCDeposit.sol", function () {
   this.timeout(120_000);
   const value = One;
   let channel: Contract;
@@ -17,21 +17,19 @@ describe("CMCDeposit.sol", function() {
   let reentrantToken: Contract;
 
   beforeEach(async () => {
-    const addressBook = await getTestAddressBook();
-    channel = await getTestChannel(addressBook);
+    await deployments.fixture(); // Start w fresh deployments
+    channel = await createChannel();
+    // setup failing token
+    failingToken = await getContract("FailingToken", alice);
+    await (await failingToken.mint(alice.address, parseEther("0.001"))).wait();
+    // setup reentrant token
+    await deployments.deploy("ReentrantToken", {
+      from: alice.address,
+      args: [channel.address],
+    });
 
-    await deployContracts(alice, addressBook, [
-      ["FailingToken", []],
-      ["ReentrantToken", [channel.address]],
-    ]);
-    failingToken = addressBook.getContract("FailingToken");
-    reentrantToken = addressBook.getContract("ReentrantToken");
-    // mint failing token
-    const tx = await failingToken.mint(alice.address, parseEther("0.001"));
-    await tx.wait();
-    // mint reentrant token
-    const tx2 = await reentrantToken.mint(alice.address, parseEther("0.01"));
-    await tx2.wait();
+    reentrantToken = await getContract("ReentrantToken", alice);
+    await (await reentrantToken.mint(alice.address, parseEther("0.01"))).wait();
   });
 
   it("should only increase totalDepositsBob after receiving a direct deposit", async () => {
@@ -59,6 +57,14 @@ describe("CMCDeposit.sol", function() {
     expect(await channel.getTotalDepositsAlice(AddressZero)).to.be.eq(0);
   });
 
+  it("depositAlice should fail if ETH is sent along with an ERC deposit", async () => {
+    await expect(channel.depositAlice(failingToken.address, value, { value: BigNumber.from(10) })).revertedWith(
+      "CMCDeposit: ETH_WITH_ERC_TRANSFER",
+    );
+    expect(await channel.getTotalDepositsAlice(failingToken.address)).to.be.eq(0);
+    expect(await channel.getTotalDepositsAlice(AddressZero)).to.be.eq(0);
+  });
+
   it("should fail if the token transfer fails", async () => {
     expect(await failingToken.balanceOf(alice.address)).to.be.gt(value);
     await expect(channel.depositAlice(failingToken.address, value)).revertedWith("FAIL: Failing token");
@@ -66,7 +72,9 @@ describe("CMCDeposit.sol", function() {
   });
 
   it("should protect against reentrant tokens", async () => {
-    await expect(channel.depositAlice(reentrantToken.address, value)).revertedWith("ReentrancyGuard: REENTRANT_CALL");
+    await expect(channel.depositAlice(reentrantToken.address, value)).to.be.revertedWith(
+      "ReentrancyGuard: REENTRANT_CALL",
+    );
     expect(await channel.getTotalDepositsAlice(reentrantToken.address)).to.be.eq(0);
   });
 });

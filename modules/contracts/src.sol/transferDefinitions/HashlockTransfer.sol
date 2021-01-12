@@ -27,6 +27,12 @@ contract HashlockTransfer is TransferDefinition {
     string public constant override ResolverEncoding =
         "tuple(bytes32 preImage)";
 
+    function EncodedCancel() external pure override returns(bytes memory) {
+      TransferResolver memory resolver;
+      resolver.preImage = bytes32(0);
+      return abi.encode(resolver);
+    } 
+
     function create(bytes calldata encodedBalance, bytes calldata encodedState)
         external
         view
@@ -36,6 +42,11 @@ contract HashlockTransfer is TransferDefinition {
         // Decode parameters
         TransferState memory state = abi.decode(encodedState, (TransferState));
         Balance memory balance = abi.decode(encodedBalance, (Balance));
+
+        require(
+            balance.amount[0] > 0,
+            "HashlockTransfer: ZER0_SENDER_BALANCE"
+        );
 
         require(
             balance.amount[1] == 0,
@@ -65,11 +76,12 @@ contract HashlockTransfer is TransferDefinition {
         Balance memory balance = abi.decode(encodedBalance, (Balance));
 
         // If you pass in bytes32(0), payment is canceled
-        // If timelock is nonzero and has expired, payment is canceled
-        if (
-            resolver.preImage != bytes32(0) &&
-            (state.expiry == 0 || state.expiry > block.timestamp)
-        ) {
+        // If timelock is nonzero and has expired, payment must be canceled
+        // otherwise resolve will revert
+        if (resolver.preImage != bytes32(0)) {
+            // Payment must not be expired
+            require(state.expiry == 0 || state.expiry > block.timestamp, "HashlockTransfer: PAYMENT_EXPIRED");
+
             // Check hash for normal payment unlock
             bytes32 generatedHash = sha256(abi.encode(resolver.preImage));
             require(
@@ -80,14 +92,10 @@ contract HashlockTransfer is TransferDefinition {
             // Update state
             balance.amount[1] = balance.amount[0];
             balance.amount[0] = 0;
-        } else {
-            // To cancel, the preImage must be empty (not simply incorrect)
-            require(
-                resolver.preImage == bytes32(0),
-                "HashlockTransfer: NONZERO_LOCKHASH"
-            );
-            // There are no additional state mutations
         }
+        // To cancel, the preImage must be empty (not simply incorrect)
+        // There are no additional state mutations, and the preImage is
+        // asserted by the `if` statement
 
         return balance;
     }

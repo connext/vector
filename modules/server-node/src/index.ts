@@ -1,3 +1,5 @@
+import "core-js/stable";
+import "regenerator-runtime/runtime";
 import fastify from "fastify";
 import fastifyCors from "fastify-cors";
 import pino from "pino";
@@ -10,6 +12,8 @@ import {
   ResolveUpdateDetails,
   CreateUpdateDetails,
   TPublicIdentifier,
+  FullChannelState,
+  VectorError,
 } from "@connext/vector-types";
 import { constructRpcRequest, hydrateProviders } from "@connext/vector-utils";
 import { Static, Type } from "@sinclair/typebox";
@@ -17,10 +21,11 @@ import { Static, Type } from "@sinclair/typebox";
 import { PrismaStore } from "./services/store";
 import { config } from "./config";
 import { createNode, deleteNodes, getChainService, getNode, getNodes } from "./helpers/nodes";
+import { ServerNodeError } from "./helpers/errors";
 
 export const logger = pino();
 logger.info({ config }, "Loaded config from environment");
-const server = fastify({ logger, pluginTimeout: 120_000, disableRequestLogging: config.logLevel !== "debug" });
+const server = fastify({ logger, pluginTimeout: 300_000, disableRequestLogging: config.logLevel !== "debug" });
 server.register(fastifyCors, {
   origin: "*",
   methods: ["GET", "PUT", "POST", "OPTIONS"],
@@ -43,7 +48,7 @@ server.addHook("onReady", async () => {
   const persistedNodes = await store.getNodeIndexes();
   for (const nodeIndex of persistedNodes) {
     logger.info({ node: nodeIndex }, "Rehydrating persisted node");
-    await createNode(nodeIndex.index, store, storedMnemonic);
+    await createNode(nodeIndex.index, store, storedMnemonic, config.skipCheckIn ?? false);
   }
 });
 
@@ -70,15 +75,21 @@ server.get<{ Params: { publicIdentifier: string } }>(
   async (request, reply) => {
     const engine = getNode(request.params.publicIdentifier);
     if (!engine) {
-      return reply.status(400).send({ message: "Node not found", publicIdentifier: request.params.publicIdentifier });
+      return reply
+        .status(400)
+        .send(
+          VectorError.jsonify(
+            new ServerNodeError(ServerNodeError.reasons.NodeNotFound, request.params.publicIdentifier, request.params),
+          ),
+        );
     }
     try {
-      const params = constructRpcRequest(ChannelRpcMethods.chan_getStatus, undefined);
+      const params = constructRpcRequest(ChannelRpcMethods.chan_getStatus, {});
       const res = await engine.request<"chan_getStatus">(params);
       return reply.status(200).send(res);
     } catch (e) {
       logger.error({ message: e.message, stack: e.stack });
-      return reply.status(500).send({ message: e.message });
+      return reply.status(500).send(VectorError.jsonify(e));
     }
   },
 );
@@ -89,19 +100,35 @@ server.get<{ Params: NodeParams.GetChannelState }>(
   async (request, reply) => {
     const engine = getNode(request.params.publicIdentifier);
     if (!engine) {
-      return reply.status(400).send({ message: "Node not found", publicIdentifier: request.params.publicIdentifier });
+      return reply
+        .status(400)
+        .send(
+          VectorError.jsonify(
+            new ServerNodeError(ServerNodeError.reasons.NodeNotFound, request.params.publicIdentifier, request.params),
+          ),
+        );
     }
 
     const params = constructRpcRequest(ChannelRpcMethods.chan_getChannelState, request.params);
     try {
       const res = await engine.request<"chan_getChannelState">(params);
       if (!res) {
-        return reply.status(404).send({ message: "Channel not found", channelAddress: request.params.channelAddress });
+        return reply
+          .status(404)
+          .send(
+            VectorError.jsonify(
+              new ServerNodeError(
+                ServerNodeError.reasons.ChannelNotFound,
+                request.params.publicIdentifier,
+                request.params,
+              ),
+            ),
+          );
       }
       return reply.status(200).send(res);
     } catch (e) {
       logger.error({ message: e.message, stack: e.stack });
-      return reply.status(500).send({ message: e.message });
+      return reply.status(500).send(VectorError.jsonify(e));
     }
   },
 );
@@ -112,7 +139,13 @@ server.get<{ Params: NodeParams.GetChannelStateByParticipants }>(
   async (request, reply) => {
     const engine = getNode(request.params.publicIdentifier);
     if (!engine) {
-      return reply.status(400).send({ message: "Node not found", publicIdentifier: request.params.publicIdentifier });
+      return reply
+        .status(400)
+        .send(
+          VectorError.jsonify(
+            new ServerNodeError(ServerNodeError.reasons.NodeNotFound, request.params.publicIdentifier, request.params),
+          ),
+        );
     }
     const params = constructRpcRequest(ChannelRpcMethods.chan_getChannelStateByParticipants, {
       alice: request.params.publicIdentifier,
@@ -122,12 +155,22 @@ server.get<{ Params: NodeParams.GetChannelStateByParticipants }>(
     try {
       const res = await engine.request<"chan_getChannelStateByParticipants">(params);
       if (!res) {
-        return reply.status(404).send({ message: "Channel not found", alice: request.params });
+        return reply
+          .status(404)
+          .send(
+            VectorError.jsonify(
+              new ServerNodeError(
+                ServerNodeError.reasons.ChannelNotFound,
+                request.params.publicIdentifier,
+                request.params,
+              ),
+            ),
+          );
       }
       return reply.status(200).send(res);
     } catch (e) {
       logger.error({ message: e.message, stack: e.stack });
-      return reply.status(500).send({ message: e.message });
+      return reply.status(500).send(VectorError.jsonify(e));
     }
   },
 );
@@ -138,18 +181,34 @@ server.get<{ Params: NodeParams.GetTransferState }>(
   async (request, reply) => {
     const engine = getNode(request.params.publicIdentifier);
     if (!engine) {
-      return reply.status(400).send({ message: "Node not found", publicIdentifier: request.params.publicIdentifier });
+      return reply
+        .status(400)
+        .send(
+          VectorError.jsonify(
+            new ServerNodeError(ServerNodeError.reasons.NodeNotFound, request.params.publicIdentifier, request.params),
+          ),
+        );
     }
     const params = constructRpcRequest(ChannelRpcMethods.chan_getTransferState, request.params);
     try {
       const res = await engine.request<"chan_getTransferState">(params);
       if (!res) {
-        return reply.status(404).send({ message: "Transfer not found", params: request.params });
+        return reply
+          .status(404)
+          .send(
+            VectorError.jsonify(
+              new ServerNodeError(
+                ServerNodeError.reasons.TransferNotFound,
+                request.params.publicIdentifier,
+                request.params,
+              ),
+            ),
+          );
       }
       return reply.status(200).send(res);
     } catch (e) {
       logger.error({ message: e.message, stack: e.stack });
-      return reply.status(500).send({ message: e.message });
+      return reply.status(500).send(VectorError.jsonify(e));
     }
   },
 );
@@ -162,18 +221,21 @@ server.get<{ Params: NodeParams.GetTransferStatesByRoutingId }>(
   async (request, reply) => {
     const engine = getNode(request.params.publicIdentifier);
     if (!engine) {
-      return reply.status(400).send({ message: "Node not found", publicIdentifier: request.params.publicIdentifier });
+      return reply
+        .status(400)
+        .send(
+          VectorError.jsonify(
+            new ServerNodeError(ServerNodeError.reasons.NodeNotFound, request.params.publicIdentifier, request.params),
+          ),
+        );
     }
     const params = constructRpcRequest(ChannelRpcMethods.chan_getTransferStatesByRoutingId, request.params);
     try {
       const res = await engine.request<"chan_getTransferStatesByRoutingId">(params);
-      if (!res) {
-        return reply.status(404).send({ message: "Transfer not found", params: request.params });
-      }
       return reply.status(200).send(res);
     } catch (e) {
       logger.error({ message: e.message, stack: e.stack });
-      return reply.status(500).send({ message: e.message });
+      return reply.status(500).send(VectorError.jsonify(e));
     }
   },
 );
@@ -184,18 +246,34 @@ server.get<{ Params: NodeParams.GetTransferStateByRoutingId }>(
   async (request, reply) => {
     const engine = getNode(request.params.publicIdentifier);
     if (!engine) {
-      return reply.status(400).send({ message: "Node not found", publicIdentifier: request.params.publicIdentifier });
+      return reply
+        .status(400)
+        .send(
+          VectorError.jsonify(
+            new ServerNodeError(ServerNodeError.reasons.NodeNotFound, request.params.publicIdentifier, request.params),
+          ),
+        );
     }
     const params = constructRpcRequest(ChannelRpcMethods.chan_getTransferStateByRoutingId, request.params);
     try {
       const res = await engine.request<"chan_getTransferStateByRoutingId">(params);
       if (!res) {
-        return reply.status(404).send({ message: "Transfer not found", params: request.params });
+        return reply
+          .status(404)
+          .send(
+            VectorError.jsonify(
+              new ServerNodeError(
+                ServerNodeError.reasons.TransferNotFound,
+                request.params.publicIdentifier,
+                request.params,
+              ),
+            ),
+          );
       }
       return reply.status(200).send(res);
     } catch (e) {
       logger.error({ message: e.message, stack: e.stack });
-      return reply.status(500).send({ message: e.message });
+      return reply.status(500).send(VectorError.jsonify(e));
     }
   },
 );
@@ -206,18 +284,21 @@ server.get<{ Params: NodeParams.GetActiveTransfersByChannelAddress }>(
   async (request, reply) => {
     const engine = getNode(request.params.publicIdentifier);
     if (!engine) {
-      return reply.status(400).send({ message: "Node not found", publicIdentifier: request.params.publicIdentifier });
+      return reply
+        .status(400)
+        .send(
+          VectorError.jsonify(
+            new ServerNodeError(ServerNodeError.reasons.NodeNotFound, request.params.publicIdentifier, request.params),
+          ),
+        );
     }
     const params = constructRpcRequest(ChannelRpcMethods.chan_getActiveTransfers, request.params);
     try {
       const res = await engine.request<"chan_getActiveTransfers">(params);
-      if (!res) {
-        return reply.status(404).send({ message: "Transfer not found", params: request.params });
-      }
       return reply.status(200).send(res);
     } catch (e) {
       logger.error({ message: e.message, stack: e.stack });
-      return reply.status(500).send({ message: e.message });
+      return reply.status(500).send(VectorError.jsonify(e));
     }
   },
 );
@@ -228,9 +309,15 @@ server.get<{ Params: NodeParams.GetChannelStates }>(
   async (request, reply) => {
     const engine = getNode(request.params.publicIdentifier);
     if (!engine) {
-      return reply.status(400).send({ message: "Node not found", publicIdentifier: request.params.publicIdentifier });
+      return reply
+        .status(400)
+        .send(
+          VectorError.jsonify(
+            new ServerNodeError(ServerNodeError.reasons.NodeNotFound, request.params.publicIdentifier, request.params),
+          ),
+        );
     }
-    const params = constructRpcRequest(ChannelRpcMethods.chan_getChannelStates, undefined);
+    const params = constructRpcRequest(ChannelRpcMethods.chan_getChannelStates, {});
     try {
       const res = await engine.request<"chan_getChannelStates">(params);
       // OPTIMIZATION: use db query instead of filter
@@ -242,7 +329,7 @@ server.get<{ Params: NodeParams.GetChannelStates }>(
       return reply.status(200).send(filtered.map((chan) => chan.channelAddress));
     } catch (e) {
       logger.error({ message: e.message, stack: e.stack, context: e.context });
-      return reply.status(500).send({ message: e.message, context: e.context });
+      return reply.status(500).send(VectorError.jsonify(e));
     }
   },
 );
@@ -255,7 +342,13 @@ server.get<{ Params: NodeParams.GetRegisteredTransfers }>(
   async (request, reply) => {
     const engine = getNode(request.params.publicIdentifier);
     if (!engine) {
-      return reply.status(400).send({ message: "Node not found", publicIdentifier: request.params.publicIdentifier });
+      return reply
+        .status(400)
+        .send(
+          VectorError.jsonify(
+            new ServerNodeError(ServerNodeError.reasons.NodeNotFound, request.params.publicIdentifier, request.params),
+          ),
+        );
     }
     const params = constructRpcRequest(ChannelRpcMethods.chan_getRegisteredTransfers, {
       chainId: request.params.chainId,
@@ -265,7 +358,7 @@ server.get<{ Params: NodeParams.GetRegisteredTransfers }>(
       return reply.status(200).send(res);
     } catch (e) {
       logger.error({ message: e.message, stack: e.stack, context: e.context });
-      return reply.status(500).send({ message: e.message, context: e.context });
+      return reply.status(500).send(VectorError.jsonify(e));
     }
   },
 );
@@ -276,7 +369,13 @@ server.post<{ Body: NodeParams.Setup }>(
   async (request, reply) => {
     const engine = getNode(request.body.publicIdentifier);
     if (!engine) {
-      return reply.status(400).send({ message: "Node not found", publicIdentifier: request.body.publicIdentifier });
+      return reply
+        .status(400)
+        .send(
+          VectorError.jsonify(
+            new ServerNodeError(ServerNodeError.reasons.NodeNotFound, request.body.publicIdentifier, request.body),
+          ),
+        );
     }
     const rpc = constructRpcRequest(ChannelRpcMethods.chan_setup, {
       chainId: request.body.chainId,
@@ -288,7 +387,7 @@ server.post<{ Body: NodeParams.Setup }>(
       return reply.status(200).send(res);
     } catch (e) {
       logger.error({ message: e.message, stack: e.stack, context: e.context });
-      return reply.status(500).send({ message: e.message, context: e.context });
+      return reply.status(500).send(VectorError.jsonify(e));
     }
   },
 );
@@ -299,7 +398,13 @@ server.post<{ Body: NodeParams.RequestSetup }>(
   async (request, reply) => {
     const engine = getNode(request.body.publicIdentifier);
     if (!engine) {
-      return reply.status(400).send({ message: "Node not found", publicIdentifier: request.body.publicIdentifier });
+      return reply
+        .status(400)
+        .send(
+          VectorError.jsonify(
+            new ServerNodeError(ServerNodeError.reasons.NodeNotFound, request.body.publicIdentifier, request.body),
+          ),
+        );
     }
     const rpc = constructRpcRequest(ChannelRpcMethods.chan_requestSetup, {
       chainId: request.body.chainId,
@@ -307,11 +412,12 @@ server.post<{ Body: NodeParams.RequestSetup }>(
       timeout: request.body.timeout,
     });
     try {
-      const res = await engine.request<"chan_requestSetup">(rpc);
-      return reply.status(200).send(res);
+      const result = await engine.request<"chan_requestSetup">(rpc);
+      logger.info({ result }, "Request collateral completed");
+      return reply.status(200).send({ ...result, channelAddress: result.channelAddress });
     } catch (e) {
       logger.error({ message: e.message, stack: e.stack, context: e.context });
-      return reply.status(500).send({ message: e.message, context: e.context });
+      return reply.status(500).send(VectorError.jsonify(e));
     }
   },
 );
@@ -324,12 +430,35 @@ server.post<{ Body: NodeParams.SendDepositTx }>(
     const engine = getNode(request.body.publicIdentifier);
 
     if (!engine || !chainService) {
-      return reply.status(400).send({ message: "Node not found", publicIdentifier: request.body.publicIdentifier });
+      return reply
+        .status(400)
+        .send(
+          VectorError.jsonify(
+            new ServerNodeError(ServerNodeError.reasons.NodeNotFound, request.body.publicIdentifier, request.body),
+          ),
+        );
     }
 
-    const channelState = await store.getChannelState(request.body.channelAddress);
+    let channelState: FullChannelState | undefined;
+    try {
+      channelState = await store.getChannelState(request.body.channelAddress);
+    } catch (e) {
+      return reply
+        .status(500)
+        .send(
+          VectorError.jsonify(
+            new ServerNodeError(ServerNodeError.reasons.GetChannelFailed, request.body.publicIdentifier, request.body),
+          ),
+        );
+    }
     if (!channelState) {
-      return reply.status(404).send({ message: "Channel not found" });
+      return reply
+        .status(404)
+        .send(
+          VectorError.jsonify(
+            new ServerNodeError(ServerNodeError.reasons.ChannelNotFound, request.body.publicIdentifier, request.body),
+          ),
+        );
     }
     const depositRes = await chainService.sendDepositTx(
       channelState,
@@ -358,7 +487,13 @@ server.post<{ Body: NodeParams.SendDisputeChannelTx }>(
   async (request, reply) => {
     const engine = getNode(request.body.publicIdentifier);
     if (!engine) {
-      return reply.status(400).send({ message: "Node not found", publicIdentifier: request.body.publicIdentifier });
+      return reply
+        .status(400)
+        .send(
+          VectorError.jsonify(
+            new ServerNodeError(ServerNodeError.reasons.NodeNotFound, request.body.publicIdentifier, request.body),
+          ),
+        );
     }
 
     const rpc = constructRpcRequest(ChannelRpcMethods.chan_dispute, { channelAddress: request.body.channelAddress });
@@ -368,7 +503,7 @@ server.post<{ Body: NodeParams.SendDisputeChannelTx }>(
       return reply.status(200).send(res);
     } catch (e) {
       logger.error({ message: e.message, stack: e.stack, context: e.context });
-      return reply.status(500).send({ message: e.message, context: e.context });
+      return reply.status(500).send(VectorError.jsonify(e));
     }
   },
 );
@@ -384,7 +519,13 @@ server.post<{ Body: NodeParams.SendDefundChannelTx }>(
   async (request, reply) => {
     const engine = getNode(request.body.publicIdentifier);
     if (!engine) {
-      return reply.status(400).send({ message: "Node not found", publicIdentifier: request.body.publicIdentifier });
+      return reply
+        .status(400)
+        .send(
+          VectorError.jsonify(
+            new ServerNodeError(ServerNodeError.reasons.NodeNotFound, request.body.publicIdentifier, request.body),
+          ),
+        );
     }
 
     const rpc = constructRpcRequest(ChannelRpcMethods.chan_defund, { channelAddress: request.body.channelAddress });
@@ -394,7 +535,7 @@ server.post<{ Body: NodeParams.SendDefundChannelTx }>(
       return reply.status(200).send(res);
     } catch (e) {
       logger.error({ message: e.message, stack: e.stack, context: e.context });
-      return reply.status(500).send({ message: e.message, context: e.context });
+      return reply.status(500).send(VectorError.jsonify(e));
     }
   },
 );
@@ -410,7 +551,13 @@ server.post<{ Body: NodeParams.SendDisputeTransferTx }>(
   async (request, reply) => {
     const engine = getNode(request.body.publicIdentifier);
     if (!engine) {
-      return reply.status(400).send({ message: "Node not found", publicIdentifier: request.body.publicIdentifier });
+      return reply
+        .status(400)
+        .send(
+          VectorError.jsonify(
+            new ServerNodeError(ServerNodeError.reasons.NodeNotFound, request.body.publicIdentifier, request.body),
+          ),
+        );
     }
 
     const rpc = constructRpcRequest(ChannelRpcMethods.chan_disputeTransfer, { transferId: request.body.transferId });
@@ -420,7 +567,7 @@ server.post<{ Body: NodeParams.SendDisputeTransferTx }>(
       return reply.status(200).send(res);
     } catch (e) {
       logger.error({ message: e.message, stack: e.stack, context: e.context });
-      return reply.status(500).send({ message: e.message, context: e.context });
+      return reply.status(500).send(VectorError.jsonify(e));
     }
   },
 );
@@ -436,7 +583,13 @@ server.post<{ Body: NodeParams.SendDefundTransferTx }>(
   async (request, reply) => {
     const engine = getNode(request.body.publicIdentifier);
     if (!engine) {
-      return reply.status(400).send({ message: "Node not found", publicIdentifier: request.body.publicIdentifier });
+      return reply
+        .status(400)
+        .send(
+          VectorError.jsonify(
+            new ServerNodeError(ServerNodeError.reasons.NodeNotFound, request.body.publicIdentifier, request.body),
+          ),
+        );
     }
 
     const rpc = constructRpcRequest(ChannelRpcMethods.chan_defundTransfer, { transferId: request.body.transferId });
@@ -446,7 +599,7 @@ server.post<{ Body: NodeParams.SendDefundTransferTx }>(
       return reply.status(200).send(res);
     } catch (e) {
       logger.error({ message: e.message, stack: e.stack, context: e.context });
-      return reply.status(500).send({ message: e.message, context: e.context });
+      return reply.status(500).send(VectorError.jsonify(e));
     }
   },
 );
@@ -457,7 +610,13 @@ server.post<{ Body: NodeParams.Deposit }>(
   async (request, reply) => {
     const engine = getNode(request.body.publicIdentifier);
     if (!engine) {
-      return reply.status(400).send({ message: "Node not found", publicIdentifier: request.body.publicIdentifier });
+      return reply
+        .status(400)
+        .send(
+          VectorError.jsonify(
+            new ServerNodeError(ServerNodeError.reasons.NodeNotFound, request.body.publicIdentifier, request.body),
+          ),
+        );
     }
 
     const rpc = constructRpcRequest(ChannelRpcMethods.chan_deposit, {
@@ -469,7 +628,7 @@ server.post<{ Body: NodeParams.Deposit }>(
       return reply.status(200).send(res);
     } catch (e) {
       logger.error({ message: e.message, stack: e.stack, context: e.context });
-      return reply.status(500).send({ message: e.message, context: e.context });
+      return reply.status(500).send(VectorError.jsonify(e));
     }
   },
 );
@@ -480,16 +639,23 @@ server.post<{ Body: NodeParams.RequestCollateral }>(
   async (request, reply) => {
     const engine = getNode(request.body.publicIdentifier);
     if (!engine) {
-      return reply.status(400).send({ message: "Node not found", publicIdentifier: request.body.publicIdentifier });
+      return reply
+        .status(400)
+        .send(
+          VectorError.jsonify(
+            new ServerNodeError(ServerNodeError.reasons.NodeNotFound, request.body.publicIdentifier, request.body),
+          ),
+        );
     }
 
     const rpc = constructRpcRequest(ChannelRpcMethods.chan_requestCollateral, request.body);
     try {
-      const res = await engine.request<"chan_requestCollateral">(rpc);
-      return reply.status(200).send(res);
+      const result = await engine.request<"chan_requestCollateral">(rpc);
+      logger.info({ result }, "Request collateral completed");
+      return reply.status(200).send({ ...result, channelAddress: request.body.channelAddress });
     } catch (e) {
       logger.error({ message: e.message, stack: e.stack, context: e.context });
-      return reply.status(500).send({ message: e.message, context: e.context });
+      return reply.status(500).send(VectorError.jsonify(e));
     }
   },
 );
@@ -505,7 +671,13 @@ server.post<{ Body: NodeParams.ConditionalTransfer }>(
   async (request, reply) => {
     const engine = getNode(request.body.publicIdentifier);
     if (!engine) {
-      return reply.status(400).send({ message: "Node not found", publicIdentifier: request.body.publicIdentifier });
+      return reply
+        .status(400)
+        .send(
+          VectorError.jsonify(
+            new ServerNodeError(ServerNodeError.reasons.NodeNotFound, request.body.publicIdentifier, request.body),
+          ),
+        );
     }
 
     const rpc = constructRpcRequest(ChannelRpcMethods.chan_createTransfer, request.body);
@@ -518,7 +690,7 @@ server.post<{ Body: NodeParams.ConditionalTransfer }>(
       } as NodeResponses.ConditionalTransfer);
     } catch (e) {
       logger.error({ message: e.message, stack: e.stack, context: e.context });
-      return reply.status(500).send({ message: e.message, context: e.context });
+      return reply.status(500).send(VectorError.jsonify(e));
     }
   },
 );
@@ -534,7 +706,13 @@ server.post<{ Body: NodeParams.ResolveTransfer }>(
   async (request, reply) => {
     const engine = getNode(request.body.publicIdentifier);
     if (!engine) {
-      return reply.status(400).send({ message: "Node not found", publicIdentifier: request.body.publicIdentifier });
+      return reply
+        .status(400)
+        .send(
+          VectorError.jsonify(
+            new ServerNodeError(ServerNodeError.reasons.NodeNotFound, request.body.publicIdentifier, request.body),
+          ),
+        );
     }
     const rpc = constructRpcRequest(ChannelRpcMethods.chan_resolveTransfer, request.body);
     try {
@@ -545,7 +723,7 @@ server.post<{ Body: NodeParams.ResolveTransfer }>(
       } as NodeResponses.ResolveTransfer);
     } catch (e) {
       logger.error({ message: e.message, stack: e.stack, context: e.context });
-      return reply.status(500).send({ message: e.message, context: e.context });
+      return reply.status(500).send(VectorError.jsonify(e));
     }
   },
 );
@@ -561,7 +739,13 @@ server.post<{ Body: NodeParams.Withdraw }>(
   async (request, reply) => {
     const engine = getNode(request.body.publicIdentifier);
     if (!engine) {
-      return reply.status(400).send({ message: "Node not found", publicIdentifier: request.body.publicIdentifier });
+      return reply
+        .status(400)
+        .send(
+          VectorError.jsonify(
+            new ServerNodeError(ServerNodeError.reasons.NodeNotFound, request.body.publicIdentifier, request.body),
+          ),
+        );
     }
     const rpc = constructRpcRequest(ChannelRpcMethods.chan_withdraw, request.body);
     try {
@@ -573,7 +757,57 @@ server.post<{ Body: NodeParams.Withdraw }>(
       } as NodeResponses.Withdraw);
     } catch (e) {
       logger.error({ message: e.message, stack: e.stack, context: e.context });
-      return reply.status(500).send({ message: e.message, context: e.context });
+      return reply.status(500).send(VectorError.jsonify(e));
+    }
+  },
+);
+
+server.post<{ Body: NodeParams.RestoreState }>(
+  "/restore",
+  { schema: { body: NodeParams.RestoreStateSchema, response: NodeResponses.RestoreStateSchema } },
+  async (request, reply) => {
+    const engine = getNode(request.body.publicIdentifier);
+    if (!engine) {
+      return reply
+        .status(400)
+        .send(
+          VectorError.jsonify(
+            new ServerNodeError(ServerNodeError.reasons.NodeNotFound, request.body.publicIdentifier, request.body),
+          ),
+        );
+    }
+    const rpc = constructRpcRequest(ChannelRpcMethods.chan_restoreState, request.body);
+    try {
+      const { channelAddress } = await engine.request<typeof ChannelRpcMethods.chan_restoreState>(rpc);
+      return reply.status(200).send({ channelAddress } as NodeResponses.RestoreState);
+    } catch (e) {
+      logger.error({ message: e.message, stack: e.stack, context: e.context });
+      return reply.status(500).send(VectorError.jsonify(e));
+    }
+  },
+);
+
+server.post<{ Body: NodeParams.SendIsAlive }>(
+  "/is-alive",
+  { schema: { response: NodeResponses.SendIsAliveSchema } },
+  async (request, reply) => {
+    const engine = getNode(request.body.publicIdentifier);
+    if (!engine) {
+      return reply
+        .status(400)
+        .send(
+          VectorError.jsonify(
+            new ServerNodeError(ServerNodeError.reasons.NodeNotFound, request.body.publicIdentifier, request.body),
+          ),
+        );
+    }
+    const rpc = constructRpcRequest(ChannelRpcMethods.chan_sendIsAlive, request.body);
+    try {
+      const { channelAddress } = await engine.request<typeof ChannelRpcMethods.chan_sendIsAlive>(rpc);
+      return reply.status(200).send({ channelAddress } as NodeResponses.SendIsAlive);
+    } catch (e) {
+      logger.error({ message: e.message, stack: e.stack, context: e.context });
+      return reply.status(500).send(VectorError.jsonify(e));
     }
   },
 );
@@ -600,7 +834,18 @@ server.post<{ Body: NodeParams.RegisterListener }>(
       return reply.status(200).send({ message: "success" });
     } catch (e) {
       logger.error(e);
-      return reply.status(500).send({ message: e.message });
+      return reply
+        .status(500)
+        .send(
+          VectorError.jsonify(
+            new ServerNodeError(
+              ServerNodeError.reasons.RegisterSubscriptionFailed,
+              request.body.publicIdentifier,
+              request.body,
+              { registerError: e.message },
+            ),
+          ),
+        );
     }
   },
 );
@@ -616,7 +861,17 @@ server.get<{ Params: NodeParams.GetListener }>(
   async (request, reply) => {
     const url = await store.getSubscription(request.params.publicIdentifier, request.params.eventName as EngineEvent);
     if (!url) {
-      return reply.status(404).send({ message: "Subscription URL not found" });
+      return reply
+        .status(404)
+        .send(
+          VectorError.jsonify(
+            new ServerNodeError(
+              ServerNodeError.reasons.SubscriptionNotFound,
+              request.params.publicIdentifier,
+              request.params,
+            ),
+          ),
+        );
     }
     return reply.status(200).send({ url });
   },
@@ -647,7 +902,13 @@ server.post<{ Body: NodeParams.Admin }>(
       await store.clear();
       return reply.status(200).send({ message: "success" });
     } catch (e) {
-      return reply.status(500).send({ message: e.message });
+      return reply
+        .status(500)
+        .send(
+          VectorError.jsonify(
+            new ServerNodeError(ServerNodeError.reasons.ClearStoreFailed, "", request.body, { storeError: e.message }),
+          ),
+        );
     }
   },
 );
@@ -665,7 +926,7 @@ server.post<{ Body: NodeParams.CreateNode }>(
         store.setMnemonic(request.body.mnemonic);
         storedMnemonic = request.body.mnemonic;
       }
-      const newNode = await createNode(request.body.index, store, storedMnemonic!);
+      const newNode = await createNode(request.body.index, store, storedMnemonic!, request.body.skipCheckIn ?? false);
       return reply.status(200).send({
         index: request.body.index,
         publicIdentifier: newNode.publicIdentifier,
@@ -673,7 +934,14 @@ server.post<{ Body: NodeParams.CreateNode }>(
       } as NodeResponses.CreateNode);
     } catch (e) {
       logger.error({ message: e.message, stack: e.stack });
-      return reply.status(500).send({ message: e.message });
+      return reply.status(500).send(
+        VectorError.jsonify(
+          new ServerNodeError(ServerNodeError.reasons.CreateNodeFailed, "", request.body, {
+            createNodeError: e.message,
+            createNodeStack: e.stack,
+          }),
+        ),
+      );
     }
   },
 );
@@ -692,13 +960,18 @@ server.post<{ Params: { chainId: string }; Body: JsonRpcRequest }>(
     if (!provider) {
       return reply
         .status(400)
-        .send({ message: "Provider not configured for chainId", chainId: request.params.chainId });
+        .send(
+          VectorError.jsonify(
+            new ServerNodeError(ServerNodeError.reasons.ProviderNotConfigured, "", request.body.params),
+          ),
+        );
     }
     try {
       const result = await provider.send(request.body.method, request.body.params);
       return reply.status(200).send({ result });
     } catch (e) {
-      return reply.status(500).send({ message: e.message });
+      // Do not touch provider errors
+      return reply.status(500).send({ message: e.message, stack: e.stack });
     }
   },
 );

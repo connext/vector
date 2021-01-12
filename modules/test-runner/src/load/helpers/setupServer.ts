@@ -16,11 +16,13 @@ const conditionalTransferResolvedPath = "/conditional-transfer-resolved";
 const depositReconciledPath = "/deposit-reconciled";
 
 export const carolEvts = {
+  [EngineEvents.IS_ALIVE]: {},
   [EngineEvents.SETUP]: {},
   [EngineEvents.WITHDRAWAL_CREATED]: {},
   [EngineEvents.WITHDRAWAL_RESOLVED]: {},
   [EngineEvents.WITHDRAWAL_RECONCILED]: {},
   [EngineEvents.REQUEST_COLLATERAL]: {},
+  [EngineEvents.RESTORE_STATE_EVENT]: {},
   [EngineEvents.CONDITIONAL_TRANSFER_CREATED]: {
     evt: Evt.create<ConditionalTransferCreatedPayload>(),
     url: `${serverBase}${conditionalTransferCreatedPath}`,

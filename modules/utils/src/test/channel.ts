@@ -13,6 +13,7 @@ import {
   IChannelSigner,
   HashlockTransferState,
   FullTransferState,
+  DEFAULT_TRANSFER_TIMEOUT,
 } from "@connext/vector-types";
 
 import { ChannelSigner } from "../channelSigner";
@@ -154,7 +155,7 @@ export function createTestChannelUpdate<T extends UpdateType>(
           lockHash: mkBytes32("0xlockHash"),
           expiry: "0",
         },
-        transferTimeout: "0",
+        transferTimeout: DEFAULT_TRANSFER_TIMEOUT.toString(),
       };
       details = { ...createDeets };
       break;
@@ -182,7 +183,7 @@ export function createTestChannelState<T extends UpdateType = typeof UpdateType.
   type: T,
   overrides: PartialFullChannelState<T> = {},
   transferOverrides: Partial<FullTransferState> = {},
-): { channel: FullChannelState<T>; transfer: FullTransferState } {
+): { channel: FullChannelState; transfer: FullTransferState } {
   // Get some default values that should be consistent between
   // the channel state and the channel update
   const publicIdentifiers = [
@@ -234,8 +235,12 @@ export function createTestChannelState<T extends UpdateType = typeof UpdateType.
       type === "create" ? (latestUpdate.details as any).meta : undefined;
     transfer.channelFactoryAddress = networkContext.channelFactoryAddress ?? transfer.channelFactoryAddress;
     transfer.inDispute = inDispute ?? transfer.inDispute;
-    transfer.initiator = participants[0];
-    transfer.responder = participants[1];
+    transfer.initiator = latestUpdate.fromIdentifier === publicIdentifiers[0] ? participants[0] : participants[1];
+    transfer.responder = latestUpdate.toIdentifier === publicIdentifiers[0] ? participants[0] : participants[1];
+    transfer.initiatorIdentifier =
+      latestUpdate.fromIdentifier === publicIdentifiers[0] ? publicIdentifiers[0] : publicIdentifiers[1];
+    transfer.responderIdentifier =
+      latestUpdate.toIdentifier === publicIdentifiers[0] ? publicIdentifiers[0] : publicIdentifiers[1];
     transfer.transferDefinition =
       (latestUpdate.details as CreateUpdateDetails).transferDefinition ?? transfer.transferDefinition;
     transfer.transferEncodings = (latestUpdate.details as CreateUpdateDetails).transferEncodings;
@@ -289,7 +294,7 @@ export function createTestChannelStateWithSigners<T extends UpdateType = typeof 
   signers: IChannelSigner[],
   type: T,
   overrides: PartialFullChannelState<T> = {},
-): FullChannelState<T> {
+): FullChannelState {
   const signerOverrides = {
     aliceIdentifier: signers[0].publicIdentifier,
     bobIdentifier: signers[1].publicIdentifier,
@@ -297,7 +302,7 @@ export function createTestChannelStateWithSigners<T extends UpdateType = typeof 
     bob: signers[1].address,
     ...(overrides ?? {}),
   };
-  return createTestChannelState(type, signerOverrides).channel as FullChannelState<T>;
+  return createTestChannelState(type, signerOverrides).channel as FullChannelState;
 }
 
 export function createTestChannelUpdateWithSigners<T extends UpdateType = typeof UpdateType.setup>(

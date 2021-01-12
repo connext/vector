@@ -34,6 +34,8 @@ interface ITransferDefinition {
 
     function ResolverEncoding() external view returns (string memory);
 
+    function EncodedCancel() external view returns (bytes memory);
+
     function getRegistryInformation()
         external
         view

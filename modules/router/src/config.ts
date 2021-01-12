@@ -1,6 +1,7 @@
 import { TAddress, TChainId, TIntegerString, TDecimalString } from "@connext/vector-types";
 import { Static, Type } from "@sinclair/typebox";
 import Ajv from "ajv";
+import { BigNumber } from "ethers";
 
 const ajv = new Ajv();
 
@@ -26,7 +27,7 @@ export type AllowedSwap = Static<typeof AllowedSwapSchema>;
 const VectorRouterConfigSchema = Type.Object({
   adminToken: Type.String(),
   allowedSwaps: Type.Array(AllowedSwapSchema),
-  chainProviders: Type.Map(Type.String({ format: "uri" })),
+  chainProviders: Type.Dict(Type.String({ format: "uri" })),
   dbUrl: Type.Optional(Type.String({ format: "uri" })),
   nodeUrl: Type.String({ format: "uri" }),
   logLevel: Type.Optional(
@@ -60,7 +61,19 @@ const valid = validate(vectorConfig);
 
 if (!valid) {
   console.error(`Invalid config: ${JSON.stringify(vectorConfig, null, 2)}`);
-  throw new Error(validate.errors?.map(err => err.message).join(","));
+  throw new Error(validate.errors?.map((err) => err.message).join(","));
+}
+
+// Profile sanity checks
+for (const profile of vectorConfig.rebalanceProfiles) {
+  const target = BigNumber.from(profile.target);
+  if (target.gt(profile.reclaimThreshold)) {
+    throw new Error("Rebalance target must be less than reclaim threshold");
+  }
+
+  if (target.lt(profile.collateralizeThreshold) && !target.isZero()) {
+    throw new Error("Rebalance target must be larger than collateralizeThreshold or 0");
+  }
 }
 
 export const config = {

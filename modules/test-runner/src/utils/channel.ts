@@ -1,4 +1,4 @@
-import { expect, getBalanceForAssetId, getRandomBytes32 } from "@connext/vector-utils";
+import { delay, expect, getBalanceForAssetId, getRandomBytes32 } from "@connext/vector-utils";
 import {
   DEFAULT_CHANNEL_TIMEOUT,
   EngineEvents,
@@ -44,7 +44,59 @@ export const setup = async (
     publicIdentifier: aliceService.publicIdentifier,
   });
   expect(bobChannel.getValue()).to.deep.eq(aliceChannel.getValue());
-  return bobChannel.getValue();
+  return bobChannel.getValue()! as FullChannelState;
+};
+
+export const requestCollateral = async (
+  requester: INodeService,
+  counterparty: INodeService,
+  channelAddress: string,
+  assetId: string,
+  requestedAmount?: BigNumber,
+): Promise<FullChannelState> => {
+  const channelRes = await requester.getStateChannel({ channelAddress });
+  const channel = channelRes.getValue()! as FullChannelState;
+
+  const counterpartyAliceOrBob = counterparty.publicIdentifier === channel.aliceIdentifier ? "alice" : "bob";
+  const counterpartyBefore = getBalanceForAssetId(channel, assetId, counterpartyAliceOrBob);
+
+  const collateralRes = await requester.requestCollateral({
+    assetId,
+    channelAddress,
+    publicIdentifier: requester.publicIdentifier,
+    amount: !!requestedAmount ? requestedAmount?.toString() : undefined,
+  });
+  expect(collateralRes.getError()).to.be.undefined;
+  const collateral = collateralRes.getValue();
+  expect(collateral).to.be.deep.eq({ channelAddress });
+
+  // wait for reconciliation
+  await delay(2000);
+
+  const requesterChannel = (
+    await requester.getStateChannel({
+      channelAddress: channel.channelAddress,
+      publicIdentifier: requester.publicIdentifier,
+    })
+  ).getValue()! as FullChannelState;
+  const counterpartyChannel = (
+    await counterparty.getStateChannel({
+      channelAddress: channel.channelAddress,
+      publicIdentifier: counterparty.publicIdentifier,
+    })
+  ).getValue()!;
+
+  const counterpartyAfter = getBalanceForAssetId(requesterChannel, assetId, counterpartyAliceOrBob);
+  expect(requesterChannel).to.deep.eq(counterpartyChannel);
+  if (requestedAmount && requestedAmount.lte(counterpartyBefore)) {
+    // should not collateralize
+    expect(BigNumber.from(counterpartyAfter).eq(counterpartyBefore)).to.be.true;
+    return requesterChannel;
+  }
+  const min = BigNumber.from(requestedAmount ?? counterpartyBefore);
+  expect(BigNumber.from(counterpartyAfter).gte(counterpartyBefore)).to.be.true;
+  expect(BigNumber.from(counterpartyAfter).gte(min)).to.be.true;
+  return requesterChannel;
 };
 
 export const deposit = async (
@@ -55,7 +107,7 @@ export const deposit = async (
   amount: BigNumber,
 ): Promise<FullChannelState> => {
   const channelRes = await depositor.getStateChannel({ channelAddress });
-  const channel = await channelRes.getValue();
+  const channel = channelRes.getValue()! as FullChannelState;
 
   const depositorAliceOrBob = depositor.publicIdentifier === channel.aliceIdentifier ? "alice" : "bob";
   const depositorBefore = getBalanceForAssetId(channel, assetId, depositorAliceOrBob);
@@ -88,7 +140,7 @@ export const deposit = async (
       channelAddress: channel.channelAddress,
       publicIdentifier: depositor.publicIdentifier,
     })
-  ).getValue()!;
+  ).getValue()! as FullChannelState;
   const counterpartyChannel = (
     await counterparty.getStateChannel({
       channelAddress: channel.channelAddress,
@@ -111,8 +163,12 @@ export const transfer = async (
   amount: BigNumber,
   receiverChainId?: number,
 ): Promise<{ senderChannel: FullChannelState; receiverChannel: FullChannelState }> => {
-  const senderChannel = (await sender.getStateChannel({ channelAddress: senderChannelAddress })).getValue();
-  const receiverChannel = (await receiver.getStateChannel({ channelAddress: receiverChannelAddress })).getValue();
+  const senderChannel = (
+    await sender.getStateChannel({ channelAddress: senderChannelAddress })
+  ).getValue()! as FullChannelState;
+  const receiverChannel = (
+    await receiver.getStateChannel({ channelAddress: receiverChannelAddress })
+  ).getValue()! as FullChannelState;
   const senderAliceOrBob = sender.publicIdentifier === senderChannel.aliceIdentifier ? "alice" : "bob";
   const receiverAliceOrBob = receiver.publicIdentifier === receiverChannel.aliceIdentifier ? "alice" : "bob";
   const senderBefore = getBalanceForAssetId(senderChannel, senderAssetId, senderAliceOrBob);
@@ -147,7 +203,7 @@ export const transfer = async (
       channelAddress: senderChannel.channelAddress,
       publicIdentifier: sender.publicIdentifier,
     })
-  ).getValue()!;
+  ).getValue()! as FullChannelState;
   const senderBalanceAfterTransfer = getBalanceForAssetId(senderChannelAfterTransfer, senderAssetId, senderAliceOrBob);
   expect(senderBalanceAfterTransfer).to.be.eq(BigNumber.from(senderBefore).sub(amount));
   const [senderCreate, receiverCreate] = await Promise.all([senderCreatePromise, receiverCreatePromise]);
@@ -161,7 +217,7 @@ export const transfer = async (
   });
 
   expect(receiverTransferRes.getError()).to.not.be.ok;
-  const receiverTransfer = receiverTransferRes.getValue();
+  const receiverTransfer = receiverTransferRes.getValue()!;
 
   const receiverResolvePromise = receiver.waitFor(EngineEvents.CONDITIONAL_TRANSFER_RESOLVED, 30_000);
   const resolveRes = await receiver.resolveTransfer({
@@ -181,7 +237,7 @@ export const transfer = async (
       channelAddress: receiverChannel.channelAddress,
       publicIdentifier: receiver.publicIdentifier,
     })
-  ).getValue()!;
+  ).getValue()! as FullChannelState;
 
   const daveAfterResolve = getBalanceForAssetId(receiverChannelAfterResolve, senderAssetId, receiverAliceOrBob);
   expect(daveAfterResolve).to.be.eq(BigNumber.from(receiverBefore).add(amount));
@@ -194,6 +250,7 @@ export const withdraw = async (
   assetId: string,
   amount: BigNumber,
   withdrawRecipient: string,
+  fee = "0",
 ): Promise<FullChannelState> => {
   // Get pre-withdraw channel balances
   const preWithdrawChannel = (await withdrawer.getStateChannel({ channelAddress })).getValue() as FullChannelState;
@@ -205,6 +262,19 @@ export const withdraw = async (
   const preWithdrawMultisig = await getOnchainBalance(assetId, preWithdrawChannel.channelAddress, provider);
   const preWithdrawRecipient = await getOnchainBalance(assetId, withdrawRecipient, provider);
 
+  // // TODO: wait for these?
+  // withdrawer.on(EngineEvents.WITHDRAWAL_CREATED, (data) => {
+  //   console.log("EngineEvents.WITHDRAWAL_CREATED ===> data: ", JSON.stringify(data, null, 2));
+  // });
+
+  // withdrawer.on(EngineEvents.WITHDRAWAL_RECONCILED, (data) => {
+  //   console.log("EngineEvents.WITHDRAWAL_RECONCILED ===> data: ", JSON.stringify(data, null, 2));
+  // });
+
+  // withdrawer.on(EngineEvents.WITHDRAWAL_RESOLVED, (data) => {
+  //   console.log("EngineEvents.WITHDRAWAL_RESOLVED ===> data: ", JSON.stringify(data, null, 2));
+  // });
+
   // Perform withdrawal
   const withdrawalRes = await withdrawer.withdraw({
     publicIdentifier: withdrawer.publicIdentifier,
@@ -212,7 +282,7 @@ export const withdraw = async (
     amount: amount.toString(),
     assetId,
     recipient: withdrawRecipient,
-    fee: "0",
+    fee,
     meta: { reason: "Test withdrawal" },
   });
   expect(withdrawalRes.getError()).to.be.undefined;
@@ -220,13 +290,13 @@ export const withdraw = async (
   expect(transactionHash).to.be.ok;
   await provider.waitForTransaction(transactionHash!);
 
-  const postWithdrawChannel = (await withdrawer.getStateChannel({ channelAddress })).getValue();
+  const postWithdrawChannel = (await withdrawer.getStateChannel({ channelAddress })).getValue()! as FullChannelState;
   const postWithdrawBalance = getBalanceForAssetId(postWithdrawChannel, assetId, withdrawerAliceOrBob);
   const postWithdrawMultisig = await getOnchainBalance(assetId, channelAddress, provider);
   const postWithdrawRecipient = await getOnchainBalance(assetId, withdrawRecipient, provider);
 
   // Verify balance changes
-  expect(BigNumber.from(preWithdrawCarol).sub(amount)).to.be.eq(postWithdrawBalance);
+  expect(BigNumber.from(preWithdrawCarol).sub(amount.add(fee))).to.be.eq(postWithdrawBalance);
   expect(postWithdrawMultisig).to.be.eq(BigNumber.from(preWithdrawMultisig).sub(amount));
   if (withdrawerAliceOrBob === "alice") {
     // use "above" because Alice sends withdrawal for Bob

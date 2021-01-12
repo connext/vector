@@ -133,13 +133,16 @@ export interface CoreTransferState {
 }
 
 export type FullTransferState = CoreTransferState & {
-  channelFactoryAddress: string; // networkContext?
+  channelFactoryAddress: string; // networkContext? TODO: remove
   chainId: number;
   transferEncodings: string[]; // Initial state encoding, resolver encoding
   transferState: any;
   transferResolver?: any; // undefined iff not resolved
   meta?: any;
   inDispute: boolean;
+  channelNonce: number;
+  initiatorIdentifier: string;
+  responderIdentifier: string;
 };
 
 export interface TransferCommitmentData {

@@ -3,7 +3,6 @@ import {
   getRandomChannelSigner,
   mkAddress,
   mkBytes32,
-  mkPublicIdentifier,
   createTestHashlockTransferState,
   createTestChannelState,
   createTestUpdateParams,
@@ -15,7 +14,6 @@ import {
 } from "@connext/vector-utils";
 import pino from "pino";
 import {
-  OutboundChannelUpdateError,
   IVectorChainReader,
   ILockService,
   IMessagingService,
@@ -27,6 +25,7 @@ import {
 } from "@connext/vector-types";
 import Sinon from "sinon";
 
+import { OutboundChannelUpdateError } from "../errors";
 import { Vector } from "../vector";
 import * as vectorSync from "../sync";
 
@@ -57,7 +56,15 @@ describe("Vector", () => {
   describe("Vector.connect", () => {
     it("should work", async () => {
       const signer = getRandomChannelSigner();
-      const node = await Vector.connect(messagingService, lockService, storeService, signer, chainReader, pino());
+      const node = await Vector.connect(
+        messagingService,
+        lockService,
+        storeService,
+        signer,
+        chainReader,
+        pino(),
+        false,
+      );
       expect(node).to.be.instanceOf(Vector);
       expect(node.publicIdentifier).to.be.eq(signer.publicIdentifier);
       expect(node.signerAddress).to.be.eq(signer.address);
@@ -83,7 +90,7 @@ describe("Vector", () => {
     beforeEach(async () => {
       const signer = getRandomChannelSigner();
       storeService.getChannelStates.resolves([]);
-      vector = await Vector.connect(messagingService, lockService, storeService, signer, chainReader, pino());
+      vector = await Vector.connect(messagingService, lockService, storeService, signer, chainReader, pino(), false);
     });
 
     it("should work", async () => {
@@ -197,7 +204,7 @@ describe("Vector", () => {
           expect(ret.isError).to.be.true;
           const error = ret.getError();
           expect(error?.message).to.be.eq(OutboundChannelUpdateError.reasons.InvalidParams);
-          expect(error?.context?.error).to.include(t.error);
+          expect(error?.context?.paramsError).to.include(t.error);
         });
       }
     });
@@ -212,7 +219,7 @@ describe("Vector", () => {
 
       storeService.getChannelState.resolves(createTestChannelState(UpdateType.setup, { channelAddress }).channel);
 
-      vector = await Vector.connect(messagingService, lockService, storeService, signer, chainReader, pino());
+      vector = await Vector.connect(messagingService, lockService, storeService, signer, chainReader, pino(), false);
     });
 
     it("should work", async () => {
@@ -259,7 +266,7 @@ describe("Vector", () => {
           expect(ret.isError).to.be.true;
           const err = ret.getError();
           expect(err?.message).to.be.eq(OutboundChannelUpdateError.reasons.InvalidParams);
-          expect(err?.context?.error).to.include(error);
+          expect(err?.context?.paramsError).to.include(error);
         });
       }
     });
@@ -274,7 +281,7 @@ describe("Vector", () => {
 
       storeService.getChannelState.resolves(createTestChannelState(UpdateType.setup, { channelAddress }).channel);
 
-      vector = await Vector.connect(messagingService, lockService, storeService, signer, chainReader, pino());
+      vector = await Vector.connect(messagingService, lockService, storeService, signer, chainReader, pino(), false);
     });
 
     it("should work", async () => {
@@ -359,7 +366,7 @@ describe("Vector", () => {
           expect(ret.isError).to.be.true;
           const err = ret.getError();
           expect(err?.message).to.be.eq(OutboundChannelUpdateError.reasons.InvalidParams);
-          expect(err?.context?.error).to.include(error);
+          expect(err?.context?.paramsError).to.include(error);
         });
       }
     });
@@ -374,7 +381,7 @@ describe("Vector", () => {
 
       storeService.getChannelState.resolves(createTestChannelState(UpdateType.setup, { channelAddress }).channel);
 
-      vector = await Vector.connect(messagingService, lockService, storeService, signer, chainReader, pino());
+      vector = await Vector.connect(messagingService, lockService, storeService, signer, chainReader, pino(), false);
     });
 
     it("should work", async () => {
@@ -418,7 +425,7 @@ describe("Vector", () => {
         {
           name: "should fail if transferResolver is undefined",
           params: { ...validParams, transferResolver: undefined },
-          error: "should have required property 'transferResolver'",
+          error: "should have required property '.transferResolver'",
         },
       ];
 
@@ -428,7 +435,7 @@ describe("Vector", () => {
           expect(ret.isError).to.be.true;
           const err = ret.getError();
           expect(err?.message).to.be.eq(OutboundChannelUpdateError.reasons.InvalidParams);
-          expect(err?.context?.error).to.include(error);
+          expect(err?.context?.paramsError).to.include(error);
         });
       }
     });

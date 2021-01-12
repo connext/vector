@@ -1,19 +1,27 @@
 import "@nomiclabs/hardhat-waffle";
-import { HardhatUserConfig } from "hardhat/types";
+import "hardhat-deploy";
+import "hardhat-deploy-ethers";
 import "hardhat-typechain";
+import { HardhatUserConfig } from "hardhat/types";
 
 import * as packageJson from "./package.json";
+import "./src.ts/tasks";
+
+const urlOverride = process.env.ETH_PROVIDER_URL;
+const chainId = parseInt(process.env.CHAIN_ID ?? "1337", 10);
 
 const mnemonic =
-  process.env.SUGAR_DADDY ??
-  process.env.MNEMONIC ??
+  process.env.SUGAR_DADDY ||
+  process.env.MNEMONIC ||
   "candy maple cake sugar pudding cream honey rich smooth crumble sweet treat";
 
 const config: HardhatUserConfig = {
   paths: {
+    artifacts: "./artifacts",
+    deploy: "./deploy",
+    deployments: "./deployments",
     sources: "./src.sol",
     tests: "./src.ts",
-    artifacts: "./artifacts",
   },
   solidity: {
     version: packageJson.devDependencies.solc,
@@ -25,19 +33,66 @@ const config: HardhatUserConfig = {
     },
   },
   defaultNetwork: "hardhat",
+  namedAccounts: {
+    deployer: { default: 0 },
+    alice: { default: 1 },
+    bob: { default: 2 },
+    rando: { default: 3 },
+  },
   networks: {
     hardhat: {
-      chainId: parseInt(process.env.CHAIN_ID ?? "1337"),
-      loggingEnabled: false,
       accounts: {
-        mnemonic,
         accountsBalance: "0x7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+        mnemonic,
       },
+      chainId,
+      loggingEnabled: false,
+      saveDeployments: false,
+    },
+    localhost: {
+      accounts: {
+        accountsBalance: "0x7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+        mnemonic,
+      },
+      chainId,
+      loggingEnabled: false,
+      saveDeployments: false,
+      url: urlOverride || "http://localhost:8545",
+    },
+    mainnet: {
+      accounts: { mnemonic },
+      chainId: 1,
+      url: urlOverride || "http://localhost:8545",
+    },
+    rinkeby: {
+      accounts: { mnemonic },
+      chainId: 4,
+      url: urlOverride || "http://localhost:8545",
+    },
+    goerli: {
+      accounts: { mnemonic },
+      chainId: 5,
+      url: urlOverride || "http://localhost:8545",
+    },
+    kovan: {
+      accounts: { mnemonic },
+      chainId: 42,
+      url: urlOverride || "http://localhost:8545",
     },
     matic: {
-      chainId: 80001,
-      url: "https://rpc-mumbai.matic.today",
       accounts: { mnemonic },
+      chainId: 137,
+      url: urlOverride || "http://localhost:8545",
+    },
+    mumbai: {
+      accounts: { mnemonic },
+      chainId: 80001,
+      url: urlOverride || "https://rpc-mumbai.matic.today",
+    },
+    arbitrum: {
+      accounts: { mnemonic },
+      chainId: 152709604825713,
+      url: urlOverride || "https://kovan2.arbitrum.io/rpc",
     },
   },
 };
