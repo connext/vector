@@ -29,6 +29,7 @@ import {
   generateMerkleTreeData,
   validateChannelUpdateSignatures,
   getSignerAddressFromPublicIdentifier,
+  getRandomBytes32,
 } from "@connext/vector-utils";
 import pino from "pino";
 import Ajv from "ajv";
@@ -514,6 +515,9 @@ export class VectorEngine implements IVectorEngine {
   private async deposit(
     params: EngineParams.Deposit,
   ): Promise<Result<ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_deposit], EngineError>> {
+    const method = "deposit";
+    const methodId = getRandomBytes32();
+    this.logger.debug({ params, method, methodId }, "Method started");
     const validate = ajv.compile(EngineParams.DepositSchema);
     const valid = validate(params);
     if (!valid) {
@@ -558,6 +562,10 @@ export class VectorEngine implements IVectorEngine {
       depositRes = await this.vector.deposit(params);
       count++;
     }
+    this.logger.debug(
+      { result: depositRes.isError ? depositRes.getError() : depositRes.getValue(), method, methodId },
+      "Method complete",
+    );
 
     return depositRes;
   }
@@ -594,6 +602,9 @@ export class VectorEngine implements IVectorEngine {
   private async createTransfer(
     params: EngineParams.ConditionalTransfer,
   ): Promise<Result<ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_createTransfer], VectorError>> {
+    const method = "createTransfer";
+    const methodId = getRandomBytes32();
+    this.logger.debug({ params, method, methodId }, "Method started");
     const validate = ajv.compile(EngineParams.ConditionalTransferSchema);
     const valid = validate(params);
     if (!valid) {
@@ -613,6 +624,7 @@ export class VectorEngine implements IVectorEngine {
     if (!channel) {
       return Result.fail(new RpcError(RpcError.reasons.ChannelNotFound, params.channelAddress, this.publicIdentifier));
     }
+    this.logger.debug({ channel, method, methodId }, "Pre-transfer channel");
 
     // First, get translated `create` params using the passed in conditional transfer ones
     const createResult = await convertConditionalTransferParams(
@@ -626,17 +638,22 @@ export class VectorEngine implements IVectorEngine {
       return Result.fail(createResult.getError()!);
     }
     const createParams = createResult.getValue();
+    this.logger.debug({ transferParams: createParams, method, methodId }, "Created conditional transfer params");
     const protocolRes = await this.vector.create(createParams);
     if (protocolRes.isError) {
       return Result.fail(protocolRes.getError()!);
     }
     const res = protocolRes.getValue();
+    this.logger.debug({ channel: res, method, methodId }, "Method complete");
     return Result.ok(res);
   }
 
   private async resolveTransfer(
     params: EngineParams.ResolveTransfer,
   ): Promise<Result<ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_resolveTransfer], EngineError>> {
+    const method = "resolveTransfer";
+    const methodId = getRandomBytes32();
+    this.logger.debug({ params, method, methodId }, "Method started");
     const validate = ajv.compile(EngineParams.ResolveTransferSchema);
     const valid = validate(params);
     if (!valid) {
@@ -660,6 +677,7 @@ export class VectorEngine implements IVectorEngine {
         }),
       );
     }
+    this.logger.debug({ transfer, method, methodId }, "Transfer pre-resolve");
 
     // First, get translated `create` params using the passed in conditional transfer ones
     const resolveResult = convertResolveConditionParams(params, transfer);
@@ -672,6 +690,7 @@ export class VectorEngine implements IVectorEngine {
       return Result.fail(protocolRes.getError()!);
     }
     const res = protocolRes.getValue();
+    this.logger.debug({ channel: res, method, methodId }, "Method complete");
     return Result.ok(res);
   }
 
