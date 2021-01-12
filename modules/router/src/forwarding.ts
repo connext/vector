@@ -147,7 +147,7 @@ export async function forwardTransferCreation(
         senderTransfer.transferId,
         "",
         {
-          nodeError: VectorError.jsonify(senderChannelRes.getError()!),
+          nodeError: senderChannelRes.getError()!.toJson(),
         },
       ),
     );
@@ -219,7 +219,7 @@ export async function forwardTransferCreation(
       ForwardTransferCreationError.reasons.RecipientChannelNotFound,
       "",
       {
-        storeError: VectorError.jsonify(recipientChannelRes.getError()!),
+        storeError: recipientChannelRes.getError()!.toJson(),
         recipientChainId,
         recipientIdentifier,
       },
@@ -330,7 +330,7 @@ export async function forwardTransferResolution(
         channelAddress,
         transferId,
         {
-          getChannelError: VectorError.jsonify(transfersRes.getError()!),
+          getChannelError: transfersRes.getError()!.toJson(),
         },
       ),
     );
@@ -375,7 +375,7 @@ export async function forwardTransferResolution(
         channelAddress,
         transferId,
         {
-          resolutionError: VectorError.jsonify(resolution.getError()!),
+          resolutionError: resolution.getError()!.toJson(),
           transferResolver,
         },
       ),

@@ -430,6 +430,9 @@ export class VectorEngine implements IVectorEngine {
   private async setup(
     params: EngineParams.Setup,
   ): Promise<Result<ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_setup], VectorError>> {
+    const method = "setup";
+    const methodId = getRandomBytes32();
+    this.logger.info({ params, method, methodId }, "Method started");
     const validate = ajv.compile(EngineParams.SetupSchema);
     const valid = validate(params);
     if (!valid) {
@@ -494,10 +497,17 @@ export class VectorEngine implements IVectorEngine {
     this.logger.info({ chainId: channel.networkContext.chainId, hash: tx.hash }, "Deploy tx broadcast");
     await tx.wait();
     this.logger.debug({ chainId: channel.networkContext.chainId, hash: tx.hash }, "Deploy tx mined");
+    this.logger.info(
+      { result: setupRes.isError ? VectorError.jsonify(setupRes.getError()!) : setupRes.getValue(), method, methodId },
+      "Method complete",
+    );
     return setupRes;
   }
 
   private async requestSetup(params: EngineParams.Setup): Promise<Result<{ channelAddress: string }, EngineError>> {
+    const method = "requestSetup";
+    const methodId = getRandomBytes32();
+    this.logger.info({ params, method, methodId }, "Method started");
     const validate = ajv.compile(EngineParams.SetupSchema);
     const valid = validate(params);
     if (!valid) {
@@ -509,7 +519,16 @@ export class VectorEngine implements IVectorEngine {
       );
     }
 
-    return this.messaging.sendSetupMessage(Result.ok(params), params.counterpartyIdentifier, this.publicIdentifier);
+    const res = await this.messaging.sendSetupMessage(
+      Result.ok(params),
+      params.counterpartyIdentifier,
+      this.publicIdentifier,
+    );
+    this.logger.info(
+      { result: res.isError ? VectorError.jsonify(res.getError()!) : res.getValue(), method, methodId },
+      "Method complete",
+    );
+    return res;
   }
 
   private async deposit(
@@ -563,7 +582,11 @@ export class VectorEngine implements IVectorEngine {
       count++;
     }
     this.logger.info(
-      { result: depositRes.isError ? depositRes.getError() : depositRes.getValue(), method, methodId },
+      {
+        result: depositRes.isError ? VectorError.jsonify(depositRes.getError()!) : depositRes.getValue(),
+        method,
+        methodId,
+      },
       "Method complete",
     );
 
@@ -571,6 +594,9 @@ export class VectorEngine implements IVectorEngine {
   }
 
   private async requestCollateral(params: EngineParams.RequestCollateral): Promise<Result<undefined, EngineError>> {
+    const method = "requestCollateral";
+    const methodId = getRandomBytes32();
+    this.logger.info({ params, method, methodId }, "Method started");
     const validate = ajv.compile(EngineParams.RequestCollateralSchema);
     const valid = validate(params);
     if (!valid) {
@@ -595,6 +621,10 @@ export class VectorEngine implements IVectorEngine {
       Result.ok(params),
       this.publicIdentifier === channel.aliceIdentifier ? channel.bobIdentifier : channel.aliceIdentifier,
       this.publicIdentifier,
+    );
+    this.logger.info(
+      { result: request.isError ? VectorError.jsonify(request.getError()!) : request.getValue(), method, methodId },
+      "Method complete",
     );
     return request as Result<undefined, EngineError>;
   }
@@ -697,6 +727,9 @@ export class VectorEngine implements IVectorEngine {
   private async withdraw(
     params: EngineParams.Withdraw,
   ): Promise<Result<ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_withdraw], EngineError>> {
+    const method = "withdraw";
+    const methodId = getRandomBytes32();
+    this.logger.info({ params, method, methodId }, "Method started");
     const validate = ajv.compile(EngineParams.WithdrawSchema);
     const valid = validate(params);
     if (!valid) {
@@ -749,12 +782,17 @@ export class VectorEngine implements IVectorEngine {
       this.logger.warn({ channelAddress: params.channelAddress, transferId, timeout }, "Withdraw tx not submitted");
     }
 
+    this.logger.info({ channel: res, method, methodId }, "Method complete");
     return Result.ok({ channel: res, transactionHash });
   }
 
   private async decrypt(encrypted: string): Promise<Result<string, EngineError>> {
+    const method = "decrypt";
+    const methodId = getRandomBytes32();
+    this.logger.info({ encrypted, method, methodId }, "Method started");
     try {
       const res = await this.signer.decrypt(encrypted);
+      this.logger.info({ res, method, methodId }, "Method complete");
       return Result.ok(res);
     } catch (e) {
       return Result.fail(
@@ -766,6 +804,9 @@ export class VectorEngine implements IVectorEngine {
   }
 
   private async signUtilityMessage(params: EngineParams.SignUtilityMessage): Promise<Result<string, EngineError>> {
+    const method = "signUtilityMessage";
+    const methodId = getRandomBytes32();
+    this.logger.info({ params, method, methodId }, "Method started");
     const validate = ajv.compile(EngineParams.SignUtilityMessageSchema);
     const valid = validate(params);
     if (!valid) {
@@ -779,6 +820,7 @@ export class VectorEngine implements IVectorEngine {
 
     try {
       const sig = await this.signer.signUtilityMessage(params.message);
+      this.logger.info({ sig, method, methodId }, "Method complete");
       return Result.ok(sig);
     } catch (e) {
       return Result.fail(
@@ -792,6 +834,9 @@ export class VectorEngine implements IVectorEngine {
   private async sendIsAlive(
     params: EngineParams.SendIsAlive,
   ): Promise<Result<{ channelAddress: string }, EngineError>> {
+    const method = "sendIsAlive";
+    const methodId = getRandomBytes32();
+    this.logger.info({ params, method, methodId }, "Method started");
     const validate = ajv.compile(EngineParams.SendIsAliveSchema);
     const valid = validate(params);
     if (!valid) {
@@ -810,7 +855,16 @@ export class VectorEngine implements IVectorEngine {
         );
       }
       const counterparty = this.signer.address === channel.alice ? channel.bobIdentifier : channel.aliceIdentifier;
-      return this.messaging.sendIsAliveMessage(Result.ok(params), counterparty, this.signer.publicIdentifier);
+      const res = await this.messaging.sendIsAliveMessage(
+        Result.ok(params),
+        counterparty,
+        this.signer.publicIdentifier,
+      );
+      this.logger.info(
+        { result: res.isError ? VectorError.jsonify(res.getError()!) : res.getValue(), method, methodId },
+        "Method complete",
+      );
+      return res;
     } catch (e) {
       return Result.fail(
         new IsAliveError(IsAliveError.reasons.Unknown, params.channelAddress, this.signer.publicIdentifier, {
@@ -826,6 +880,8 @@ export class VectorEngine implements IVectorEngine {
     params: EngineParams.RestoreState,
   ): Promise<Result<ChannelRpcMethodsResponsesMap["chan_restoreState"], EngineError>> {
     const method = "restoreState";
+    const methodId = getRandomBytes32();
+    this.logger.info({ params, method, methodId }, "Method started");
     const validate = ajv.compile(EngineParams.RestoreStateSchema);
     const valid = validate(params);
     if (!valid) {
@@ -968,6 +1024,14 @@ export class VectorEngine implements IVectorEngine {
       chainId,
     });
 
+    this.logger.info(
+      {
+        result: returnVal.isError ? VectorError.jsonify(returnVal.getError()!) : returnVal.getValue(),
+        method,
+        methodId,
+      },
+      "Method complete",
+    );
     return returnVal;
   }
 
