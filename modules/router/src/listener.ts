@@ -6,6 +6,7 @@ import {
   FullChannelState,
   IVectorChainReader,
   jsonifyError,
+  FullTransferState,
 } from "@connext/vector-types";
 import { getRandomBytes32 } from "@connext/vector-utils";
 import { Gauge, Registry } from "prom-client";
@@ -166,12 +167,29 @@ export async function setupListeners(
           "Error forwarding resolution",
         );
       }
-      logger.info({ method: "forwardTransferResolution", result: res.getValue() }, "Successfully forwarded resolution");
+      logger.info(
+        { event: EngineEvents.CONDITIONAL_TRANSFER_RESOLVED, result: res.getValue() },
+        "Successfully forwarded resolution",
+      );
+
+      const transferSenderResolutionChannelAddress = res.getValue()?.channelAddress;
+      const transferSenderResolutionAssetId = res.getValue()?.assetId;
+      if (!transferSenderResolutionChannelAddress || !transferSenderResolutionAssetId) {
+        logger.warn(
+          {
+            event: EngineEvents.CONDITIONAL_TRANSFER_RESOLVED,
+            transferSenderResolutionChannelAddress,
+            transferSenderResolutionAssetId,
+          },
+          "No channel or transfer found in response, will not adjust sender collateral",
+        );
+        return;
+      }
 
       // Adjust collateral in channel
       const response = await adjustCollateral(
-        data.channelAddress,
-        data.transfer.assetId,
+        transferSenderResolutionChannelAddress,
+        transferSenderResolutionAssetId,
         routerPublicIdentifier,
         nodeService,
         chainReader,
