@@ -6,6 +6,7 @@ import {
   FullChannelState,
   IVectorChainReader,
   jsonifyError,
+  FullTransferState,
 } from "@connext/vector-types";
 import { getRandomBytes32 } from "@connext/vector-utils";
 import { Gauge, Registry } from "prom-client";
@@ -166,12 +167,44 @@ export async function setupListeners(
           "Error forwarding resolution",
         );
       }
-      logger.info({ method: "forwardTransferResolution", result: res.getValue() }, "Successfully forwarded resolution");
+      logger.info(
+        { event: EngineEvents.CONDITIONAL_TRANSFER_RESOLVED, result: res.getValue() },
+        "Successfully forwarded resolution",
+      );
+
+      const transferSenderResolutionChannelAddress = res.getValue()?.channelAddress;
+      const transferSenderResolutionTransferId = res.getValue()?.transferId;
+      if (!transferSenderResolutionChannelAddress || !transferSenderResolutionTransferId) {
+        logger.warn(
+          {
+            event: EngineEvents.CONDITIONAL_TRANSFER_RESOLVED,
+            transferSenderResolutionChannelAddress,
+            transferSenderResolutionTransferId,
+          },
+          "No channel or transfer found in response, will not adjust sender collateral",
+        );
+        return;
+      }
+
+      const transferSenderResolutionTransferRes = await nodeService.getTransfer({
+        transferId: transferSenderResolutionTransferId,
+      });
+      if (transferSenderResolutionTransferRes.isError) {
+        return logger.error(
+          {
+            event: EngineEvents.CONDITIONAL_TRANSFER_RESOLVED,
+            error: jsonifyError(transferSenderResolutionTransferRes.getError()!),
+          },
+          "Error getting transfer",
+        );
+      }
+
+      const resolution = transferSenderResolutionTransferRes.getValue() as FullTransferState;
 
       // Adjust collateral in channel
       const response = await adjustCollateral(
-        data.channelAddress,
-        data.transfer.assetId,
+        resolution.channelAddress,
+        resolution.assetId,
         routerPublicIdentifier,
         nodeService,
         chainReader,
