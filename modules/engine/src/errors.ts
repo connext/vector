@@ -101,6 +101,7 @@ export class ParameterConversionError extends EngineError {
     CannotSendToSelf: "An initiator cannot be a receiver on the same chain",
     CouldNotSignWithdrawal: "Failed to sign withdrawal commitment",
     FailedToGetRegisteredTransfer: "Could not get transfer registry information",
+    WithdrawToZero: "Cannot withdraw to AddressZero",
   } as const;
 
   constructor(
