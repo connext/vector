@@ -935,7 +935,7 @@ server.post<{ Body: NodeParams.CreateNode }>(
         new ServerNodeError(ServerNodeError.reasons.CreateNodeFailed, "", request.body, {
           createNodeError: e.message,
           createNodeStack: e.stack,
-        }).toJson,
+        }).toJson(),
       );
     }
   },
