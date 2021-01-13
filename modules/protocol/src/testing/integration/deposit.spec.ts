@@ -5,7 +5,7 @@ import { AddressZero } from "@ethersproject/constants";
 
 import { deployChannelIfNeeded, depositInChannel, depositOnchain, getSetupChannel } from "../utils";
 import { env } from "../env";
-import { chainId } from "../constants";
+import { CHAIN_ID } from "../constants";
 
 const testName = "Deposit Integrations";
 const { log } = getTestLoggers(testName, env.logLevel);
@@ -41,7 +41,7 @@ describe(testName, () => {
 
     depositAmount = BigNumber.from("1000");
     assetId = AddressZero;
-    assetIdErc20 = env.chainAddresses[chainId].testTokenAddress;
+    assetIdErc20 = env.chainAddresses[CHAIN_ID].testTokenAddress;
 
     log.info({
       alice: alice.publicIdentifier,

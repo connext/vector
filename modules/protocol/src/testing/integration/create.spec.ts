@@ -3,7 +3,7 @@ import { getTestLoggers, expect, mkAddress } from "@connext/vector-utils";
 import { IVectorProtocol, IChannelSigner, IVectorStore, ProtocolEventName } from "@connext/vector-types";
 import { AddressZero } from "@ethersproject/constants";
 import { BigNumber } from "@ethersproject/bignumber";
-
+import { CHAIN_ID } from "../constants";
 import { env } from "../env";
 import { createTransfer, getFundedChannel, depositInChannel } from "../utils";
 
@@ -138,6 +138,7 @@ describe(testName, () => {
           amount: ["100", "100"],
         },
       ],
+      CHAIN_ID,
       { signer: aliceSigner, store: aliceStore },
     );
     const carol = setup.bob.protocol;

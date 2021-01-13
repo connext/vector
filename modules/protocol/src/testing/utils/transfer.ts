@@ -23,7 +23,7 @@ import { BigNumber, BigNumberish } from "@ethersproject/bignumber";
 import { AddressZero } from "@ethersproject/constants";
 
 import { env } from "../env";
-import { chainId } from "../constants";
+import { CHAIN_ID } from "../constants";
 
 // Will create a hashlock transfer in the channel, and return the full
 // transfer state (including the necessary resolver)
@@ -51,7 +51,7 @@ export const createTransfer = async (
   const params: CreateTransferParams = {
     channelAddress,
     balance,
-    transferDefinition: env.chainAddresses[chainId].hashlockTransferAddress,
+    transferDefinition: env.chainAddresses[CHAIN_ID].hashlockTransferAddress,
     transferInitialState,
     timeout: DEFAULT_TRANSFER_TIMEOUT.toString(),
     meta: { test: "field" },
@@ -79,7 +79,7 @@ export const createTransfer = async (
     transferId,
     transferDefinition: params.transferDefinition,
     channelFactoryAddress: channel.networkContext.channelFactoryAddress,
-    chainId,
+    CHAIN_ID,
     transferState: params.transferInitialState,
     meta: params.meta,
   });

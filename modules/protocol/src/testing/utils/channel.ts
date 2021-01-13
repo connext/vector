@@ -22,11 +22,12 @@ import {
 } from "@connext/vector-utils";
 import { Contract } from "@ethersproject/contracts";
 import { BigNumber, BigNumberish } from "@ethersproject/bignumber";
+import { JsonRpcProvider } from "@ethersproject/providers";
 import { AddressZero, HashZero, Zero } from "@ethersproject/constants";
 import Pino from "pino";
 
 import { env } from "../env";
-import { chainId, provider } from "../constants";
+import { CHAIN_ID } from "../constants";
 import { Vector } from "../../vector";
 
 import { fundAddress } from "./funding";
@@ -44,13 +45,14 @@ type VectorTestOverrides = {
 // all share a messaging service
 const sharedMessaging = new MemoryMessagingService();
 const sharedLock = new MemoryLockService();
-const sharedChain = new VectorChainReader({ [chainId]: provider }, Pino());
 
 export const createVectorInstances = async (
   shareServices = true,
   numberOfEngines = 2,
   overrides: Partial<VectorTestOverrides>[] = [],
+  chainId = CHAIN_ID,
 ): Promise<IVectorProtocol[]> => {
+  const provider = new JsonRpcProvider(env.chainProviders[chainId], chainId);
   return Promise.all(
     Array(numberOfEngines)
       .fill(0)
@@ -60,8 +62,8 @@ export const createVectorInstances = async (
         const lockService = shareServices ? sharedLock : new MemoryLockService();
         const logger = instanceOverrides.logger ?? Pino();
         const chainReader = shareServices
-          ? sharedChain
-          : new VectorChainReader({ [chainId]: provider }, logger.child({ module: "VectorChainReader" }));
+          ? new VectorChainReader({ [chainId!]: provider }, Pino())
+          : new VectorChainReader({ [chainId!]: provider }, logger.child({ module: "VectorChainReader" }));
 
         const opts = {
           messagingService,
@@ -82,7 +84,12 @@ export const createVectorInstances = async (
   );
 };
 
-export const setupChannel = async (alice: IVectorProtocol, bob: IVectorProtocol): Promise<FullChannelState> => {
+export const setupChannel = async (
+  alice: IVectorProtocol,
+  bob: IVectorProtocol,
+  chainId = CHAIN_ID,
+): Promise<FullChannelState> => {
+  // console.log(env.chainProviders[chainId]);
   const setupParams: SetupParams = {
     counterpartyIdentifier: bob.publicIdentifier,
     timeout: DEFAULT_CHANNEL_TIMEOUT.toString(),
@@ -131,6 +138,7 @@ export const deployChannelIfNeeded = async (
   bobAddr: string,
   aliceAddr: string,
   deployerSigner: IChannelSigner,
+  chainId = CHAIN_ID,
 ): Promise<void> => {
   const code = await deployerSigner.provider?.getCode(channelAddress);
   if (code !== "0x") {
@@ -193,6 +201,7 @@ export const depositInChannel = async (
   counterparty: IVectorProtocol,
   assetId: string = AddressZero,
   amount?: BigNumberish,
+  chainId = CHAIN_ID,
 ): Promise<FullChannelState> => {
   // If amount is not supplied, simply reconcile
   // deposits immediately
@@ -207,7 +216,7 @@ export const depositInChannel = async (
   const value = BigNumber.from(amount);
   // Deploy multsig if needed
   const channel = await depositor.getChannelState(channelAddress);
-  await deployChannelIfNeeded(channelAddress, channel!.bob, channel!.alice, depositorSigner);
+  await deployChannelIfNeeded(channelAddress, channel!.bob, channel!.alice, depositorSigner, chainId);
 
   // Deposit onchain
   await depositOnchain(assetId, value, channelAddress, channel!.aliceIdentifier, depositorSigner);
@@ -252,11 +261,14 @@ export const depositInChannel = async (
 export const getSetupChannel = async (
   testName = "setup",
   providedAlice?: { signer: IChannelSigner; store: IVectorStore },
+  chainId = CHAIN_ID,
 ): Promise<{
   channel: FullChannelState;
   alice: { protocol: IVectorProtocol; store: IVectorStore; signer: IChannelSigner };
   bob: { protocol: IVectorProtocol; store: IVectorStore; signer: IChannelSigner };
 }> => {
+  console.log(env.chainProviders[chainId], chainId);
+  const provider = new JsonRpcProvider(env.chainProviders[chainId], chainId);
   // First, get the signers and fund the accounts
   const aliceSigner = providedAlice?.signer ?? getRandomChannelSigner(provider);
   const bobSigner = getRandomChannelSigner(provider);
@@ -276,7 +288,7 @@ export const getSetupChannel = async (
     { signer: bobSigner, logger: getTestLoggers(testName, env.logLevel).log, storeService: bobStore },
   ]);
   // Setup the channel
-  const channel = await setupChannel(alice, bob);
+  const channel = await setupChannel(alice, bob, chainId);
   return {
     channel,
     alice: { protocol: alice, signer: aliceSigner, store: aliceStore },
@@ -292,13 +304,18 @@ export const getSetupChannel = async (
 export const getFundedChannel = async (
   testName = "deposit",
   balances: { assetId: string; amount: [BigNumberish, BigNumberish] }[] = [{ assetId: AddressZero, amount: [100, 0] }],
+  chainId = CHAIN_ID,
   providedAlice?: { signer: IChannelSigner; store: IVectorStore },
 ): Promise<{
   channel: FullChannelState;
   alice: { protocol: IVectorProtocol; store: IVectorStore; signer: IChannelSigner };
   bob: { protocol: IVectorProtocol; store: IVectorStore; signer: IChannelSigner };
 }> => {
-  const { alice: aliceInfo, bob: bobInfo, channel: setupChannel } = await getSetupChannel(testName, providedAlice);
+  const { alice: aliceInfo, bob: bobInfo, channel: setupChannel } = await getSetupChannel(
+    testName,
+    providedAlice,
+    chainId,
+  );
   // Fund the channel for all balances
   for (const requestedDeposit of balances) {
     const { assetId, amount } = requestedDeposit;
@@ -312,6 +329,7 @@ export const getFundedChannel = async (
         bobInfo.protocol,
         assetId,
         depositAlice,
+        chainId,
       );
     }
     // Perform the bob deposit
@@ -323,6 +341,7 @@ export const getFundedChannel = async (
         aliceInfo.protocol,
         assetId,
         depositBob,
+        chainId,
       );
     }
   }

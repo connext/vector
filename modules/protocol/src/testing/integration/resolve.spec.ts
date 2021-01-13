@@ -12,7 +12,7 @@ import { BigNumber } from "@ethersproject/bignumber";
 
 import { createTransfer, getFundedChannel, resolveTransfer, depositInChannel } from "../utils";
 import { env } from "../env";
-import { chainId } from "../constants";
+import { CHAIN_ID } from "../constants";
 
 const testName = "Resolve Integrations";
 const { log } = getTestLoggers(testName, env.logLevel);
@@ -37,7 +37,7 @@ describe(testName, () => {
         amount: ["100", "100"],
       },
       {
-        assetId: env.chainAddresses[chainId].testTokenAddress,
+        assetId: env.chainAddresses[CHAIN_ID].testTokenAddress,
         amount: ["100", "100"],
       },
     ]);
@@ -51,7 +51,7 @@ describe(testName, () => {
 
     // Set test constants
     assetId = AddressZero;
-    assetIdErc20 = env.chainAddresses[chainId].testTokenAddress;
+    assetIdErc20 = env.chainAddresses[CHAIN_ID].testTokenAddress;
     transferAmount = "7";
 
     log.info({
