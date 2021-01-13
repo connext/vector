@@ -12,7 +12,7 @@ import { Gauge, Registry } from "prom-client";
 import Ajv from "ajv";
 import { JsonRpcProvider } from "@ethersproject/providers";
 import { BaseLogger } from "pino";
-import { BigNumber } from "ethers";
+import { BigNumber } from "@ethersproject/bignumber";
 
 import { adjustCollateral, requestCollateral } from "./services/collateral";
 import { forwardTransferCreation, forwardTransferResolution, handleIsAlive } from "./forwarding";

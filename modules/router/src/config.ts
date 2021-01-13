@@ -1,7 +1,7 @@
 import { TAddress, TChainId, TIntegerString, TDecimalString } from "@connext/vector-types";
 import { Static, Type } from "@sinclair/typebox";
 import Ajv from "ajv";
-import { BigNumber } from "ethers";
+import { BigNumber } from "@ethersproject/bignumber";
 
 const ajv = new Ajv();
 

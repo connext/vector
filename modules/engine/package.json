@@ -18,6 +18,7 @@
     "@connext/vector-protocol": "0.1.0",
     "@connext/vector-types": "0.1.0",
     "@connext/vector-utils": "0.1.0",
+    "@ethersproject/address": "5.0.8",
     "@ethersproject/bignumber": "5.0.12",
     "@ethersproject/bytes": "5.0.8",
     "@ethersproject/constants": "5.0.7",

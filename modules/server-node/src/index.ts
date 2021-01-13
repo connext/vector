@@ -17,7 +17,7 @@ import {
 } from "@connext/vector-types";
 import { constructRpcRequest, getPublicIdentifierFromPublicKey, hydrateProviders } from "@connext/vector-utils";
 import { Static, Type } from "@sinclair/typebox";
-import { Wallet } from "ethers";
+import { Wallet } from "@ethersproject/wallet";
 
 import { PrismaStore } from "./services/store";
 import { config } from "./config";
