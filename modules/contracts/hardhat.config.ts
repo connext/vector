@@ -2,6 +2,8 @@ import "@nomiclabs/hardhat-waffle";
 import "hardhat-deploy";
 import "hardhat-deploy-ethers";
 import "hardhat-typechain";
+import "@nomiclabs/hardhat-etherscan";
+
 import { HardhatUserConfig } from "hardhat/types";
 
 import * as packageJson from "./package.json";
@@ -38,6 +40,9 @@ const config: HardhatUserConfig = {
     alice: { default: 1 },
     bob: { default: 2 },
     rando: { default: 3 },
+  },
+  etherscan: {
+    apiKey: process.env.API_KEY || "",
   },
   networks: {
     hardhat: {

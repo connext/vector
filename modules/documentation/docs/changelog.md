@@ -3,6 +3,7 @@
 ## Next Release
 
 - \[all\] Improve logging
+- \[contracts\] Add etherscan verification plugin
 
 ## 0.1.0
 
