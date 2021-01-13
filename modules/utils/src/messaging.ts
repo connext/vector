@@ -340,25 +340,8 @@ export class NatsMessagingService implements IMessagingService {
   ////////////
 
   // CONFIG METHODS
-  sendRouterConfigMessage(
-    to: string,
-    from: string,
-    timeout?: number,
-    numRetries?: number,
-  ): Promise<Result<RouterConfigResponse, VectorError | MessagingError>> {
-    return this.sendMessage(Result.ok(undefined), "config", to, from, timeout, numRetries, "sendRouterConfigMessage");
-  }
-  onReceiveRouterConfigMessage(
-    publicIdentifier: string,
-    callback: (params: Result<void, VectorError>, from: string, inbox: string) => void,
-  ): Promise<void> {
-    return this.registerCallback(`${publicIdentifier}.*.config`, callback, "onReceiveRouterConfigMessage");
-  }
-  respondToRouterConfigMessage(
-    inbox: string,
-    response: Result<RouterConfigResponse, VectorError | MessagingError>,
-  ): Promise<void> {
-    return this.respondToMessage(inbox, response, "respondToRouterConfigMessage");
+  subscribeToRouterConfigMessage(routerIdentifier: string, response: RouterConfigResponse): Promise<void> {
+    throw new Error("Method not implemented");
   }
   ////////////
 

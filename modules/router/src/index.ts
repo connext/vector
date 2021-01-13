@@ -27,6 +27,7 @@ import { Wallet } from "ethers";
 import { config } from "./config";
 import { IRouter, Router } from "./router";
 import { PrismaStore } from "./services/store";
+import { NatsRouterMessagingService } from "./services/messaging";
 
 const routerPort = 8000;
 const routerBase = `http://router:${routerPort}`;
@@ -76,13 +77,9 @@ let router: IRouter;
 const store = new PrismaStore();
 
 server.addHook("onReady", async () => {
-  const signer = new ChannelSigner(Wallet.fromMnemonic(config.mnemonic).privateKey);
+  // const signer = new ChannelSigner(Wallet.fromMnemonic(config.mnemonic).privateKey);
 
-  const messagingService = new NatsMessagingService({
-    logger: logger.child({ module: "NatsMessagingService" }),
-    messagingUrl: config.messagingUrl,
-    signer,
-  });
+  const messagingService = new NatsRouterMessagingService();
   const nodeService = await RestServerNodeService.connect(
     config.nodeUrl,
     logger.child({ module: "RouterNodeService" }),

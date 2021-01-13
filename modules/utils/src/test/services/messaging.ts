@@ -223,25 +223,8 @@ export class MemoryMessagingService implements IMessagingService {
     throw new Error("Method not implemented.");
   }
 
-  sendRouterConfigMessage(
-    to: string,
-    from: string,
-    timeout?: number,
-    numRetries?: number,
-  ): Promise<Result<RouterConfigResponse, VectorError | MessagingError>> {
-    throw new Error("Method not implemented.");
-  }
-  onReceiveRouterConfigMessage(
-    publicIdentifier: string,
-    callback: (params: Result<void, EngineError>, from: string, inbox: string) => void,
-  ): Promise<void> {
-    throw new Error("Method not implemented.");
-  }
-  respondToRouterConfigMessage(
-    inbox: string,
-    response: Result<RouterConfigResponse, VectorError | MessagingError>,
-  ): Promise<void> {
-    throw new Error("Method not implemented.");
+  subscribeToRouterConfigMessage(routerIdentifier: string, response: RouterConfigResponse): Promise<void> {
+    throw new Error("Method not implemented");
   }
 
   async subscribe(subject: string, callback: (data: any) => void): Promise<void> {

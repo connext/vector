@@ -4,6 +4,7 @@ import { Registry } from "prom-client";
 
 import { setupListeners } from "./listener";
 import { IRouterStore } from "./services/store";
+import { IRouterMessagingService } from "./services/messaging";
 
 export interface IRouter {
   startup(): Promise<void>;
@@ -16,7 +17,7 @@ export class Router implements IRouter {
     private readonly nodeService: INodeService,
     private readonly chainReader: IVectorChainReader,
     private readonly store: IRouterStore,
-    private readonly messagingService: IMessagingService,
+    private readonly messagingService: IRouterMessagingService,
     private readonly logger: BaseLogger,
     private readonly register: Registry,
   ) {}
@@ -27,7 +28,7 @@ export class Router implements IRouter {
     nodeService: INodeService,
     chainReader: IVectorChainReader,
     store: IRouterStore,
-    messagingService: IMessagingService,
+    messagingService: IRouterMessagingService,
     logger: BaseLogger,
     register: Registry,
   ): Promise<Router> {
