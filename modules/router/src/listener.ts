@@ -6,6 +6,9 @@ import {
   FullChannelState,
   IVectorChainReader,
   jsonifyError,
+  IMessagingService,
+  VectorError,
+  Result,
 } from "@connext/vector-types";
 import { getRandomBytes32 } from "@connext/vector-utils";
 import { Gauge, Registry } from "prom-client";
@@ -18,6 +21,7 @@ import { adjustCollateral, requestCollateral } from "./services/collateral";
 import { forwardTransferCreation, forwardTransferResolution, handleIsAlive } from "./forwarding";
 import { IRouterStore } from "./services/store";
 import { getRebalanceProfile } from "./services/config";
+import { config } from "./config";
 
 const ajv = new Ajv();
 
@@ -74,6 +78,7 @@ export async function setupListeners(
   nodeService: INodeService,
   store: IRouterStore,
   chainReader: IVectorChainReader,
+  messagingService: IMessagingService,
   logger: BaseLogger,
   register: Registry,
 ): Promise<void> {
@@ -328,5 +333,22 @@ export async function setupListeners(
 
     logger.info({ method: "handleIsAlive", res: res.getValue() }, "Succesfully handled isAlive");
   });
+
+  // Handle received config request messages
+  await messagingService.onReceiveRouterConfigMessage(
+    routerPublicIdentifier,
+    async (params: Result<void, VectorError>, from: string, inbox: string) => {
+      if (params.isError) {
+        logger.error(
+          { params: params.toJson(), from, method: "onReceiveRouterConfigMessage" },
+          "Got error, shouldn't happen",
+        );
+      }
+      const { allowedSwaps, chainProviders } = config;
+      const supportedChains = Object.keys(chainProviders).map(parseInt);
+      await messagingService.respondToRouterConfigMessage(inbox, Result.ok({ allowedSwaps, supportedChains }));
+    },
+  );
+
   logger.debug({ method, methodId }, "Method complete");
 }

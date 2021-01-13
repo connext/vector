@@ -53,6 +53,7 @@ export class Router implements IRouter {
       this.nodeService,
       this.store,
       this.chainReader,
+      this.messagingService,
       this.logger,
       this.register,
     );
