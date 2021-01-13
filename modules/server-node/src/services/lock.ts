@@ -4,7 +4,7 @@ import {
   LockInformation,
   NodeError,
   Result,
-  VectorError,
+  jsonifyError,
 } from "@connext/vector-types";
 import { MemoryLockService } from "@connext/vector-utils";
 import { BaseLogger } from "pino";
@@ -120,7 +120,7 @@ export class LockService implements ILockService {
         throw new ServerNodeLockError(ServerNodeLockError.reasons.AcquireMessageFailed, lockName, undefined, {
           counterpartyPublicIdentifier,
           isAlice,
-          messagingError: VectorError.jsonify(res.getError()!),
+          messagingError: jsonifyError(res.getError()!),
         });
       }
       const { lockValue } = res.getValue();
@@ -151,7 +151,7 @@ export class LockService implements ILockService {
       );
       if (result.isError) {
         throw new ServerNodeLockError(ServerNodeLockError.reasons.ReleaseMessageFailed, lockName, lockValue, {
-          messagingError: VectorError.jsonify(result.getError()!),
+          messagingError: jsonifyError(result.getError()!),
           counterpartyPublicIdentifier,
           isAlice,
         });

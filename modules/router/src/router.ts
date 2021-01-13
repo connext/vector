@@ -1,7 +1,6 @@
 import { BaseLogger } from "pino";
-import { FullChannelState, INodeService, IVectorChainReader } from "@connext/vector-types";
-import { Gauge, Registry } from "prom-client";
-import { formatEther } from "@ethersproject/units";
+import { INodeService, IVectorChainReader } from "@connext/vector-types";
+import { Registry } from "prom-client";
 
 import { setupListeners } from "./listener";
 import { IRouterStore } from "./services/store";

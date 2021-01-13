@@ -1,5 +1,4 @@
 import { WithdrawCommitment } from "@connext/vector-contracts";
-import { Values } from "@connext/vector-types";
 import {
   ChainAddresses,
   ChannelUpdateEvent,
@@ -34,6 +33,8 @@ import {
   CheckInResponse,
   VectorError,
   IS_ALIVE_EVENT,
+  Values,
+  jsonifyError,
 } from "@connext/vector-types";
 import { BigNumber } from "@ethersproject/bignumber";
 import Pino from "pino";
@@ -244,7 +245,7 @@ export async function setupEngineListeners(
       const res = await acquireRestoreLocks(channel);
       if (res.isError) {
         return sendCannotRestoreFromError(RestoreError.reasons.AcquireLockError, {
-          acquireLockError: VectorError.jsonify(res.getError()!),
+          acquireLockError: jsonifyError(res.getError()!),
         });
       }
 
