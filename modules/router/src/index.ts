@@ -12,6 +12,7 @@ import {
   getRandomBytes32,
   NatsMessagingService,
   ChannelSigner,
+  getPublicIdentifierFromPublicKey,
 } from "@connext/vector-utils";
 import {
   IsAlivePayload,
@@ -22,11 +23,11 @@ import {
   RequestCollateralPayload,
 } from "@connext/vector-types";
 import { Registry } from "prom-client";
+import { Wallet } from "ethers";
 
 import { config } from "./config";
 import { IRouter, Router } from "./router";
 import { PrismaStore } from "./services/store";
-import { Wallet } from "ethers";
 
 const routerPort = 8000;
 const routerBase = `http://router:${routerPort}`;
@@ -63,7 +64,9 @@ const evts: EventCallbackConfig = {
   [EngineEvents.WITHDRAWAL_RESOLVED]: {},
 };
 
-const logger = pino({ name: getRandomBytes32() });
+const configuredIdentifier = getPublicIdentifierFromPublicKey(Wallet.fromMnemonic(config.mnemonic).publicKey);
+
+const logger = pino({ name: configuredIdentifier });
 logger.info({ config }, "Loaded config from environment");
 const server = fastify({ logger, pluginTimeout: 300_000, disableRequestLogging: config.logLevel !== "debug" });
 
@@ -92,6 +95,7 @@ server.addHook("onReady", async () => {
     hydrateProviders(config.chainProviders),
     logger.child({ module: "RouterChainReader" }),
   );
+
   router = await Router.connect(
     nodeService.publicIdentifier,
     nodeService.signerAddress,
