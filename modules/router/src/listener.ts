@@ -173,38 +173,23 @@ export async function setupListeners(
       );
 
       const transferSenderResolutionChannelAddress = res.getValue()?.channelAddress;
-      const transferSenderResolutionTransferId = res.getValue()?.transferId;
-      if (!transferSenderResolutionChannelAddress || !transferSenderResolutionTransferId) {
+      const transferSenderResolutionAssetId = res.getValue()?.assetId;
+      if (!transferSenderResolutionChannelAddress || !transferSenderResolutionAssetId) {
         logger.warn(
           {
             event: EngineEvents.CONDITIONAL_TRANSFER_RESOLVED,
             transferSenderResolutionChannelAddress,
-            transferSenderResolutionTransferId,
+            transferSenderResolutionAssetId,
           },
           "No channel or transfer found in response, will not adjust sender collateral",
         );
         return;
       }
 
-      const transferSenderResolutionTransferRes = await nodeService.getTransfer({
-        transferId: transferSenderResolutionTransferId,
-      });
-      if (transferSenderResolutionTransferRes.isError) {
-        return logger.error(
-          {
-            event: EngineEvents.CONDITIONAL_TRANSFER_RESOLVED,
-            error: jsonifyError(transferSenderResolutionTransferRes.getError()!),
-          },
-          "Error getting transfer",
-        );
-      }
-
-      const resolution = transferSenderResolutionTransferRes.getValue() as FullTransferState;
-
       // Adjust collateral in channel
       const response = await adjustCollateral(
-        resolution.channelAddress,
-        resolution.assetId,
+        transferSenderResolutionChannelAddress,
+        transferSenderResolutionAssetId,
         routerPublicIdentifier,
         nodeService,
         chainReader,
