@@ -9,7 +9,6 @@ import {
   EventCallbackConfig,
   hydrateProviders,
   RestServerNodeService,
-  getRandomBytes32,
   NatsMessagingService,
   ChannelSigner,
   getPublicIdentifierFromPublicKey,

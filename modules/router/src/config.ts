@@ -1,4 +1,4 @@
-import { TAddress, TChainId, TIntegerString, TDecimalString, TUrl } from "@connext/vector-types";
+import { TUrl, TChainId, TAddress, TIntegerString, TDecimalString } from "@connext/vector-types";
 import { Static, Type } from "@sinclair/typebox";
 import Ajv from "ajv";
 import { BigNumber } from "ethers";
@@ -22,7 +22,6 @@ const AllowedSwapSchema = Type.Object({
   priceType: Type.Union([Type.Literal("hardcoded")]),
   hardcodedRate: TDecimalString,
 });
-export type AllowedSwap = Static<typeof AllowedSwapSchema>;
 
 const VectorRouterConfigSchema = Type.Object({
   adminToken: Type.String(),

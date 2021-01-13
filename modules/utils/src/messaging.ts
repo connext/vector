@@ -12,6 +12,7 @@ import {
   VectorError,
   MessagingError,
   ProtocolError,
+  RouterConfigResponse,
 } from "@connext/vector-types";
 import axios, { AxiosResponse } from "axios";
 import pino, { BaseLogger } from "pino";
@@ -335,6 +336,29 @@ export class NatsMessagingService implements IMessagingService {
 
   respondToIsAliveMessage(inbox: string, params: Result<{ channelAddress: string }, VectorError>): Promise<void> {
     return this.respondToMessage(inbox, params, "respondToIsAliveMessage");
+  }
+  ////////////
+
+  // CONFIG METHODS
+  sendRouterConfigMessage(
+    to: string,
+    from: string,
+    timeout?: number,
+    numRetries?: number,
+  ): Promise<Result<RouterConfigResponse, VectorError | MessagingError>> {
+    return this.sendMessage(Result.ok(undefined), "config", to, from, timeout, numRetries, "sendRouterConfigMessage");
+  }
+  onReceiveRouterConfigMessage(
+    publicIdentifier: string,
+    callback: (params: Result<void, VectorError>, from: string, inbox: string) => void,
+  ): Promise<void> {
+    return this.registerCallback(`${publicIdentifier}.*.config`, callback, "onReceiveRouterConfigMessage");
+  }
+  respondToRouterConfigMessage(
+    inbox: string,
+    response: Result<RouterConfigResponse, VectorError | MessagingError>,
+  ): Promise<void> {
+    return this.respondToMessage(inbox, response, "respondToRouterConfigMessage");
   }
   ////////////
 

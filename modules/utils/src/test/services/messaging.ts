@@ -11,6 +11,7 @@ import {
   EngineParams,
   VectorError,
   ProtocolError,
+  RouterConfigResponse,
 } from "@connext/vector-types";
 import { Evt } from "evt";
 
@@ -219,6 +220,27 @@ export class MemoryMessagingService implements IMessagingService {
   }
 
   respondToIsAliveMessage(inbox: string, params: Result<{ channelAddress: string }, VectorError>): Promise<void> {
+    throw new Error("Method not implemented.");
+  }
+
+  sendRouterConfigMessage(
+    to: string,
+    from: string,
+    timeout?: number,
+    numRetries?: number,
+  ): Promise<Result<RouterConfigResponse, VectorError | MessagingError>> {
+    throw new Error("Method not implemented.");
+  }
+  onReceiveRouterConfigMessage(
+    publicIdentifier: string,
+    callback: (params: Result<void, EngineError>, from: string, inbox: string) => void,
+  ): Promise<void> {
+    throw new Error("Method not implemented.");
+  }
+  respondToRouterConfigMessage(
+    inbox: string,
+    response: Result<RouterConfigResponse, VectorError | MessagingError>,
+  ): Promise<void> {
     throw new Error("Method not implemented.");
   }
 

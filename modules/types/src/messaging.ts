@@ -1,5 +1,5 @@
 import { ChannelUpdate, FullChannelState, FullTransferState } from "./channel";
-import { EngineError, NodeError, MessagingError, ProtocolError, Result } from "./error";
+import { EngineError, NodeError, MessagingError, ProtocolError, Result, VectorError } from "./error";
 import { LockInformation } from "./lock";
 import { EngineParams } from "./schemas";
 
@@ -9,6 +9,19 @@ export type CheckInResponse = {
   bobIdentifier: string;
   chainId: number;
   channelAddress: string;
+};
+
+export type AllowedSwap = {
+  fromChainId: number;
+  toChainId: number;
+  fromAssetId: string;
+  toAssetId: string;
+  priceType: "hardcoded";
+  hardcodedRate: string;
+};
+export type RouterConfigResponse = {
+  supportedChains: number[];
+  allowedSwaps: AllowedSwap[];
 };
 
 export interface IMessagingService {
@@ -129,6 +142,21 @@ export interface IMessagingService {
     callback: (params: Result<EngineParams.RequestCollateral, EngineError>, from: string, inbox: string) => void,
   ): Promise<void>;
   respondToRequestCollateralMessage(inbox: string, params: Result<{ message?: string }, EngineError>): Promise<void>;
+
+  sendRouterConfigMessage(
+    to: string,
+    from: string,
+    timeout?: number,
+    numRetries?: number,
+  ): Promise<Result<RouterConfigResponse, VectorError | MessagingError>>;
+  onReceiveRouterConfigMessage(
+    publicIdentifier: string,
+    callback: (params: Result<void, EngineError>, from: string, inbox: string) => void,
+  ): Promise<void>;
+  respondToRouterConfigMessage(
+    inbox: string,
+    response: Result<RouterConfigResponse, VectorError | MessagingError>,
+  ): Promise<void>;
 
   publish(subject: string, data: any): Promise<void>;
   subscribe(subject: string, cb: (data: any) => any): Promise<void>;
