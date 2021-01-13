@@ -1,11 +1,15 @@
 # Vector Changelog
 
-- \[router\] - correctly reclaim from the sender's channel
-
 ## Next Release
+
+## 0.1.1
 
 - \[all\] Improve logging
 - \[contracts\] Add etherscan verification plugin
+- \[router\] Correctly reclaim from the sender's channel
+- \[contracts\] Check if channel is deployed right before deploying
+- \[router\] Checksum config assetIds
+- \[engine\] Checksum user input assetIds
 
 ## 0.1.0
 
