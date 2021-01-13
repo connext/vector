@@ -136,6 +136,18 @@ export async function convertWithdrawParams(
 ): Promise<Result<CreateTransferParams, EngineError>> {
   const { channelAddress, assetId, recipient, fee, callTo, callData, meta } = params;
 
+  // If recipient is AddressZero, throw
+  if (recipient === AddressZero) {
+    return Result.fail(
+      new ParameterConversionError(
+        ParameterConversionError.reasons.WithdrawToZero,
+        channelAddress,
+        signer.publicIdentifier,
+        { params },
+      ),
+    );
+  }
+
   // If there is a fee being charged, add the fee to the amount.
   const amount = fee ? BigNumber.from(params.amount).add(fee).toString() : params.amount;
 
