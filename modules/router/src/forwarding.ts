@@ -334,7 +334,7 @@ export async function forwardTransferResolution(
   nodeService: INodeService,
   store: IRouterStore,
   logger: BaseLogger,
-): Promise<Result<undefined | NodeResponses.ResolveTransfer, ForwardTransferResolutionError>> {
+): Promise<Result<undefined | (NodeResponses.ResolveTransfer & { assetId: string }), ForwardTransferResolutionError>> {
   const method = "forwardTransferResolution";
   const methodId = getRandomBytes32();
   logger.info(
@@ -445,7 +445,7 @@ export async function forwardTransferResolution(
   }
 
   logger.info({ method, methodId }, "Method complete");
-  return Result.ok(resolution.getValue());
+  return Result.ok({ ...resolution.getValue(), assetId: incomingTransfer.assetId });
 }
 
 export async function handleIsAlive(
