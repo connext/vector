@@ -1,5 +1,4 @@
 import { WithdrawCommitment } from "@connext/vector-contracts";
-import { Values, jsonifyError } from "@connext/vector-types";
 import {
   ChainAddresses,
   ChannelUpdateEvent,
@@ -34,6 +33,8 @@ import {
   CheckInResponse,
   VectorError,
   IS_ALIVE_EVENT,
+  Values,
+  jsonifyError,
 } from "@connext/vector-types";
 import { BigNumber } from "@ethersproject/bignumber";
 import Pino from "pino";
