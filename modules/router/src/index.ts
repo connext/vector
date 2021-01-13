@@ -5,7 +5,14 @@ import metricsPlugin from "fastify-metrics";
 import pino from "pino";
 import { Evt } from "evt";
 import { VectorChainReader } from "@connext/vector-contracts";
-import { EventCallbackConfig, hydrateProviders, RestServerNodeService, getRandomBytes32 } from "@connext/vector-utils";
+import {
+  EventCallbackConfig,
+  hydrateProviders,
+  RestServerNodeService,
+  getRandomBytes32,
+  NatsMessagingService,
+  ChannelSigner,
+} from "@connext/vector-utils";
 import {
   IsAlivePayload,
   ConditionalTransferCreatedPayload,
@@ -19,6 +26,7 @@ import { Registry } from "prom-client";
 import { config } from "./config";
 import { IRouter, Router } from "./router";
 import { PrismaStore } from "./services/store";
+import { Wallet } from "ethers";
 
 const routerPort = 8000;
 const routerBase = `http://router:${routerPort}`;
@@ -66,6 +74,13 @@ let router: IRouter;
 const store = new PrismaStore();
 
 server.addHook("onReady", async () => {
+  const signer = new ChannelSigner(Wallet.fromMnemonic(config.mnemonic).privateKey);
+
+  const messagingService = new NatsMessagingService({
+    logger: logger.child({ module: "NatsMessagingService" }),
+    messagingUrl: config.messagingUrl,
+    signer,
+  });
   const nodeService = await RestServerNodeService.connect(
     config.nodeUrl,
     logger.child({ module: "RouterNodeService" }),
@@ -83,6 +98,7 @@ server.addHook("onReady", async () => {
     nodeService,
     chainService,
     store,
+    messagingService,
     logger,
     register,
   );
