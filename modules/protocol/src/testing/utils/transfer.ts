@@ -79,7 +79,7 @@ export const createTransfer = async (
     transferId,
     transferDefinition: params.transferDefinition,
     channelFactoryAddress: channel.networkContext.channelFactoryAddress,
-    CHAIN_ID,
+    chainId: CHAIN_ID,
     transferState: params.transferInitialState,
     meta: params.meta,
   });
