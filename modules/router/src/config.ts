@@ -1,7 +1,8 @@
 import { TUrl, TChainId, TAddress, TIntegerString, TDecimalString } from "@connext/vector-types";
 import { Static, Type } from "@sinclair/typebox";
 import Ajv from "ajv";
-import { BigNumber } from "ethers";
+import { getAddress } from "@ethersproject/address";
+import { BigNumber } from "@ethersproject/bignumber";
 
 const ajv = new Ajv();
 
@@ -69,8 +70,12 @@ if (!valid) {
   throw new Error(validate.errors?.map((err) => err.message).join(","));
 }
 
-// Profile sanity checks
-for (const profile of vectorConfig.rebalanceProfiles) {
+// checksum allowed swaps + rebalance profiles
+vectorConfig.allowedSwaps = vectorConfig.allowedSwaps.map((s) => {
+  return { ...s, fromAssetId: getAddress(s.fromAssetId), toAssetId: getAddress(s.toAssetId) };
+});
+vectorConfig.rebalanceProfiles = vectorConfig.rebalanceProfiles.map((profile) => {
+  // sanity checks
   const target = BigNumber.from(profile.target);
   if (target.gt(profile.reclaimThreshold)) {
     throw new Error("Rebalance target must be less than reclaim threshold");
@@ -79,7 +84,13 @@ for (const profile of vectorConfig.rebalanceProfiles) {
   if (target.lt(profile.collateralizeThreshold) && !target.isZero()) {
     throw new Error("Rebalance target must be larger than collateralizeThreshold or 0");
   }
-}
+
+  // checksum
+  return {
+    ...profile,
+    assetId: getAddress(profile.assetId),
+  };
+});
 
 export const config = {
   dbUrl,

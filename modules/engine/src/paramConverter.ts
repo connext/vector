@@ -20,6 +20,7 @@ import {
 } from "@connext/vector-types";
 import { BigNumber } from "@ethersproject/bignumber";
 import { AddressZero } from "@ethersproject/constants";
+import { getAddress } from "@ethersproject/address";
 
 import { ParameterConversionError } from "./errors";
 
@@ -33,7 +34,7 @@ export async function convertConditionalTransferParams(
   const { channelAddress, amount, assetId, recipient, details, type, timeout, meta: providedMeta } = params;
 
   const recipientChainId = params.recipientChainId ?? channel.networkContext.chainId;
-  const recipientAssetId = params.recipientAssetId ?? params.assetId;
+  const recipientAssetId = getAddress(params.recipientAssetId ?? params.assetId);
   const channelCounterparty = signer.address === channel.alice ? channel.bob : channel.alice;
 
   if (recipient === signer.publicIdentifier && recipientChainId === channel.networkContext.chainId) {
@@ -134,7 +135,21 @@ export async function convertWithdrawParams(
   chainAddresses: ChainAddresses,
   chainReader: IVectorChainReader,
 ): Promise<Result<CreateTransferParams, EngineError>> {
-  const { channelAddress, assetId, recipient, fee, callTo, callData, meta } = params;
+  const { channelAddress, fee, callTo, callData, meta } = params;
+  const assetId = getAddress(params.assetId);
+  const recipient = getAddress(params.recipient);
+
+  // If recipient is AddressZero, throw
+  if (recipient === AddressZero) {
+    return Result.fail(
+      new ParameterConversionError(
+        ParameterConversionError.reasons.WithdrawToZero,
+        channelAddress,
+        signer.publicIdentifier,
+        { params },
+      ),
+    );
+  }
 
   // If there is a fee being charged, add the fee to the amount.
   const amount = fee ? BigNumber.from(params.amount).add(fee).toString() : params.amount;
