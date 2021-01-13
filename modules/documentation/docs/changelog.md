@@ -1,5 +1,7 @@
 # Vector Changelog
 
+- \[router\] - correctly reclaim from the sender's channel
+
 ## Next Release
 
 - \[all\] Improve logging
