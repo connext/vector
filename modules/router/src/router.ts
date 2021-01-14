@@ -48,6 +48,7 @@ export class Router implements IRouter {
   }
 
   async startup(): Promise<void> {
+    await this.messagingService.connect();
     await setupListeners(
       this.publicIdentifier,
       this.signerAddress,
