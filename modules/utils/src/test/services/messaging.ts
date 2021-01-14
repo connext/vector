@@ -223,7 +223,10 @@ export class MemoryMessagingService implements IMessagingService {
     throw new Error("Method not implemented.");
   }
 
-  subscribeToRouterConfigMessage(routerIdentifier: string, response: RouterConfigResponse): Promise<void> {
+  subscribeToRouterConfigMessage(
+    routerIdentifier: string,
+    callback: (msg: Result<RouterConfigResponse, MessagingError>) => void | Promise<void>,
+  ): Promise<void> {
     throw new Error("Method not implemented");
   }
 

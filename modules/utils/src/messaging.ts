@@ -99,6 +99,10 @@ export class NatsBasicMessagingService implements IBasicMessaging {
     }
   }
 
+  get publicIdentifier(): string {
+    return this.signer.publicIdentifier;
+  }
+
   private isConnected(): boolean {
     return !!this.connection?.isConnected();
   }
@@ -151,8 +155,9 @@ export class NatsBasicMessagingService implements IBasicMessaging {
   // Generic methods
   public async publish(subject: string, data: any): Promise<void> {
     this.assertConnected();
-    this.log.debug(`Publishing ${subject}: ${safeJsonStringify(data)}`);
-    this.connection!.publish(subject, safeJsonStringify(data));
+    const toPublish = safeJsonStringify(data);
+    this.log.debug({ subject, data }, `Publishing`);
+    this.connection!.publish(subject, toPublish);
   }
 
   public async request(subject: string, timeout: number, data: any): Promise<any> {
@@ -413,8 +418,13 @@ export class NatsMessagingService extends NatsBasicMessagingService implements I
   ////////////
 
   // CONFIG METHODS
-  subscribeToRouterConfigMessage(routerIdentifier: string, response: RouterConfigResponse): Promise<void> {
-    throw new Error("Method not implemented");
+  async subscribeToRouterConfigMessage(
+    routerIdentifier: string,
+    callback: (msg: Result<RouterConfigResponse, MessagingError>) => void | Promise<void>,
+  ): Promise<void> {
+    const subject = `${routerIdentifier}.config`;
+    // await this.subscribe(subject, callback);
+    await this.registerCallback<RouterConfigResponse>(subject, callback, "subscribeToRouterConfigMessage");
   }
   ////////////
 
@@ -425,7 +435,7 @@ export class NatsMessagingService extends NatsBasicMessagingService implements I
 
   private async registerCallback<T = any>(
     subscriptionSubject: string,
-    callback: (dataReceived: Result<T, Error>, from: string, inbox: string) => void,
+    callback: (dataReceived: Result<T, Error>, from?: string, inbox?: string) => void,
     method: string,
   ): Promise<void> {
     await this.subscribe(subscriptionSubject, (msg, err) => {

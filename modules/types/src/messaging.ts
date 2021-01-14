@@ -151,5 +151,8 @@ export interface IMessagingService extends IBasicMessaging {
   ): Promise<void>;
   respondToRequestCollateralMessage(inbox: string, params: Result<{ message?: string }, EngineError>): Promise<void>;
 
-  subscribeToRouterConfigMessage(routerIdentifier: string, config: RouterConfigResponse): Promise<void>;
+  subscribeToRouterConfigMessage(
+    routerIdentifier: string,
+    callback: (msg: Result<RouterConfigResponse, MessagingError>) => void | Promise<void>,
+  ): Promise<void>;
 }
