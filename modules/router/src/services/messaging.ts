@@ -11,13 +11,13 @@ export interface IRouterMessagingService extends IBasicMessaging {
 
 export class NatsRouterMessagingService extends NatsBasicMessagingService implements IRouterMessagingService {
   private logger: BaseLogger;
-  constructor(private readonly config: MessagingConfig) {
-    super(config);
-    this.logger = config.logger ?? pino();
+  constructor(private readonly messagingConfig: MessagingConfig) {
+    super(messagingConfig);
+    this.logger = messagingConfig.logger ?? pino();
   }
 
   async publishRouterConfig(config: RouterConfigResponse): Promise<void> {
-    const method = "configureSubscriptions";
+    const method = "publishRouterConfig";
     const methodId = getRandomBytes32();
     this.logger.debug({ method, methodId, config }, "Method started");
     const subject = `${this.publicIdentifier}.config`;

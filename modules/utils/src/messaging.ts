@@ -157,7 +157,7 @@ export class NatsBasicMessagingService implements IBasicMessaging {
     this.assertConnected();
     const toPublish = safeJsonStringify(data);
     this.log.debug({ subject, data }, `Publishing`);
-    this.connection!.publish(subject, toPublish);
+    await this.connection!.publish(subject, toPublish);
   }
 
   public async request(subject: string, timeout: number, data: any): Promise<any> {
