@@ -14,6 +14,7 @@ import {
   ProtocolError,
   RouterConfigResponse,
   IBasicMessaging,
+  RouterError,
 } from "@connext/vector-types";
 import axios, { AxiosResponse } from "axios";
 import pino, { BaseLogger } from "pino";
@@ -97,10 +98,6 @@ export class NatsBasicMessagingService implements IBasicMessaging {
     } else {
       throw new Error(`Either a bearerToken or signer must be provided`);
     }
-  }
-
-  get publicIdentifier(): string {
-    return this.signer.publicIdentifier;
   }
 
   private isConnected(): boolean {
@@ -191,7 +188,8 @@ export class NatsBasicMessagingService implements IBasicMessaging {
     await this.connection!.flush();
   }
 
-  private getSubjectsToUnsubscribeFrom(subject: string): string[] {
+  // Helper methods
+  protected getSubjectsToUnsubscribeFrom(subject: string): string[] {
     // must account for wildcards
     const subscribedTo = this.connection!.getSubscribedSubjects();
     const unsubscribeFrom: string[] = [];
@@ -214,6 +212,82 @@ export class NatsBasicMessagingService implements IBasicMessaging {
     });
 
     return unsubscribeFrom;
+  }
+
+  protected async respondToMessage<T = any>(inbox: string, response: Result<T, Error>, method: string): Promise<void> {
+    this.log.debug({ method, inbox }, `Sending response`);
+    await this.publish(inbox, response.toJson());
+  }
+
+  protected async registerCallback<T = any>(
+    subscriptionSubject: string,
+    callback: (dataReceived: Result<T, VectorError>, from: string, inbox: string) => void,
+    method: string,
+  ): Promise<void> {
+    await this.subscribe(subscriptionSubject, (msg, err) => {
+      this.log.debug({ method, msg }, "Received message");
+      const from = msg.subject.split(".")[1];
+      if (err) {
+        callback(Result.fail(new MessagingError(err)), from, msg.reply);
+        return;
+      }
+      const { result, parsed } = this.parseIncomingMessage<T>(msg);
+      if (!parsed.reply) {
+        return;
+      }
+
+      callback(result, from, msg.reply);
+      return;
+    });
+    this.log.debug({ method, subject: subscriptionSubject }, `Subscription created`);
+  }
+
+  // TODO: error typing
+  protected async sendMessage<T = any, R = any>(
+    data: Result<T, any>,
+    subjectSuffix: string,
+    to: string,
+    from: string,
+    timeout: number,
+    numRetries: number,
+    method: string,
+  ): Promise<Result<R, any>> {
+    this.assertConnected();
+    const subject = `${to}.${from}.${subjectSuffix}`;
+    try {
+      const msgBody = safeJsonStringify(data.toJson());
+      this.log.debug({ method, msgBody }, "Sending message");
+      const msg = await this.request(subject, timeout, msgBody);
+      this.log.debug({ method, msg }, "Received response");
+      const { result } = this.parseIncomingMessage<R>(msg);
+      return result;
+    } catch (e) {
+      this.log.error(
+        { error: e.message ?? e, subject: subjectSuffix, data: data.toJson(), method },
+        "Sending message failed",
+      );
+      const error = e.message ?? e ?? "";
+      return Result.fail(
+        new MessagingError(
+          error.includes("Request timed out") || error.includes("timeout")
+            ? MessagingError.reasons.Timeout
+            : MessagingError.reasons.Unknown,
+          {
+            messagingError: e.message ?? e,
+            subject,
+            data: data.toJson(),
+            method,
+          },
+        ),
+      );
+    }
+  }
+
+  protected parseIncomingMessage<R>(msg: any): { result: Result<R, any>; parsed: any } {
+    const parsedMsg = typeof msg === `string` ? safeJsonParse(msg) : msg;
+    const parsedData = typeof msg.data === `string` ? safeJsonParse(msg.data) : msg.data;
+    parsedMsg.data = parsedData;
+    return { result: Result.fromJson<R, any>(parsedMsg.data), parsed: parsedMsg };
   }
 }
 
@@ -418,89 +492,14 @@ export class NatsMessagingService extends NatsBasicMessagingService implements I
   ////////////
 
   // CONFIG METHODS
-  async subscribeToRouterConfigMessage(
-    routerIdentifier: string,
-    callback: (msg: Result<RouterConfigResponse, MessagingError>) => void | Promise<void>,
-  ): Promise<void> {
-    const subject = `${routerIdentifier}.config`;
-    // await this.subscribe(subject, callback);
-    await this.registerCallback<RouterConfigResponse>(subject, callback, "subscribeToRouterConfigMessage");
-  }
-  ////////////
-
-  private async respondToMessage<T = any>(inbox: string, response: Result<T, Error>, method: string): Promise<void> {
-    this.logger.debug({ method, inbox }, `Sending response`);
-    await this.publish(inbox, response.toJson());
-  }
-
-  private async registerCallback<T = any>(
-    subscriptionSubject: string,
-    callback: (dataReceived: Result<T, Error>, from?: string, inbox?: string) => void,
-    method: string,
-  ): Promise<void> {
-    await this.subscribe(subscriptionSubject, (msg, err) => {
-      this.logger.debug({ method, msg }, "Received message");
-      const from = msg.subject.split(".")[1];
-      if (err) {
-        callback(Result.fail(new MessagingError(err)), from, msg.reply);
-        return;
-      }
-      const { result, parsed } = this.parseIncomingMessage<T>(msg);
-      if (!parsed.reply) {
-        return;
-      }
-
-      callback(result, from, msg.reply);
-      return;
-    });
-    this.logger.debug({ method, subject: subscriptionSubject }, `Subscription created`);
-  }
-
-  // TODO: error typing
-  private async sendMessage<T = any, R = any>(
-    data: Result<T, any>,
-    subjectSuffix: string,
+  async sendRouterConfigMessage(
+    configRequest: Result<void, VectorError>,
     to: string,
     from: string,
-    timeout: number,
-    numRetries: number,
-    method: string,
-  ): Promise<Result<R, any>> {
-    this.assertConnected();
-    const subject = `${to}.${from}.${subjectSuffix}`;
-    try {
-      const msgBody = safeJsonStringify(data.toJson());
-      this.logger.debug({ method, msgBody }, "Sending message");
-      const msg = await this.request(subject, timeout, msgBody);
-      this.logger.debug({ method, msg }, "Received response");
-      const { result } = this.parseIncomingMessage<R>(msg);
-      return result;
-    } catch (e) {
-      this.logger.error(
-        { error: e.message ?? e, subject: subjectSuffix, data: data.toJson(), method },
-        "Sending message failed",
-      );
-      const error = e.message ?? e ?? "";
-      return Result.fail(
-        new MessagingError(
-          error.includes("Request timed out") || error.includes("timeout")
-            ? MessagingError.reasons.Timeout
-            : MessagingError.reasons.Unknown,
-          {
-            messagingError: e.message ?? e,
-            subject,
-            data: data.toJson(),
-            method,
-          },
-        ),
-      );
-    }
+    timeout?: number,
+    numRetries?: number,
+  ): Promise<Result<RouterConfigResponse, RouterError | MessagingError>> {
+    return this.sendMessage(configRequest, "config", to, from, timeout, numRetries, "sendRouterConfigMessage");
   }
-
-  private parseIncomingMessage<R>(msg: any): { result: Result<R, any>; parsed: any } {
-    const parsedMsg = typeof msg === `string` ? safeJsonParse(msg) : msg;
-    const parsedData = typeof msg.data === `string` ? safeJsonParse(msg.data) : msg.data;
-    parsedMsg.data = parsedData;
-    return { result: Result.fromJson<R, any>(parsedMsg.data), parsed: parsedMsg };
-  }
+  ////////////
 }

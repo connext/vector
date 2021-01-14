@@ -1,5 +1,5 @@
 import { ChannelUpdate, FullChannelState, FullTransferState } from "./channel";
-import { EngineError, NodeError, MessagingError, ProtocolError, Result } from "./error";
+import { EngineError, NodeError, MessagingError, ProtocolError, Result, RouterError, VectorError } from "./error";
 import { LockInformation } from "./lock";
 import { EngineParams } from "./schemas";
 
@@ -151,8 +151,11 @@ export interface IMessagingService extends IBasicMessaging {
   ): Promise<void>;
   respondToRequestCollateralMessage(inbox: string, params: Result<{ message?: string }, EngineError>): Promise<void>;
 
-  subscribeToRouterConfigMessage(
-    routerIdentifier: string,
-    callback: (msg: Result<RouterConfigResponse, MessagingError>) => void | Promise<void>,
-  ): Promise<void>;
+  sendRouterConfigMessage(
+    configRequest: Result<void, VectorError>,
+    to: string,
+    from: string,
+    timeout?: number,
+    numRetries?: number,
+  ): Promise<Result<RouterConfigResponse, RouterError | MessagingError>>;
 }

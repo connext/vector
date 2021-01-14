@@ -1,11 +1,11 @@
 import { getRandomChannelSigner, getTestLoggers, NatsMessagingService, expect, delay } from "@connext/vector-utils";
 import pino from "pino";
-import { IChannelSigner } from "@connext/vector-types";
+import { IChannelSigner, Result } from "@connext/vector-types";
 
 import { NatsRouterMessagingService } from "../../services/messaging";
 import { config } from "../../config";
 
-describe.only("messaging.ts", () => {
+describe("messaging.ts", () => {
   const { log: logger } = getTestLoggers("messaging", "trace" as pino.Level);
   let routerMessaging: NatsRouterMessagingService;
   let messaging: NatsMessagingService;
@@ -31,21 +31,28 @@ describe.only("messaging.ts", () => {
     await messaging.connect();
   });
 
-  it("should publish + subscribe to config", async () => {
-    const promise = new Promise(async (resolve, reject) => {
-      setTimeout(() => reject("No config received"), 15_000);
-      await messaging.subscribeToRouterConfigMessage(router.publicIdentifier, (config: any) => resolve(config));
-    });
+  it("should properly respond with config when requested", async () => {
+    const configResponse = { allowedSwaps: config.allowedSwaps, supportedChains: [1, 2, 3] };
 
-    const response = { allowedSwaps: config.allowedSwaps, supportedChains: [1, 2, 3] };
+    await routerMessaging.onReceiveRouterConfigMessage(
+      router.publicIdentifier,
+      async (result: Result<any, any>, from: string, inbox: string) => {
+        expect(result.isError).to.not.be.ok;
+        expect(result.getValue()).to.not.be.ok;
+        expect(inbox).to.be.a("string");
+        expect(from).to.be.eq(signer.publicIdentifier);
+        await routerMessaging.respondToRouterConfigMessage(inbox, Result.ok(configResponse));
+      },
+    );
 
-    // NOTE: watch logs in debug, if the delay isnt added then the subscription
-    // is created AFTER the message is published
-    await delay(5_000);
+    await delay(1_000);
 
-    await routerMessaging.publishRouterConfig(response);
-    console.log("published, waiting for promise");
-    const received = await promise;
-    expect(received).to.be.deep.eq(response);
+    const res = await messaging.sendRouterConfigMessage(
+      Result.ok(undefined),
+      router.publicIdentifier,
+      signer.publicIdentifier,
+    );
+    expect(res.isError).to.be.false;
+    expect(res.getValue()).to.be.deep.eq(configResponse);
   });
 });

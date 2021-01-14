@@ -1,40 +1,38 @@
-import { RouterConfigResponse, IBasicMessaging, Result } from "@connext/vector-types";
-import { getRandomBytes32, NatsBasicMessagingService, MessagingConfig } from "@connext/vector-utils";
+import { RouterConfigResponse, IBasicMessaging, Result, RouterError, MessagingError } from "@connext/vector-types";
+import { NatsBasicMessagingService, MessagingConfig } from "@connext/vector-utils";
 import pino, { BaseLogger } from "pino";
-
-import { config } from "../config";
-
 export interface IRouterMessagingService extends IBasicMessaging {
-  // Specialized broadcast methods
-  publishRouterConfig(config: RouterConfigResponse): Promise<void>;
+  // Specialized request/response methods
+  respondToRouterConfigMessage(
+    inbox: string,
+    configData: Result<RouterConfigResponse, RouterError | MessagingError>,
+  ): Promise<void>;
+  onReceiveRouterConfigMessage(
+    publicIdentifier: string,
+    callback: (configRequest: Result<void, RouterError | MessagingError>, from: string, inbox: string) => void,
+  ): Promise<void>;
 }
 
 export class NatsRouterMessagingService extends NatsBasicMessagingService implements IRouterMessagingService {
   private logger: BaseLogger;
-  constructor(private readonly messagingConfig: MessagingConfig) {
-    super(messagingConfig);
-    this.logger = messagingConfig.logger ?? pino();
+  constructor(private readonly config: MessagingConfig) {
+    super(config);
+    this.logger = config.logger ?? pino();
   }
 
-  async publishRouterConfig(config: RouterConfigResponse): Promise<void> {
-    const method = "publishRouterConfig";
-    const methodId = getRandomBytes32();
-    this.logger.debug({ method, methodId, config }, "Method started");
-    const subject = `${this.publicIdentifier}.config`;
-    await this.publish(subject, Result.ok(config).toJson());
-    this.logger.debug({ method, methodId }, "Method complete");
+  // Config messages
+  respondToRouterConfigMessage(
+    inbox: string,
+    configData: Result<RouterConfigResponse, RouterError | MessagingError>,
+  ): Promise<void> {
+    return this.respondToMessage(inbox, configData, "respondToRouterConfigMessage");
   }
+
+  async onReceiveRouterConfigMessage(
+    publicIdentifier: string,
+    callback: (configRequest: Result<void, RouterError | MessagingError>, from: string, inbox: string) => void,
+  ): Promise<void> {
+    await this.registerCallback(`${publicIdentifier}.*.config`, callback, "onReceiveRouterConfigMessage");
+  }
+  //////////////////
 }
-
-export const configureSubscriptions = async (
-  messagingService: IRouterMessagingService,
-  logger: BaseLogger,
-): Promise<void> => {
-  const method = "configureSubscriptions";
-  const methodId = getRandomBytes32();
-  logger.debug({ method, methodId }, "Method started");
-  const { chainProviders, allowedSwaps } = config;
-  const supportedChains = Object.keys(chainProviders).map(parseInt);
-  await messagingService.publishRouterConfig({ supportedChains, allowedSwaps });
-  logger.debug({ method, methodId }, "Method complete");
-};

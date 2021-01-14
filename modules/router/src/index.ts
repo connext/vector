@@ -9,7 +9,6 @@ import {
   EventCallbackConfig,
   hydrateProviders,
   RestServerNodeService,
-  NatsMessagingService,
   ChannelSigner,
   getPublicIdentifierFromPublicKey,
 } from "@connext/vector-utils";
