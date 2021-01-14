@@ -216,7 +216,7 @@ function App() {
       });
       console.log(`Cross chain transfer complete!`);
     } catch (e) {
-      console.error("Error cross chain transferring", e);
+      console.error("Error cross chain transferring", !!e["toJson"] ? e.toJson() : e);
     }
     setTransferLoading(false);
   };
