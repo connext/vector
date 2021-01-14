@@ -17,6 +17,10 @@ export interface INodeService {
 
   getStatus(): Promise<Result<NodeResponses.GetStatus, NodeError>>;
 
+  getRouterConfig(
+    params: OptionalPublicIdentifier<NodeParams.GetRouterConfig>,
+  ): Promise<Result<NodeResponses.GetRouterConfig, NodeError>>;
+
   getStateChannelByParticipants(
     params: OptionalPublicIdentifier<NodeParams.GetChannelStateByParticipants>,
   ): Promise<Result<NodeResponses.GetChannelStateByParticipants, NodeError>>;

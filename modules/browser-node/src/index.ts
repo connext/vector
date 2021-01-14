@@ -485,6 +485,18 @@ export class BrowserNode implements INodeService {
     return this.send(rpc);
   }
 
+  async getRouterConfig(
+    params: OptionalPublicIdentifier<NodeParams.GetRouterConfig>,
+  ): Promise<Result<NodeResponses.GetRouterConfig, BrowserNodeError>> {
+    const rpc = constructRpcRequest("chan_getRouterConfig", params);
+    try {
+      const res = await this.send(rpc);
+      return Result.ok(res);
+    } catch (e) {
+      return Result.fail(e);
+    }
+  }
+
   async getStatus(): Promise<Result<NodeResponses.GetStatus, BrowserNodeError>> {
     const rpc = constructRpcRequest("chan_getStatus", {});
     try {
