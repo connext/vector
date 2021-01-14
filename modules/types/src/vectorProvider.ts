@@ -6,6 +6,7 @@ import { RegisteredTransfer } from "./transferDefinitions";
 export const ChannelRpcMethods = {
   chan_signUtilityMessage: "chan_signUtilityMessage",
   chan_getConfig: "chan_getConfig",
+  chan_getRouterConfig: "chan_getRouterConfig",
   chan_getStatus: "chan_getStatus",
   chan_getChannelState: "chan_getChannelState",
   chan_getChannelStateByParticipants: "chan_getChannelStateByParticipants",
@@ -39,6 +40,7 @@ export type ChannelRpcMethod = typeof ChannelRpcMethods[keyof typeof ChannelRpcM
 export type ChannelRpcMethodsPayloadMap = {
   [ChannelRpcMethods.chan_signUtilityMessage]: EngineParams.SignUtilityMessage;
   [ChannelRpcMethods.chan_getConfig]: {};
+  [ChannelRpcMethods.chan_getRouterConfig]: EngineParams.GetRouterConfig;
   [ChannelRpcMethods.chan_getStatus]: {};
   [ChannelRpcMethods.chan_sendIsAlive]: EngineParams.SendIsAlive;
   [ChannelRpcMethods.chan_getChannelState]: EngineParams.GetChannelState;
@@ -74,6 +76,7 @@ export type ChannelRpcMethodsPayloadMap = {
 export type ChannelRpcMethodsResponsesMap = {
   [ChannelRpcMethods.chan_signUtilityMessage]: string;
   [ChannelRpcMethods.chan_getConfig]: NodeResponses.GetConfig;
+  [ChannelRpcMethods.chan_getRouterConfig]: NodeResponses.GetRouterConfig;
   [ChannelRpcMethods.chan_getStatus]: NodeResponses.GetStatus;
   [ChannelRpcMethods.chan_sendIsAlive]: NodeResponses.SendIsAlive;
   [ChannelRpcMethods.chan_getChannelState]: FullChannelState | undefined;

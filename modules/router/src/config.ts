@@ -1,4 +1,4 @@
-import { TUrl, TChainId, TAddress, TIntegerString, TDecimalString } from "@connext/vector-types";
+import { TUrl, TChainId, TAddress, TIntegerString, AllowedSwapSchema } from "@connext/vector-types";
 import { Static, Type } from "@sinclair/typebox";
 import Ajv from "ajv";
 import { getAddress } from "@ethersproject/address";
@@ -14,15 +14,6 @@ const RebalanceProfileSchema = Type.Object({
   collateralizeThreshold: TIntegerString,
 });
 export type RebalanceProfile = Static<typeof RebalanceProfileSchema>;
-
-const AllowedSwapSchema = Type.Object({
-  fromChainId: TChainId,
-  toChainId: TChainId,
-  fromAssetId: TAddress,
-  toAssetId: TAddress,
-  priceType: Type.Union([Type.Literal("hardcoded")]),
-  hardcodedRate: TDecimalString,
-});
 
 const VectorRouterConfigSchema = Type.Object({
   adminToken: Type.String(),
