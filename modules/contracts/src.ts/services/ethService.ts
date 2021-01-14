@@ -475,7 +475,6 @@ export class EthereumChainService extends EthereumChainReader implements IVector
       const response = await this.queue.add(async () => {
         const response = await txFn();
         if (!response) {
-          console.log("********** did not send tx");
           this.log.warn({ channelAddress, reason }, "Did not attempt tx");
           return response;
         }
