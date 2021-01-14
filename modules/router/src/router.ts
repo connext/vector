@@ -57,7 +57,7 @@ export class Router implements IRouter {
       this.logger,
       this.register,
     );
-    await configureSubscriptions(this.publicIdentifier, this.signerAddress, this.messagingService, this.logger);
+    await configureSubscriptions(this.messagingService, this.logger);
     this.configureMetrics();
   }
 

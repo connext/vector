@@ -6,7 +6,6 @@ import {
   FullChannelState,
   IVectorChainReader,
   jsonifyError,
-  FullTransferState,
 } from "@connext/vector-types";
 import { getRandomBytes32 } from "@connext/vector-utils";
 import { Gauge, Registry } from "prom-client";
