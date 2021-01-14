@@ -2,7 +2,7 @@
 import { VectorChainService } from "@connext/vector-contracts";
 import { IVectorProtocol, IChannelSigner, IVectorStore } from "@connext/vector-types";
 import { VectorEngine } from "@connext/vector-engine";
-import { expect, getTestLoggers, getRandomBytes32 } from "@connext/vector-utils";
+import { expect, getTestLoggers, getRandomBytes32, mkAddress } from "@connext/vector-utils";
 import { AddressZero } from "@ethersproject/constants";
 import { JsonRpcProvider } from "@ethersproject/providers";
 import { BigNumber } from "@ethersproject/bignumber";
@@ -17,14 +17,10 @@ import { env } from "./env";
 const testName = "VectorEngine index utils";
 const { log } = getTestLoggers(testName, env.logLevel);
 
-export const depositChainId = parseInt(Object.keys(env.chainProviders)[0]);
-export const recipientChainId = parseInt(Object.keys(env.chainProviders)[1]);
-
-export const senderAssetId = env.chainAddresses[depositChainId]?.testTokenAddress ?? "";
-export const receiverAssetId = env.chainAddresses[recipientChainId]?.testTokenAddress ?? "";
-
-export const senderProvider = new JsonRpcProvider(env.chainProviders[depositChainId], depositChainId);
-export const receiverProvider = new JsonRpcProvider(env.chainProviders[recipientChainId], recipientChainId);
+const depositChainId = 1337;
+const withdrawChainId = 1338;
+const depositAssetId = mkAddress("0x1337");
+const withdrawAssetId = mkAddress("0x1338");
 
 describe("BrowserNode", () => {
   let iframe: Sinon.SinonStubbedInstance<IframeChannelProvider>;
@@ -51,6 +47,7 @@ describe("BrowserNode", () => {
   let value: BigNumber;
 
   beforeEach(async () => {
+    console.log("env.chainAddresses: ", env.chainAddresses);
     const depositChannelSetup = await getFundedChannel(
       testName,
       [
@@ -59,7 +56,7 @@ describe("BrowserNode", () => {
           amount: ["100", "100"],
         },
         {
-          assetId: env.chainAddresses[depositChainId].testTokenAddress,
+          assetId: depositAssetId,
           amount: ["100", "100"],
         },
       ],
@@ -80,11 +77,11 @@ describe("BrowserNode", () => {
           amount: ["100", "100"],
         },
         {
-          assetId: env.chainAddresses[recipientChainId].testTokenAddress,
+          assetId: depositAssetId,
           amount: ["100", "100"],
         },
       ],
-      recipientChainId,
+      withdrawChainId,
       depositChannelSetup.alice,
     );
     console.log(recipientChannelSetup);
@@ -115,12 +112,12 @@ describe("BrowserNode", () => {
   // - store calls when channel is updated
   // - event emission is done properly
   // - update on latest channel corresponds to input params
-  it("should be able to make crossChain transfer for ETH", async () => {
+  it.only("should be able to make crossChain transfer for ETH", async () => {
     //connect
     const browserNode = new BrowserNode({
       routerPublicIdentifier: alice.publicIdentifier,
-      supportedChains: [depositChainId, recipientChainId],
-      chainProviders: { [depositChainId]: "http://localhost:8545", [recipientChainId]: "http://localhost:8546" },
+      supportedChains: [1337, 1338],
+      chainProviders: { [depositChainId]: "http://localhost:8545", [withdrawChainId]: "http://localhost:8546" },
     });
 
     connectStub.resolves(directProvider);
@@ -141,20 +138,17 @@ describe("BrowserNode", () => {
     const params = {
       amount: amount,
       fromChainId: depositChainId,
-      fromAssetId: env.chainAddresses[depositChainId].testTokenAddress,
-      toChainId: recipientChainId,
-      toAssetId: env.chainAddresses[recipientChainId].testTokenAddress,
+      fromAssetId: depositAssetId,
+      toChainId: withdrawChainId,
+      toAssetId: withdrawAssetId,
       reconcileDeposit: true,
       withdrawalAddress: withdrawalAddress,
       meta: { crossChainTransferId },
     };
 
-    let result;
-    try {
-      result = await browserNode!.crossChainTransfer(params);
-    } catch (e) {
-      expect(result).to.be.instanceOf(VectorEngine);
-    }
+    const result = await browserNode!.crossChainTransfer(params);
+    console.log("result: ", result);
+    expect(result).to.be.ok;
   });
 
   it("should be able to make crossChain transfer for ERC20 Token", async () => {
