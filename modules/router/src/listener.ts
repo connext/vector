@@ -365,7 +365,9 @@ export async function setupListeners(
       return;
     }
     const { chainProviders, allowedSwaps } = config;
-    const supportedChains = Object.keys(chainProviders).map(parseInt);
+    const supportedChains = Object.keys(chainProviders)
+      .map((x) => parseInt(x))
+      .filter((x) => !!x);
     await messagingService.respondToRouterConfigMessage(inbox, Result.ok({ supportedChains, allowedSwaps }));
     logger.debug({ method, methodId }, "Method complete");
   });
