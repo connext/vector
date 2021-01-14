@@ -24,10 +24,18 @@ export type RouterConfigResponse = {
   allowedSwaps: AllowedSwap[];
 };
 
-export interface IMessagingService {
+// All basic NATS messaging services
+export interface IBasicMessaging {
   connect(): Promise<void>;
   disconnect(): Promise<void>;
+  publish(subject: string, data: any): Promise<void>;
+  subscribe(subject: string, cb: (data: any) => any): Promise<void>;
+  unsubscribe(subject: string): Promise<void>;
+  flush(): Promise<void>;
+  request(subject: string, timeout: number, data: any): Promise<any>;
+}
 
+export interface IMessagingService extends IBasicMessaging {
   onReceiveLockMessage(
     myPublicIdentifier: string,
     callback: (lockInfo: Result<LockInformation, NodeError>, from: string, inbox: string) => void,
@@ -144,10 +152,4 @@ export interface IMessagingService {
   respondToRequestCollateralMessage(inbox: string, params: Result<{ message?: string }, EngineError>): Promise<void>;
 
   subscribeToRouterConfigMessage(routerIdentifier: string, config: RouterConfigResponse): Promise<void>;
-
-  publish(subject: string, data: any): Promise<void>;
-  subscribe(subject: string, cb: (data: any) => any): Promise<void>;
-  unsubscribe(subject: string): Promise<void>;
-  flush(): Promise<void>;
-  request(subject: string, timeout: number, data: any): Promise<any>;
 }

@@ -77,9 +77,13 @@ let router: IRouter;
 const store = new PrismaStore();
 
 server.addHook("onReady", async () => {
-  // const signer = new ChannelSigner(Wallet.fromMnemonic(config.mnemonic).privateKey);
+  const signer = new ChannelSigner(Wallet.fromMnemonic(config.mnemonic).privateKey);
 
-  const messagingService = new NatsRouterMessagingService();
+  const messagingService = new NatsRouterMessagingService({
+    signer,
+    logger: logger.child({ module: "NatsRouterMessagingService" }),
+    messagingUrl: config.messagingUrl,
+  });
   const nodeService = await RestServerNodeService.connect(
     config.nodeUrl,
     logger.child({ module: "RouterNodeService" }),

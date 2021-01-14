@@ -1,10 +1,10 @@
 import { BaseLogger } from "pino";
-import { IMessagingService, INodeService, IVectorChainReader } from "@connext/vector-types";
+import { INodeService, IVectorChainReader } from "@connext/vector-types";
 import { Registry } from "prom-client";
 
 import { setupListeners } from "./listener";
 import { IRouterStore } from "./services/store";
-import { IRouterMessagingService } from "./services/messaging";
+import { configureSubscriptions, IRouterMessagingService } from "./services/messaging";
 
 export interface IRouter {
   startup(): Promise<void>;
@@ -54,10 +54,10 @@ export class Router implements IRouter {
       this.nodeService,
       this.store,
       this.chainReader,
-      this.messagingService,
       this.logger,
       this.register,
     );
+    await configureSubscriptions(this.publicIdentifier, this.signerAddress, this.messagingService, this.logger);
     this.configureMetrics();
   }
 

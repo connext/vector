@@ -19,7 +19,6 @@ import { adjustCollateral, requestCollateral } from "./services/collateral";
 import { forwardTransferCreation, forwardTransferResolution, handleIsAlive } from "./forwarding";
 import { IRouterStore } from "./services/store";
 import { getRebalanceProfile } from "./services/config";
-import { IRouterMessagingService } from "./services/messaging";
 
 const ajv = new Ajv();
 
@@ -76,7 +75,6 @@ export async function setupListeners(
   nodeService: INodeService,
   store: IRouterStore,
   chainReader: IVectorChainReader,
-  messagingService: IRouterMessagingService,
   logger: BaseLogger,
   register: Registry,
 ): Promise<void> {

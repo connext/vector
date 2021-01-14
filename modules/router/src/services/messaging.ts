@@ -1,15 +1,8 @@
-import { RouterConfigResponse } from "@connext/vector-types";
+import { RouterConfigResponse, IBasicMessaging } from "@connext/vector-types";
+import { NatsBasicMessagingService } from "@connext/vector-utils";
+import { BaseLogger } from "pino";
 
-export interface IRouterMessagingService {
-  // Standard messaging service methods
-  connect(): Promise<void>;
-  disconnect(): Promise<void>;
-  publish(subject: string, data: any): Promise<void>;
-  subscribe(subject: string, cb: (data: any) => any): Promise<void>;
-  unsubscribe(subject: string): Promise<void>;
-  flush(): Promise<void>;
-  request(subject: string, timeout: number, data: any): Promise<any>;
-
+export interface IRouterMessagingService extends IBasicMessaging {
   // Specialized broadcast methods
   publishRouterConfig(config: RouterConfigResponse): Promise<void>;
   subscribeToRouterConfig(
@@ -18,28 +11,7 @@ export interface IRouterMessagingService {
   ): void;
 }
 
-export class NatsRouterMessagingService implements IRouterMessagingService {
-  connect(): Promise<void> {
-    throw new Error("Method not implemented.");
-  }
-  disconnect(): Promise<void> {
-    throw new Error("Method not implemented.");
-  }
-  publish(subject: string, data: any): Promise<void> {
-    throw new Error("Method not implemented.");
-  }
-  subscribe(subject: string, cb: (data: any) => any): Promise<void> {
-    throw new Error("Method not implemented.");
-  }
-  unsubscribe(subject: string): Promise<void> {
-    throw new Error("Method not implemented.");
-  }
-  flush(): Promise<void> {
-    throw new Error("Method not implemented.");
-  }
-  request(subject: string, timeout: number, data: any): Promise<any> {
-    throw new Error("Method not implemented.");
-  }
+export class NatsRouterMessagingService extends NatsBasicMessagingService implements IRouterMessagingService {
   publishRouterConfig(config: RouterConfigResponse): Promise<void> {
     throw new Error("Method not implemented.");
   }
@@ -50,3 +22,10 @@ export class NatsRouterMessagingService implements IRouterMessagingService {
     throw new Error("Method not implemented.");
   }
 }
+
+export const configureSubscriptions = async (
+  routerPublicIdentifier: string,
+  routerSignerAddress: string,
+  messagingService: IRouterMessagingService,
+  logger: BaseLogger,
+): Promise<void> => {};
