@@ -14,8 +14,8 @@ describe("swap.ts", () => {
       const toChainId = config.allowedSwaps[0].toChainId;
 
       const res = getSwappedAmount(fromAmount, fromAssetId, fromChainId, toAssetId, toChainId);
-      expect(res.getError().message).to.be.eq(SwapError.reasons.SwapNotAllowed);
-      expect(res.getError().context).to.be.deep.eq({
+      expect(res.getError()!.message).to.be.eq(SwapError.reasons.SwapNotAllowed);
+      expect(res.getError()!.context).to.be.deep.eq({
         fromAmount,
         fromAssetId,
         fromChainId,

@@ -84,9 +84,9 @@ describe("Router store", () => {
         );
       });
       expect(expected).to.be.ok;
-      expect(s.type).to.be.eq(expected.type);
+      expect(s.type).to.be.eq(expected!.type);
       expect(s.status).to.be.eq(RouterUpdateStatus.PENDING);
-      expect(s.payload).to.be.deep.eq(expected.updateData);
+      expect(s.payload).to.be.deep.eq(expected!.updateData);
       expect(s.id).to.be.ok;
     });
 
