@@ -14,7 +14,7 @@
   "scripts": {
     "build": "rm -rf dist && tsc",
     "start": "node dist/index.js",
-    "test": "ts-mocha --bail --check-leaks --exit --timeout 60000 'src/**/*.spec.ts'"
+    "test": "ts-mocha --require mock-local-storage --bail --check-leaks --exit --timeout 60000 'src/**/*.spec.ts'"
   },
   "dependencies": {
     "@connext/vector-contracts": "0.1.1",
@@ -41,6 +41,7 @@
     "copy-webpack-plugin": "6.2.1",
     "fake-indexeddb": "3.1.2",
     "mocha": "8.2.0",
+    "mock-local-storage": "^1.1.15",
     "pino-pretty": "4.3.0",
     "ts-loader": "8.0.7",
     "ts-mocha": "8.0.0",

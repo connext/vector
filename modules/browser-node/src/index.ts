@@ -346,10 +346,11 @@ export class BrowserNode implements INodeService {
       const existingReceiverTransfer = transferRes.getValue();
       let receiverTransferId = existingReceiverTransfer?.transferId;
       withdrawalAmount = existingReceiverTransfer?.balance.amount[0];
-      this.logger.info({ existingReceiverTransfer }, "Existing receiver transfer");
 
       if (!existingReceiverTransfer) {
+        this.logger.info("No existing receiver transfer in store, waiting for transfer");
         receiverTransferData = await receiverTransferDataPromise;
+        console.log("receiverTransferData: ", receiverTransferData);
         if (!receiverTransferData) {
           this.logger.error(
             { routingId: crossChainTransferId, channelAddress: receiverChannel.channelAddress },
@@ -368,6 +369,8 @@ export class BrowserNode implements INodeService {
         }
         receiverTransferId = receiverTransferData.transfer.transferId;
         withdrawalAmount = receiverTransferData.transfer.balance.amount[0];
+      } else {
+        this.logger.info({ existingReceiverTransfer }, "Existing receiver transfer");
       }
       storeParams.withdrawalAmount = withdrawalAmount;
 
@@ -508,6 +511,7 @@ export class BrowserNode implements INodeService {
         },
       );
       const res = await this.send(rpc);
+      console.log("getStateChannelByParticipants>>>>res: ", res);
       return Result.ok(res);
     } catch (e) {
       return Result.fail(e);
@@ -520,6 +524,7 @@ export class BrowserNode implements INodeService {
     try {
       const rpc = constructRpcRequest<"chan_getChannelState">(ChannelRpcMethods.chan_getChannelState, params);
       const res = await this.channelProvider!.send(rpc);
+      console.log("getStateChannel>>>>res: ", res);
       return Result.ok(res);
     } catch (e) {
       return Result.fail(e);
@@ -633,6 +638,7 @@ export class BrowserNode implements INodeService {
     try {
       const rpc = constructRpcRequest<"chan_deposit">(ChannelRpcMethods.chan_deposit, params);
       const res = await this.channelProvider!.send(rpc);
+      console.log("reconcileDeposit>>>>res: ", res);
       return Result.ok({ channelAddress: res.channelAddress });
     } catch (e) {
       return Result.fail(e);
@@ -657,6 +663,7 @@ export class BrowserNode implements INodeService {
     try {
       const rpc = constructRpcRequest<"chan_createTransfer">(ChannelRpcMethods.chan_createTransfer, params);
       const res = await this.channelProvider!.send(rpc);
+      console.log("conditionalTransfer>>>>res: ", res);
       return Result.ok({
         channelAddress: res.channelAddress,
         transferId: (res.latestUpdate.details as CreateUpdateDetails).transferId,

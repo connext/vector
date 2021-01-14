@@ -1,15 +1,26 @@
 /* eslint-disable @typescript-eslint/no-empty-function */
 import { VectorChainService } from "@connext/vector-contracts";
-import { IVectorProtocol, IChannelSigner, IVectorStore } from "@connext/vector-types";
+import { IVectorProtocol, IChannelSigner, IVectorStore, Result } from "@connext/vector-types";
 import { VectorEngine } from "@connext/vector-engine";
-import { expect, getTestLoggers, getRandomBytes32, mkAddress } from "@connext/vector-utils";
+import {
+  expect,
+  getTestLoggers,
+  getRandomBytes32,
+  mkAddress,
+  mkPublicIdentifier,
+  createTestChannelState,
+  getRandomAddress,
+  mkBytes32,
+} from "@connext/vector-utils";
 import { AddressZero } from "@ethersproject/constants";
 import { JsonRpcProvider } from "@ethersproject/providers";
 import { BigNumber } from "@ethersproject/bignumber";
 import Sinon from "sinon";
+global.window = {} as any;
+import "mock-local-storage";
+(window as any).localStorage = global.localStorage;
 
 import { DirectProvider, IframeChannelProvider } from "../channelProvider";
-import { getFundedChannel } from "../../../protocol/src/testing/utils";
 import { BrowserNode } from "../index";
 
 import { env } from "./env";
@@ -17,91 +28,22 @@ import { env } from "./env";
 const testName = "VectorEngine index utils";
 const { log } = getTestLoggers(testName, env.logLevel);
 
+const senderPublicIdentifier = mkPublicIdentifier("vectorA");
+const senderSigner = mkAddress("0xA");
+const routerPublicIdentifier = mkPublicIdentifier("vectorE");
+const routerSigner = mkAddress("0xE");
+
 const depositChainId = 1337;
 const withdrawChainId = 1338;
 const depositAssetId = mkAddress("0x1337");
 const withdrawAssetId = mkAddress("0x1338");
+const transferAmount = "1";
 
 describe("BrowserNode", () => {
-  let iframe: Sinon.SinonStubbedInstance<IframeChannelProvider>;
   let directProvider: Sinon.SinonStubbedInstance<DirectProvider>;
-  let node: Sinon.SinonStubbedInstance<BrowserNode>;
-  let connectStub: Sinon.SinonStub;
-
-  let alice: IVectorProtocol;
-  let bob: IVectorProtocol;
-  let carol: IVectorProtocol;
-
-  let depositChannelAddress: string;
-  let aliceSigner: IChannelSigner;
-  let bobSigner: IChannelSigner;
-  let aliceStore: IVectorStore;
-  let bobStore: IVectorStore;
-
-  let recipientChannelAddress: string;
-  let carolSigner: IChannelSigner;
-  let carolStore: IVectorStore;
-
-  let assetId: string;
-  let transferAmount: any;
-  let value: BigNumber;
 
   beforeEach(async () => {
-    console.log("env.chainAddresses: ", env.chainAddresses);
-    const depositChannelSetup = await getFundedChannel(
-      testName,
-      [
-        {
-          assetId: AddressZero,
-          amount: ["100", "100"],
-        },
-        {
-          assetId: depositAssetId,
-          amount: ["100", "100"],
-        },
-      ],
-      depositChainId,
-    );
-    console.log(depositChannelSetup);
-
-    bob = depositChannelSetup.bob.protocol;
-    bobSigner = depositChannelSetup.bob.signer;
-    bobStore = depositChannelSetup.bob.store;
-    depositChannelAddress = depositChannelSetup.channel.channelAddress;
-
-    const recipientChannelSetup = await getFundedChannel(
-      testName,
-      [
-        {
-          assetId: AddressZero,
-          amount: ["100", "100"],
-        },
-        {
-          assetId: depositAssetId,
-          amount: ["100", "100"],
-        },
-      ],
-      withdrawChainId,
-      depositChannelSetup.alice,
-    );
-    console.log(recipientChannelSetup);
-
-    alice = recipientChannelSetup.alice.protocol;
-    aliceSigner = recipientChannelSetup.alice.signer;
-    aliceStore = recipientChannelSetup.alice.store;
-    carol = recipientChannelSetup.bob.protocol;
-    carolSigner = recipientChannelSetup.bob.signer;
-    carolStore = recipientChannelSetup.bob.store;
-    recipientChannelAddress = recipientChannelSetup.channel.channelAddress;
-
     directProvider = Sinon.createStubInstance(DirectProvider);
-    node = Sinon.createStubInstance(BrowserNode);
-    // Set test constants
-    assetId = AddressZero;
-    transferAmount = "1";
-    iframe = Sinon.createStubInstance(IframeChannelProvider);
-    connectStub = Sinon.stub(IframeChannelProvider, "connect");
-    value = BigNumber.from("1000");
   });
 
   afterEach(async () => {
@@ -113,38 +55,87 @@ describe("BrowserNode", () => {
   // - event emission is done properly
   // - update on latest channel corresponds to input params
   it.only("should be able to make crossChain transfer for ETH", async () => {
-    //connect
+    // channel states
+    const senderChannelState = createTestChannelState("setup", {
+      alice: routerSigner,
+      aliceIdentifier: routerPublicIdentifier,
+      bob: senderSigner,
+      bobIdentifier: senderPublicIdentifier,
+      channelAddress: senderSigner,
+      networkContext: {
+        chainId: depositChainId,
+      },
+    });
+
+    const receiverChannelState = createTestChannelState("setup", {
+      alice: routerSigner,
+      aliceIdentifier: routerPublicIdentifier,
+      bob: senderSigner,
+      bobIdentifier: senderPublicIdentifier,
+      channelAddress: senderSigner,
+      networkContext: {
+        chainId: withdrawChainId,
+      },
+    });
+
+    // create browser instance
     const browserNode = new BrowserNode({
-      routerPublicIdentifier: alice.publicIdentifier,
+      logger: log,
+      routerPublicIdentifier: senderPublicIdentifier,
       supportedChains: [1337, 1338],
       chainProviders: { [depositChainId]: "http://localhost:8545", [withdrawChainId]: "http://localhost:8546" },
     });
 
-    connectStub.resolves(directProvider);
-    directProvider.send
-      .onFirstCall()
-      .resolves({ publicIdentifier: bob.publicIdentifier, signerAddress: bob.signerAddress });
-
-    directProvider.send
-      .onSecondCall()
-      .resolves([{ publicIdentifier: bob.publicIdentifier, signerAddress: bob.signerAddress, index: 0 }]);
-
-    await browserNode.init();
-
+    const senderTransferId = mkBytes32("0xabc");
     const crossChainTransferId = getRandomBytes32();
-    const withdrawalAddress = carol.signerAddress;
-    const amount = value.toString();
+
+    // mock out all calls to `send` in the crossChainTransfer function
+    // get sender channel
+    directProvider.send.onFirstCall().resolves(senderChannelState.channel);
+
+    // get receiver channal
+    directProvider.send.onSecondCall().resolves(receiverChannelState.channel);
+
+    // reconcile deposit
+    directProvider.send.onThirdCall().resolves({ channelAddress: senderChannelState.channel.channelAddress });
+
+    // get sender channel
+    directProvider.send.onCall(4).resolves(senderChannelState.channel);
+
+    // conditional transfer
+    directProvider.send.onCall(5).resolves({
+      channelAddress: senderChannelState.channel.channelAddress,
+      latestUpdate: { details: { transferId: senderTransferId, meta: { routingId: crossChainTransferId } } },
+    });
+
+    // get transfer by routing id, return undefined so that it waits for the event
+    directProvider.send.onCall(6).resolves(undefined);
+
+    // resolve on with ConditionalTransferCreatedPayload
+    directProvider.on.yields({
+      transfer: {
+        meta: { routingId: crossChainTransferId },
+        channelAddress: receiverChannelState.channel.channelAddress,
+      },
+    });
+
+    // set channel provider into instance
+    browserNode.channelProvider = directProvider as any;
+
+    const withdrawalAddress = getRandomAddress();
 
     const params = {
-      amount: amount,
+      amount: transferAmount,
       fromChainId: depositChainId,
       fromAssetId: depositAssetId,
       toChainId: withdrawChainId,
       toAssetId: withdrawAssetId,
       reconcileDeposit: true,
       withdrawalAddress: withdrawalAddress,
-      meta: { crossChainTransferId },
+      crossChainTransferId,
     };
+
+    // assert each call to saveCrossChainTransfer happens properly
 
     const result = await browserNode!.crossChainTransfer(params);
     console.log("result: ", result);
