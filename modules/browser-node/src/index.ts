@@ -26,6 +26,7 @@ import {
   hydrateProviders,
   NatsMessagingService,
 } from "@connext/vector-utils";
+import { getAddress } from "@ethersproject/address";
 import { sha256 as soliditySha256 } from "@ethersproject/solidity";
 import pino, { BaseLogger } from "pino";
 
@@ -218,7 +219,9 @@ export class BrowserNode implements INodeService {
   }): Promise<{ withdrawalTx?: string; withdrawalAmount?: string }> {
     this.logger.info({ params }, "Starting crossChainTransfer");
     const startStage = params.startStage ?? CrossChainTransferStatus.INITIAL;
-    const { amount, fromAssetId, fromChainId, toAssetId, toChainId, withdrawalAddress, reconcileDeposit } = params;
+    const { amount, fromChainId, toChainId, withdrawalAddress, reconcileDeposit } = params;
+    const fromAssetId = getAddress(params.fromAssetId);
+    const toAssetId = getAddress(params.toAssetId);
 
     const storeParams: CrossChainTransferParams = {
       amount: amount,
@@ -258,6 +261,41 @@ export class BrowserNode implements INodeService {
         CrossChainTransferError.reasons.MissingReceiverChannel,
         this.publicIdentifier,
         params,
+      );
+    }
+
+    const config = await this.getRouterConfig({ routerIdentifier: this.routerPublicIdentifier! });
+    if (config.isError) {
+      throw config.getError();
+    }
+    const { allowedSwaps, supportedChains } = config.getValue();
+    if (!supportedChains.includes(fromChainId) || !supportedChains.includes(toChainId)) {
+      throw new CrossChainTransferError(
+        CrossChainTransferError.reasons.ChainNotSupported,
+        this.publicIdentifier,
+        params,
+        { supportedChains, routerIdentifier: this.routerPublicIdentifier },
+      );
+    }
+    const swap = allowedSwaps.find((s) => {
+      const noninverted =
+        s.fromAssetId === fromAssetId &&
+        s.fromChainId === fromChainId &&
+        s.toAssetId === toAssetId &&
+        s.toChainId === toChainId;
+      const inverted =
+        s.toAssetId === fromAssetId &&
+        s.toChainId === fromChainId &&
+        s.fromAssetId === toAssetId &&
+        s.fromChainId === toChainId;
+      return noninverted || inverted;
+    });
+    if (!swap) {
+      throw new CrossChainTransferError(
+        CrossChainTransferError.reasons.SwapNotSupported,
+        this.publicIdentifier,
+        params,
+        { allowedSwaps, routerIdentifier: this.routerPublicIdentifier },
       );
     }
 
