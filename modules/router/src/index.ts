@@ -5,7 +5,7 @@ import metricsPlugin from "fastify-metrics";
 import pino from "pino";
 import { Evt } from "evt";
 import { VectorChainReader } from "@connext/vector-contracts";
-import { EventCallbackConfig, hydrateProviders, RestServerNodeService } from "@connext/vector-utils";
+import { EventCallbackConfig, hydrateProviders, RestServerNodeService, getRandomBytes32 } from "@connext/vector-utils";
 import {
   IsAlivePayload,
   ConditionalTransferCreatedPayload,
@@ -55,7 +55,7 @@ const evts: EventCallbackConfig = {
   [EngineEvents.WITHDRAWAL_RESOLVED]: {},
 };
 
-const logger = pino();
+const logger = pino({ name: getRandomBytes32() });
 logger.info({ config }, "Loaded config from environment");
 const server = fastify({ logger, pluginTimeout: 300_000, disableRequestLogging: config.logLevel !== "debug" });
 

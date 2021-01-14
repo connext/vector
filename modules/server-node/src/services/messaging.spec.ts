@@ -1,4 +1,4 @@
-import { IChannelSigner, Result, NodeError, MessagingError, UpdateType, VectorError } from "@connext/vector-types";
+import { IChannelSigner, Result, jsonifyError, MessagingError, UpdateType, VectorError } from "@connext/vector-types";
 import {
   createTestChannelUpdate,
   delay,
@@ -92,7 +92,7 @@ describe("messaging", () => {
     const res = await messagingA.sendProtocolMessage(update);
     expect(res.isError).to.be.true;
     const errReceived = res.getError()!;
-    const expected = VectorError.fromJson(VectorError.jsonify(err));
+    const expected = VectorError.fromJson(jsonifyError(err));
     expect(errReceived.message).to.be.eq(expected.message);
     expect(errReceived.context).to.be.deep.eq(expected.context);
     expect(errReceived.type).to.be.deep.eq(expected.type);
@@ -198,7 +198,7 @@ describe("messaging", () => {
               expect(result.getValue()).to.be.deep.eq(message.getValue());
             } else {
               const errReceived = result.getError()!;
-              const expected = VectorError.fromJson(VectorError.jsonify(message.getError()!));
+              const expected = VectorError.fromJson(jsonifyError(message.getError()!));
               expect(errReceived.message).to.be.eq(expected.message);
               expect(errReceived.context).to.be.deep.eq(expected.context);
               expect(errReceived.type).to.be.deep.eq(expected.type);
@@ -221,7 +221,7 @@ describe("messaging", () => {
           expect(test.getValue()).to.be.deep.eq(response.getValue());
         } else {
           const errReceived = test.getError()!;
-          const expected = VectorError.fromJson(VectorError.jsonify(response.getError()!));
+          const expected = VectorError.fromJson(jsonifyError(response.getError()!));
           expect(errReceived.message).to.be.eq(expected.message);
           expect(errReceived.context).to.be.deep.eq(expected.context);
           expect(errReceived.type).to.be.deep.eq(expected.type);

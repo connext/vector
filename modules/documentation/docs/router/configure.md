@@ -4,8 +4,6 @@ This guide will take you through the e2e process of configuring and deploying a 
 
 ## Machine Setup
 
-Lets say you want to deploy a vector node + router to `https://vector.example.com` (we'll call this url `$DOMAINNAME`).
-
 !!! Info
     If you're planning to launch an instance on your local machine or to a non-Ubuntu OS, you can skip this section and instead install the following dependencies yourself:
     - `make`: Probably already installed, otherwise install w `brew install make` or `apt install make` or similar.
@@ -13,11 +11,6 @@ Lets say you want to deploy a vector node + router to `https://vector.example.co
     - `docker`: See the [docker website](https://www.docker.com/) for installation instructions.
 
 First step: get a server via AWS or DigitalOcean or setup some hardware at home. For best results, use the most recent LTS version of Ubuntu & make sure it has at least 32GB of disk space. Note this new server's IP address (we'll call this `$SERVER_IP`). Make sure it's able to connect to the internet via ports 80, 443, 4221, and 4222 (no action required on DigitalOcean, Security Group config needs to be setup properly on AWS).
-
-Set up DNS so that `$DOMAINNAME` points to `$SERVER_IP`. If you're using CloudFlare name servers, turn on CloudFlare's built-in SSL support & make sure it's set to "Full (strict)".
-
-!!! Info
-    If you're just testing things out, you're welcome to skip registering a domain name & instead deploy to a raw IP address. This is a quicker way to get started but isn't recommended for production. In this case, don't turn on CloudFlare's built-in SSL support.
 
 We won't need to ssh into this server right away, most of the setup will be done locally. Start by cloning the repo to your local machine if you haven't already and `cd` into it.
 
@@ -128,7 +121,6 @@ The router's node can be configured by adding any of the following keys to `rout
 | `rebalanceProfiles` |  `object` | Specifies the thresholds & target while collateralizing some `assetId` on some `chainId` .                               |
 |    `awsAccessId`    |  `string` | An API KEY id that specifies credentials for a remote AWS S3 bucket for storing db backups                               |
 |    `awsAccessKey`   |  `string` |  An API KEY secret that to authenticate on a remote AWS S3 bucket for storing db backups.                                |
-|     `domainName`    |  `string` |    If provided, https will be auto-configured & the stack will be exposed on port 443.                                   |
 |     `production`    | `boolean` | If `false`, ops will automatically build anything that isn't available locally. If `true, nothing will be built locally. |
 |     `logDnaKey`     | `string`  |             An API KEY secret that is used to connect to logdna for parsing and viewing router logs.                     |
 

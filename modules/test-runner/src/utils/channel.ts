@@ -297,7 +297,8 @@ export const withdraw = async (
 
   // Verify balance changes
   expect(BigNumber.from(preWithdrawCarol).sub(amount.add(fee))).to.be.eq(postWithdrawBalance);
-  expect(postWithdrawMultisig).to.be.eq(BigNumber.from(preWithdrawMultisig).sub(amount));
+  // using gte here because roger could collateralize
+  expect(postWithdrawMultisig.gte(BigNumber.from(preWithdrawMultisig).sub(amount))).to.be.true;
   if (withdrawerAliceOrBob === "alice") {
     // use "above" because Alice sends withdrawal for Bob
     // TODO: calculate gas

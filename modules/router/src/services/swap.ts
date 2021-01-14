@@ -1,5 +1,6 @@
 import { Result } from "@connext/vector-types";
 import { calculateExchangeAmount, inverse } from "@connext/vector-utils";
+import { getAddress } from "@ethersproject/address";
 
 import { config } from "../config";
 import { SwapError } from "../errors";
@@ -11,11 +12,13 @@ export const getSwappedAmount = (
   toAssetId: string,
   toChainId: number,
 ): Result<string, SwapError> => {
+  const fromAsset = getAddress(fromAssetId);
+  const toAsset = getAddress(toAssetId);
   let swap = config.allowedSwaps.find(
     (s) =>
-      s.fromAssetId === fromAssetId &&
+      s.fromAssetId === fromAsset &&
       s.fromChainId === fromChainId &&
-      s.toAssetId === toAssetId &&
+      s.toAssetId === toAsset &&
       s.toChainId === toChainId,
   );
 
@@ -24,9 +27,9 @@ export const getSwappedAmount = (
     // search other way around swap
     swap = config.allowedSwaps.find(
       (s) =>
-        s.toAssetId === fromAssetId &&
+        s.toAssetId === fromAsset &&
         s.toChainId === fromChainId &&
-        s.fromAssetId === toAssetId &&
+        s.fromAssetId === toAsset &&
         s.fromChainId === toChainId,
     );
     invert = true;

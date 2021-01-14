@@ -21,7 +21,7 @@ import {
   TSetupUpdateDetails,
   TDepositUpdateDetails,
   TResolveUpdateDetails,
-  VectorError,
+  jsonifyError,
 } from "@connext/vector-types";
 import { getSignerAddressFromPublicIdentifier, getTransferId } from "@connext/vector-utils";
 import { isAddress } from "@ethersproject/address";
@@ -104,7 +104,7 @@ export async function validateUpdateParams<T extends UpdateType = any>(
       if (calculated.isError) {
         return handleError(ValidationError.reasons.ChainServiceFailure, {
           chainServiceMethod: "getChannelAddress",
-          chainServiceError: VectorError.jsonify(calculated.getError()!),
+          chainServiceError: jsonifyError(calculated.getError()!),
         });
       }
       if (channelAddress !== calculated.getValue()) {
@@ -220,7 +220,7 @@ export async function validateUpdateParams<T extends UpdateType = any>(
       if (validRes.isError) {
         return handleError(ValidationError.reasons.ChainServiceFailure, {
           chainServiceMethod: "create",
-          chainServiceError: VectorError.jsonify(validRes.getError()!),
+          chainServiceError: jsonifyError(validRes.getError()!),
         });
       }
       if (!validRes.getValue()) {
@@ -441,7 +441,7 @@ export async function validateAndApplyInboundUpdate<T extends UpdateType = any>(
             update,
             previousState,
             {
-              chainServiceError: VectorError.jsonify(transferBalanceResult.getError()!),
+              chainServiceError: jsonifyError(transferBalanceResult.getError()!),
             },
           ),
         );
