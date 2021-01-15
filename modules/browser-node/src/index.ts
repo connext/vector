@@ -339,6 +339,7 @@ export class BrowserNode implements INodeService {
           data.channelAddress === receiverChannel.channelAddress &&
           Object.values(data.transfer.transferResolver)[0] === HashZero
         ) {
+          this.logger.warn({ transfer: data.transfer }, "Transfer cancelled, removing from store");
           removeCrossChainTransfer(crossChainTransferId);
         }
       });
