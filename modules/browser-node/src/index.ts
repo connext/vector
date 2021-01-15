@@ -28,6 +28,7 @@ import {
 } from "@connext/vector-utils";
 import { getAddress } from "@ethersproject/address";
 import { sha256 as soliditySha256 } from "@ethersproject/solidity";
+import { HashZero } from "@ethersproject/constants";
 import pino, { BaseLogger } from "pino";
 
 import { BrowserStore } from "./services/store";
@@ -331,6 +332,18 @@ export class BrowserNode implements INodeService {
 
     let senderTransferId = "";
     if (startStage < CrossChainTransferStatus.TRANSFER_1) {
+      // remove from the storage if sender transfer was canceled
+      this.on(EngineEvents.CONDITIONAL_TRANSFER_RESOLVED, (data) => {
+        if (
+          data.transfer.meta.routingId === crossChainTransferId &&
+          data.channelAddress === senderChannel.channelAddress &&
+          Object.values(data.transfer.transferResolver)[0] === HashZero
+        ) {
+          this.logger.warn({ transfer: data.transfer }, "Transfer cancelled, removing from store");
+          removeCrossChainTransfer(crossChainTransferId);
+        }
+      });
+
       const transferParams = {
         amount: amount,
         assetId: fromAssetId,
@@ -473,6 +486,7 @@ export class BrowserNode implements INodeService {
   async reclaimPendingCrossChainTransfers(): Promise<void> {
     const transfers = await getCrossChainTransfers();
     for (const transfer of transfers) {
+      this.logger.info({ transfer }, "Starting pending crossChainTransfer");
       if (transfer.error) {
         this.logger.error({ transfer }, "Found errored transfer, TODO: handle these properly");
         continue;

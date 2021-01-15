@@ -2,6 +2,10 @@
 
 ## Next Release
 
+## 0.1.3-beta.1
+
+- \[browser-node\] Remove from storage if transfer is cancelled.
+
 ## 0.1.2
 
 - \[router\] Add NATS client
