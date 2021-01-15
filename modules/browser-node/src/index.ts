@@ -28,6 +28,7 @@ import {
 } from "@connext/vector-utils";
 import { getAddress } from "@ethersproject/address";
 import { sha256 as soliditySha256 } from "@ethersproject/solidity";
+import { HashZero } from "@ethersproject/constants";
 import pino, { BaseLogger } from "pino";
 
 import { BrowserStore } from "./services/store";
@@ -331,6 +332,17 @@ export class BrowserNode implements INodeService {
 
     let senderTransferId = "";
     if (startStage < CrossChainTransferStatus.TRANSFER_1) {
+      // remove from the storage if transfer was canceled
+      this.on(EngineEvents.CONDITIONAL_TRANSFER_RESOLVED, (data) => {
+        if (
+          data.transfer.meta.routingId === crossChainTransferId &&
+          data.channelAddress === receiverChannel.channelAddress &&
+          Object.values(data.transfer.transferResolver)[0] === HashZero
+        ) {
+          removeCrossChainTransfer(crossChainTransferId);
+        }
+      });
+
       const transferParams = {
         amount: amount,
         assetId: fromAssetId,
