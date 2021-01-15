@@ -2,7 +2,7 @@
 
 ## Next Release
 
-## 0.1.3-beta
+## 0.1.3-beta.1
 
 - \[browser-node\] Remove from storage if transfer is cancelled.
 
