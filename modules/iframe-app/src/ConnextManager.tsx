@@ -85,7 +85,7 @@ export default class ConnextManager {
       return {
         publicIdentifier: node.publicIdentifier,
         signerAddress: node.signerAddress,
-      } as ChannelRpcMethodsResponsesMap["connext_authenticate"];
+      } as any;
     }
     if (typeof this.browserNode === "undefined") {
       throw new Error(
@@ -106,7 +106,7 @@ export default class ConnextManager {
       } else {
         this.browserNode.on(request.params.event, listener);
       }
-      return subscription;
+      return subscription as ChannelRpcMethodsResponsesMap["chan_subscription"];
     }
     if (request.method === "chan_unsubscribe") {
       this.browserNode.off(request.params.event);
