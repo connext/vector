@@ -1,6 +1,9 @@
 # Vector Changelog
 
 ## Next Release
+
+## 0.1.3-beta
+
 - \[browser-node\] Remove from storage if transfer is cancelled.
 
 ## 0.1.2
