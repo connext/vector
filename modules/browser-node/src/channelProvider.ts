@@ -47,6 +47,8 @@ export interface IRpcChannelProvider {
     callback: (payload: EngineEventMap[T]) => void | Promise<void>,
     filter?: (payload: EngineEventMap[T]) => boolean,
   ): void;
+  off<T extends EngineEvent>(event: T): void;
+  removeAllListeners(): void;
 }
 
 export class IframeChannelProvider extends EventEmitter<string> implements IRpcChannelProvider {
@@ -55,6 +57,8 @@ export class IframeChannelProvider extends EventEmitter<string> implements IRpcC
 
   private subscribed = false;
   private events = new EventEmitter<string>();
+
+  private subscriptionIds: { [event: string]: string | undefined } = {};
 
   private constructor(private readonly opts: IframeOptions) {
     super();
@@ -115,6 +119,7 @@ export class IframeChannelProvider extends EventEmitter<string> implements IRpcC
       });
       return this.send(rpc).then((id) => {
         this.events.on(id, listener);
+        this.subscriptionIds[event] = id;
       });
     }
     return this.events.on(event, listener);
@@ -128,9 +133,23 @@ export class IframeChannelProvider extends EventEmitter<string> implements IRpcC
       });
       return this.send(rpc).then((id) => {
         this.events.once(id, listener);
+        this.subscriptionIds[event] = id;
       });
     }
     return this.events.once(event, listener);
+  }
+
+  public off(event: string | ChannelRpcMethod | EngineEvent): any {
+    if (isEventName(event) || isMethodName(event)) {
+      const rpc = constructRpcRequest<"chan_unsubscribe">("chan_unsubscribe", {
+        event,
+      });
+      return this.send(rpc).then((id) => {
+        this.events.removeAllListeners(id);
+        this.subscriptionIds[event] = undefined;
+      });
+    }
+    return this.events.removeAllListeners(event);
   }
 
   public removeAllListeners = (): any => {
@@ -227,7 +246,6 @@ export class IframeChannelProvider extends EventEmitter<string> implements IRpcC
 export class DirectProvider implements IRpcChannelProvider {
   public connected = false;
   constructor(private readonly engine: IVectorEngine) {}
-
   async send(payload: EngineParams.RpcRequest): Promise<any> {
     const rpc = constructRpcRequest(payload.method as any, payload.params);
     const res = await this.engine.request(rpc);
@@ -246,7 +264,7 @@ export class DirectProvider implements IRpcChannelProvider {
     callback: (payload: EngineEventMap[T]) => void | Promise<void>,
     filter?: (payload: EngineEventMap[T]) => boolean,
   ): void {
-    this.engine.on(event, callback, filter);
+    return this.engine.on(event, callback, filter);
   }
 
   once<T extends EngineEvent>(
@@ -254,6 +272,14 @@ export class DirectProvider implements IRpcChannelProvider {
     callback: (payload: EngineEventMap[T]) => void | Promise<void>,
     filter?: (payload: EngineEventMap[T]) => boolean,
   ): void {
-    this.engine.once(event, callback, filter);
+    return this.engine.once(event, callback, filter);
+  }
+
+  off<T extends EngineEvent>(event: T): void {
+    return this.engine.off(event);
+  }
+
+  removeAllListeners(): void {
+    throw new Error("Method not implemented.");
   }
 }

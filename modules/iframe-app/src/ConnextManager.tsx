@@ -108,9 +108,11 @@ export default class ConnextManager {
       }
       return subscription;
     }
+    if (request.method === "chan_unsubscribe") {
+      this.browserNode.off(request.params.event);
+    }
     if (request.method === "chan_unsubscribeAll") {
-      // this.browserNode.removeAllListeners();
-      return true;
+      this.browserNode.removeAllListeners();
     }
     return await this.browserNode.send(request);
   }

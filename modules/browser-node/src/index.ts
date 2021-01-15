@@ -850,24 +850,27 @@ export class BrowserNode implements INodeService {
     // return this.engine.waitFor(event, timeout, filter);
   }
 
-  async once<T extends EngineEvent>(
+  once<T extends EngineEvent>(
     event: T,
     callback: (payload: EngineEventMap[T]) => void | Promise<void>,
     filter?: (payload: EngineEventMap[T]) => boolean,
-  ): Promise<void> {
+  ): void {
     return this.channelProvider!.once(event, callback, filter);
   }
 
-  async on<T extends EngineEvent>(
+  on<T extends EngineEvent>(
     event: T,
     callback: (payload: EngineEventMap[T]) => void | Promise<void>,
     filter?: (payload: EngineEventMap[T]) => boolean,
-  ): Promise<void> {
+  ): void {
     return this.channelProvider!.on(event, callback, filter);
   }
 
-  async off<T extends EngineEvent>(event: T): Promise<void> {
-    throw new Error("TODO");
-    // return this.engine.off(event);
+  off<T extends EngineEvent>(event: T): void {
+    return this.channelProvider!.off(event);
+  }
+
+  removeAllListeners(): void {
+    return this.channelProvider!.removeAllListeners();
   }
 }
