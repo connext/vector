@@ -45,6 +45,7 @@ mnemonic=$(getConfig mnemonic)
 production=$(getConfig production)
 public_port=$(getConfig port)
 logdna_key=$(getConfig logDnaKey)
+logdna_tags=$(getConfig logDnaTags)
 
 chain_providers=$(echo "$config" | jq '.chainProviders' | tr -d '\n\r ')
 default_providers=$(jq '.chainProviders' "$root/ops/config/node.default.json" | tr -d '\n\r ')
@@ -297,6 +298,7 @@ logdna_service="logdna:
     image: '$logdna_image'
     environment:
       LOGDNA_KEY: '$logdna_key'
+      TAGS: '$logdna_tags'
     volumes:
       - '/var/run/docker.sock:/var/run/docker.sock'"
 
