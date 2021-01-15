@@ -2,6 +2,14 @@
 
 ## Next Release
 
+## 0.1.2
+
+- \[router\] Add NATS client
+- \[browser-node, server-node\] Add methods to get router config
+- \[browser-node\] Verify swap supported before `crossChainTransfer`
+- \[router\] Hotfix `toString()` undefined
+- \[ops\] Add LogDNA tag support to router config
+
 ## 0.1.1
 
 - \[all\] Improve logging

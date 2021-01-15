@@ -339,7 +339,7 @@ export const requestCollateral = async (
         methodId,
         assetId,
         channelAddress: channel.channelAddress,
-        processed: processed.toString(),
+        processed,
         amountToDeposit: amountToDeposit.toString(),
         reconcilable: reconcilable.toString(),
         target: target.toString(),

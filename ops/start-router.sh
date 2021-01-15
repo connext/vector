@@ -45,6 +45,7 @@ mnemonic=$(getConfig mnemonic)
 production=$(getConfig production)
 public_port=$(getConfig port)
 logdna_key=$(getConfig logDnaKey)
+logdna_tags=$(getConfig logDnaTags)
 
 chain_providers=$(echo "$config" | jq '.chainProviders' | tr -d '\n\r ')
 default_providers=$(jq '.chainProviders' "$root/ops/config/node.default.json" | tr -d '\n\r ')
@@ -297,6 +298,7 @@ logdna_service="logdna:
     image: '$logdna_image'
     environment:
       LOGDNA_KEY: '$logdna_key'
+      TAGS: '$logdna_tags'
     volumes:
       - '/var/run/docker.sock:/var/run/docker.sock'"
 
@@ -385,6 +387,8 @@ services:
       VECTOR_PG_PASSWORD_FILE: '$pg_password_file'
       VECTOR_PG_PORT: '5432'
       VECTOR_PG_USERNAME: '$pg_user'
+      VECTOR_MNEMONIC: '$eth_mnemonic'
+      VECTOR_MNEMONIC_FILE: '$eth_mnemonic_file'
 
   database-node:
     $common

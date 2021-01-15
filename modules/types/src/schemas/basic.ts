@@ -39,6 +39,15 @@ export const TNetworkContext = Type.Intersect([
   }),
 ]);
 
+export const AllowedSwapSchema = Type.Object({
+  fromChainId: TChainId,
+  toChainId: TChainId,
+  fromAssetId: TAddress,
+  toAssetId: TAddress,
+  priceType: Type.Union([Type.Literal("hardcoded")]),
+  hardcodedRate: TDecimalString,
+});
+
 ////////////////////////////////////////
 //////// Transfer types
 // NOTE: The schemas of the transfer states could be validated using the

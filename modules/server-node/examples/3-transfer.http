@@ -23,10 +23,10 @@
 @routingId = 0x5e7af61c2bd4243ea005c3e450dbee3faec55fda230e47db2cfa4e5394bd6942
 @transferId = 0x
 
-@nodeUrl = {{daveUrl}}
-@nodePublicIdentifier = {{davePublicIdentifier}}
-@recipientPublicIdentifier = {{carolPublicIdentifier}}
-@channel = {{daveRogerChannel}}
+@nodeUrl = {{carolUrl}}
+@nodePublicIdentifier = {{carolPublicIdentifier}}
+@recipientPublicIdentifier = {{davePublicIdentifier}}
+@channel = {{carolRogerChannel}}
 
 ##############
 ### Create Transfer ETH
@@ -45,7 +45,6 @@ Content-Type: application/json
   },
   "recipient": "{{recipientPublicIdentifier}}",
   "meta": {
-    "routingId": "{{routingId}}",
     "hello": "world",
     "requireOnline": false
   },

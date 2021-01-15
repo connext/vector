@@ -1,5 +1,5 @@
 import { ChannelUpdate, FullChannelState, FullTransferState } from "./channel";
-import { EngineError, NodeError, MessagingError, ProtocolError, Result } from "./error";
+import { EngineError, NodeError, MessagingError, ProtocolError, Result, RouterError, VectorError } from "./error";
 import { LockInformation } from "./lock";
 import { EngineParams } from "./schemas";
 
@@ -11,10 +11,31 @@ export type CheckInResponse = {
   channelAddress: string;
 };
 
-export interface IMessagingService {
+export type AllowedSwap = {
+  fromChainId: number;
+  toChainId: number;
+  fromAssetId: string;
+  toAssetId: string;
+  priceType: "hardcoded";
+  hardcodedRate: string;
+};
+export type RouterConfigResponse = {
+  supportedChains: number[];
+  allowedSwaps: AllowedSwap[];
+};
+
+// All basic NATS messaging services
+export interface IBasicMessaging {
   connect(): Promise<void>;
   disconnect(): Promise<void>;
+  publish(subject: string, data: any): Promise<void>;
+  subscribe(subject: string, cb: (data: any) => any): Promise<void>;
+  unsubscribe(subject: string): Promise<void>;
+  flush(): Promise<void>;
+  request(subject: string, timeout: number, data: any): Promise<any>;
+}
 
+export interface IMessagingService extends IBasicMessaging {
   onReceiveLockMessage(
     myPublicIdentifier: string,
     callback: (lockInfo: Result<LockInformation, NodeError>, from: string, inbox: string) => void,
@@ -130,9 +151,11 @@ export interface IMessagingService {
   ): Promise<void>;
   respondToRequestCollateralMessage(inbox: string, params: Result<{ message?: string }, EngineError>): Promise<void>;
 
-  publish(subject: string, data: any): Promise<void>;
-  subscribe(subject: string, cb: (data: any) => any): Promise<void>;
-  unsubscribe(subject: string): Promise<void>;
-  flush(): Promise<void>;
-  request(subject: string, timeout: number, data: any): Promise<any>;
+  sendRouterConfigMessage(
+    configRequest: Result<void, VectorError>,
+    to: string,
+    from: string,
+    timeout?: number,
+    numRetries?: number,
+  ): Promise<Result<RouterConfigResponse, RouterError | MessagingError>>;
 }

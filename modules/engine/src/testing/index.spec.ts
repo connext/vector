@@ -220,6 +220,16 @@ describe("VectorEngine", () => {
       };
       const paramsTests = [
         {
+          name: "chan_getRouterConfig missing parameter routerIdentifier",
+          overrides: { id: 1, jsonrpc: "2.0", method: "chan_getRouterConfig", params: { routerIdentifier: undefined } },
+          error: missingParam("routerIdentifier"),
+        },
+        {
+          name: "chan_getRouterConfig malformed parameter routerIdentifier",
+          overrides: { id: 1, jsonrpc: "2.0", method: "chan_getRouterConfig", params: { routerIdentifier: "fail" } },
+          error: 'should match pattern "^vector([a-zA-Z0-9]{50})$"',
+        },
+        {
           name: "chan_signUtilityMessage missing parameter message",
           overrides: { id: 1, jsonrpc: "2.0", method: "chan_signUtilityMessage", params: { message: undefined } },
           error: missingParam("message"),
