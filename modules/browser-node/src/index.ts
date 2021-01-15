@@ -473,6 +473,7 @@ export class BrowserNode implements INodeService {
   async reclaimPendingCrossChainTransfers(): Promise<void> {
     const transfers = await getCrossChainTransfers();
     for (const transfer of transfers) {
+      this.logger.info({ transfer }, "Starting pending crossChainTransfer");
       if (transfer.error) {
         this.logger.error({ transfer }, "Found errored transfer, TODO: handle these properly");
         continue;
