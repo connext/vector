@@ -332,11 +332,11 @@ export class BrowserNode implements INodeService {
 
     let senderTransferId = "";
     if (startStage < CrossChainTransferStatus.TRANSFER_1) {
-      // remove from the storage if transfer was canceled
+      // remove from the storage if sender transfer was canceled
       this.on(EngineEvents.CONDITIONAL_TRANSFER_RESOLVED, (data) => {
         if (
           data.transfer.meta.routingId === crossChainTransferId &&
-          data.channelAddress === receiverChannel.channelAddress &&
+          data.channelAddress === senderChannel.channelAddress &&
           Object.values(data.transfer.transferResolver)[0] === HashZero
         ) {
           this.logger.warn({ transfer: data.transfer }, "Transfer cancelled, removing from store");
