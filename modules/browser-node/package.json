@@ -23,6 +23,7 @@
     "@connext/vector-utils": "0.1.2",
     "@ethersproject/address": "5.0.8",
     "@ethersproject/solidity": "5.0.7",
+    "@ethersproject/constants": "5.0.7",
     "@sinclair/typebox": "0.12.7",
     "ajv": "6.12.6",
     "axios": "0.21.0",
