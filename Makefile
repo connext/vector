@@ -209,6 +209,7 @@ watch-browser-node: browser-node
 	bash ops/test-unit.sh browser-node watch
 
 test-router: router-js
+	bash ops/start-messaging.sh
 	bash ops/test-unit.sh router test
 watch-router: engine
 	bash ops/test-unit.sh router watch

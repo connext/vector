@@ -15,7 +15,6 @@ import { config } from "../config";
 import { ServerNodeLockError } from "../helpers/errors";
 
 describe("messaging", () => {
-  console.log("config.logLevel: ", config.logLevel);
   const { log: logger } = getTestLoggers("messaging", (config.logLevel ?? "fatal") as pino.Level);
   let messagingA: NatsMessagingService;
   let messagingB: NatsMessagingService;

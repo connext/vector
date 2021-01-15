@@ -28,7 +28,7 @@ describe(testName, () => {
   let chainReader: Sinon.SinonStubbedInstance<VectorChainReader>;
   let getRebalanceProfile: Sinon.SinonStub;
 
-  const ethProfile = config.rebalanceProfiles.find((p) => p.chainId === chainId && p.assetId === AddressZero);
+  const ethProfile = config.rebalanceProfiles.find((p) => p.chainId === chainId && p.assetId === AddressZero)!;
   const routerPublicIdentifier = mkPublicIdentifier("vectorRRR");
 
   beforeEach(async () => {
@@ -91,7 +91,7 @@ describe(testName, () => {
         log,
         transferAmount.toString(),
       );
-      expect(res.getError().message).to.be.eq(CollateralError.reasons.UnableToGetRebalanceProfile);
+      expect(res.getError()!.message).to.be.eq(CollateralError.reasons.UnableToGetRebalanceProfile);
       expect(node.sendDepositTx.callCount).to.be.eq(0);
     });
 
@@ -112,14 +112,14 @@ describe(testName, () => {
         transferAmount.toString(),
       );
       expect(res.getError()).to.be.undefined;
-      expect(res.getValue().channelAddress).to.be.ok;
+      expect(res.getValue()!.channelAddress).to.be.ok;
       expect(node.sendDepositTx.callCount).to.be.eq(1);
       expect(node.sendDepositTx.firstCall.args[0]).to.be.deep.eq({
         channelAddress: channel.channelAddress,
         publicIdentifier: routerPublicIdentifier,
         assetId: AddressZero,
         chainId: channel.networkContext.chainId,
-        amount: transferAmount.add(ethProfile.target).toString(),
+        amount: transferAmount.add(ethProfile!.target).toString(),
       });
     });
 
@@ -143,7 +143,7 @@ describe(testName, () => {
         transferAmount.toString(),
       );
       expect(res.getError()).to.be.undefined;
-      expect(res.getValue().channelAddress).to.be.ok;
+      expect(res.getValue()!.channelAddress).to.be.ok;
       expect(node.sendDepositTx.callCount).to.be.eq(1);
       expect(node.sendDepositTx.firstCall.args[0]).to.be.deep.eq({
         channelAddress: channel.channelAddress,
@@ -161,7 +161,7 @@ describe(testName, () => {
         alice: mkAddress("0xaaa"),
         aliceIdentifier: routerPublicIdentifier,
         assetIds: [AddressZero],
-        balances: [{ to: [mkAddress("0xaaa"), mkAddress("0xbbb")], amount: [ethProfile.target.toString(), "0"] }],
+        balances: [{ to: [mkAddress("0xaaa"), mkAddress("0xbbb")], amount: [ethProfile!.target.toString(), "0"] }],
       });
       node.getStateChannel.resolves(Result.ok(channel));
       const res = await adjustCollateral(
@@ -195,7 +195,7 @@ describe(testName, () => {
         log,
       );
       expect(res.getError()).to.be.undefined;
-      expect(res.getValue().channelAddress).to.be.ok;
+      expect(res.getValue()!.channelAddress).to.be.ok;
       expect(node.sendDepositTx.callCount).to.be.eq(1);
       expect(node.withdraw.callCount).to.be.eq(0);
       expect(node.sendDepositTx.firstCall.args[0]).to.be.deep.eq({
@@ -231,7 +231,7 @@ describe(testName, () => {
         log,
       );
       expect(res.getError()).to.be.undefined;
-      expect(res.getValue().channelAddress).to.be.ok;
+      expect(res.getValue()!.channelAddress).to.be.ok;
       expect(node.sendDepositTx.callCount).to.be.eq(0);
       expect(node.withdraw.callCount).to.be.eq(1);
       expect(node.withdraw.firstCall.args[0]).to.be.deep.eq({
@@ -267,9 +267,9 @@ describe(testName, () => {
         chainReader,
         log,
       );
-      expect(res.getError().message).to.be.eq(CollateralError.reasons.UnableToReclaim);
+      expect(res.getError()!.message).to.be.eq(CollateralError.reasons.UnableToReclaim);
       const { stack, ...sanitized } = err.toJson();
-      expect(res.getError().context).to.containSubset({
+      expect(res.getError()!.context).to.containSubset({
         assetId: AddressZero,
         channelAddress: channel.channelAddress,
         withdrawError: sanitized,
@@ -304,7 +304,7 @@ describe(testName, () => {
         log,
       );
       expect(res.getError()).to.be.undefined;
-      expect(res.getValue().channelAddress).to.be.ok;
+      expect(res.getValue()!.channelAddress).to.be.ok;
       expect(node.sendDepositTx.callCount).to.be.eq(0);
       expect(node.withdraw.callCount).to.be.eq(1);
       expect(node.withdraw.firstCall.args[0]).to.be.deep.eq({
@@ -353,7 +353,7 @@ describe(testName, () => {
         chainReader,
         log,
       );
-      expect(res.getError().message).to.be.eq(CollateralError.reasons.UnableToGetRebalanceProfile);
+      expect(res.getError()!.message).to.be.eq(CollateralError.reasons.UnableToGetRebalanceProfile);
     });
 
     it("should fail if it cannot get the chainProviders", async () => {
@@ -367,7 +367,7 @@ describe(testName, () => {
         chainReader,
         log,
       );
-      expect(res.getError().message).to.be.eq(CollateralError.reasons.ProviderNotFound);
+      expect(res.getError()!.message).to.be.eq(CollateralError.reasons.ProviderNotFound);
     });
 
     it("should fail if it cannot get a provider on the right chain", async () => {
@@ -381,7 +381,7 @@ describe(testName, () => {
         chainReader,
         log,
       );
-      expect(res.getError().message).to.be.eq(CollateralError.reasons.ProviderNotFound);
+      expect(res.getError()!.message).to.be.eq(CollateralError.reasons.ProviderNotFound);
     });
 
     it("should fail if it cannot get the onchain balance", async () => {
@@ -395,7 +395,7 @@ describe(testName, () => {
         chainReader,
         log,
       );
-      expect(res.getError().message).to.be.eq(CollateralError.reasons.CouldNotGetOnchainDeposits);
+      expect(res.getError()!.message).to.be.eq(CollateralError.reasons.CouldNotGetOnchainDeposits);
     });
 
     describe("should work", () => {

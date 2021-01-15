@@ -24,6 +24,10 @@
 GET {{nodeUrl}}/config
 
 ##############
+### GET ROUTER CONFIG
+GET {{nodeUrl}}/{{nodePublicIdentifier}}/router/config/{{rogerPublicIdentifier}}
+
+##############
 ### GET STATUS
 GET {{nodeUrl}}/{{nodePublicIdentifier}}/status
 

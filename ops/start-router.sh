@@ -387,6 +387,8 @@ services:
       VECTOR_PG_PASSWORD_FILE: '$pg_password_file'
       VECTOR_PG_PORT: '5432'
       VECTOR_PG_USERNAME: '$pg_user'
+      VECTOR_MNEMONIC: '$eth_mnemonic'
+      VECTOR_MNEMONIC_FILE: '$eth_mnemonic_file'
 
   database-node:
     $common

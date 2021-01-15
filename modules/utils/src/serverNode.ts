@@ -105,6 +105,17 @@ export class RestServerNodeService implements INodeService {
     );
   }
 
+  getRouterConfig(
+    params: OptionalPublicIdentifier<NodeParams.GetRouterConfig>,
+  ): Promise<Result<NodeResponses.GetRouterConfig, ServerNodeServiceError>> {
+    return this.executeHttpRequest(
+      `${params.publicIdentifier ?? this.publicIdentifier}/router/config/${params.routerIdentifier}`,
+      "get",
+      params,
+      NodeParams.GetRouterConfigSchema,
+    );
+  }
+
   async getConfig(): Promise<Result<NodeResponses.GetConfig, ServerNodeServiceError>> {
     return this.executeHttpRequest("config", "get", {}, NodeParams.GetConfigSchema);
   }
