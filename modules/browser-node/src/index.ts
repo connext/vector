@@ -866,7 +866,7 @@ export class BrowserNode implements INodeService {
     return this.channelProvider!.on(event, callback, filter);
   }
 
-  off<T extends EngineEvent>(event: T): void {
+  off<T extends EngineEvent>(event?: T): void {
     return this.channelProvider!.off(event);
   }
 

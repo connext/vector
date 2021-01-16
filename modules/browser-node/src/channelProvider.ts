@@ -47,7 +47,7 @@ export interface IRpcChannelProvider {
     callback: (payload: EngineEventMap[T]) => void | Promise<void>,
     filter?: (payload: EngineEventMap[T]) => boolean,
   ): void;
-  off<T extends EngineEvent>(event: T): void;
+  off<T extends EngineEvent>(event?: T): void;
   removeAllListeners(): void;
 }
 
@@ -139,7 +139,10 @@ export class IframeChannelProvider extends EventEmitter<string> implements IRpcC
     return this.events.once(event, listener);
   }
 
-  public off(event: string | ChannelRpcMethod | EngineEvent): any {
+  public off(event?: string | ChannelRpcMethod | EngineEvent): any {
+    if (!event) {
+      return this.removeAllListeners();
+    }
     if (isEventName(event) || isMethodName(event)) {
       const rpc = constructRpcRequest<"chan_unsubscribe">("chan_unsubscribe", {
         event,
@@ -275,7 +278,7 @@ export class DirectProvider implements IRpcChannelProvider {
     return this.engine.once(event, callback, filter);
   }
 
-  off<T extends EngineEvent>(event: T): void {
+  off<T extends EngineEvent>(event?: T): void {
     return this.engine.off(event);
   }
 

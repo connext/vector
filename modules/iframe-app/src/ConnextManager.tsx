@@ -112,7 +112,7 @@ export default class ConnextManager {
       this.browserNode.off(request.params.event);
     }
     if (request.method === "chan_unsubscribeAll") {
-      this.browserNode.removeAllListeners();
+      this.browserNode.off();
     }
     return await this.browserNode.send(request);
   }
