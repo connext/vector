@@ -1,4 +1,4 @@
-import { TransactionResponse } from "@ethersproject/abstract-provider";
+import { TransactionRequest, TransactionResponse } from "@ethersproject/abstract-provider";
 import { BigNumber, BigNumberish } from "@ethersproject/bignumber";
 
 import { Address, HexString } from "./basic";
@@ -41,6 +41,7 @@ export class ChainError extends VectorError {
     NotInitialState: "Transfer must be disputed with initial state",
     MultisigDeployed: "Multisig already deployed",
     TransferNotFound: "Transfer is not included in active transfers",
+    TxReverted: "Transaction reverted on chain",
   };
 
   // Errors you would see from trying to send a transaction, and
@@ -133,6 +134,8 @@ export interface IVectorChainReader {
 
   getGasPrice(chainId: number): Promise<Result<BigNumber, ChainError>>;
 
+  estimateGas(chainId: number, transaction: TransactionRequest): Promise<Result<BigNumber, ChainError>>;
+
   getTokenAllowance(
     tokenAddress: string,
     owner: string,
@@ -171,6 +174,7 @@ export interface IVectorChainService extends IVectorChainReader {
   ): Promise<Result<TransactionResponse, ChainError>>;
   sendDeployChannelTx(
     channelState: FullChannelState,
+    gasPrice: BigNumber,
     deposit?: { amount: string; assetId: string }, // Included IFF createChannelAndDepositAlice
   ): Promise<Result<TransactionResponse, ChainError>>;
 

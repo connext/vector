@@ -879,7 +879,11 @@ async function handleWithdrawalTransferResolution(
   });
   logger.info({ transactionHash: tx.hash }, "Submitted withdraw tx");
   const receipt = await tx.wait();
-  logger.info({ method, transactionHash: receipt.transactionHash }, "Withdraw tx mined, completed");
+  if (receipt.status === 0) {
+    logger.error({ method, receipt }, "Withdraw tx reverted");
+  } else {
+    logger.info({ method, transactionHash: receipt.transactionHash }, "Withdraw tx mined, completed");
+  }
 }
 
 const isWithdrawTransfer = async (
