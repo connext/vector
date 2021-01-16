@@ -78,22 +78,6 @@ export class BrowserNode implements INodeService {
     this.supportedChains = params.supportedChains || [];
     this.iframeSrc = params.iframeSrc;
     this.chainProviders = params.chainProviders;
-
-    // Add listener for cross chain transfer cancellations
-    this.on(EngineEvents.CONDITIONAL_TRANSFER_RESOLVED, (data) => {
-      // remove from the storage if sender transfer was canceled
-      const routingId = data.transfer.meta?.routingId;
-      if (!routingId) {
-        return;
-      }
-      const resolver = Object.values(data.transfer.transferResolver)[0];
-      if (resolver !== HashZero) {
-        return;
-      }
-      this.logger.warn({ transfer: data.transfer }, "Transfer cancelled, removing from store");
-      // remove from store
-      removeCrossChainTransfer(routingId);
-    });
   }
 
   // method for signer-based connections
@@ -167,6 +151,22 @@ export class BrowserNode implements INodeService {
     node.channelProvider = new DirectProvider(engine);
     node.publicIdentifier = config.signer.publicIdentifier;
     node.signerAddress = config.signer.address;
+
+    // Add listener for cross chain transfer cancellations
+    node.on(EngineEvents.CONDITIONAL_TRANSFER_RESOLVED, (data) => {
+      // remove from the storage if sender transfer was canceled
+      const routingId = data.transfer.meta?.routingId;
+      if (!routingId) {
+        return;
+      }
+      const resolver = Object.values(data.transfer.transferResolver)[0];
+      if (resolver !== HashZero) {
+        return;
+      }
+      node.logger.warn({ transfer: data.transfer }, "Transfer cancelled, removing from store");
+      // remove from store
+      removeCrossChainTransfer(routingId);
+    });
     return node;
   }
 
@@ -217,6 +217,22 @@ export class BrowserNode implements INodeService {
         this.logger.info({ channel, chainId });
       }),
     );
+
+    // Add listener for cross chain transfer cancellations
+    this.on(EngineEvents.CONDITIONAL_TRANSFER_RESOLVED, (data) => {
+      // remove from the storage if sender transfer was canceled
+      const routingId = data.transfer.meta?.routingId;
+      if (!routingId) {
+        return;
+      }
+      const resolver = Object.values(data.transfer.transferResolver)[0];
+      if (resolver !== HashZero) {
+        return;
+      }
+      this.logger.warn({ transfer: data.transfer }, "Transfer cancelled, removing from store");
+      // remove from store
+      removeCrossChainTransfer(routingId);
+    });
   }
 
   // IFRAME SPECIFIC
