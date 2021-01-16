@@ -566,7 +566,6 @@ const handleUnverifiedUpdates = async (
     await store.setUpdateStatus(update.id, RouterUpdateStatus.FAILED, msg);
     erroredUpdates.push(update);
   };
-  logger.error({ updates: updates.length }, "****** HANDLING UNVERIFIED UPDATES");
   for (const update of updates) {
     if (update.type !== RouterUpdateType.TRANSFER_CREATION) {
       await handleUpdateErr(update, "Can't verify non-create updates");
