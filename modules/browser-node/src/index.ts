@@ -66,6 +66,9 @@ export class BrowserNode implements INodeService {
   private iframeSrc?: string;
   private chainProviders: ChainProviders = {};
 
+  // Crosschain transfer helpers
+  private crossChainTransfers: { [routingId: string]: Omit<StoredCrossChainTransfer, "status"> } = {};
+
   constructor(params: {
     logger?: pino.BaseLogger;
     routerPublicIdentifier?: string;
@@ -78,6 +81,28 @@ export class BrowserNode implements INodeService {
     this.supportedChains = params.supportedChains || [];
     this.iframeSrc = params.iframeSrc;
     this.chainProviders = params.chainProviders;
+
+    // Add listener for cross chain transfer cancellations
+    this.on(EngineEvents.CONDITIONAL_TRANSFER_RESOLVED, (data) => {
+      // remove from the storage if sender transfer was canceled
+      const routingId = data.transfer.meta?.routingId;
+      if (!routingId) {
+        return;
+      }
+      const record = this.crossChainTransfers[routingId];
+      if (!record) {
+        return;
+      }
+      const resolver = Object.values(data.transfer.transferResolver)[0];
+      if (resolver !== HashZero) {
+        return;
+      }
+      this.logger.warn({ transfer: data.transfer }, "Transfer cancelled, removing from store");
+      // remove from memory
+      delete this.crossChainTransfers[routingId];
+      // remove from store
+      removeCrossChainTransfer(routingId);
+    });
   }
 
   // method for signer-based connections
@@ -301,7 +326,12 @@ export class BrowserNode implements INodeService {
     }
 
     const crossChainTransferId = params.crossChainTransferId ?? getRandomBytes32();
-    saveCrossChainTransfer(crossChainTransferId, CrossChainTransferStatus.INITIAL, storeParams);
+    // add to in-memory transfers
+    this.crossChainTransfers[crossChainTransferId] = {
+      ...storeParams,
+      crossChainTransferId,
+    };
+    saveCrossChainTransfer(crossChainTransferId, startStage, storeParams);
 
     const { meta, ...res } = params;
     const updatedMeta = { ...res, crossChainTransferId, routingId: crossChainTransferId, ...(meta ?? {}) };
@@ -332,18 +362,6 @@ export class BrowserNode implements INodeService {
 
     let senderTransferId = "";
     if (startStage < CrossChainTransferStatus.TRANSFER_1) {
-      // remove from the storage if sender transfer was canceled
-      this.on(EngineEvents.CONDITIONAL_TRANSFER_RESOLVED, (data) => {
-        if (
-          data.transfer.meta.routingId === crossChainTransferId &&
-          data.channelAddress === senderChannel.channelAddress &&
-          Object.values(data.transfer.transferResolver)[0] === HashZero
-        ) {
-          this.logger.warn({ transfer: data.transfer }, "Transfer cancelled, removing from store");
-          removeCrossChainTransfer(crossChainTransferId);
-        }
-      });
-
       const transferParams = {
         amount: amount,
         assetId: fromAssetId,
@@ -478,6 +496,8 @@ export class BrowserNode implements INodeService {
       this.logger.info({ withdrawal }, "Withdrawal completed");
       withdrawalTx = withdrawal.transactionHash;
     }
+    // remove from memory
+    delete this.crossChainTransfers[crossChainTransferId];
     removeCrossChainTransfer(crossChainTransferId);
     return { withdrawalTx, withdrawalAmount };
   }
