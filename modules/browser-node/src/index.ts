@@ -337,7 +337,13 @@ export class BrowserNode implements INodeService {
     saveCrossChainTransfer(crossChainTransferId, startStage, storeParams);
 
     const { meta, ...res } = params;
-    const updatedMeta = { ...res, crossChainTransferId, routingId: crossChainTransferId, ...(meta ?? {}) };
+    const updatedMeta = {
+      ...res,
+      crossChainTransferId,
+      routingId: crossChainTransferId,
+      requireOnline: false,
+      ...(meta ?? {}),
+    };
 
     if (startStage < CrossChainTransferStatus.DEPOSITED) {
       if (reconcileDeposit) {
