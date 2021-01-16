@@ -131,6 +131,8 @@ export interface IVectorChainReader {
 
   getBlockNumber(chainId: number): Promise<Result<number, ChainError>>;
 
+  getGasPrice(chainId: number): Promise<Result<BigNumber, ChainError>>;
+
   getTokenAllowance(
     tokenAddress: string,
     owner: string,

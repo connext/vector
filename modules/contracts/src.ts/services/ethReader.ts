@@ -454,6 +454,19 @@ export class EthereumChainReader implements IVectorChainReader {
     }
   }
 
+  async getGasPrice(chainId: number): Promise<Result<BigNumber, ChainError>> {
+    const provider = this.chainProviders[chainId];
+    if (!provider) {
+      return Result.fail(new ChainError(ChainError.reasons.ProviderNotFound));
+    }
+    try {
+      const gasPrice = await provider.getGasPrice();
+      return Result.ok(gasPrice);
+    } catch (e) {
+      return Result.fail(e);
+    }
+  }
+
   async getTokenAllowance(
     tokenAddress: string,
     owner: string,
