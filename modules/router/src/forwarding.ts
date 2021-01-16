@@ -20,13 +20,14 @@ import { BigNumber } from "@ethersproject/bignumber";
 import { getRandomBytes32 } from "@connext/vector-utils";
 
 import { getSwappedAmount } from "./services/swap";
-import { IRouterStore, RouterUpdateType, RouterUpdateStatus } from "./services/store";
+import { IRouterStore, RouterUpdateType, RouterUpdateStatus, RouterStoredUpdate } from "./services/store";
 import { CheckInError, ForwardTransferCreationError, ForwardTransferResolutionError } from "./errors";
 import {
   cancelCreatedTransfer,
   attemptTransferWithCollateralization,
   transferWithCollateralization,
 } from "./services/transfer";
+import { AddressZero } from "@ethersproject/constants";
 
 export async function forwardTransferCreation(
   data: ConditionalTransferCreatedPayload,
@@ -135,7 +136,6 @@ export async function forwardTransferCreation(
     channelAddress: senderChannelAddress,
     initiator,
     transferTimeout,
-    transferDefinition: senderTransferDefinition,
   } = senderTransfer;
   const meta = { ...untypedMeta } as RouterSchemas.RouterMeta & any;
   const { routingId } = meta ?? {};
@@ -322,6 +322,19 @@ export async function forwardTransferCreation(
     return cancelSenderTransferAndReturnError(routingId, senderTransfer, error.message);
   }
 
+  // There was an error, but we cannot safely cancel the sender transfer
+  // because we have sent a single signed update to the receiver.
+  // In this case, we need to know if the transfer was successfully sent
+  // to the receiver, or if we should retry the transfer. This case can
+  // be handled on check-in, so store the update as an update pending
+  // verification
+  await store.queueUpdate(
+    recipientChannel.channelAddress,
+    RouterUpdateType.TRANSFER_CREATION,
+    params,
+    RouterUpdateStatus.UNVERIFIED,
+  );
+
   // return failure without cancelling
   logger.info({ method, methodId }, "Method complete");
   return Result.fail(error);
@@ -475,6 +488,30 @@ export async function handleIsAlive(
     logger.info({ method, methodId, channelAddress: data.channelAddress }, "Skipping isAlive handler");
     return Result.ok(undefined);
   }
+
+  const pendingErr = await handlePendingUpdates(data, routerPublicIdentifier, nodeService, store, chainReader, logger);
+  return pendingErr;
+}
+
+const handlePendingUpdates = async (
+  data: IsAlivePayload,
+  routerPublicIdentifier: string,
+  nodeService: INodeService,
+  store: IRouterStore,
+  chainReader: IVectorChainReader,
+  logger: BaseLogger,
+): Promise<Result<undefined, CheckInError>> => {
+  const method = "handlePendingUpdates";
+  const methodId = getRandomBytes32();
+  logger.debug(
+    {
+      method,
+      methodId,
+      routerPublicIdentifier,
+      channelAddress: data.channelAddress,
+    },
+    "Method started",
+  );
   // This means the user is online and has checked in. Get all updates that are
   // queued and then execute them.
   const updates = await store.getQueuedUpdates(data.channelAddress, RouterUpdateStatus.PENDING);
@@ -564,4 +601,4 @@ export async function handleIsAlive(
   }
   logger.info({ method, methodId }, "Method complete");
   return Result.ok(undefined);
-}
+};
