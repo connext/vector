@@ -489,8 +489,35 @@ export async function handleIsAlive(
     return Result.ok(undefined);
   }
 
-  const pendingErr = await handlePendingUpdates(data, routerPublicIdentifier, nodeService, store, chainReader, logger);
-  return pendingErr;
+  const pending = await handlePendingUpdates(data, routerPublicIdentifier, nodeService, store, chainReader, logger);
+
+  const unverified = await handleUnverifiedUpdates(
+    data,
+    routerPublicIdentifier,
+    nodeService,
+    store,
+    chainReader,
+    logger,
+  );
+
+  if (pending.isError && unverified.isError) {
+    return Result.fail(
+      new CheckInError(CheckInError.reasons.PendingAndUnverifiedFailed, data.channelAddress, {
+        pending: jsonifyError(pending.getError()!),
+        unverified: jsonifyError(unverified.getError()!),
+      }),
+    );
+  }
+
+  if (pending.isError) {
+    return pending;
+  }
+
+  if (unverified.isError) {
+    return unverified;
+  }
+
+  return Result.ok(undefined);
 }
 
 const handleUnverifiedUpdates = async (

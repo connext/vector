@@ -141,6 +141,7 @@ export class CheckInError extends RouterError {
 
   static readonly reasons = {
     CouldNotGetChannel: "Could not get channel, or not found",
+    PendingAndUnverifiedFailed: "Could not handle pending or unverified updates",
     UpdatesFailed: "Could not forward all updates",
   } as const;
 
