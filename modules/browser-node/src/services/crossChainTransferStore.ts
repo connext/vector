@@ -38,9 +38,7 @@ export async function getCrossChainTransfers(): Promise<StoredCrossChainTransfer
   return transfers.filter((t) => !!t) as StoredCrossChainTransfer[];
 }
 
-export async function getCrossChainTransfer(
-  crossChainTransferId: string,
-): Promise<StoredCrossChainTransfer | undefined> {
+export function getCrossChainTransfer(crossChainTransferId: string): StoredCrossChainTransfer | undefined {
   const retrieved = window.localStorage.getItem(crossChainTransferId);
   if (retrieved) {
     return JSON.parse(retrieved);

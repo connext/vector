@@ -37,6 +37,7 @@ import { DirectProvider, IframeChannelProvider, IRpcChannelProvider } from "./ch
 import {
   CrossChainTransferParams,
   CrossChainTransferStatus,
+  getCrossChainTransfer,
   getCrossChainTransfers,
   removeCrossChainTransfer,
   saveCrossChainTransfer,
@@ -341,7 +342,7 @@ export class BrowserNode implements INodeService {
       ...res,
       crossChainTransferId,
       routingId: crossChainTransferId,
-      requireOnline: false,
+      requireOnline: true,
       ...(meta ?? {}),
     };
 
@@ -400,7 +401,7 @@ export class BrowserNode implements INodeService {
       saveCrossChainTransfer(crossChainTransferId, CrossChainTransferStatus.TRANSFER_1, storeParams);
     }
 
-    let receiverTransferData: ConditionalTransferCreatedPayload | undefined;
+    let receiverTransferData: ConditionalTransferCreatedPayload | string | undefined;
     let withdrawalAmount = params.withdrawalAmount;
     if (startStage < CrossChainTransferStatus.TRANSFER_2) {
       // first try to pull the transfer from store in case this was called through the resumePendingCrossChainTransfer function
@@ -427,7 +428,20 @@ export class BrowserNode implements INodeService {
       this.logger.info({ existingReceiverTransfer }, "Existing receiver transfer");
 
       if (!existingReceiverTransfer) {
-        receiverTransferData = await receiverTransferDataPromise;
+        // NOTE: i know it is dumb to do this on a setInterval. i know that.
+        // i'm doing it this way to avoid adding excess listeners
+        let clear: NodeJS.Timeout;
+        const senderTransferCancelledPromise = new Promise<string>((res) => {
+          clear = setInterval(() => {
+            const stored = getCrossChainTransfer(crossChainTransferId);
+            if (stored) {
+              return;
+            }
+            res("Sender transfer cancelled");
+          }, 500);
+        });
+        receiverTransferData = await Promise.race([receiverTransferDataPromise, senderTransferCancelledPromise]);
+        clear();
         if (!receiverTransferData) {
           this.logger.error(
             { routingId: crossChainTransferId, channelAddress: receiverChannel.channelAddress },
@@ -439,6 +453,16 @@ export class BrowserNode implements INodeService {
           });
           throw new CrossChainTransferError(
             CrossChainTransferError.reasons.ReceiverEventMissed,
+            this.publicIdentifier,
+            params,
+            { senderTransfer: senderTransferId, preImage },
+          );
+        }
+        if (typeof receiverTransferData === "string") {
+          // Sender transfer was cancelled, removed from
+          // store
+          throw new CrossChainTransferError(
+            CrossChainTransferError.reasons.SenderTransferCancelled,
             this.publicIdentifier,
             params,
             { senderTransfer: senderTransferId, preImage },
@@ -477,13 +501,18 @@ export class BrowserNode implements INodeService {
     let withdrawalTx: string | undefined;
     const withdrawalMeta = { ...res, crossChainTransferId, ...(meta ?? {}) };
     if (withdrawalAddress) {
-      withdrawalAmount = params.withdrawalAmount ?? receiverTransferData?.transfer.balance.amount[0];
+      withdrawalAmount =
+        params.withdrawalAmount ??
+        (receiverTransferData as ConditionalTransferCreatedPayload)?.transfer.balance.amount[0];
       if (!withdrawalAmount) {
         throw new CrossChainTransferError(
           CrossChainTransferError.reasons.MissingWithdrawalAmount,
           this.publicIdentifier,
           params,
-          { senderTransfer: senderTransferId, receiverTransfer: receiverTransferData?.transfer.transferId },
+          {
+            senderTransfer: senderTransferId,
+            receiverTransfer: (receiverTransferData as ConditionalTransferCreatedPayload)?.transfer.transferId,
+          },
         );
       }
       this.logger.info({ withdrawalAddress: withdrawalAddress, withdrawalAmount }, "Withdrawing to configured address");
@@ -514,11 +543,11 @@ export class BrowserNode implements INodeService {
   async resumePendingCrossChainTransfers(): Promise<void> {
     const transfers = await getCrossChainTransfers();
     for (const transfer of transfers) {
-      this.logger.info({ transfer }, "Starting pending crossChainTransfer");
       if (transfer.error) {
         this.logger.error({ transfer }, "Found errored transfer, TODO: handle these properly");
         continue;
       }
+      this.logger.info({ transfer }, "Starting pending crossChainTransfer");
       try {
         await this.resumePendingCrossChainTransfer(transfer);
       } catch (e) {
