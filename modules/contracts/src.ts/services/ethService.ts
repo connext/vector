@@ -26,11 +26,14 @@ import { Wallet } from "@ethersproject/wallet";
 import { BaseLogger } from "pino";
 import PriorityQueue from "p-queue";
 import { AddressZero, HashZero } from "@ethersproject/constants";
+import { parseUnits } from "@ethersproject/units";
 import { MerkleTree } from "merkletreejs";
 
 import { ChannelFactory, VectorChannel } from "../artifacts";
 
 import { EthereumChainReader } from "./ethReader";
+
+const EXTRA_GAS_PRICE = parseUnits("20", "gwei");
 
 export class EthereumChainService extends EthereumChainReader implements IVectorChainService {
   private signers: Map<number, Signer> = new Map();
@@ -171,6 +174,22 @@ export class EthereumChainService extends EthereumChainReader implements IVector
     }
 
     const channelFactory = new Contract(channelState.networkContext.channelFactoryAddress, ChannelFactory.abi, signer);
+    const gasPriceRes = await this.getGasPrice(channelState.networkContext.chainId);
+    if (gasPriceRes.isError) {
+      Result.fail(gasPriceRes.getError()!);
+    }
+    const _gasPrice = gasPriceRes.getValue();
+    const gasPrice = _gasPrice.add(EXTRA_GAS_PRICE);
+    this.log.info(
+      {
+        channelAddress: channelState.channelAddress,
+        sender,
+        method,
+        gasPrice: gasPrice.toString(),
+        chainId: channelState.networkContext.chainId,
+      },
+      "Got gas price",
+    );
 
     // If there is no deposit information, just create the channel
     if (!deposit) {
@@ -187,7 +206,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
         if (multisigRes.getValue() !== `0x`) {
           return undefined;
         }
-        return channelFactory.createChannel(channelState.alice, channelState.bob);
+        return channelFactory.createChannel(channelState.alice, channelState.bob, { gasPrice });
       });
       if (result.isError) {
         return result as Result<any, ChainError>;
@@ -221,11 +240,12 @@ export class EthereumChainService extends EthereumChainReader implements IVector
         }
         if (multisigRes.getValue() !== `0x`) {
           // multisig deployed, just send deposit
-          return this.sendDepositATx(channelState, amount, AddressZero);
+          return this.sendDepositATx(channelState, amount, AddressZero, gasPrice);
         }
         // otherwise deploy with deposit
         return channelFactory.createChannelAndDepositAlice(channelState.alice, channelState.bob, assetId, amount, {
           value: amount,
+          gasPrice,
         });
       }) as Promise<Result<TransactionResponse, ChainError>>;
     }
@@ -504,6 +524,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
     amount: string,
     assetId: string,
     chainId: number,
+    gasPrice?: BigNumber,
   ): Promise<Result<TransactionResponse | undefined, ChainError>> {
     const signer = this.signers.get(chainId);
     if (!signer?._isSigner) {
@@ -541,7 +562,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
       return Result.ok(undefined);
     }
     const approveRes = await this.sendTxWithRetries(channelAddress, TransactionReason.approveTokens, () =>
-      erc20.approve(spender, amount),
+      erc20.approve(spender, amount, gasPrice),
     );
     if (approveRes.isError) {
       this.log.error(
@@ -563,6 +584,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
     channelState: FullChannelState,
     amount: string,
     assetId: string,
+    gasPrice?: BigNumber,
   ): Promise<Result<TransactionResponse, ChainError>> {
     const signer = this.signers.get(channelState.networkContext.chainId);
     if (!signer?._isSigner) {
@@ -580,6 +602,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
         amount,
         assetId,
         channelState.networkContext.chainId,
+        gasPrice,
       );
       if (approveRes.isError) {
         this.log.error(
@@ -598,11 +621,11 @@ export class EthereumChainService extends EthereumChainReader implements IVector
       }
       this.log.info({ txHash: approveTx?.hash, method: "sendDepositATx", assetId }, "Token approval confirmed");
       return this.sendTxWithRetries(channelState.channelAddress, TransactionReason.depositA, () =>
-        vectorChannel.depositAlice(assetId, amount),
+        vectorChannel.depositAlice(assetId, amount, { gasPrice }),
       ) as Promise<Result<TransactionResponse, ChainError>>;
     }
     return this.sendTxWithRetries(channelState.channelAddress, TransactionReason.depositA, () =>
-      vectorChannel.depositAlice(assetId, amount, { value: amount }),
+      vectorChannel.depositAlice(assetId, amount, { value: amount, gasPrice }),
     ) as Promise<Result<TransactionResponse, ChainError>>;
   }
 
