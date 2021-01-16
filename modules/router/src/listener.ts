@@ -198,9 +198,9 @@ export async function setupListeners(
         chainReader,
         logger,
       );
-      if (res.isError) {
+      if (response.isError) {
         return logger.error(
-          { method: "adjustCollateral", error: jsonifyError(res.getError()!) },
+          { method: "adjustCollateral", error: jsonifyError(response.getError()!) },
           "Error adjusting collateral",
         );
       }
