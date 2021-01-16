@@ -236,6 +236,9 @@ export class EthereumChainService extends EthereumChainReader implements IVector
           channelState.bob,
           assetId,
           amount,
+          {
+            value: amount,
+          },
         );
         const gas = _gas.add(EXTRA_GAS);
         return channelFactory.createChannelAndDepositAlice(channelState.alice, channelState.bob, assetId, amount, {
