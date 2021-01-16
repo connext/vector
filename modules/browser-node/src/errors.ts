@@ -38,6 +38,7 @@ export class CrossChainTransferError extends NodeError {
     MissingWithdrawalAmount: "Withdrawal amount not specified",
     MultinodeProhibitted: "Cannot configure multiple nodes for browser",
     ReceiverEventMissed: "Failed to get receiver event",
+    SenderTransferCancelled: "Sender-side transfer was cancelled",
     SwapNotSupported: "Router does not support requested swap",
   } as const;
 
