@@ -497,7 +497,11 @@ export class BrowserNode implements INodeService {
         this.logger.error({ transfer }, "Found errored transfer, TODO: handle these properly");
         continue;
       }
-      await this.resumePendingCrossChainTransfer(transfer);
+      try {
+        await this.resumePendingCrossChainTransfer(transfer);
+      } catch (e) {
+        this.logger.error({ e: e.message, ...transfer }, "Failed to resume transfer");
+      }
     }
   }
 
