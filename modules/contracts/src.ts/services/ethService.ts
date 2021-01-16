@@ -26,13 +26,14 @@ import { Wallet } from "@ethersproject/wallet";
 import { BaseLogger } from "pino";
 import PriorityQueue from "p-queue";
 import { AddressZero, HashZero } from "@ethersproject/constants";
+import { parseUnits } from "@ethersproject/units";
 import { MerkleTree } from "merkletreejs";
 
 import { ChannelFactory, VectorChannel } from "../artifacts";
 
 import { EthereumChainReader } from "./ethReader";
 
-const EXTRA_GAS_PRICE = 20;
+const EXTRA_GAS_PRICE = parseUnits("20", "gwei");
 
 export class EthereumChainService extends EthereumChainReader implements IVectorChainService {
   private signers: Map<number, Signer> = new Map();
