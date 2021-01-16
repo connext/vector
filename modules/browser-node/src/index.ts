@@ -376,7 +376,7 @@ export class BrowserNode implements INodeService {
     let receiverTransferData: ConditionalTransferCreatedPayload | undefined;
     let withdrawalAmount = params.withdrawalAmount;
     if (startStage < CrossChainTransferStatus.TRANSFER_2) {
-      // first try to pull the transfer from store in case this was called through the reclaimPendingCrossChainTransfer function
+      // first try to pull the transfer from store in case this was called through the resumePendingCrossChainTransfer function
       const receiverTransferDataPromise = new Promise<ConditionalTransferCreatedPayload>((res) => {
         this.on(EngineEvents.CONDITIONAL_TRANSFER_CREATED, (data) => {
           if (
@@ -483,7 +483,7 @@ export class BrowserNode implements INodeService {
   }
 
   // separate from init(), can eventually be called as part of that
-  async reclaimPendingCrossChainTransfers(): Promise<void> {
+  async resumePendingCrossChainTransfers(): Promise<void> {
     const transfers = await getCrossChainTransfers();
     for (const transfer of transfers) {
       this.logger.info({ transfer }, "Starting pending crossChainTransfer");
@@ -491,11 +491,11 @@ export class BrowserNode implements INodeService {
         this.logger.error({ transfer }, "Found errored transfer, TODO: handle these properly");
         continue;
       }
-      await this.reclaimPendingCrossChainTransfer(transfer);
+      await this.resumePendingCrossChainTransfer(transfer);
     }
   }
 
-  private async reclaimPendingCrossChainTransfer(transferData: StoredCrossChainTransfer) {
+  private async resumePendingCrossChainTransfer(transferData: StoredCrossChainTransfer) {
     const {
       amount,
       withdrawalAddress,

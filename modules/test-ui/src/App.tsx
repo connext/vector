@@ -56,7 +56,7 @@ function App() {
         chainProviders: config.chainProviders,
       });
       await client.init();
-      await client.reclaimPendingCrossChainTransfers();
+      await client.resumePendingCrossChainTransfers();
       const channelsRes = await client.getStateChannels();
       if (channelsRes.isError) {
         setConnectError(channelsRes.getError().message);
