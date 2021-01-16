@@ -8,6 +8,7 @@ export const RouterUpdateStatus = {
   FAILED: "FAILED",
   PENDING: "PENDING",
   PROCESSING: "PROCESSING",
+  UNVERIFIED: "UNVERIFIED",
 } as const;
 export type RouterUpdateStatus = keyof typeof RouterUpdateStatus;
 
@@ -34,6 +35,7 @@ export interface IRouterStore {
     channelAddress: string,
     type: T,
     updateData: RouterStoredUpdatePayload[T],
+    status?: RouterUpdateStatus,
   ): Promise<void>;
   setUpdateStatus(updateId: string, status: RouterUpdateStatus, context?: string): Promise<void>;
 }
@@ -83,13 +85,14 @@ export class PrismaStore implements IRouterStore {
     channelAddress: string,
     type: T,
     updateData: RouterStoredUpdatePayload[T],
+    status: RouterUpdateStatus = RouterUpdateStatus.PENDING,
   ): Promise<void> {
     await this.prisma.queuedUpdate.create({
       data: {
         channelAddress,
         type,
         updateData: JSON.stringify(updateData),
-        status: RouterUpdateStatus.PENDING,
+        status,
       },
     });
   }

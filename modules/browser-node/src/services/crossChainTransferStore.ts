@@ -23,7 +23,8 @@ export type StoredCrossChainTransfer = CrossChainTransferParams & {
   crossChainTransferId: string;
 };
 
-const CROSS_CHAIN_TRANSFER_LOCAL_STORAGE_KEY = "crossChainTransfer";
+// const OLD_CROSS_CHAIN_TRANSFER_LOCAL_STORAGE_KEY = "crossChainTransfer";
+const CROSS_CHAIN_TRANSFER_LOCAL_STORAGE_KEY = "pendingCrossChainTransfers";
 
 export async function getCrossChainTransfers(): Promise<StoredCrossChainTransfer[]> {
   const transfers = await Promise.all(
@@ -37,9 +38,7 @@ export async function getCrossChainTransfers(): Promise<StoredCrossChainTransfer
   return transfers.filter((t) => !!t) as StoredCrossChainTransfer[];
 }
 
-export async function getCrossChainTransfer(
-  crossChainTransferId: string,
-): Promise<StoredCrossChainTransfer | undefined> {
+export function getCrossChainTransfer(crossChainTransferId: string): StoredCrossChainTransfer | undefined {
   const retrieved = window.localStorage.getItem(crossChainTransferId);
   if (retrieved) {
     return JSON.parse(retrieved);
