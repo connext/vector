@@ -430,7 +430,7 @@ export class BrowserNode implements INodeService {
       if (!existingReceiverTransfer) {
         // NOTE: i know it is dumb to do this on a setInterval. i know that.
         // i'm doing it this way to avoid adding excess listeners
-        let clear: NodeJS.Timeout;
+        let clear: NodeJS.Timeout | undefined = undefined;
         const senderTransferCancelledPromise = new Promise<string>((res) => {
           clear = setInterval(() => {
             const stored = getCrossChainTransfer(crossChainTransferId);
@@ -441,7 +441,9 @@ export class BrowserNode implements INodeService {
           }, 500);
         });
         receiverTransferData = await Promise.race([receiverTransferDataPromise, senderTransferCancelledPromise]);
-        clear();
+        if (clear) {
+          clearInterval(clear);
+        }
         if (!receiverTransferData) {
           this.logger.error(
             { routingId: crossChainTransferId, channelAddress: receiverChannel.channelAddress },
