@@ -66,9 +66,6 @@ export class BrowserNode implements INodeService {
   private iframeSrc?: string;
   private chainProviders: ChainProviders = {};
 
-  // Crosschain transfer helpers
-  private crossChainTransfers: { [routingId: string]: Omit<StoredCrossChainTransfer, "status"> } = {};
-
   constructor(params: {
     logger?: pino.BaseLogger;
     routerPublicIdentifier?: string;
@@ -89,17 +86,11 @@ export class BrowserNode implements INodeService {
       if (!routingId) {
         return;
       }
-      const record = this.crossChainTransfers[routingId];
-      if (!record) {
-        return;
-      }
       const resolver = Object.values(data.transfer.transferResolver)[0];
       if (resolver !== HashZero) {
         return;
       }
       this.logger.warn({ transfer: data.transfer }, "Transfer cancelled, removing from store");
-      // remove from memory
-      delete this.crossChainTransfers[routingId];
       // remove from store
       removeCrossChainTransfer(routingId);
     });
@@ -326,11 +317,7 @@ export class BrowserNode implements INodeService {
     }
 
     const crossChainTransferId = params.crossChainTransferId ?? getRandomBytes32();
-    // add to in-memory transfers
-    this.crossChainTransfers[crossChainTransferId] = {
-      ...storeParams,
-      crossChainTransferId,
-    };
+    // add to stored transfers
     saveCrossChainTransfer(crossChainTransferId, startStage, storeParams);
 
     const { meta, ...res } = params;
@@ -496,8 +483,7 @@ export class BrowserNode implements INodeService {
       this.logger.info({ withdrawal }, "Withdrawal completed");
       withdrawalTx = withdrawal.transactionHash;
     }
-    // remove from memory
-    delete this.crossChainTransfers[crossChainTransferId];
+    // remove from store
     removeCrossChainTransfer(crossChainTransferId);
     return { withdrawalTx, withdrawalAmount };
   }
