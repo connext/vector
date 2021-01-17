@@ -26,7 +26,7 @@ export type StoredCrossChainTransfer = CrossChainTransferParams & {
 };
 
 // const OLD_CROSS_CHAIN_TRANSFER_LOCAL_STORAGE_KEY = "crossChainTransfer";
-const CROSS_CHAIN_TRANSFER_LOCAL_STORAGE_KEY = "pendingCrossChainTransfers";
+export const CROSS_CHAIN_TRANSFER_LOCAL_STORAGE_KEY = "pendingCrossChainTransfers";
 const getLocalStorageKey = (crossChainTransferId: string): string =>
   `${CROSS_CHAIN_TRANSFER_LOCAL_STORAGE_KEY}_${crossChainTransferId}`;
 
