@@ -356,7 +356,7 @@ describe("BrowserNode", () => {
     return { ctx, params };
   };
 
-  it.only("should be able to make crossChain transfer for ETH", async () => {
+  it.only("should be able to make crossChain transfer for ETH from initial stage", async () => {
     // Create test params
     const { ctx, params } = prepEnv();
 
@@ -364,7 +364,9 @@ describe("BrowserNode", () => {
     console.log("result: ", result);
     expect(result).to.containSubset({ withdrawalTx: ctx.withdrawTx, withdrawalAmount: ctx.transferAmount });
 
-    ///////// Verify all local storage calls
+    //////////////////////////////
+    //////// Verify store ////////
+    /////////////////////////////
     // save after verifying params
     const saveTransferCalls = saveCrossChainTransferStub.getCalls();
     const { crossChainTransferId: id, ...res } = params;
@@ -399,9 +401,24 @@ describe("BrowserNode", () => {
     expect(saveTransferCalls[3].args[2].preImage).to.be.ok;
   });
 
-  it("should be able to make crossChain transfer for ERC20 Token", async () => {
-    //connect
-    // deposit
-    // crossChainTransfer
+  it.skip("should be able to make crossChain transfer for ERC20 Token", async () => {});
+
+  describe("should be able to resume a stored transfer", () => {
+    it("should work for deposited state", async () => {});
+    it("should work for transfer_1 state", async () => {});
+    it("should work for transfer_2 state", async () => {});
   });
+
+  it("should fail if it cant get the sender channel", async () => {});
+  it("should fail if it cant get the receiver channel", async () => {});
+  it("should fail if sender channel is undefined", async () => {});
+  it("should fail if receiver channel is undefined", async () => {});
+  it("should fail if it cant get the router config", async () => {});
+  it("should fail if chains arent supported", async () => {});
+  it("should fail if swap isnt allowed", async () => {});
+  it("should fail if reconcile deposit fails", async () => {});
+  it("should fail if creating sender transfer fails", async () => {});
+  it("should fail if sender transfer is cancelled", async () => {});
+  it("should fail if resolving receiver transfer fails", async () => {});
+  it("should fail if withdrawing fails", async () => {});
 });
