@@ -194,7 +194,9 @@ export class EthereumChainService extends EthereumChainReader implements IVector
         if (multisigRes.getValue() !== `0x`) {
           return undefined;
         }
-        return channelFactory.createChannel(channelState.alice, channelState.bob, { gasPrice });
+        const _gas = await channelFactory.estimateGas.createChannel(channelState.alice, channelState.bob);
+        const gas = _gas.add(EXTRA_GAS);
+        return channelFactory.createChannel(channelState.alice, channelState.bob, { gasPrice, gasLimit: gas });
       });
       if (result.isError) {
         return result as Result<any, ChainError>;
@@ -335,24 +337,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
     if (multisigRes.getValue() === `0x`) {
       // Deploy multisig tx
       this.log.info({ channelAddress: channelState.channelAddress, sender, method }, "Deploying channel");
-      const channelFactory = new Contract(
-        channelState.networkContext.channelFactoryAddress,
-        ChannelFactory.abi,
-        signer,
-      );
-      const _gas = await channelFactory.estimateGas.createChannel(channelState.alice, channelState.bob);
-      const gas = _gas.add(EXTRA_GAS);
-      const txRes = await this.sendTxWithRetries(channelState.channelAddress, TransactionReason.deploy, async () => {
-        // If the multisig has been deployed already, do not redeploy
-        const multisigRes = await this.getCode(channelState.channelAddress, channelState.networkContext.chainId);
-        if (multisigRes.isError) {
-          return Result.fail(multisigRes.getError()!);
-        }
-        if (multisigRes.getValue() !== `0x`) {
-          return undefined;
-        }
-        return channelFactory.createChannel(channelState.alice, channelState.bob, { gasPrice, gasLimit: gas });
-      });
+      const txRes = await this.sendDeployChannelTx(channelState, gasPrice);
       if (txRes.isError) {
         return Result.fail(
           new ChainError(ChainError.reasons.FailedToDeploy, {
@@ -389,11 +374,11 @@ export class EthereumChainService extends EthereumChainReader implements IVector
     }
 
     this.log.info({ sender, method, channel: channelState.channelAddress }, "Sending withdraw tx to chain");
-    const _gas = await signer.estimateGas(minTx);
-    const gas = _gas.add(EXTRA_GAS);
-    return this.sendTxWithRetries(channelState.channelAddress, TransactionReason.withdraw, () =>
-      signer.sendTransaction({ ...minTx, gasPrice, gasLimit: gas }),
-    ) as Promise<Result<TransactionResponse, ChainError>>;
+    return this.sendTxWithRetries(channelState.channelAddress, TransactionReason.withdraw, async () => {
+      const _gas = await signer.estimateGas(minTx);
+      const gas = _gas.add(EXTRA_GAS);
+      return signer.sendTransaction({ ...minTx, gasPrice, gasLimit: gas });
+    }) as Promise<Result<TransactionResponse, ChainError>>;
   }
 
   public async sendDepositTx(
