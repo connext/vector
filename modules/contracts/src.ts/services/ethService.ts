@@ -444,7 +444,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
     txFn: () => Promise<undefined | TransactionResponse>,
   ): Promise<Result<TransactionResponse | undefined, ChainError>> {
     const errors = [];
-    for (let attempt = 1; attempt++; attempt < this.defaultRetries) {
+    for (let attempt = 1; attempt++; attempt <= this.defaultRetries) {
       this.log.info(
         {
           retries: this.defaultRetries,
