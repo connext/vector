@@ -2,12 +2,17 @@
 
 ## Next Release
 
+## 0.1.4
+
+- \[contracts\] Fix bug in `chainService`
+
 ## 0.1.3
 
 - \[browser-node\] Remove from storage if transfer is cancelled.
 - \[browser-node\] Register listener for sender cancellations once
 - \[browser-node\] Don't hang on `crossChainTransfer` if sender-side transfer cancelled
 - \[router\] Handle unverified (sent a single-signed) updates for transfer forwarding on check-in (using `reconcileDeposit` for state consensus)
+- \[contracts\] Improvements with `gasPrice` and `gasLimit` in chain servce
 
 ## 0.1.3-beta.1
 
