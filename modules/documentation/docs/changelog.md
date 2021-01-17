@@ -2,6 +2,10 @@
 
 ## Next Release
 
+## 0.1.5
+
+- \[browser-node\] Fix bug in `crossChainTransferStore` key
+
 ## 0.1.4
 
 - \[contracts\] Fix bug in `chainService`

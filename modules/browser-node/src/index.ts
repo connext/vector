@@ -543,7 +543,7 @@ export class BrowserNode implements INodeService {
 
   // separate from init(), can eventually be called as part of that
   async resumePendingCrossChainTransfers(): Promise<void> {
-    const transfers = await getCrossChainTransfers();
+    const transfers = getCrossChainTransfers();
     for (const transfer of transfers) {
       if (transfer.error) {
         this.logger.error({ transfer }, "Found errored transfer, TODO: handle these properly");
