@@ -25,6 +25,7 @@ import {
   Values,
   VectorError,
   jsonifyError,
+  ChainError,
 } from "@connext/vector-types";
 import {
   generateMerkleTreeData,
@@ -47,6 +48,7 @@ import {
 import { setupEngineListeners } from "./listeners";
 import { getEngineEvtContainer } from "./utils";
 import { sendIsAlive } from "./isAlive";
+import { EXTRA_GAS_PRICE } from "@connext/vector-contracts/dist/src.ts/services/ethService";
 
 export const ajv = new Ajv();
 
@@ -192,6 +194,22 @@ export class VectorEngine implements IVectorEngine {
     Result<ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_getConfig], EngineError>
   > {
     return Result.ok([{ index: 0, publicIdentifier: this.publicIdentifier, signerAddress: this.signerAddress }]);
+  }
+
+  private async getRouterConfig(
+    params: EngineParams.GetRouterConfig,
+  ): Promise<Result<ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_getRouterConfig], EngineError>> {
+    const validate = ajv.compile(EngineParams.GetRouterConfigSchema);
+    const valid = validate(params);
+    if (!valid) {
+      return Result.fail(
+        new RpcError(RpcError.reasons.InvalidParams, "", this.publicIdentifier, {
+          invalidParamsError: validate.errors?.map((e) => e.message).join(","),
+          invalidParams: params,
+        }),
+      );
+    }
+    return this.messaging.sendRouterConfigMessage(Result.ok(undefined), params.routerIdentifier, this.publicIdentifier);
   }
 
   private async getStatus(): Promise<
@@ -477,10 +495,21 @@ export class VectorEngine implements IVectorEngine {
     }
 
     this.logger.info(
-      { chainId: channel.networkContext.chainId, channel: channel.channelAddress },
+      { method, chainId: channel.networkContext.chainId, channel: channel.channelAddress },
       "Deploying channel multisig",
     );
-    const deployRes = await this.chainService.sendDeployChannelTx(channel);
+
+    const gasPriceRes = await this.chainService.getGasPrice(channel.networkContext.chainId);
+    if (gasPriceRes.isError) {
+      Result.fail(gasPriceRes.getError()!);
+    }
+    const _gasPrice = gasPriceRes.getValue();
+    const gasPrice = _gasPrice.add(EXTRA_GAS_PRICE);
+    this.logger.info(
+      { method, chainId: channel.networkContext.chainId, channel: channel.channelAddress },
+      "Got gas price",
+    );
+    const deployRes = await this.chainService.sendDeployChannelTx(channel, gasPrice);
     if (deployRes.isError) {
       const err = deployRes.getError();
       this.logger.error(
@@ -496,7 +525,10 @@ export class VectorEngine implements IVectorEngine {
     }
     const tx = deployRes.getValue();
     this.logger.info({ chainId: channel.networkContext.chainId, hash: tx.hash }, "Deploy tx broadcast");
-    await tx.wait();
+    const receipt = await tx.wait();
+    if (receipt.status === 0) {
+      return Result.fail(new ChainError(ChainError.reasons.TxReverted, { receipt }));
+    }
     this.logger.debug({ chainId: channel.networkContext.chainId, hash: tx.hash }, "Deploy tx mined");
     this.logger.info(
       { result: setupRes.isError ? jsonifyError(setupRes.getError()!) : setupRes.getValue(), method, methodId },

@@ -96,6 +96,31 @@ server.get<{ Params: { publicIdentifier: string } }>(
   },
 );
 
+server.get<{ Params: NodeParams.GetRouterConfig }>(
+  "/:publicIdentifier/router/config/:routerIdentifier",
+  { schema: { params: NodeParams.GetRouterConfigSchema } },
+  async (request, reply) => {
+    const engine = getNode(request.params.publicIdentifier);
+    if (!engine) {
+      return reply
+        .status(400)
+        .send(
+          jsonifyError(
+            new ServerNodeError(ServerNodeError.reasons.NodeNotFound, request.params.publicIdentifier, request.params),
+          ),
+        );
+    }
+    const params = constructRpcRequest(ChannelRpcMethods.chan_getRouterConfig, request.params);
+    try {
+      const res = await engine.request<"chan_getRouterConfig">(params);
+      return reply.status(200).send(res);
+    } catch (e) {
+      logger.error({ error: e.toJson() });
+      return reply.status(500).send(jsonifyError(e));
+    }
+  },
+);
+
 server.get<{ Params: NodeParams.GetChannelState }>(
   "/:publicIdentifier/channels/:channelAddress",
   { schema: { params: NodeParams.GetChannelStateSchema } },
@@ -472,7 +497,7 @@ server.post<{ Body: NodeParams.SendDepositTx }>(
       if (depositRes.getError()!.message === ChainError.reasons.NotEnoughFunds) {
         return reply.status(400).send({ message: depositRes.getError()!.message });
       }
-      logger.error({ error: depositRes.getError()!.toJson() });
+      logger.error({ error: jsonifyError(depositRes.getError()!) });
       return reply.status(500).send({ message: depositRes.getError()!.message.substring(0, 100) });
     }
     return reply.status(200).send({ txHash: depositRes.getValue().hash });

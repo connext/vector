@@ -6,7 +6,7 @@ import {
   FullChannelState,
   IVectorChainReader,
   jsonifyError,
-  FullTransferState,
+  Result,
 } from "@connext/vector-types";
 import { getRandomBytes32 } from "@connext/vector-utils";
 import { Gauge, Registry } from "prom-client";
@@ -19,6 +19,8 @@ import { adjustCollateral, requestCollateral } from "./services/collateral";
 import { forwardTransferCreation, forwardTransferResolution, handleIsAlive } from "./forwarding";
 import { IRouterStore } from "./services/store";
 import { getRebalanceProfile } from "./services/config";
+import { IRouterMessagingService } from "./services/messaging";
+import { config } from "./config";
 
 const ajv = new Ajv();
 
@@ -75,6 +77,7 @@ export async function setupListeners(
   nodeService: INodeService,
   store: IRouterStore,
   chainReader: IVectorChainReader,
+  messagingService: IRouterMessagingService,
   logger: BaseLogger,
   register: Registry,
 ): Promise<void> {
@@ -195,9 +198,9 @@ export async function setupListeners(
         chainReader,
         logger,
       );
-      if (res.isError) {
+      if (response.isError) {
         return logger.error(
-          { method: "adjustCollateral", error: jsonifyError(res.getError()!) },
+          { method: "adjustCollateral", error: jsonifyError(response.getError()!) },
           "Error adjusting collateral",
         );
       }
@@ -346,5 +349,28 @@ export async function setupListeners(
 
     logger.info({ method: "handleIsAlive", res: res.getValue() }, "Succesfully handled isAlive");
   });
+
+  /////////////////////////////////
+  ///// Messaging responses //////
+  ///////////////////////////////
+  await messagingService.onReceiveRouterConfigMessage(routerPublicIdentifier, async (request, from, inbox) => {
+    const method = "configureSubscriptions";
+    const methodId = getRandomBytes32();
+    logger.debug({ method, methodId }, "Method started");
+    if (request.isError) {
+      logger.error(
+        { error: request.getError()!.toJson(), from, method, methodId },
+        "Received error, shouldn't happen!",
+      );
+      return;
+    }
+    const { chainProviders, allowedSwaps } = config;
+    const supportedChains = Object.keys(chainProviders)
+      .map((x) => parseInt(x))
+      .filter((x) => !!x);
+    await messagingService.respondToRouterConfigMessage(inbox, Result.ok({ supportedChains, allowedSwaps }));
+    logger.debug({ method, methodId }, "Method complete");
+  });
+
   logger.debug({ method, methodId }, "Method complete");
 }

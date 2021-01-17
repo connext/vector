@@ -330,6 +330,21 @@ export const requestCollateral = async (
     const tx = txRes.getValue();
     logger.info({ method, methodId, txHash: tx.txHash }, "Submitted deposit tx");
     const receipt = await provider.waitForTransaction(tx.txHash);
+    if (receipt.status === 0) {
+      return Result.fail(
+        new CollateralError(
+          CollateralError.reasons.UnableToCollateralize,
+          channel.channelAddress,
+          assetId,
+          profile,
+          requestedAmount,
+          {
+            receipt,
+            error: "Tx reverted",
+          },
+        ),
+      );
+    }
     logger.info({ method, methodId, txHash: tx.txHash }, "Tx mined");
     logger.debug({ method, methodId, txHash: tx.txHash, logs: receipt.logs }, "Tx mined");
   } else {
@@ -339,7 +354,7 @@ export const requestCollateral = async (
         methodId,
         assetId,
         channelAddress: channel.channelAddress,
-        processed: processed.toString(),
+        processed,
         amountToDeposit: amountToDeposit.toString(),
         reconcilable: reconcilable.toString(),
         target: target.toString(),
