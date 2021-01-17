@@ -6,5 +6,6 @@
   },
   "logLevel": "info",
   "messagingUrl": "",
-  "production": false
+  "production": false,
+  "transactionRetries": 2
 }
