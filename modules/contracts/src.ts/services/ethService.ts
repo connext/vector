@@ -338,7 +338,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
       // Deploy multisig tx
       this.log.info({ channelAddress: channelState.channelAddress, sender, method }, "Deploying channel");
       const txRes = await this.sendDeployChannelTx(channelState, gasPrice);
-      if (txRes.isError) {
+      if (txRes.isError && txRes.getError()?.message !== ChainError.reasons.MultisigDeployed) {
         return Result.fail(
           new ChainError(ChainError.reasons.FailedToDeploy, {
             method,
@@ -347,7 +347,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
           }),
         );
       }
-      const deployTx = txRes.getValue();
+      const deployTx = txRes.isError ? txRes.getValue() : undefined;
       if (deployTx) {
         this.log.info({ method, deployTx: deployTx.hash }, "Deploy tx broadcast");
         try {
