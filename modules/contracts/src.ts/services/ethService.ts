@@ -600,7 +600,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
       return Result.ok(undefined);
     }
     const approveRes = await this.sendTxWithRetries(channelAddress, TransactionReason.approveTokens, () =>
-      erc20.approve(spender, amount, gasPrice),
+      erc20.approve(spender, amount, { gasPrice }),
     );
     if (approveRes.isError) {
       this.log.error(
