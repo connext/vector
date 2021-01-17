@@ -347,7 +347,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
           }),
         );
       }
-      const deployTx = txRes.isError ? txRes.getValue() : undefined;
+      const deployTx = txRes.isError ? undefined : txRes.getValue();
       if (deployTx) {
         this.log.info({ method, deployTx: deployTx.hash }, "Deploy tx broadcast");
         try {
