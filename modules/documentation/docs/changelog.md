@@ -2,6 +2,12 @@
 
 ## Next Release
 
+## 0.1.8-beta.0
+
+- \[protocol\] Retry sending messages
+- \[protocol\] Do not throw error if lock is not released
+- \[messaging\] Add retry logic
+
 ## 0.1.7
 
 - \[router\] Update status of processed stored updates
