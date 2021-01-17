@@ -1,3 +1,5 @@
+import { safeJsonParse } from "@connext/vector-utils";
+
 export type CrossChainTransferParams = {
   amount: string;
   fromChainId: number;
@@ -31,11 +33,11 @@ const getLocalStorageKey = (crossChainTransferId: string): string =>
 export function getCrossChainTransfers(): StoredCrossChainTransfer[] {
   const transfers = Object.keys(window.localStorage).map((key) => {
     if (key.startsWith(CROSS_CHAIN_TRANSFER_LOCAL_STORAGE_KEY)) {
-      return getCrossChainTransfer(key);
+      return window.localStorage.getItem(key);
     }
     return undefined;
   });
-  return transfers.filter((t) => !!t) as StoredCrossChainTransfer[];
+  return transfers.filter((t) => !!t).map((t) => safeJsonParse(t)) as StoredCrossChainTransfer[];
 }
 
 export function getCrossChainTransfer(crossChainTransferId: string): StoredCrossChainTransfer | undefined {
