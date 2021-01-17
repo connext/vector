@@ -258,7 +258,7 @@ export class BrowserNode implements INodeService {
     const toAssetId = getAddress(params.toAssetId);
 
     const storeParams: CrossChainTransferParams = {
-      amount: amount,
+      amount,
       fromAssetId: fromAssetId,
       fromChainId: fromChainId,
       reconcileDeposit: reconcileDeposit ?? false,
@@ -554,6 +554,18 @@ export class BrowserNode implements INodeService {
         await this.resumePendingCrossChainTransfer(transfer);
       } catch (e) {
         this.logger.error({ e: e.message, ...transfer }, "Failed to resume transfer");
+        saveCrossChainTransfer(transfer.crossChainTransferId, transfer.status, {
+          amount: transfer.amount,
+          error: true,
+          fromAssetId: transfer.fromAssetId,
+          fromChainId: transfer.fromChainId,
+          reconcileDeposit: transfer.reconcileDeposit,
+          toAssetId: transfer.toAssetId,
+          toChainId: transfer.toChainId,
+          preImage: transfer.preImage,
+          withdrawalAddress: transfer.withdrawalAddress,
+          withdrawalAmount: transfer.withdrawalAmount,
+        });
       }
     }
   }
