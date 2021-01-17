@@ -308,6 +308,7 @@ const PostCreateNodeBodySchema = Type.Object({
   index: Type.Integer({ minimum: 0, maximum: 2147483647 }),
   mnemonic: Type.Optional(Type.String()),
   skipCheckIn: Type.Optional(Type.Boolean()),
+  transactionRetries: Type.Optional(Type.Number()),
 });
 
 const PostCreateNodeResponseSchema = {

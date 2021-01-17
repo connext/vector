@@ -23,6 +23,7 @@ export const VectorNodeConfigSchema = Type.Object({
   mnemonic: Type.Optional(Type.String()),
   natsUrl: Type.Optional(TUrl),
   skipCheckIn: Type.Optional(Type.Boolean()),
+  transactionRetries: Type.Optional(Type.Number()),
 });
 
 export type VectorNodeConfig = Static<typeof VectorNodeConfigSchema>;

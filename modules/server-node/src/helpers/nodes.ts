@@ -43,6 +43,7 @@ export const createNode = async (
   store: IServerNodeStore,
   mnemonic: string,
   skipCheckIn: boolean,
+  transactionRetries?: number,
 ): Promise<IVectorEngine> => {
   const method = "createNode";
   const pk = Wallet.fromMnemonic(mnemonic, getPath(index)).privateKey;
@@ -54,7 +55,13 @@ export const createNode = async (
 
   logger.info({ method, publicIdentifier: signer.publicIdentifier }, "Created ChannelSigner");
 
-  const vectorTx = new VectorChainService(store, _providers, pk, logger.child({ module: "VectorChainService" }));
+  const vectorTx = new VectorChainService(
+    store,
+    _providers,
+    pk,
+    logger.child({ module: "VectorChainService" }),
+    transactionRetries,
+  );
   logger.info({ method, providers: config.chainProviders }, "Connected VectorChainService");
 
   const messaging = new NatsMessagingService({
