@@ -10,10 +10,11 @@ type InternalLock = {
   secret: string;
 };
 
+export const LOCK_TTL = 30_000;
+
 export class MemoryLockService implements ILockService {
   public readonly locks: Map<string, InternalLock> = new Map();
-
-  constructor(private readonly ttl: number = 30000) {}
+  private readonly ttl = LOCK_TTL;
 
   async acquireLock(lockName: string): Promise<string> {
     let lock = this.locks.get(lockName)?.lock;
