@@ -1,20 +1,18 @@
 import {
   ChannelUpdate,
   IMessagingService,
-  InboundChannelUpdateError,
-  LockError,
+  NodeError,
   LockInformation,
   MessagingError,
-  OutboundChannelUpdateError,
   Result,
   FullChannelState,
   EngineError,
   FullTransferState,
   EngineParams,
-  CheckInInfo,
-  CheckInResponse,
-  CheckInError,
   VectorError,
+  ProtocolError,
+  RouterConfigResponse,
+  RouterError,
 } from "@connext/vector-types";
 import { Evt } from "evt";
 
@@ -29,13 +27,13 @@ export class MemoryMessagingService implements IMessagingService {
     data: {
       update?: ChannelUpdate<any>;
       previousUpdate?: ChannelUpdate<any>;
-      error?: InboundChannelUpdateError;
+      error?: ProtocolError;
     };
   }> = Evt.create<{
     to?: string;
     from: string;
     inbox?: string;
-    data: { update?: ChannelUpdate<any>; previousUpdate?: ChannelUpdate<any>; error?: InboundChannelUpdateError };
+    data: { update?: ChannelUpdate<any>; previousUpdate?: ChannelUpdate<any>; error?: ProtocolError };
     replyTo?: string;
   }>();
 
@@ -56,12 +54,7 @@ export class MemoryMessagingService implements IMessagingService {
     previousUpdate?: ChannelUpdate<any>,
     timeout = 20_000,
     numRetries = 0,
-  ): Promise<
-    Result<
-      { update: ChannelUpdate<any>; previousUpdate: ChannelUpdate<any> },
-      OutboundChannelUpdateError | InboundChannelUpdateError
-    >
-  > {
+  ): Promise<Result<{ update: ChannelUpdate<any>; previousUpdate: ChannelUpdate<any> }, ProtocolError>> {
     const inbox = getRandomBytes32();
     const responsePromise = this.evt.pipe((e) => e.inbox === inbox).waitFor(timeout);
     this.evt.post({
@@ -89,18 +82,18 @@ export class MemoryMessagingService implements IMessagingService {
     });
   }
 
-  async respondWithProtocolError(inbox: string, error: InboundChannelUpdateError): Promise<void> {
+  async respondWithProtocolError(inbox: string, error: ProtocolError): Promise<void> {
     this.evt.post({
       inbox,
       data: { error },
-      from: error.update.toIdentifier,
+      from: error.context.update.toIdentifier,
     });
   }
 
   async onReceiveProtocolMessage(
     myPublicIdentifier: string,
     callback: (
-      result: Result<{ update: ChannelUpdate<any>; previousUpdate: ChannelUpdate<any> }, InboundChannelUpdateError>,
+      result: Result<{ update: ChannelUpdate<any>; previousUpdate: ChannelUpdate<any> }, ProtocolError>,
       from: string,
       inbox: string,
     ) => void,
@@ -145,18 +138,18 @@ export class MemoryMessagingService implements IMessagingService {
   }
 
   sendRequestCollateralMessage(
-    requestCollateralParams: Result<EngineParams.RequestCollateral, Error>,
+    requestCollateralParams: Result<EngineParams.RequestCollateral, VectorError>,
     to: string,
     from: string,
     timeout?: number,
     numRetries?: number,
-  ): Promise<Result<undefined, Error>> {
+  ): Promise<Result<undefined, VectorError>> {
     throw new Error("Method not implemented.");
   }
 
   onReceiveRequestCollateralMessage(
     publicIdentifier: string,
-    callback: (params: Result<EngineParams.RequestCollateral, Error>, from: string, inbox: string) => void,
+    callback: (params: Result<EngineParams.RequestCollateral, VectorError>, from: string, inbox: string) => void,
   ): Promise<void> {
     throw new Error("Method not implemented.");
   }
@@ -191,22 +184,22 @@ export class MemoryMessagingService implements IMessagingService {
     throw new Error("Method not implemented.");
   }
 
-  respondToLockMessage(inbox: string, lockInformation: Result<LockInformation, LockError>): Promise<void> {
+  respondToLockMessage(inbox: string, lockInformation: Result<LockInformation, NodeError>): Promise<void> {
     throw new Error("Method not implemented.");
   }
   onReceiveLockMessage(
     myPublicIdentifier: string,
-    callback: (lockInfo: Result<LockInformation, LockError>, from: string, inbox: string) => void,
+    callback: (lockInfo: Result<LockInformation, NodeError>, from: string, inbox: string) => void,
   ): Promise<void> {
     throw new Error("Method not implemented.");
   }
   sendLockMessage(
-    lockInfo: Result<LockInformation, LockError>,
+    lockInfo: Result<LockInformation, NodeError>,
     to: string,
     from: string,
     timeout?: number,
     numRetries?: number,
-  ): Promise<Result<LockInformation, LockError>> {
+  ): Promise<Result<LockInformation, NodeError>> {
     throw new Error("Method not implemented.");
   }
 
@@ -229,6 +222,16 @@ export class MemoryMessagingService implements IMessagingService {
 
   respondToIsAliveMessage(inbox: string, params: Result<{ channelAddress: string }, VectorError>): Promise<void> {
     throw new Error("Method not implemented.");
+  }
+
+  sendRouterConfigMessage(
+    configRequest: Result<void, VectorError>,
+    to: string,
+    from: string,
+    timeout?: number,
+    numRetries?: number,
+  ): Promise<Result<RouterConfigResponse, RouterError | MessagingError>> {
+    throw new Error("Method not implemented");
   }
 
   async subscribe(subject: string, callback: (data: any) => void): Promise<void> {

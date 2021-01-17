@@ -16,4 +16,4 @@ prisma generate
 prisma migrate up --experimental
 
 # Launch tests
-nyc ts-mocha --bail --check-leaks --exit --timeout 60000 'src/**/*.spec.ts' "$@"
+nyc ts-mocha --check-leaks --exit --timeout 60000 'src/**/*.spec.ts' "$@"

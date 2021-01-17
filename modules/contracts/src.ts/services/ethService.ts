@@ -8,6 +8,8 @@ import {
   IChainServiceStore,
   TransactionReason,
   FullTransferState,
+  UINT_MAX,
+  jsonifyError,
 } from "@connext/vector-types";
 import {
   bufferify,
@@ -26,11 +28,15 @@ import { Wallet } from "@ethersproject/wallet";
 import { BaseLogger } from "pino";
 import PriorityQueue from "p-queue";
 import { AddressZero, HashZero } from "@ethersproject/constants";
+import { parseUnits } from "@ethersproject/units";
 import { MerkleTree } from "merkletreejs";
 
 import { ChannelFactory, VectorChannel } from "../artifacts";
 
 import { EthereumChainReader } from "./ethReader";
+
+export const EXTRA_GAS_PRICE = parseUnits("20", "gwei");
+export const EXTRA_GAS = 50_000;
 
 export class EthereumChainService extends EthereumChainReader implements IVectorChainService {
   private signers: Map<number, Signer> = new Map();
@@ -67,7 +73,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
         channelState.latestUpdate.aliceSignature,
         channelState.latestUpdate.bobSignature,
       );
-    });
+    }) as Promise<Result<TransactionResponse, ChainError>>;
   }
 
   async sendDefundChannelTx(
@@ -86,7 +92,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
     return this.sendTxWithRetries(channelState.channelAddress, TransactionReason.defundChannel, () => {
       const channel = new Contract(channelState.channelAddress, VectorChannel.abi, signer);
       return channel.defundChannel(channelState, assetsToDefund, indices);
-    });
+    }) as Promise<Result<TransactionResponse, ChainError>>;
   }
 
   async sendDisputeTransferTx(
@@ -118,7 +124,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
     return this.sendTxWithRetries(transferState.channelAddress, TransactionReason.disputeTransfer, () => {
       const channel = new Contract(transferState.channelAddress, VectorChannel.abi, signer);
       return channel.disputeTransfer(transferState, merkle.getHexProof(hash));
-    });
+    }) as Promise<Result<TransactionResponse, ChainError>>;
   }
 
   async sendDefundTransferTx(
@@ -145,11 +151,12 @@ export class EthereumChainService extends EthereumChainReader implements IVector
     return this.sendTxWithRetries(transferState.channelAddress, TransactionReason.defundTransfer, () => {
       const channel = new Contract(transferState.channelAddress, VectorChannel.abi, signer);
       return channel.defundTransfer(transferState, encodedState, encodedResolver, responderSignature);
-    });
+    }) as Promise<Result<TransactionResponse, ChainError>>;
   }
 
   public async sendDeployChannelTx(
     channelState: FullChannelState,
+    gasPrice: BigNumber,
     deposit?: { amount: string; assetId: string }, // Included IFF createChannelAndDepositAlice
   ): Promise<Result<TransactionResponse, ChainError>> {
     const method = "sendDeployChannelTx";
@@ -179,9 +186,25 @@ export class EthereumChainService extends EthereumChainReader implements IVector
         { channelAddress: channelState.channelAddress, sender, method },
         "Deploying channel without deposit",
       );
-      return this.sendTxWithRetries(channelState.channelAddress, TransactionReason.deploy, () => {
-        return channelFactory.createChannel(channelState.alice, channelState.bob);
+      const result = await this.sendTxWithRetries(channelState.channelAddress, TransactionReason.deploy, async () => {
+        const multisigRes = await this.getCode(channelState.channelAddress, channelState.networkContext.chainId);
+        if (multisigRes.isError) {
+          return Result.fail(multisigRes.getError()!);
+        }
+        if (multisigRes.getValue() !== `0x`) {
+          return undefined;
+        }
+        const _gas = await channelFactory.estimateGas.createChannel(channelState.alice, channelState.bob);
+        const gas = _gas.add(EXTRA_GAS);
+        return channelFactory.createChannel(channelState.alice, channelState.bob, { gasPrice, gasLimit: gas });
       });
+      if (result.isError) {
+        return result as Result<any, ChainError>;
+      }
+      if (!result.getValue()) {
+        return Result.fail(new ChainError(ChainError.reasons.MultisigDeployed));
+      }
+      return result as Result<TransactionResponse>;
     }
 
     // Deploy a channel with a deposit (only alice can do this)
@@ -200,11 +223,32 @@ export class EthereumChainService extends EthereumChainReader implements IVector
 
     // Handle eth deposits
     if (assetId === AddressZero) {
-      return this.sendTxWithRetries(channelState.channelAddress, TransactionReason.deployWithDepositAlice, () =>
-        channelFactory.createChannelAndDepositAlice(channelState.alice, channelState.bob, assetId, amount, {
+      return this.sendTxWithRetries(channelState.channelAddress, TransactionReason.deployWithDepositAlice, async () => {
+        const multisigRes = await this.getCode(channelState.channelAddress, channelState.networkContext.chainId);
+        if (multisigRes.isError) {
+          return Result.fail(multisigRes.getError()!);
+        }
+        if (multisigRes.getValue() !== `0x`) {
+          // multisig deployed, just send deposit
+          return this.sendDepositATx(channelState, amount, AddressZero, gasPrice);
+        }
+        // otherwise deploy with deposit
+        const _gas = await channelFactory.estimateGas.createChannelAndDepositAlice(
+          channelState.alice,
+          channelState.bob,
+          assetId,
+          amount,
+          {
+            value: amount,
+          },
+        );
+        const gas = _gas.add(EXTRA_GAS);
+        return channelFactory.createChannelAndDepositAlice(channelState.alice, channelState.bob, assetId, amount, {
           value: amount,
-        }),
-      );
+          gasPrice,
+          gasLimit: gas,
+        });
+      }) as Promise<Result<TransactionResponse, ChainError>>;
     }
 
     // Must be token deposit, first approve the token transfer
@@ -213,20 +257,42 @@ export class EthereumChainService extends EthereumChainReader implements IVector
       channelState.channelAddress,
       channelState.networkContext.channelFactoryAddress,
       sender,
-      amount,
+      UINT_MAX,
       assetId,
       channelState.networkContext.chainId,
+      gasPrice,
     );
     if (approveRes.isError) {
       return Result.fail(approveRes.getError()!);
     }
     if (approveRes.getValue()) {
       const receipt = await approveRes.getValue()!.wait();
+      if (receipt.status === 0) {
+        return Result.fail(new ChainError(ChainError.reasons.TxReverted, { receipt }));
+      }
       this.log.info({ txHash: receipt.transactionHash, method, assetId }, "Token approval confirmed");
     }
-    return this.sendTxWithRetries(channelState.channelAddress, TransactionReason.deployWithDepositAlice, () =>
-      channelFactory.createChannelAndDepositAlice(channelState.alice, channelState.bob, assetId, amount),
-    );
+    return this.sendTxWithRetries(channelState.channelAddress, TransactionReason.deployWithDepositAlice, async () => {
+      const multisigRes = await this.getCode(channelState.channelAddress, channelState.networkContext.chainId);
+      if (multisigRes.isError) {
+        return Result.fail(multisigRes.getError()!);
+      }
+      if (multisigRes.getValue() !== `0x`) {
+        // multisig deployed, just send deposit (will check allowance)
+        return this.sendDepositATx(channelState, amount, assetId, gasPrice);
+      }
+      const _gas = await channelFactory.estimateGas.createChannelAndDepositAlice(
+        channelState.alice,
+        channelState.bob,
+        assetId,
+        amount,
+      );
+      const gas = _gas.add(EXTRA_GAS);
+      return channelFactory.createChannelAndDepositAlice(channelState.alice, channelState.bob, assetId, amount, {
+        gasPrice,
+        gasLimit: gas,
+      });
+    }) as Promise<Result<TransactionResponse, ChainError>>;
   }
 
   public async sendWithdrawTx(
@@ -251,18 +317,28 @@ export class EthereumChainService extends EthereumChainReader implements IVector
       return Result.fail(multisigRes.getError()!);
     }
 
+    const gasPriceRes = await this.getGasPrice(channelState.networkContext.chainId);
+    if (gasPriceRes.isError) {
+      Result.fail(gasPriceRes.getError()!);
+    }
+    const _gasPrice = gasPriceRes.getValue();
+    const gasPrice = _gasPrice.add(EXTRA_GAS_PRICE);
+    this.log.info(
+      {
+        channelAddress: channelState.channelAddress,
+        sender,
+        method,
+        gasPrice: gasPrice.toString(),
+        chainId: channelState.networkContext.chainId,
+      },
+      "Got gas price",
+    );
+
     if (multisigRes.getValue() === `0x`) {
       // Deploy multisig tx
       this.log.info({ channelAddress: channelState.channelAddress, sender, method }, "Deploying channel");
-      const channelFactory = new Contract(
-        channelState.networkContext.channelFactoryAddress,
-        ChannelFactory.abi,
-        signer,
-      );
-      const txRes = await this.sendTxWithRetries(channelState.channelAddress, TransactionReason.deploy, () => {
-        return channelFactory.createChannel(channelState.alice, channelState.bob);
-      });
-      if (txRes.isError) {
+      const txRes = await this.sendDeployChannelTx(channelState, gasPrice);
+      if (txRes.isError && txRes.getError()?.message !== ChainError.reasons.MultisigDeployed) {
         return Result.fail(
           new ChainError(ChainError.reasons.FailedToDeploy, {
             method,
@@ -271,41 +347,38 @@ export class EthereumChainService extends EthereumChainReader implements IVector
           }),
         );
       }
-      const deployTx = txRes.getValue();
-      this.log.info({ method, deployTx: deployTx.hash }, "Deploy tx broadcast");
-      try {
-        await deployTx.wait();
-        this.log.debug("Waiting for event to be emitted");
-        await Promise.race([
-          deployTx.wait(),
-          new Promise((resolve) =>
-            setTimeout(() => {
-              this.log.warn(
-                { deployTx: deployTx.hash, channel: channelState.channelAddress },
-                "Did not see event within 15s after tx was mined",
-              );
-              resolve(undefined);
-            }, 15_000),
-          ),
-        ]);
-      } catch (e) {
-        this.log.error(`caught ${e.message}`);
-        return Result.fail(
-          new ChainError(ChainError.reasons.FailedToDeploy, {
-            error: e.message,
-            deployTx: deployTx.hash,
-            channel: channelState.channelAddress,
-            chainId: channelState.networkContext.chainId,
-          }),
-        );
+      const deployTx = txRes.isError ? undefined : txRes.getValue();
+      if (deployTx) {
+        this.log.info({ method, deployTx: deployTx.hash }, "Deploy tx broadcast");
+        try {
+          this.log.debug("Waiting for event to be emitted");
+          const receipt = await deployTx.wait();
+          if (receipt.status === 0) {
+            return Result.fail(new ChainError(ChainError.reasons.TxReverted, { receipt }));
+          }
+        } catch (e) {
+          this.log.error(`caught ${e.message}`);
+          return Result.fail(
+            new ChainError(ChainError.reasons.FailedToDeploy, {
+              error: e.message,
+              deployTx: deployTx.hash,
+              channel: channelState.channelAddress,
+              chainId: channelState.networkContext.chainId,
+            }),
+          );
+        }
+        this.log.debug({ method }, "Deploy tx mined");
+      } else {
+        this.log.info({ method }, "Multisig already deployed");
       }
-      this.log.debug({ method }, "Deploy tx mined");
     }
 
     this.log.info({ sender, method, channel: channelState.channelAddress }, "Sending withdraw tx to chain");
-    return this.sendTxWithRetries(channelState.channelAddress, TransactionReason.withdraw, () =>
-      signer.sendTransaction(minTx),
-    );
+    return this.sendTxWithRetries(channelState.channelAddress, TransactionReason.withdraw, async () => {
+      const _gas = await signer.estimateGas(minTx);
+      const gas = _gas.add(EXTRA_GAS);
+      return signer.sendTransaction({ ...minTx, gasPrice, gasLimit: gas });
+    }) as Promise<Result<TransactionResponse, ChainError>>;
   }
 
   public async sendDepositTx(
@@ -330,6 +403,23 @@ export class EthereumChainService extends EthereumChainReader implements IVector
       return Result.fail(multisigRes.getError()!);
     }
 
+    const gasPriceRes = await this.getGasPrice(channelState.networkContext.chainId);
+    if (gasPriceRes.isError) {
+      Result.fail(gasPriceRes.getError()!);
+    }
+    const _gasPrice = gasPriceRes.getValue();
+    const gasPrice = _gasPrice.add(EXTRA_GAS_PRICE);
+    this.log.info(
+      {
+        channelAddress: channelState.channelAddress,
+        sender,
+        method,
+        gasPrice: gasPrice.toString(),
+        chainId: channelState.networkContext.chainId,
+      },
+      "Got gas price",
+    );
+
     const multisigCode = multisigRes.getValue();
     // alice needs to deploy the multisig
     if (multisigCode === `0x` && sender === channelState.alice) {
@@ -343,7 +433,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
         },
         `Deploying channel with deposit`,
       );
-      return this.sendDeployChannelTx(channelState, { amount, assetId });
+      return this.sendDeployChannelTx(channelState, gasPrice, { amount, assetId });
     }
 
     this.log.info({ method, assetId, amount }, "Channel is deployed, sending deposit");
@@ -352,7 +442,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
         { method, sender, alice: channelState.alice, bob: channelState.bob },
         "Detected participant A, sending tx",
       );
-      const txRes = await this.sendDepositATx(channelState, amount, assetId);
+      const txRes = await this.sendDepositATx(channelState, amount, assetId, gasPrice);
       if (txRes.isError) {
         this.log.error({ method, error: txRes.getError()?.message }, "Error sending tx");
       } else {
@@ -364,7 +454,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
         { method, sender, alice: channelState.alice, bob: channelState.bob },
         "Detected participant B, sendng tx",
       );
-      const txRes = await this.sendDepositBTx(channelState, amount, assetId);
+      const txRes = await this.sendDepositBTx(channelState, amount, assetId, gasPrice);
       if (txRes.isError) {
         this.log.error({ method, error: txRes.getError()?.message }, "Error sending tx");
       } else {
@@ -377,8 +467,10 @@ export class EthereumChainService extends EthereumChainReader implements IVector
   private async sendTxWithRetries(
     channelAddress: string,
     reason: TransactionReason,
-    txFn: () => Promise<TransactionResponse>,
-  ): Promise<Result<TransactionResponse, ChainError>> {
+    // should return undefined IFF tx didnt send based on validation in
+    // fn
+    txFn: () => Promise<undefined | TransactionResponse>,
+  ): Promise<Result<TransactionResponse | undefined, ChainError>> {
     const errors = [];
     for (let attempt = 1; attempt++; attempt < this.defaultRetries) {
       this.log.info(
@@ -424,18 +516,32 @@ export class EthereumChainService extends EthereumChainReader implements IVector
   private async sendTxAndParseResponse(
     channelAddress: string,
     reason: TransactionReason,
-    txFn: () => Promise<TransactionResponse>,
-  ): Promise<Result<TransactionResponse, ChainError>> {
+    txFn: () => Promise<undefined | TransactionResponse>,
+  ): Promise<Result<TransactionResponse | undefined, ChainError>> {
     // TODO: add retries on specific errors
     try {
       const response = await this.queue.add(async () => {
         const response = await txFn();
+        if (!response) {
+          this.log.warn({ channelAddress, reason }, "Did not attempt tx");
+          return response;
+        }
         await this.store.saveTransactionResponse(channelAddress, reason, response);
         // Register callbacks for saving tx, then return
         response
           .wait() // TODO: confirmation blocks?
-          .then((receipt) => this.store.saveTransactionReceipt(channelAddress, receipt))
-          .catch((e) => this.store.saveTransactionFailure(channelAddress, response.hash, e.message));
+          .then((receipt) => {
+            if (receipt.status === 0) {
+              this.log.error({ method: "sendTxAndParseResponse", receipt }, "Transaction reverted");
+              this.store.saveTransactionFailure(channelAddress, response.hash, "Tx reverted");
+            } else {
+              this.store.saveTransactionReceipt(channelAddress, receipt);
+            }
+          })
+          .catch((e) => {
+            this.log.error({ method: "sendTxAndParseResponse", error: jsonifyError(e) }, "Transaction reverted");
+            this.store.saveTransactionFailure(channelAddress, response.hash, e.message);
+          });
         return response;
       });
       return Result.ok(response);
@@ -456,6 +562,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
     amount: string,
     assetId: string,
     chainId: number,
+    gasPrice: BigNumber,
   ): Promise<Result<TransactionResponse | undefined, ChainError>> {
     const signer = this.signers.get(chainId);
     if (!signer?._isSigner) {
@@ -493,7 +600,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
       return Result.ok(undefined);
     }
     const approveRes = await this.sendTxWithRetries(channelAddress, TransactionReason.approveTokens, () =>
-      erc20.approve(spender, amount),
+      erc20.approve(spender, amount, { gasPrice }),
     );
     if (approveRes.isError) {
       this.log.error(
@@ -507,7 +614,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
       return approveRes;
     }
     const approveTx = approveRes.getValue();
-    this.log.info({ txHash: approveTx.hash, method: "approveTokens", assetId, amount }, "Approve token tx submitted");
+    this.log.info({ txHash: approveTx!.hash, method: "approveTokens", assetId, amount }, "Approve token tx submitted");
     return approveRes;
   }
 
@@ -515,6 +622,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
     channelState: FullChannelState,
     amount: string,
     assetId: string,
+    gasPrice: BigNumber,
   ): Promise<Result<TransactionResponse, ChainError>> {
     const signer = this.signers.get(channelState.networkContext.chainId);
     if (!signer?._isSigner) {
@@ -529,9 +637,10 @@ export class EthereumChainService extends EthereumChainReader implements IVector
         channelState.channelAddress,
         channelState.channelAddress,
         channelState.alice,
-        amount,
+        UINT_MAX,
         assetId,
         channelState.networkContext.chainId,
+        gasPrice,
       );
       if (approveRes.isError) {
         this.log.error(
@@ -546,22 +655,26 @@ export class EthereumChainService extends EthereumChainReader implements IVector
       }
       const approveTx = approveRes.getValue();
       if (approveTx) {
-        await approveTx.wait();
+        const receipt = await approveTx.wait();
+        if (receipt.status === 0) {
+          return Result.fail(new ChainError(ChainError.reasons.TxReverted, { receipt }));
+        }
       }
       this.log.info({ txHash: approveTx?.hash, method: "sendDepositATx", assetId }, "Token approval confirmed");
       return this.sendTxWithRetries(channelState.channelAddress, TransactionReason.depositA, () =>
-        vectorChannel.depositAlice(assetId, amount),
-      );
+        vectorChannel.depositAlice(assetId, amount, { gasPrice }),
+      ) as Promise<Result<TransactionResponse, ChainError>>;
     }
     return this.sendTxWithRetries(channelState.channelAddress, TransactionReason.depositA, () =>
-      vectorChannel.depositAlice(assetId, amount, { value: amount }),
-    );
+      vectorChannel.depositAlice(assetId, amount, { value: amount, gasPrice }),
+    ) as Promise<Result<TransactionResponse, ChainError>>;
   }
 
   private async sendDepositBTx(
     channelState: FullChannelState,
     amount: string,
     assetId: string,
+    gasPrice: BigNumber,
   ): Promise<Result<TransactionResponse, ChainError>> {
     const signer = this.signers.get(channelState.networkContext.chainId);
     if (!signer?._isSigner) {
@@ -575,13 +688,14 @@ export class EthereumChainService extends EthereumChainReader implements IVector
           to: channelState.channelAddress,
           value: BigNumber.from(amount),
           chainId: channelState.networkContext.chainId,
+          gasPrice,
         }),
-      );
+      ) as Promise<Result<TransactionResponse, ChainError>>;
     } else {
       const erc20 = new Contract(channelState.networkContext.channelFactoryAddress, ERC20Abi, signer);
       return this.sendTxWithRetries(channelState.channelAddress, TransactionReason.depositB, () =>
-        erc20.transfer(channelState.channelAddress, amount),
-      );
+        erc20.transfer(channelState.channelAddress, amount, { gasPrice }),
+      ) as Promise<Result<TransactionResponse, ChainError>>;
     }
   }
 }

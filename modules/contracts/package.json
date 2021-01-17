@@ -1,6 +1,6 @@
 {
   "name": "@connext/vector-contracts",
-  "version": "0.1.0-rc.24",
+  "version": "0.1.6",
   "license": "ISC",
   "description": "Smart contracts powering Connext's minimalist channel platform",
   "keywords": [
@@ -28,8 +28,8 @@
   },
   "dependencies": {
     "@connext/pure-evm-wasm": "0.1.4",
-    "@connext/vector-types": "0.1.0-rc.24",
-    "@connext/vector-utils": "0.1.0-rc.24",
+    "@connext/vector-types": "0.1.6",
+    "@connext/vector-utils": "0.1.6",
     "@ethersproject/abi": "5.0.9",
     "@ethersproject/abstract-provider": "5.0.7",
     "@ethersproject/abstract-signer": "5.0.9",
@@ -56,6 +56,7 @@
   "devDependencies": {
     "@nomiclabs/hardhat-ethers": "2.0.0",
     "@nomiclabs/hardhat-waffle": "2.0.0",
+    "@nomiclabs/hardhat-etherscan": "2.1.0",
     "@typechain/ethers-v5": "4.0.0",
     "@types/chai": "4.2.14",
     "@types/chai-subset": "1.3.3",

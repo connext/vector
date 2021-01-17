@@ -7,16 +7,17 @@ import {
   IChannelSigner,
   Result,
   UpdateParams,
-  InboundChannelUpdateError,
-  OutboundChannelUpdateError,
   Values,
   IVectorChainReader,
   FullTransferState,
   IExternalValidation,
   MessagingError,
+  jsonifyError,
 } from "@connext/vector-types";
+import { getRandomBytes32 } from "@connext/vector-utils";
 import pino from "pino";
 
+import { InboundChannelUpdateError, OutboundChannelUpdateError } from "./errors";
 import { extractContextFromStore, validateChannelSignatures } from "./utils";
 import { validateAndApplyInboundUpdate, validateParamsAndApplyUpdate } from "./validate";
 
@@ -39,13 +40,15 @@ export async function outbound(
   >
 > {
   const method = "outbound";
+  const methodId = getRandomBytes32();
+  logger.debug({ method, methodId }, "Method start");
 
   // First, pull all information out from the store
   const storeRes = await extractContextFromStore(storeService, params.channelAddress);
   if (storeRes.isError) {
     return Result.fail(
       new OutboundChannelUpdateError(OutboundChannelUpdateError.reasons.StoreFailure, params, undefined, {
-        message: storeRes.getError()?.message,
+        storeError: storeRes.getError()?.message,
         method,
       }),
     );
@@ -66,10 +69,7 @@ export async function outbound(
     logger,
   );
   if (updateRes.isError) {
-    logger.warn(
-      { error: updateRes.getError()?.message, context: updateRes.getError()?.context },
-      "Failed to apply proposed update",
-    );
+    logger.warn({ method, methodId, error: jsonifyError(updateRes.getError()!) }, "Failed to apply proposed update");
     return Result.fail(updateRes.getError()!);
   }
 
@@ -86,7 +86,7 @@ export async function outbound(
   );
 
   // Send and wait for response
-  logger.debug({ method, to: update.toIdentifier, type: update.type }, "Sending protocol message");
+  logger.debug({ method, methodId, to: update.toIdentifier, type: update.type }, "Sending protocol message");
   let counterpartyResult = await messagingService.sendProtocolMessage(update, previousState?.latestUpdate);
 
   // IFF the result failed because the update is stale, our channel is behind
@@ -96,8 +96,9 @@ export async function outbound(
     logger.warn(
       {
         method,
+        methodId,
         update: update.nonce,
-        counterparty: (error as InboundChannelUpdateError).update.nonce,
+        counterparty: (error as InboundChannelUpdateError).context.update.nonce,
       },
       `Behind, syncing and retrying`,
     );
@@ -116,7 +117,7 @@ export async function outbound(
     );
     if (syncedResult.isError) {
       // Failed to sync channel, throw the error
-      logger.error({ method, error: syncedResult.getError() }, "Error syncing channel");
+      logger.error({ method, methodId, error: jsonifyError(syncedResult.getError()!) }, "Error syncing channel");
       return Result.fail(syncedResult.getError()!);
     }
 
@@ -137,7 +138,7 @@ export async function outbound(
   // original error. Either way, we do not want to handle it
   if (error) {
     // Error is for some other reason, do not retry update.
-    logger.error({ method, error }, "Error receiving response, will not save state!");
+    logger.error({ method, methodId, error: jsonifyError(error) }, "Error receiving response, will not save state!");
     return Result.fail(
       new OutboundChannelUpdateError(
         error.message === MessagingError.reasons.Timeout
@@ -146,14 +147,13 @@ export async function outbound(
         params,
         previousState,
         {
-          counterpartyError: error.message,
-          errorContext: error.context,
+          counterpartyError: jsonifyError(error),
         },
       ),
     );
   }
 
-  logger.debug({ method, to: update.toIdentifier, type: update.type }, "Received protocol response");
+  logger.debug({ method, methodId, to: update.toIdentifier, type: update.type }, "Received protocol response");
 
   const { update: counterpartyUpdate } = counterpartyResult.getValue();
 
@@ -170,14 +170,15 @@ export async function outbound(
       OutboundChannelUpdateError.reasons.BadSignatures,
       params,
       previousState,
-      { error: sigRes.getError()?.message },
+      { recoveryError: sigRes.getError()?.message },
     );
-    logger.error({ method, error: error.message }, "Error receiving response, will not save state!");
+    logger.error({ method, error: jsonifyError(error) }, "Error receiving response, will not save state!");
     return Result.fail(error);
   }
 
   try {
     await storeService.saveChannelState({ ...updatedChannel, latestUpdate: counterpartyUpdate }, updatedTransfer);
+    logger.debug({ method, methodId }, "Method complete");
     return Result.ok({
       updatedChannel: { ...updatedChannel, latestUpdate: counterpartyUpdate },
       updatedTransfers: updatedActiveTransfers,
@@ -190,7 +191,7 @@ export async function outbound(
         params,
         { ...updatedChannel, latestUpdate: counterpartyUpdate },
         {
-          error: e.message,
+          saveChannelError: e.message,
         },
       ),
     );
@@ -217,6 +218,9 @@ export async function inbound(
     InboundChannelUpdateError
   >
 > {
+  const method = "inbound";
+  const methodId = getRandomBytes32();
+  logger.debug({ method, methodId }, "Method start");
   // Create a helper to handle errors so the message is sent
   // properly to the counterparty
   const returnError = async (
@@ -226,7 +230,7 @@ export async function inbound(
     context: any = {},
   ): Promise<Result<never, InboundChannelUpdateError>> => {
     logger.error(
-      { method: "inbound", channel: update.channelAddress, error: reason, context },
+      { method, methodId, channel: update.channelAddress, error: reason, context },
       "Error responding to channel update",
     );
     const error = new InboundChannelUpdateError(reason, prevUpdate, state, context);
@@ -236,7 +240,9 @@ export async function inbound(
 
   const storeRes = await extractContextFromStore(storeService, update.channelAddress);
   if (storeRes.isError) {
-    return returnError(InboundChannelUpdateError.reasons.StoreFailure);
+    return returnError(InboundChannelUpdateError.reasons.StoreFailure, undefined, undefined, {
+      storeError: storeRes.getError()?.message,
+    });
   }
 
   // eslint-disable-next-line prefer-const
@@ -277,8 +283,9 @@ export async function inbound(
   // If we are behind by more than 3, we cannot sync from their latest
   // update, and must use restore
   if (diff >= 3) {
-    return returnError(InboundChannelUpdateError.reasons.StaleChannel, update, channelFromStore, {
+    return returnError(InboundChannelUpdateError.reasons.RestoreNeeded, update, channelFromStore, {
       counterpartyLatestUpdate: previousUpdate,
+      ourLatestNonce: prevNonce,
     });
   }
 
@@ -300,9 +307,16 @@ export async function inbound(
       activeTransfers,
       (message: string) =>
         Result.fail(
-          new InboundChannelUpdateError(InboundChannelUpdateError.reasons.SyncFailure, previousUpdate, previousState, {
-            error: message,
-          }),
+          new InboundChannelUpdateError(
+            message !== InboundChannelUpdateError.reasons.CannotSyncSetup
+              ? InboundChannelUpdateError.reasons.SyncFailure
+              : InboundChannelUpdateError.reasons.CannotSyncSetup,
+            previousUpdate,
+            previousState,
+            {
+              syncError: message,
+            },
+          ),
         ),
       storeService,
       chainReader,
@@ -312,7 +326,7 @@ export async function inbound(
     );
     if (syncRes.isError) {
       const error = syncRes.getError() as InboundChannelUpdateError;
-      return returnError(error.message, error.update, error.state as FullChannelState, error.context);
+      return returnError(error.message, error.context.update, error.context.state as FullChannelState, error.context);
     }
 
     const { updatedChannel: syncedChannel, updatedActiveTransfers: syncedActiveTransfers } = syncRes.getValue();
@@ -334,7 +348,8 @@ export async function inbound(
     logger,
   );
   if (validateRes.isError) {
-    return returnError(validateRes.getError()!.message, update, previousState, validateRes.getError()?.context);
+    const { state: errState, params: errParams, update: errUpdate, ...usefulContext } = validateRes.getError()?.context;
+    return returnError(validateRes.getError()!.message, update, previousState, usefulContext);
   }
 
   const { updatedChannel, updatedActiveTransfers, updatedTransfer } = validateRes.getValue();
@@ -344,7 +359,7 @@ export async function inbound(
     await storeService.saveChannelState(updatedChannel, updatedTransfer);
   } catch (e) {
     return returnError(InboundChannelUpdateError.reasons.SaveChannelFailed, update, previousState, {
-      error: e.message,
+      saveChannelError: e.message,
     });
   }
 
@@ -388,16 +403,35 @@ const syncStateAndRecreateUpdate = async (
   // channel, and regenerate the requested update from the user-supplied
   // parameters.
 
-  const counterpartyUpdate = receivedError.update;
+  const counterpartyUpdate = receivedError.context.update;
+
+  // make sure you *can* sync
+  const diff = counterpartyUpdate.nonce - (previousState?.nonce ?? 0);
+  if (diff !== 1) {
+    return Result.fail(
+      new OutboundChannelUpdateError(OutboundChannelUpdateError.reasons.RestoreNeeded, attemptedParams, previousState, {
+        counterpartyUpdate,
+        latestNonce: previousState.nonce,
+      }),
+    );
+  }
+
   const syncRes = await syncState(
     counterpartyUpdate,
     previousState,
     activeTransfers,
     (message: string) =>
       Result.fail(
-        new OutboundChannelUpdateError(OutboundChannelUpdateError.reasons.SyncFailure, attemptedParams, previousState, {
-          error: message,
-        }),
+        new OutboundChannelUpdateError(
+          message !== InboundChannelUpdateError.reasons.CannotSyncSetup
+            ? OutboundChannelUpdateError.reasons.SyncFailure
+            : OutboundChannelUpdateError.reasons.CannotSyncSetup,
+          attemptedParams,
+          previousState,
+          {
+            syncError: message,
+          },
+        ),
       ),
     storeService,
     chainReader,
@@ -426,13 +460,20 @@ const syncStateAndRecreateUpdate = async (
   );
 
   if (validationRes.isError) {
+    const {
+      state: errState,
+      params: errParams,
+      update: errUpdate,
+      ...usefulContext
+    } = validationRes.getError()?.context;
     return Result.fail(
       new OutboundChannelUpdateError(
         OutboundChannelUpdateError.reasons.RegenerateUpdateFailed,
         attemptedParams,
         syncedChannel,
         {
-          error: validationRes.getError()!.message,
+          regenerateUpdateError: validationRes.getError()!.message,
+          regenerateUpdateContext: usefulContext,
         },
       ),
     );
@@ -460,7 +501,7 @@ const syncState = async (
   // channel properly, we will have to handle the retry in the calling
   // function, so just ignore for now.
   if (toSync.type === UpdateType.setup) {
-    return handleError("Cannot sync setup update");
+    return handleError(InboundChannelUpdateError.reasons.CannotSyncSetup);
   }
 
   // As you receive an update to sync, it should *always* be double signed.

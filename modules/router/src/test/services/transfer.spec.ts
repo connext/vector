@@ -5,11 +5,11 @@ import {
   RegisteredTransfer,
   TransferNames,
   Result,
-  NodeError,
   NodeParams,
   DEFAULT_TRANSFER_TIMEOUT,
   UpdateType,
   INodeService,
+  ChainError,
 } from "@connext/vector-types";
 import {
   createTestFullHashlockTransferState,
@@ -21,12 +21,13 @@ import {
   mkPublicIdentifier,
   RestServerNodeService,
   createTestChannelState,
+  ServerNodeServiceError,
 } from "@connext/vector-utils";
 import { HashZero } from "@ethersproject/constants";
 import * as Sinon from "sinon";
 
 import { config } from "../../config";
-import { ForwardTransferError } from "../../errors";
+import { ForwardTransferCreationError } from "../../errors";
 import { PrismaStore, RouterUpdateType } from "../../services/store";
 import { cancelCreatedTransfer, attemptTransferWithCollateralization } from "../../services/transfer";
 import * as collateral from "../../services/collateral";
@@ -187,8 +188,8 @@ describe(testName, () => {
         log,
         true,
       );
-      expect(res.getError().message).to.be.eq(ForwardTransferError.reasons.ReceiverOffline);
-      expect(res.getError().context.shouldCancelSender).to.be.true;
+      expect(res.getError()!.message).to.be.eq(ForwardTransferCreationError.reasons.ReceiverOffline);
+      expect(res.getError()!.context.shouldCancelSender).to.be.true;
     });
 
     it("should fail if store.queueUpdate fails", async () => {
@@ -202,6 +203,7 @@ describe(testName, () => {
         balances: [{ to: [routerAddr, recipientAddr], amount: ["700", "53"] }],
       });
       nodeService.sendIsAliveMessage.resolves(Result.fail(new Error("fail") as any));
+      store.queueUpdate.rejects(new Error("fail"));
       const res = await attemptTransferWithCollateralization(
         mkParams(),
         channel,
@@ -210,10 +212,11 @@ describe(testName, () => {
         store,
         chainReader,
         log,
-        true,
+        false,
       );
-      expect(res.getError().message).to.be.eq(ForwardTransferError.reasons.ReceiverOffline);
-      expect(res.getError().context.shouldCancelSender).to.be.true;
+      expect(res.getError()!.message).to.be.eq(ForwardTransferCreationError.reasons.ErrorQueuingReceiverUpdate);
+      expect(res.getError()!.context.shouldCancelSender).to.be.true;
+      expect(res.getError()!.context.storeError).to.be.eq("fail");
     });
 
     it("should fail if undercollateralized && requestCollateral fails", async () => {
@@ -226,7 +229,7 @@ describe(testName, () => {
         assetIds: [mkAddress()],
         balances: [{ to: [routerAddr, recipientAddr], amount: ["0", "53"] }],
       });
-      justInTimeCollateral.resolves(Result.fail(new Error("fail")));
+      justInTimeCollateral.resolves(Result.fail(new ChainError("fail")));
       const res = await attemptTransferWithCollateralization(
         mkParams(),
         channel,
@@ -237,8 +240,8 @@ describe(testName, () => {
         log,
         true,
       );
-      expect(res.getError().message).to.be.eq(ForwardTransferError.reasons.UnableToCollateralize);
-      expect(res.getError().context.shouldCancelSender).to.be.true;
+      expect(res.getError()!.message).to.be.eq(ForwardTransferCreationError.reasons.UnableToCollateralize);
+      expect(res.getError()!.context.shouldCancelSender).to.be.true;
     });
 
     it("should fail if node.conditionalTransfer fails", async () => {
@@ -251,7 +254,7 @@ describe(testName, () => {
         assetIds: [mkAddress()],
         balances: [{ to: [routerAddr, recipientAddr], amount: ["0", "53"] }],
       });
-      nodeService.conditionalTransfer.resolves(Result.fail(new Error("fail") as any));
+      nodeService.conditionalTransfer.resolves(Result.fail(new ChainError("fail") as any));
       const res = await attemptTransferWithCollateralization(
         mkParams(),
         channel,
@@ -262,8 +265,8 @@ describe(testName, () => {
         log,
         true,
       );
-      expect(res.getError().message).to.be.eq(ForwardTransferError.reasons.ErrorForwardingTransfer);
-      expect(res.getError().context.shouldCancelSender).to.be.false;
+      expect(res.getError()!.message).to.be.eq(ForwardTransferCreationError.reasons.ErrorForwardingTransfer);
+      expect(res.getError()!.context.shouldCancelSender).to.be.false;
     });
   });
 
@@ -308,7 +311,9 @@ describe(testName, () => {
     });
 
     it("should fail without queueing if cannot get registry info", async () => {
-      nodeService.getRegisteredTransfers.resolves(Result.fail(new Error(NodeError.reasons.Timeout) as any));
+      nodeService.getRegisteredTransfers.resolves(
+        Result.fail(new ChainError(ServerNodeServiceError.reasons.Timeout) as any),
+      );
 
       const res = await cancelCreatedTransfer(
         cancellationReason,
@@ -319,9 +324,9 @@ describe(testName, () => {
         log,
       );
 
-      expect(res.getError().message).to.be.eq(ForwardTransferError.reasons.FailedToCancelSenderTransfer);
-      expect(res.getError().context).to.containSubset({
-        cancellationError: NodeError.reasons.Timeout,
+      expect(res.getError()!.message).to.be.eq(ForwardTransferCreationError.reasons.FailedToCancelSenderTransfer);
+      expect(res.getError()!.context).to.containSubset({
+        cancellationError: { message: ServerNodeServiceError.reasons.Timeout },
         senderChannel: channelAddress,
         senderTransfer: transferId,
         cancellationReason,
@@ -342,8 +347,8 @@ describe(testName, () => {
         log,
       );
 
-      expect(res.getError().message).to.be.eq(ForwardTransferError.reasons.FailedToCancelSenderTransfer);
-      expect(res.getError().context).to.containSubset({
+      expect(res.getError()!.message).to.be.eq(ForwardTransferCreationError.reasons.FailedToCancelSenderTransfer);
+      expect(res.getError()!.context).to.containSubset({
         cancellationError: "Sender transfer not in registry info",
         senderChannel: channelAddress,
         senderTransfer: transferId,
@@ -367,8 +372,8 @@ describe(testName, () => {
         log,
       );
 
-      expect(res.getError().message).to.be.eq(ForwardTransferError.reasons.FailedToCancelSenderTransfer);
-      expect(res.getError().context).to.containSubset({
+      expect(res.getError()!.message).to.be.eq(ForwardTransferCreationError.reasons.FailedToCancelSenderTransfer);
+      expect(res.getError()!.context).to.containSubset({
         cancellationError: "Sender transfer not in registry info",
         senderChannel: channelAddress,
         senderTransfer: transferId,
@@ -381,7 +386,7 @@ describe(testName, () => {
     });
 
     it("should fail if store.queueUpdate fails", async () => {
-      nodeService.resolveTransfer.resolves(Result.fail(new Error(NodeError.reasons.Timeout) as any));
+      nodeService.resolveTransfer.resolves(Result.fail(new ChainError(ServerNodeServiceError.reasons.Timeout) as any));
       store.queueUpdate.rejects(new Error("fail"));
 
       const res = await cancelCreatedTransfer(
@@ -393,11 +398,11 @@ describe(testName, () => {
         log,
       );
 
-      expect(res.getError().message).to.be.eq(ForwardTransferError.reasons.FailedToCancelSenderTransfer);
-      expect(res.getError().context).to.containSubset({
-        cancellationError: NodeError.reasons.Timeout,
-        channel: channelAddress,
-        transferId,
+      expect(res.getError()!.message).to.be.eq(ForwardTransferCreationError.reasons.FailedToCancelSenderTransfer);
+      expect(res.getError()!.context).to.containSubset({
+        cancellationError: { message: ServerNodeServiceError.reasons.Timeout },
+        senderChannel: channelAddress,
+        senderTransfer: transferId,
         cancellationReason,
         queueError: "fail",
       });
@@ -406,7 +411,7 @@ describe(testName, () => {
     });
 
     it("should fail without enqueueing if resolveTransfer fails && enqueue == false", async () => {
-      nodeService.resolveTransfer.resolves(Result.fail(new Error(NodeError.reasons.Timeout) as any));
+      nodeService.resolveTransfer.resolves(Result.fail(new ChainError(ServerNodeServiceError.reasons.Timeout) as any));
 
       const res = await cancelCreatedTransfer(
         cancellationReason,
@@ -415,15 +420,16 @@ describe(testName, () => {
         nodeService as any,
         store,
         log,
-        {},
+        undefined,
+        undefined,
         false,
       );
 
-      expect(res.getError().message).to.be.eq(ForwardTransferError.reasons.FailedToCancelSenderTransfer);
-      expect(res.getError().context).to.containSubset({
-        cancellationError: NodeError.reasons.Timeout,
-        channel: channelAddress,
-        transferId,
+      expect(res.getError()!.message).to.be.eq(ForwardTransferCreationError.reasons.FailedToCancelSenderTransfer);
+      expect(res.getError()!.context).to.containSubset({
+        cancellationError: { message: ServerNodeServiceError.reasons.Timeout },
+        senderChannel: channelAddress,
+        senderTransfer: transferId,
         cancellationReason,
       });
       // Verify nothing enqueued
@@ -447,7 +453,7 @@ describe(testName, () => {
     });
 
     it("should properly enqueue resolveTransfer updates", async () => {
-      nodeService.resolveTransfer.resolves(Result.fail(new Error(NodeError.reasons.Timeout) as any));
+      nodeService.resolveTransfer.resolves(Result.fail(new ChainError(ServerNodeServiceError.reasons.Timeout) as any));
 
       const res = await cancelCreatedTransfer(
         cancellationReason,
@@ -462,7 +468,6 @@ describe(testName, () => {
       expect(res.getValue()).to.be.undefined;
       // Verify enqueued correctly
       expect(store.queueUpdate.callCount).to.be.eq(1);
-      console.log("store.queueUpdate.firstCall.args", store.queueUpdate.firstCall.args);
       expect(store.queueUpdate.firstCall.args[2]).to.containSubset({
         publicIdentifier: routerPublicIdentifier,
         channelAddress,

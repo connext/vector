@@ -14,6 +14,12 @@ then
   export VECTOR_PG_PASSWORD
 fi
 
+if [[ -z "$VECTOR_MNEMONIC" && -n "$VECTOR_MNEMONIC_FILE" ]]
+then
+  VECTOR_MNEMONIC="$(cat "$VECTOR_MNEMONIC_FILE")"
+  export VECTOR_MNEMONIC
+fi
+
 if [[ -n $VECTOR_DATABASE_URL ]]
 then
   echo "Using provided database url env var"

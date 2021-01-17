@@ -1,4 +1,4 @@
-import { TransactionResponse } from "@ethersproject/abstract-provider";
+import { TransactionRequest, TransactionResponse } from "@ethersproject/abstract-provider";
 import { BigNumber, BigNumberish } from "@ethersproject/bignumber";
 
 import { Address, HexString } from "./basic";
@@ -27,7 +27,7 @@ export const ERC20Abi = [
 ];
 
 export class ChainError extends VectorError {
-  readonly type = VectorError.errors.ChainError;
+  static readonly type = "ChainError";
   static readonly reasons = {
     ProviderNotFound: "Provider not found for chainId",
     SignerNotFound: "Signer not found for chainId",
@@ -41,6 +41,7 @@ export class ChainError extends VectorError {
     NotInitialState: "Transfer must be disputed with initial state",
     MultisigDeployed: "Multisig already deployed",
     TransferNotFound: "Transfer is not included in active transfers",
+    TxReverted: "Transaction reverted on chain",
   };
 
   // Errors you would see from trying to send a transaction, and
@@ -55,7 +56,7 @@ export class ChainError extends VectorError {
   readonly canRetry: boolean;
 
   constructor(public readonly message: Values<typeof ChainError.reasons>, public readonly context: any = {}) {
-    super(message);
+    super(message, context, ChainError.type);
     this.canRetry = Object.values(ChainError.retryableTxErrors).includes(this.message);
   }
 }
@@ -131,6 +132,10 @@ export interface IVectorChainReader {
 
   getBlockNumber(chainId: number): Promise<Result<number, ChainError>>;
 
+  getGasPrice(chainId: number): Promise<Result<BigNumber, ChainError>>;
+
+  estimateGas(chainId: number, transaction: TransactionRequest): Promise<Result<BigNumber, ChainError>>;
+
   getTokenAllowance(
     tokenAddress: string,
     owner: string,
@@ -169,6 +174,7 @@ export interface IVectorChainService extends IVectorChainReader {
   ): Promise<Result<TransactionResponse, ChainError>>;
   sendDeployChannelTx(
     channelState: FullChannelState,
+    gasPrice: BigNumber,
     deposit?: { amount: string; assetId: string }, // Included IFF createChannelAndDepositAlice
   ): Promise<Result<TransactionResponse, ChainError>>;
 

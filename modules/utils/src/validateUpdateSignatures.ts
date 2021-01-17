@@ -19,7 +19,7 @@ export async function validateChannelUpdateSignatures(
   };
   // Generate the commitment
   const { networkContext, ...core } = state;
-  let hash;
+  let hash: string;
   try {
     hash = hashChannelCommitment(core);
   } catch (e) {
@@ -28,7 +28,7 @@ export async function validateChannelUpdateSignatures(
 
   // Create a recovery helper to catch errors
   const tryRecovery = async (sig?: string, expectedSigner?: string): Promise<string> => {
-    log("Attempting recovery", { hash, sig });
+    log("Attempting recovery", { hash, sig }, "debug");
     if (!sig) {
       return "No signature provided";
     }

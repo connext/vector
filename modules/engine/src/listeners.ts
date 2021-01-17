@@ -27,17 +27,19 @@ import {
   ChannelRpcMethods,
   EngineParams,
   ChannelRpcMethodsResponsesMap,
-  OutboundChannelUpdateError,
   Result,
   ChainError,
   EngineError,
-  CheckInError,
   CheckInResponse,
   VectorError,
   IS_ALIVE_EVENT,
+  Values,
+  jsonifyError,
 } from "@connext/vector-types";
 import { BigNumber } from "@ethersproject/bignumber";
 import Pino from "pino";
+
+import { CheckInError, IsAliveError, RestoreError } from "./errors";
 
 import { EngineEvtContainer } from "./index";
 
@@ -52,9 +54,7 @@ export async function setupEngineListeners(
   logger: Pino.BaseLogger,
   setup: (
     params: EngineParams.Setup,
-  ) => Promise<
-    Result<ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_setup], OutboundChannelUpdateError | Error>
-  >,
+  ) => Promise<Result<ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_setup], EngineError>>,
   acquireRestoreLocks: (channel: FullChannelState) => Promise<Result<void, EngineError>>,
   releaseRestoreLocks: (channel: FullChannelState) => Promise<Result<void, EngineError>>,
 ): Promise<void> {
@@ -188,7 +188,7 @@ export async function setupEngineListeners(
       if (restoreData.isError) {
         // releasing the lock should be done regardless of error
         logger.error({ message: restoreData.getError()!.message, method }, "Error received from counterparty restore");
-        await releaseLockAndAck(restoreData.getError()!.channelAddress);
+        await releaseLockAndAck(restoreData.getError()!.context.channelAddress);
         return;
       }
 
@@ -207,10 +207,12 @@ export async function setupEngineListeners(
 
       // Otherwise, they are looking to initiate a sync
       let channel: FullChannelState | undefined;
-      const sendCannotSyncFromError = (error: string, context: any = {}) => {
+      const sendCannotRestoreFromError = (error: Values<typeof RestoreError.reasons>, context: any = {}) => {
         return messaging.respondToRestoreStateMessage(
           inbox,
-          Result.fail(new EngineError(error, channel?.channelAddress ?? "unknown", { ...context, method })),
+          Result.fail(
+            new RestoreError(error, channel?.channelAddress ?? "", signer.publicIdentifier, { ...context, method }),
+          ),
         );
       };
 
@@ -219,20 +221,20 @@ export async function setupEngineListeners(
       try {
         channel = await store.getChannelStateByParticipants(signer.publicIdentifier, from, chainId);
       } catch (e) {
-        return sendCannotSyncFromError("Store method failed", {
+        return sendCannotRestoreFromError(RestoreError.reasons.CouldNotGetChannel, {
           storeMethod: "getChannelStateByParticipants",
           chainId,
           identifiers: [signer.publicIdentifier, from],
         });
       }
       if (!channel) {
-        return sendCannotSyncFromError("No channel to restore from", { chainId });
+        return sendCannotRestoreFromError(RestoreError.reasons.ChannelNotFound, { chainId });
       }
       let activeTransfers: FullTransferState[];
       try {
         activeTransfers = await store.getActiveTransfers(channel.channelAddress);
       } catch (e) {
-        return sendCannotSyncFromError("Store method failed", {
+        return sendCannotRestoreFromError(RestoreError.reasons.CouldNotGetActiveTransfers, {
           storeMethod: "getActiveTransfers",
           chainId,
           channelAddress: channel.channelAddress,
@@ -242,9 +244,8 @@ export async function setupEngineListeners(
       // Acquire lock
       const res = await acquireRestoreLocks(channel);
       if (res.isError) {
-        return sendCannotSyncFromError("Failed to acquire lock", {
-          ...(res.getError()?.context ?? {}),
-          channel: channel.channelAddress,
+        return sendCannotRestoreFromError(RestoreError.reasons.AcquireLockError, {
+          acquireLockError: jsonifyError(res.getError()!),
         });
       }
 
@@ -286,7 +287,7 @@ export async function setupEngineListeners(
         logger.error({ channelAddress, method }, "Channel not found");
         return messaging.respondToIsAliveMessage(
           inbox,
-          Result.fail(new EngineError("Channel not found", channelAddress)),
+          Result.fail(new IsAliveError(IsAliveError.reasons.ChannelNotFound, channelAddress, signer.publicIdentifier)),
         );
       }
 
@@ -314,7 +315,13 @@ export async function setupEngineListeners(
     let response: Result<CheckInResponse, CheckInError>;
     if (!channel) {
       logger.error({ params: params.getValue(), method }, "Could not find channel for received isAlive message");
-      response = Result.fail(new CheckInError(CheckInError.reasons.ChannelNotFound));
+      response = Result.fail(
+        new CheckInError(
+          CheckInError.reasons.ChannelNotFound,
+          params.getValue().channelAddress,
+          signer.publicIdentifier,
+        ),
+      );
     } else {
       response = Result.ok({
         aliceIdentifier: channel.aliceIdentifier,
@@ -872,7 +879,11 @@ async function handleWithdrawalTransferResolution(
   });
   logger.info({ transactionHash: tx.hash }, "Submitted withdraw tx");
   const receipt = await tx.wait();
-  logger.info({ method, transactionHash: receipt.transactionHash }, "Withdraw tx mined, completed");
+  if (receipt.status === 0) {
+    logger.error({ method, receipt }, "Withdraw tx reverted");
+  } else {
+    logger.info({ method, transactionHash: receipt.transactionHash }, "Withdraw tx mined, completed");
+  }
 }
 
 const isWithdrawTransfer = async (

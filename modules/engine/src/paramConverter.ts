@@ -15,11 +15,14 @@ import {
   TransferNames,
   TransferName,
   IVectorChainReader,
+  EngineError,
+  jsonifyError,
 } from "@connext/vector-types";
 import { BigNumber } from "@ethersproject/bignumber";
 import { AddressZero } from "@ethersproject/constants";
+import { getAddress } from "@ethersproject/address";
 
-import { InvalidTransferType } from "./errors";
+import { ParameterConversionError } from "./errors";
 
 export async function convertConditionalTransferParams(
   params: EngineParams.ConditionalTransfer,
@@ -27,16 +30,25 @@ export async function convertConditionalTransferParams(
   channel: FullChannelState,
   chainAddresses: ChainAddresses,
   chainReader: IVectorChainReader,
-): Promise<Result<CreateTransferParams, InvalidTransferType | Error>> {
+): Promise<Result<CreateTransferParams, EngineError>> {
   const { channelAddress, amount, assetId, recipient, details, type, timeout, meta: providedMeta } = params;
 
   const recipientChainId = params.recipientChainId ?? channel.networkContext.chainId;
-  const recipientAssetId = params.recipientAssetId ?? params.assetId;
+  const recipientAssetId = getAddress(params.recipientAssetId ?? params.assetId);
   const channelCounterparty = signer.address === channel.alice ? channel.bob : channel.alice;
 
   if (recipient === signer.publicIdentifier && recipientChainId === channel.networkContext.chainId) {
     // If signer is also the receipient on same chain/network
-    return Result.fail(new Error("An initiator cannot be a receiver on the same chain"));
+    return Result.fail(
+      new ParameterConversionError(
+        ParameterConversionError.reasons.CannotSendToSelf,
+        channelAddress,
+        signer.publicIdentifier,
+        {
+          params,
+        },
+      ),
+    );
   }
 
   // If the recipient is the channel counterparty, no default routing
@@ -72,7 +84,14 @@ export async function convertConditionalTransferParams(
         channel.networkContext.chainId,
       );
   if (registryRes.isError) {
-    return Result.fail(new InvalidTransferType(registryRes.getError()!.message));
+    return Result.fail(
+      new ParameterConversionError(
+        ParameterConversionError.reasons.FailedToGetRegisteredTransfer,
+        channelAddress,
+        signer.publicIdentifier,
+        { params, registryError: jsonifyError(registryRes.getError()!) },
+      ),
+    );
   }
   const { definition } = registryRes.getValue()!;
 
@@ -98,7 +117,7 @@ export async function convertConditionalTransferParams(
 export function convertResolveConditionParams(
   params: EngineParams.ResolveTransfer,
   transfer: FullTransferState,
-): Result<ResolveTransferParams, InvalidTransferType> {
+): Result<ResolveTransferParams, EngineError> {
   const { channelAddress, transferResolver, meta } = params;
 
   return Result.ok({
@@ -115,8 +134,22 @@ export async function convertWithdrawParams(
   channel: FullChannelState,
   chainAddresses: ChainAddresses,
   chainReader: IVectorChainReader,
-): Promise<Result<CreateTransferParams, InvalidTransferType>> {
-  const { channelAddress, assetId, recipient, fee, callTo, callData, meta } = params;
+): Promise<Result<CreateTransferParams, EngineError>> {
+  const { channelAddress, fee, callTo, callData, meta } = params;
+  const assetId = getAddress(params.assetId);
+  const recipient = getAddress(params.recipient);
+
+  // If recipient is AddressZero, throw
+  if (recipient === AddressZero) {
+    return Result.fail(
+      new ParameterConversionError(
+        ParameterConversionError.reasons.WithdrawToZero,
+        channelAddress,
+        signer.publicIdentifier,
+        { params },
+      ),
+    );
+  }
 
   // If there is a fee being charged, add the fee to the amount.
   const amount = fee ? BigNumber.from(params.amount).add(fee).toString() : params.amount;
@@ -139,7 +172,18 @@ export async function convertWithdrawParams(
   try {
     initiatorSignature = await signer.signMessage(commitment.hashToSign());
   } catch (err) {
-    return Result.fail(new Error(`${signer.publicIdentifier} failed to sign: ${err.message}`));
+    return Result.fail(
+      new ParameterConversionError(
+        ParameterConversionError.reasons.CouldNotSignWithdrawal,
+        channelAddress,
+        signer.publicIdentifier,
+        {
+          signatureError: err.message,
+          params,
+          commitment: commitment.toJson(),
+        },
+      ),
+    );
   }
 
   const channelCounterparty = channel.alice === signer.address ? channel.bob : channel.alice;
@@ -162,7 +206,14 @@ export async function convertWithdrawParams(
     channel.networkContext.chainId,
   );
   if (registryRes.isError) {
-    return Result.fail(new InvalidTransferType(registryRes.getError()!.message));
+    return Result.fail(
+      new ParameterConversionError(
+        ParameterConversionError.reasons.FailedToGetRegisteredTransfer,
+        channelAddress,
+        signer.publicIdentifier,
+        { params, registryError: jsonifyError(registryRes.getError()!) },
+      ),
+    );
   }
   const { definition } = registryRes.getValue()!;
 

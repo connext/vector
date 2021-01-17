@@ -7,7 +7,6 @@ import {
   IVectorProtocol,
   Result,
   EngineParams,
-  OutboundChannelUpdateError,
   ChannelRpcMethodsResponsesMap,
   IVectorEngine,
   EngineEventMap,
@@ -23,12 +22,16 @@ import {
   FullChannelState,
   EngineError,
   UpdateType,
-  InboundChannelUpdateError,
+  Values,
+  VectorError,
+  jsonifyError,
+  ChainError,
 } from "@connext/vector-types";
 import {
   generateMerkleTreeData,
   validateChannelUpdateSignatures,
   getSignerAddressFromPublicIdentifier,
+  getRandomBytes32,
 } from "@connext/vector-utils";
 import pino from "pino";
 import Ajv from "ajv";
@@ -36,7 +39,7 @@ import { Evt } from "evt";
 
 import { version } from "../package.json";
 
-import { InvalidTransferType } from "./errors";
+import { DisputeError, IsAliveError, RestoreError, RpcError } from "./errors";
 import {
   convertConditionalTransferParams,
   convertResolveConditionParams,
@@ -45,6 +48,7 @@ import {
 import { setupEngineListeners } from "./listeners";
 import { getEngineEvtContainer } from "./utils";
 import { sendIsAlive } from "./isAlive";
+import { EXTRA_GAS_PRICE } from "@connext/vector-contracts/dist/src.ts/services/ethService";
 
 export const ajv = new Ajv();
 
@@ -155,8 +159,8 @@ export class VectorEngine implements IVectorEngine {
       return Result.ok(undefined);
     } catch (e) {
       return Result.fail(
-        new EngineError("Failed to acquire restore lock", channel.channelAddress, {
-          publicIdentifier: this.signer.publicIdentifier,
+        new RestoreError(RestoreError.reasons.AcquireLockError, channel.channelAddress, this.signer.publicIdentifier, {
+          acquireRestoreLockError: e.message,
         }),
       );
     }
@@ -179,18 +183,38 @@ export class VectorEngine implements IVectorEngine {
       return Result.ok(undefined);
     } catch (e) {
       return Result.fail(
-        new EngineError("Failed to release restore lock", channel.channelAddress, {
-          publicIdentifier: this.signer.publicIdentifier,
+        new RestoreError(RestoreError.reasons.ReleaseLockError, channel.channelAddress, this.signer.publicIdentifier, {
+          releaseRestoreLockError: e.message,
         }),
       );
     }
   }
 
-  private async getConfig(): Promise<Result<ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_getConfig]>> {
+  private async getConfig(): Promise<
+    Result<ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_getConfig], EngineError>
+  > {
     return Result.ok([{ index: 0, publicIdentifier: this.publicIdentifier, signerAddress: this.signerAddress }]);
   }
 
-  private async getStatus(): Promise<Result<ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_getStatus]>> {
+  private async getRouterConfig(
+    params: EngineParams.GetRouterConfig,
+  ): Promise<Result<ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_getRouterConfig], EngineError>> {
+    const validate = ajv.compile(EngineParams.GetRouterConfigSchema);
+    const valid = validate(params);
+    if (!valid) {
+      return Result.fail(
+        new RpcError(RpcError.reasons.InvalidParams, "", this.publicIdentifier, {
+          invalidParamsError: validate.errors?.map((e) => e.message).join(","),
+          invalidParams: params,
+        }),
+      );
+    }
+    return this.messaging.sendRouterConfigMessage(Result.ok(undefined), params.routerIdentifier, this.publicIdentifier);
+  }
+
+  private async getStatus(): Promise<
+    Result<ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_getStatus], EngineError>
+  > {
     const chainIds = Object.keys(this.chainAddresses).map((chainId) => parseInt(chainId));
     const providerResponses = await Promise.all(chainIds.map((chainId) => this.chainService.getSyncing(chainId)));
     const providerSyncing = Object.fromEntries(
@@ -219,139 +243,200 @@ export class VectorEngine implements IVectorEngine {
 
   private async getChannelState(
     params: EngineParams.GetChannelState,
-  ): Promise<
-    Result<
-      ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_getChannelState],
-      Error | OutboundChannelUpdateError
-    >
-  > {
+  ): Promise<Result<ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_getChannelState], EngineError>> {
     const validate = ajv.compile(EngineParams.GetChannelStateSchema);
     const valid = validate(params);
     if (!valid) {
-      return Result.fail(new Error(validate.errors?.map((err) => err.message).join(",")));
+      return Result.fail(
+        new RpcError(RpcError.reasons.InvalidParams, params.channelAddress ?? "", this.publicIdentifier, {
+          invalidParamsError: validate.errors?.map((e) => e.message).join(","),
+          invalidParams: params,
+        }),
+      );
     }
     try {
       const channel = await this.store.getChannelState(params.channelAddress);
       return Result.ok(channel);
     } catch (e) {
-      return Result.fail(e);
+      return Result.fail(
+        new RpcError(RpcError.reasons.StoreMethodFailed, params.channelAddress, this.publicIdentifier, {
+          storeMethod: "getChannelState",
+          storeError: e.message,
+          params,
+        }),
+      );
     }
   }
 
   private async getTransferState(
     params: EngineParams.GetTransferState,
-  ): Promise<Result<ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_getTransferState], Error>> {
+  ): Promise<Result<ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_getTransferState], EngineError>> {
     const validate = ajv.compile(EngineParams.GetTransferStateSchema);
     const valid = validate(params);
     if (!valid) {
-      return Result.fail(new Error(validate.errors?.map((err) => err.message).join(",")));
+      return Result.fail(
+        new RpcError(RpcError.reasons.InvalidParams, "", this.publicIdentifier, {
+          invalidParamsError: validate.errors?.map((e) => e.message).join(","),
+          invalidParams: params,
+        }),
+      );
     }
 
     try {
       const transfer = await this.store.getTransferState(params.transferId);
       return Result.ok(transfer);
     } catch (e) {
-      return Result.fail(e);
+      return Result.fail(
+        new RpcError(RpcError.reasons.StoreMethodFailed, "", this.publicIdentifier, {
+          storeMethod: "getTransferState",
+          storeError: e.message,
+          params,
+        }),
+      );
     }
   }
 
   private async getActiveTransfers(
     params: EngineParams.GetActiveTransfers,
-  ): Promise<Result<ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_getActiveTransfers], Error>> {
+  ): Promise<Result<ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_getActiveTransfers], EngineError>> {
     const validate = ajv.compile(EngineParams.GetActiveTransfersSchema);
     const valid = validate(params);
     if (!valid) {
-      return Result.fail(new Error(validate.errors?.map((err) => err.message).join(",")));
+      return Result.fail(
+        new RpcError(RpcError.reasons.InvalidParams, params.channelAddress ?? "", this.publicIdentifier, {
+          invalidParamsError: validate.errors?.map((e) => e.message).join(","),
+          invalidParams: params,
+        }),
+      );
     }
 
     try {
       const transfers = await this.store.getActiveTransfers(params.channelAddress);
       return Result.ok(transfers);
     } catch (e) {
-      return Result.fail(e);
+      return Result.fail(
+        new RpcError(RpcError.reasons.StoreMethodFailed, params.channelAddress, this.publicIdentifier, {
+          storeMethod: "getActiveTransfers",
+          storeError: e.message,
+        }),
+      );
     }
   }
 
   private async getTransferStateByRoutingId(
     params: EngineParams.GetTransferStateByRoutingId,
-  ): Promise<Result<ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_getTransferStateByRoutingId], Error>> {
+  ): Promise<
+    Result<ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_getTransferStateByRoutingId], EngineError>
+  > {
     const validate = ajv.compile(EngineParams.GetTransferStateByRoutingIdSchema);
     const valid = validate(params);
     if (!valid) {
-      return Result.fail(new Error(validate.errors?.map((err) => err.message).join(",")));
+      return Result.fail(
+        new RpcError(RpcError.reasons.InvalidParams, params.channelAddress ?? "", this.publicIdentifier, {
+          invalidParamsError: validate.errors?.map((e) => e.message).join(","),
+          invalidParams: params,
+        }),
+      );
     }
 
     try {
       const transfer = await this.store.getTransferByRoutingId(params.channelAddress, params.routingId);
       return Result.ok(transfer);
     } catch (e) {
-      return Result.fail(e);
+      return Result.fail(
+        new RpcError(RpcError.reasons.StoreMethodFailed, params.channelAddress ?? "", this.publicIdentifier, {
+          storeMethod: "getTransferByRoutingId",
+          storeError: e.message,
+        }),
+      );
     }
   }
 
   private async getTransferStatesByRoutingId(
     params: EngineParams.GetTransferStatesByRoutingId,
-  ): Promise<Result<ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_getTransferStatesByRoutingId], Error>> {
+  ): Promise<
+    Result<ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_getTransferStatesByRoutingId], EngineError>
+  > {
     const validate = ajv.compile(EngineParams.GetTransferStatesByRoutingIdSchema);
     const valid = validate(params);
     if (!valid) {
-      return Result.fail(new Error(validate.errors?.map((err) => err.message).join(",")));
+      return Result.fail(
+        new RpcError(RpcError.reasons.InvalidParams, "", this.publicIdentifier, {
+          invalidParamsError: validate.errors?.map((e) => e.message).join(","),
+          invalidParams: params,
+        }),
+      );
     }
     try {
       const transfers = await this.store.getTransfersByRoutingId(params.routingId);
       return Result.ok(transfers);
     } catch (e) {
-      return Result.fail(e);
+      return Result.fail(
+        new RpcError(RpcError.reasons.StoreMethodFailed, "", this.publicIdentifier, {
+          storeMethod: "getTransfersByRoutingId",
+          storeError: e.message,
+        }),
+      );
     }
   }
 
   private async getChannelStateByParticipants(
     params: EngineParams.GetChannelStateByParticipants,
   ): Promise<
-    Result<
-      ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_getChannelStateByParticipants],
-      Error | OutboundChannelUpdateError
-    >
+    Result<ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_getChannelStateByParticipants], EngineError>
   > {
     const validate = ajv.compile(EngineParams.GetChannelStateByParticipantsSchema);
     const valid = validate(params);
     if (!valid) {
-      return Result.fail(new Error(validate.errors?.map((err) => err.message).join(",")));
+      return Result.fail(
+        new RpcError(RpcError.reasons.InvalidParams, "", this.publicIdentifier, {
+          invalidParamsError: validate.errors?.map((e) => e.message).join(","),
+          invalidParams: params,
+        }),
+      );
     }
     try {
       const channel = await this.store.getChannelStateByParticipants(params.alice, params.bob, params.chainId);
       return Result.ok(channel);
     } catch (e) {
-      return Result.fail(e);
+      return Result.fail(
+        new RpcError(RpcError.reasons.StoreMethodFailed, "", this.publicIdentifier, {
+          storeMethod: "getChannelStateByParticipants",
+          storeError: e.message,
+          params,
+        }),
+      );
     }
   }
 
   private async getChannelStates(): Promise<
-    Result<
-      ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_getChannelStates],
-      Error | OutboundChannelUpdateError
-    >
+    Result<ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_getChannelStates], EngineError>
   > {
     try {
       const channel = await this.store.getChannelStates();
       return Result.ok(channel);
     } catch (e) {
-      return Result.fail(e);
+      return Result.fail(
+        new RpcError(RpcError.reasons.StoreMethodFailed, "", this.publicIdentifier, {
+          storeMethod: "getChannelStates",
+          storeError: e.message,
+        }),
+      );
     }
   }
 
   private async getRegisteredTransfers(
     params: EngineParams.GetRegisteredTransfers,
-  ): Promise<
-    Result<
-      ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_getRegisteredTransfers],
-      Error | OutboundChannelUpdateError
-    >
-  > {
+  ): Promise<Result<ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_getRegisteredTransfers], EngineError>> {
     const validate = ajv.compile(EngineParams.GetRegisteredTransfersSchema);
     const valid = validate(params);
     if (!valid) {
-      return Result.fail(new Error(validate.errors?.map((err) => err.message).join(",")));
+      return Result.fail(
+        new RpcError(RpcError.reasons.InvalidParams, "", this.publicIdentifier, {
+          invalidParamsError: validate.errors?.map((e) => e.message).join(","),
+          invalidParams: params,
+        }),
+      );
     }
     const { chainId } = params;
     const result = await this.chainService.getRegisteredTransfers(
@@ -363,13 +448,19 @@ export class VectorEngine implements IVectorEngine {
 
   private async setup(
     params: EngineParams.Setup,
-  ): Promise<
-    Result<ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_setup], OutboundChannelUpdateError | Error>
-  > {
+  ): Promise<Result<ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_setup], VectorError>> {
+    const method = "setup";
+    const methodId = getRandomBytes32();
+    this.logger.info({ params, method, methodId }, "Method started");
     const validate = ajv.compile(EngineParams.SetupSchema);
     const valid = validate(params);
     if (!valid) {
-      return Result.fail(new Error(validate.errors?.map((err) => err.message).join(",")));
+      return Result.fail(
+        new RpcError(RpcError.reasons.InvalidParams, "", this.publicIdentifier, {
+          invalidParamsError: validate.errors?.map((e) => e.message).join(","),
+          invalidParams: params,
+        }),
+      );
     }
 
     const chainProviders = this.chainService.getChainProviders();
@@ -390,7 +481,7 @@ export class VectorEngine implements IVectorEngine {
     });
 
     if (setupRes.isError) {
-      return setupRes;
+      return Result.fail(setupRes.getError()!);
     }
 
     const channel = setupRes.getValue();
@@ -404,10 +495,21 @@ export class VectorEngine implements IVectorEngine {
     }
 
     this.logger.info(
-      { chainId: channel.networkContext.chainId, channel: channel.channelAddress },
+      { method, chainId: channel.networkContext.chainId, channel: channel.channelAddress },
       "Deploying channel multisig",
     );
-    const deployRes = await this.chainService.sendDeployChannelTx(channel);
+
+    const gasPriceRes = await this.chainService.getGasPrice(channel.networkContext.chainId);
+    if (gasPriceRes.isError) {
+      Result.fail(gasPriceRes.getError()!);
+    }
+    const _gasPrice = gasPriceRes.getValue();
+    const gasPrice = _gasPrice.add(EXTRA_GAS_PRICE);
+    this.logger.info(
+      { method, chainId: channel.networkContext.chainId, channel: channel.channelAddress },
+      "Got gas price",
+    );
+    const deployRes = await this.chainService.sendDeployChannelTx(channel, gasPrice);
     if (deployRes.isError) {
       const err = deployRes.getError();
       this.logger.error(
@@ -423,32 +525,60 @@ export class VectorEngine implements IVectorEngine {
     }
     const tx = deployRes.getValue();
     this.logger.info({ chainId: channel.networkContext.chainId, hash: tx.hash }, "Deploy tx broadcast");
-    await tx.wait();
+    const receipt = await tx.wait();
+    if (receipt.status === 0) {
+      return Result.fail(new ChainError(ChainError.reasons.TxReverted, { receipt }));
+    }
     this.logger.debug({ chainId: channel.networkContext.chainId, hash: tx.hash }, "Deploy tx mined");
+    this.logger.info(
+      { result: setupRes.isError ? jsonifyError(setupRes.getError()!) : setupRes.getValue(), method, methodId },
+      "Method complete",
+    );
     return setupRes;
   }
 
-  private async requestSetup(
-    params: EngineParams.Setup,
-  ): Promise<Result<{ channelAddress: string }, OutboundChannelUpdateError | Error>> {
+  private async requestSetup(params: EngineParams.Setup): Promise<Result<{ channelAddress: string }, EngineError>> {
+    const method = "requestSetup";
+    const methodId = getRandomBytes32();
+    this.logger.info({ params, method, methodId }, "Method started");
     const validate = ajv.compile(EngineParams.SetupSchema);
     const valid = validate(params);
     if (!valid) {
-      return Result.fail(new Error(validate.errors?.map((err) => err.message).join(",")));
+      return Result.fail(
+        new RpcError(RpcError.reasons.InvalidParams, "", this.publicIdentifier, {
+          invalidParamsError: validate.errors?.map((e) => e.message).join(","),
+          invalidParams: params,
+        }),
+      );
     }
 
-    return this.messaging.sendSetupMessage(Result.ok(params), params.counterpartyIdentifier, this.publicIdentifier);
+    const res = await this.messaging.sendSetupMessage(
+      Result.ok(params),
+      params.counterpartyIdentifier,
+      this.publicIdentifier,
+    );
+    this.logger.info(
+      { result: res.isError ? jsonifyError(res.getError()!) : res.getValue(), method, methodId },
+      "Method complete",
+    );
+    return res;
   }
 
   private async deposit(
     params: EngineParams.Deposit,
-  ): Promise<
-    Result<ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_deposit], OutboundChannelUpdateError | Error>
-  > {
+  ): Promise<Result<ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_deposit], EngineError>> {
+    const method = "deposit";
+    const methodId = getRandomBytes32();
+    this.logger.info({ params, method, methodId }, "Method started");
     const validate = ajv.compile(EngineParams.DepositSchema);
     const valid = validate(params);
     if (!valid) {
-      return Result.fail(new Error(validate.errors?.map((err) => err.message).join(",")));
+      return Result.fail(
+        new RpcError(RpcError.reasons.InvalidParams, params.channelAddress ?? "", this.publicIdentifier, {
+          invalidParamsError: validate.errors?.map((e) => e.message).join(","),
+          invalidParams: params,
+        }),
+      );
     }
 
     // NOTE: There is a race-condition for deposits because the onchain process
@@ -472,9 +602,10 @@ export class VectorEngine implements IVectorEngine {
       const error = depositRes.getError()!;
       // IFF deposit fails because you or the counterparty fails to recover
       // signatures, retry
-      const recoveryFailed =
-        error.message === OutboundChannelUpdateError.reasons.BadSignatures ||
-        error.context?.counterpartyError === InboundChannelUpdateError.reasons.BadSignatures;
+      // This should be the message from *.reasons.BadSignatures in the protocol
+      // errors
+      const recoveryErr = "Could not recover signers";
+      const recoveryFailed = error.message === recoveryErr || error.context?.counterpartyError === recoveryErr;
 
       if (!recoveryFailed) {
         break;
@@ -483,17 +614,31 @@ export class VectorEngine implements IVectorEngine {
       depositRes = await this.vector.deposit(params);
       count++;
     }
+    this.logger.info(
+      {
+        result: depositRes.isError ? jsonifyError(depositRes.getError()!) : depositRes.getValue(),
+        method,
+        methodId,
+      },
+      "Method complete",
+    );
 
     return depositRes;
   }
 
-  private async requestCollateral(
-    params: EngineParams.RequestCollateral,
-  ): Promise<Result<undefined, OutboundChannelUpdateError | Error>> {
+  private async requestCollateral(params: EngineParams.RequestCollateral): Promise<Result<undefined, EngineError>> {
+    const method = "requestCollateral";
+    const methodId = getRandomBytes32();
+    this.logger.info({ params, method, methodId }, "Method started");
     const validate = ajv.compile(EngineParams.RequestCollateralSchema);
     const valid = validate(params);
     if (!valid) {
-      return Result.fail(new Error(validate.errors?.map((err) => err.message).join(",")));
+      return Result.fail(
+        new RpcError(RpcError.reasons.InvalidParams, params.channelAddress ?? "", this.publicIdentifier, {
+          invalidParamsError: validate.errors?.map((e) => e.message).join(","),
+          invalidParams: params,
+        }),
+      );
     }
 
     const channelRes = await this.getChannelState({ channelAddress: params.channelAddress });
@@ -502,9 +647,7 @@ export class VectorEngine implements IVectorEngine {
     }
     const channel = channelRes.getValue();
     if (!channel) {
-      return Result.fail(
-        new OutboundChannelUpdateError(OutboundChannelUpdateError.reasons.ChannelNotFound, params as any),
-      );
+      return Result.fail(new RpcError(RpcError.reasons.ChannelNotFound, params.channelAddress, this.publicIdentifier));
     }
 
     const request = await this.messaging.sendRequestCollateralMessage(
@@ -512,21 +655,28 @@ export class VectorEngine implements IVectorEngine {
       this.publicIdentifier === channel.aliceIdentifier ? channel.bobIdentifier : channel.aliceIdentifier,
       this.publicIdentifier,
     );
-    return request;
+    this.logger.info(
+      { result: request.isError ? jsonifyError(request.getError()!) : request.getValue(), method, methodId },
+      "Method complete",
+    );
+    return request as Result<undefined, EngineError>;
   }
 
   private async createTransfer(
     params: EngineParams.ConditionalTransfer,
-  ): Promise<
-    Result<
-      ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_createTransfer],
-      InvalidTransferType | OutboundChannelUpdateError
-    >
-  > {
+  ): Promise<Result<ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_createTransfer], VectorError>> {
+    const method = "createTransfer";
+    const methodId = getRandomBytes32();
+    this.logger.info({ params, method, methodId }, "Method started");
     const validate = ajv.compile(EngineParams.ConditionalTransferSchema);
     const valid = validate(params);
     if (!valid) {
-      return Result.fail(new Error(validate.errors?.map((err) => err.message).join(",")));
+      return Result.fail(
+        new RpcError(RpcError.reasons.InvalidParams, params.channelAddress ?? "", this.publicIdentifier, {
+          invalidParamsError: validate.errors?.map((e) => e.message).join(","),
+          invalidParams: params,
+        }),
+      );
     }
 
     const channelRes = await this.getChannelState({ channelAddress: params.channelAddress });
@@ -535,10 +685,9 @@ export class VectorEngine implements IVectorEngine {
     }
     const channel = channelRes.getValue();
     if (!channel) {
-      return Result.fail(
-        new OutboundChannelUpdateError(OutboundChannelUpdateError.reasons.ChannelNotFound, params as any),
-      );
+      return Result.fail(new RpcError(RpcError.reasons.ChannelNotFound, params.channelAddress, this.publicIdentifier));
     }
+    this.logger.info({ channel, method, methodId }, "Pre-transfer channel");
 
     // First, get translated `create` params using the passed in conditional transfer ones
     const createResult = await convertConditionalTransferParams(
@@ -552,21 +701,31 @@ export class VectorEngine implements IVectorEngine {
       return Result.fail(createResult.getError()!);
     }
     const createParams = createResult.getValue();
+    this.logger.info({ transferParams: createParams, method, methodId }, "Created conditional transfer params");
     const protocolRes = await this.vector.create(createParams);
     if (protocolRes.isError) {
       return Result.fail(protocolRes.getError()!);
     }
     const res = protocolRes.getValue();
+    this.logger.info({ channel: res, method, methodId }, "Method complete");
     return Result.ok(res);
   }
 
   private async resolveTransfer(
     params: EngineParams.ResolveTransfer,
-  ): Promise<Result<ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_resolveTransfer], Error>> {
+  ): Promise<Result<ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_resolveTransfer], EngineError>> {
+    const method = "resolveTransfer";
+    const methodId = getRandomBytes32();
+    this.logger.info({ params, method, methodId }, "Method started");
     const validate = ajv.compile(EngineParams.ResolveTransferSchema);
     const valid = validate(params);
     if (!valid) {
-      return Result.fail(new Error(validate.errors?.map((err) => err.message).join(",")));
+      return Result.fail(
+        new RpcError(RpcError.reasons.InvalidParams, params.channelAddress ?? "", this.publicIdentifier, {
+          invalidParamsError: validate.errors?.map((e) => e.message).join(","),
+          invalidParams: params,
+        }),
+      );
     }
 
     const transferRes = await this.getTransferState({ transferId: params.transferId });
@@ -576,9 +735,12 @@ export class VectorEngine implements IVectorEngine {
     const transfer = transferRes.getValue();
     if (!transfer) {
       return Result.fail(
-        new OutboundChannelUpdateError(OutboundChannelUpdateError.reasons.TransferNotFound, params as any),
+        new RpcError(RpcError.reasons.TransferNotFound, params.channelAddress ?? "", this.publicIdentifier, {
+          transferId: params.transferId,
+        }),
       );
     }
+    this.logger.info({ transfer, method, methodId }, "Transfer pre-resolve");
 
     // First, get translated `create` params using the passed in conditional transfer ones
     const resolveResult = convertResolveConditionParams(params, transfer);
@@ -591,16 +753,25 @@ export class VectorEngine implements IVectorEngine {
       return Result.fail(protocolRes.getError()!);
     }
     const res = protocolRes.getValue();
+    this.logger.info({ channel: res, method, methodId }, "Method complete");
     return Result.ok(res);
   }
 
   private async withdraw(
     params: EngineParams.Withdraw,
-  ): Promise<Result<ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_withdraw], Error>> {
+  ): Promise<Result<ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_withdraw], EngineError>> {
+    const method = "withdraw";
+    const methodId = getRandomBytes32();
+    this.logger.info({ params, method, methodId }, "Method started");
     const validate = ajv.compile(EngineParams.WithdrawSchema);
     const valid = validate(params);
     if (!valid) {
-      return Result.fail(new Error(validate.errors?.map((err) => err.message).join(",")));
+      return Result.fail(
+        new RpcError(RpcError.reasons.InvalidParams, params.channelAddress ?? "", this.publicIdentifier, {
+          invalidParamsError: validate.errors?.map((e) => e.message).join(","),
+          invalidParams: params,
+        }),
+      );
     }
 
     const channelRes = await this.getChannelState({ channelAddress: params.channelAddress });
@@ -609,9 +780,7 @@ export class VectorEngine implements IVectorEngine {
     }
     const channel = channelRes.getValue();
     if (!channel) {
-      return Result.fail(
-        new OutboundChannelUpdateError(OutboundChannelUpdateError.reasons.ChannelNotFound, params as any),
-      );
+      return Result.fail(new RpcError(RpcError.reasons.ChannelNotFound, params.channelAddress, this.publicIdentifier));
     }
 
     // First, get translated `create` params from withdraw
@@ -646,47 +815,95 @@ export class VectorEngine implements IVectorEngine {
       this.logger.warn({ channelAddress: params.channelAddress, transferId, timeout }, "Withdraw tx not submitted");
     }
 
+    this.logger.info({ channel: res, method, methodId }, "Method complete");
     return Result.ok({ channel: res, transactionHash });
   }
 
-  private async decrypt(encrypted: string): Promise<Result<string, Error>> {
+  private async decrypt(encrypted: string): Promise<Result<string, EngineError>> {
+    const method = "decrypt";
+    const methodId = getRandomBytes32();
+    this.logger.info({ encrypted, method, methodId }, "Method started");
     try {
       const res = await this.signer.decrypt(encrypted);
+      this.logger.info({ res, method, methodId }, "Method complete");
       return Result.ok(res);
     } catch (e) {
-      return Result.fail(e);
+      return Result.fail(
+        new RpcError(RpcError.reasons.DecryptFailed, "", this.publicIdentifier, {
+          decryptError: e.message,
+        }),
+      );
     }
   }
 
-  private async signUtilityMessage(params: EngineParams.SignUtilityMessage): Promise<Result<string, Error>> {
+  private async signUtilityMessage(params: EngineParams.SignUtilityMessage): Promise<Result<string, EngineError>> {
+    const method = "signUtilityMessage";
+    const methodId = getRandomBytes32();
+    this.logger.info({ params, method, methodId }, "Method started");
     const validate = ajv.compile(EngineParams.SignUtilityMessageSchema);
     const valid = validate(params);
     if (!valid) {
-      return Result.fail(new Error(validate.errors?.map((err) => err.message).join(",")));
+      return Result.fail(
+        new RpcError(RpcError.reasons.InvalidParams, "", this.publicIdentifier, {
+          invalidParamsError: validate.errors?.map((e) => e.message).join(","),
+          invalidParams: params,
+        }),
+      );
     }
+
     try {
       const sig = await this.signer.signUtilityMessage(params.message);
+      this.logger.info({ sig, method, methodId }, "Method complete");
       return Result.ok(sig);
     } catch (e) {
-      return Result.fail(e);
+      return Result.fail(
+        new RpcError(RpcError.reasons.UtilitySigningFailed, "", this.publicIdentifier, {
+          signingError: e.message,
+        }),
+      );
     }
   }
 
-  private async sendIsAlive(params: EngineParams.SendIsAlive): Promise<Result<{ channelAddress: string }, Error>> {
+  private async sendIsAlive(
+    params: EngineParams.SendIsAlive,
+  ): Promise<Result<{ channelAddress: string }, EngineError>> {
+    const method = "sendIsAlive";
+    const methodId = getRandomBytes32();
+    this.logger.info({ params, method, methodId }, "Method started");
     const validate = ajv.compile(EngineParams.SendIsAliveSchema);
     const valid = validate(params);
     if (!valid) {
-      return Result.fail(new Error(validate.errors?.map((err) => err.message).join(",")));
+      return Result.fail(
+        new RpcError(RpcError.reasons.InvalidParams, params.channelAddress ?? "", this.publicIdentifier, {
+          invalidParamsError: validate.errors?.map((e) => e.message).join(","),
+          invalidParams: params,
+        }),
+      );
     }
     try {
       const channel = await this.store.getChannelState(params.channelAddress);
       if (!channel) {
-        return Result.fail(new EngineError("Channel not found", params.channelAddress));
+        return Result.fail(
+          new IsAliveError(IsAliveError.reasons.ChannelNotFound, params.channelAddress, this.signer.publicIdentifier),
+        );
       }
       const counterparty = this.signer.address === channel.alice ? channel.bobIdentifier : channel.aliceIdentifier;
-      return this.messaging.sendIsAliveMessage(Result.ok(params), counterparty, this.signer.publicIdentifier);
+      const res = await this.messaging.sendIsAliveMessage(
+        Result.ok(params),
+        counterparty,
+        this.signer.publicIdentifier,
+      );
+      this.logger.info(
+        { result: res.isError ? jsonifyError(res.getError()!) : res.getValue(), method, methodId },
+        "Method complete",
+      );
+      return res;
     } catch (e) {
-      return Result.fail(new EngineError(e.message, params.channelAddress));
+      return Result.fail(
+        new IsAliveError(IsAliveError.reasons.Unknown, params.channelAddress, this.signer.publicIdentifier, {
+          isAliveError: e.message,
+        }),
+      );
     }
   }
 
@@ -694,12 +911,19 @@ export class VectorEngine implements IVectorEngine {
   // NOTE: MUST be under protocol lock
   private async restoreState(
     params: EngineParams.RestoreState,
-  ): Promise<Result<ChannelRpcMethodsResponsesMap["chan_restoreState"], Error>> {
+  ): Promise<Result<ChannelRpcMethodsResponsesMap["chan_restoreState"], EngineError>> {
     const method = "restoreState";
+    const methodId = getRandomBytes32();
+    this.logger.info({ params, method, methodId }, "Method started");
     const validate = ajv.compile(EngineParams.RestoreStateSchema);
     const valid = validate(params);
     if (!valid) {
-      return Result.fail(new Error(validate.errors?.map((err) => err.message).join(",")));
+      return Result.fail(
+        new RpcError(RpcError.reasons.InvalidParams, "", this.publicIdentifier, {
+          invalidParamsError: validate.errors?.map((e) => e.message).join(","),
+          invalidParams: params,
+        }),
+      );
     }
 
     // Send message to counterparty, they will grab lock and
@@ -719,7 +943,7 @@ export class VectorEngine implements IVectorEngine {
 
     // Here you are under lock, verify things about channel
     // Create helper to send message allowing a release lock
-    const sendResponseToCounterparty = async (error?: string, context: any = {}) => {
+    const sendResponseToCounterparty = async (error?: Values<typeof RestoreError.reasons>, context: any = {}) => {
       if (!error) {
         const res = await this.messaging.sendRestoreStateMessage(
           Result.ok({
@@ -729,20 +953,18 @@ export class VectorEngine implements IVectorEngine {
           this.signer.publicIdentifier,
         );
         if (res.isError) {
-          error = "Restore failed: unable to ack";
-          context = { error: res.getError()!.message };
+          error = RestoreError.reasons.AckFailed;
+          context = { error: jsonifyError(res.getError()!) };
         } else {
           return Result.ok(channel);
         }
       }
 
       // handle error by returning it to counterparty && returning result
-      const err = new EngineError(error as string, channel.channelAddress, {
+      const err = new RestoreError(error, channel?.channelAddress ?? "", this.publicIdentifier, {
         ...context,
-        signer: this.signer.publicIdentifier,
-        chainId,
         method,
-        counterpartyIdentifier,
+        params,
       });
       await this.messaging.sendRestoreStateMessage(
         Result.fail(err),
@@ -754,7 +976,7 @@ export class VectorEngine implements IVectorEngine {
 
     // Verify data exists
     if (!channel || !activeTransfers) {
-      return sendResponseToCounterparty("Restore failed: no data for restore");
+      return sendResponseToCounterparty(RestoreError.reasons.NoData);
     }
 
     // Verify channel address is same as calculated
@@ -766,13 +988,12 @@ export class VectorEngine implements IVectorEngine {
       chainId,
     );
     if (calculated.isError) {
-      return sendResponseToCounterparty("Restore failed: could not verify channelAddress", {
-        error: calculated.getError()!.message,
-        ...calculated.getError()!.context,
+      return sendResponseToCounterparty(RestoreError.reasons.GetChannelAddressFailed, {
+        getChannelAddressError: jsonifyError(calculated.getError()!),
       });
     }
     if (calculated.getValue() !== channel.channelAddress) {
-      return sendResponseToCounterparty("Restore failed: invalid channelAddress", {
+      return sendResponseToCounterparty(RestoreError.reasons.InvalidChannelAddress, {
         calculated: calculated.getValue(),
       });
     }
@@ -785,16 +1006,15 @@ export class VectorEngine implements IVectorEngine {
       "both",
     );
     if (sigRes.isError) {
-      return sendResponseToCounterparty("Restore failed: invalid signatures", {
-        calculated: calculated.getValue(),
-        error: sigRes.getError()!.message,
+      return sendResponseToCounterparty(RestoreError.reasons.InvalidSignatures, {
+        recoveryError: sigRes.getError().message,
       });
     }
 
     // Verify transfers match merkleRoot
     const { root } = generateMerkleTreeData(activeTransfers);
     if (root !== channel.merkleRoot) {
-      return sendResponseToCounterparty("Restore failed: invalid merkleRoot", {
+      return sendResponseToCounterparty(RestoreError.reasons.InvalidMerkleRoot, {
         calculated: root,
         merkleRoot: channel.merkleRoot,
         activeTransfers: activeTransfers.map((t) => t.transferId),
@@ -804,14 +1024,14 @@ export class VectorEngine implements IVectorEngine {
     // Verify nothing with a sync-able nonce exists in store
     const existing = await this.getChannelState({ channelAddress: channel.channelAddress });
     if (existing.isError) {
-      return sendResponseToCounterparty("Restore failed: store.getChannelState faileds", {
-        error: existing.getError()?.message,
+      return sendResponseToCounterparty(RestoreError.reasons.CouldNotGetChannel, {
+        getChannelStateError: jsonifyError(existing.getError()!),
       });
     }
     const nonce = existing.getValue()?.nonce ?? 0;
     const diff = channel.nonce - nonce;
     if (diff <= 1 && channel.latestUpdate.type !== UpdateType.setup) {
-      return sendResponseToCounterparty("Restore failed: syncable state", {
+      return sendResponseToCounterparty(RestoreError.reasons.SyncableState, {
         existing: nonce,
         toRestore: channel.nonce,
       });
@@ -821,8 +1041,8 @@ export class VectorEngine implements IVectorEngine {
     try {
       await this.store.saveChannelStateAndTransfers(channel, activeTransfers);
     } catch (e) {
-      return sendResponseToCounterparty("Restore failed: could not save state", {
-        error: e.message,
+      return sendResponseToCounterparty(RestoreError.reasons.SaveChannelFailed, {
+        saveChannelStateAndTransfersError: e.message,
       });
     }
 
@@ -837,13 +1057,31 @@ export class VectorEngine implements IVectorEngine {
       chainId,
     });
 
+    this.logger.info(
+      {
+        result: returnVal.isError ? jsonifyError(returnVal.getError()!) : returnVal.getValue(),
+        method,
+        methodId,
+      },
+      "Method complete",
+    );
     return returnVal;
   }
 
   // DISPUTE METHODS
-  private async disputeChannel(
+  private async dispute(
     params: EngineParams.DisputeChannel,
-  ): Promise<Result<ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_dispute], Error>> {
+  ): Promise<Result<ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_dispute], EngineError>> {
+    const validate = ajv.compile(EngineParams.DisputeChannelSchema);
+    const valid = validate(params);
+    if (!valid) {
+      return Result.fail(
+        new RpcError(RpcError.reasons.InvalidParams, params.channelAddress ?? "", this.publicIdentifier, {
+          invalidParamsError: validate.errors?.map((e) => e.message).join(","),
+          invalidParams: params,
+        }),
+      );
+    }
     const channel = await this.getChannelState({ channelAddress: params.channelAddress });
     if (channel.isError) {
       return Result.fail(channel.getError()!);
@@ -851,7 +1089,7 @@ export class VectorEngine implements IVectorEngine {
     const state = channel.getValue();
     if (!state) {
       return Result.fail(
-        new OutboundChannelUpdateError(OutboundChannelUpdateError.reasons.ChannelNotFound, params as any),
+        new DisputeError(DisputeError.reasons.ChannelNotFound, params.channelAddress, this.publicIdentifier),
       );
     }
     const disputeRes = await this.chainService.sendDisputeChannelTx(state);
@@ -862,9 +1100,19 @@ export class VectorEngine implements IVectorEngine {
     return Result.ok({ transactionHash: disputeRes.getValue().hash });
   }
 
-  private async defundChannel(
+  private async defund(
     params: EngineParams.DefundChannel,
-  ): Promise<Result<ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_defund], Error>> {
+  ): Promise<Result<ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_defund], EngineError>> {
+    const validate = ajv.compile(EngineParams.DefundChannelSchema);
+    const valid = validate(params);
+    if (!valid) {
+      return Result.fail(
+        new RpcError(RpcError.reasons.InvalidParams, params.channelAddress ?? "", this.publicIdentifier, {
+          invalidParamsError: validate.errors?.map((e) => e.message).join(","),
+          invalidParams: params,
+        }),
+      );
+    }
     const channel = await this.getChannelState({ channelAddress: params.channelAddress });
     if (channel.isError) {
       return Result.fail(channel.getError()!);
@@ -872,11 +1120,13 @@ export class VectorEngine implements IVectorEngine {
     const state = channel.getValue();
     if (!state) {
       return Result.fail(
-        new OutboundChannelUpdateError(OutboundChannelUpdateError.reasons.ChannelNotFound, params as any),
+        new DisputeError(DisputeError.reasons.ChannelNotFound, params.channelAddress, this.publicIdentifier),
       );
     }
     if (!state.inDispute) {
-      return Result.fail(new Error("Channel not in dispute"));
+      return Result.fail(
+        new DisputeError(DisputeError.reasons.ChannelNotInDispute, params.channelAddress, this.publicIdentifier),
+      );
     }
     const disputeRes = await this.chainService.sendDefundChannelTx(state);
     if (disputeRes.isError) {
@@ -888,7 +1138,17 @@ export class VectorEngine implements IVectorEngine {
 
   private async disputeTransfer(
     params: EngineParams.DisputeTransfer,
-  ): Promise<Result<ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_disputeTransfer], Error>> {
+  ): Promise<Result<ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_disputeTransfer], EngineError>> {
+    const validate = ajv.compile(EngineParams.DisputeTransferSchema);
+    const valid = validate(params);
+    if (!valid) {
+      return Result.fail(
+        new RpcError(RpcError.reasons.InvalidParams, "", this.publicIdentifier, {
+          invalidParamsError: validate.errors?.map((e) => e.message).join(","),
+          invalidParams: params,
+        }),
+      );
+    }
     const transferRes = await this.getTransferState(params);
     if (transferRes.isError) {
       return Result.fail(transferRes.getError()!);
@@ -896,7 +1156,9 @@ export class VectorEngine implements IVectorEngine {
     const transfer = transferRes.getValue();
     if (!transfer) {
       return Result.fail(
-        new OutboundChannelUpdateError(OutboundChannelUpdateError.reasons.TransferNotFound, params as any),
+        new DisputeError(DisputeError.reasons.TransferNotFound, "", this.publicIdentifier, {
+          transferId: params.transferId,
+        }),
       );
     }
 
@@ -914,7 +1176,18 @@ export class VectorEngine implements IVectorEngine {
 
   private async defundTransfer(
     params: EngineParams.DefundTransfer,
-  ): Promise<Result<ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_defundTransfer], Error>> {
+  ): Promise<Result<ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_defundTransfer], EngineError>> {
+    const validate = ajv.compile(EngineParams.DefundTransferSchema);
+    const valid = validate(params);
+    if (!valid) {
+      return Result.fail(
+        new RpcError(RpcError.reasons.InvalidParams, "", this.publicIdentifier, {
+          invalidParamsError: validate.errors?.map((e) => e.message).join(","),
+          invalidParams: params,
+        }),
+      );
+    }
+
     const transferRes = await this.getTransferState(params);
     if (transferRes.isError) {
       return Result.fail(transferRes.getError()!);
@@ -922,12 +1195,18 @@ export class VectorEngine implements IVectorEngine {
     const transfer = transferRes.getValue();
     if (!transfer) {
       return Result.fail(
-        new OutboundChannelUpdateError(OutboundChannelUpdateError.reasons.TransferNotFound, params as any),
+        new DisputeError(DisputeError.reasons.TransferNotFound, "", this.publicIdentifier, {
+          transferId: params.transferId,
+        }),
       );
     }
 
     if (!transfer.inDispute) {
-      return Result.fail(new Error("Transfer not in dispute"));
+      return Result.fail(
+        new DisputeError(DisputeError.reasons.TransferNotDisputed, transfer.channelAddress, this.publicIdentifier, {
+          transferId: transfer.transferId,
+        }),
+      );
     }
 
     const defundRes = await this.chainService.sendDefundTransferTx(transfer);
@@ -949,15 +1228,23 @@ export class VectorEngine implements IVectorEngine {
     const validate = ajv.compile(EngineParams.RpcRequestSchema);
     const valid = validate(payload);
     if (!valid) {
-      // dont use result type since this could go over the wire
-      // TODO: how to represent errors over the wire?
       this.logger.error({ method: "request", payload, ...(validate.errors ?? {}) });
-      throw new Error(validate.errors?.map((err) => err.message).join(","));
+      throw new RpcError(
+        RpcError.reasons.InvalidRpcSchema,
+        payload.params?.channelAddress ?? "",
+        this.publicIdentifier,
+        {
+          invalidRpcRequest: payload,
+          invalidRpcRequestError: validate.errors?.map((err) => err.message).join(","),
+        },
+      );
     }
 
     const methodName = payload.method.replace("chan_", "");
     if (typeof this[methodName] !== "function") {
-      throw new Error(`Invalid method: ${methodName}`);
+      throw new RpcError(RpcError.reasons.InvalidMethod, payload.params?.channelAddress ?? "", this.publicIdentifier, {
+        payload,
+      });
     }
 
     // every method must be a result type

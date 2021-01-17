@@ -1,6 +1,15 @@
-import { ILockService, IMessagingService, LockError, LockInformation, Result } from "@connext/vector-types";
+import {
+  ILockService,
+  IMessagingService,
+  LockInformation,
+  NodeError,
+  Result,
+  jsonifyError,
+} from "@connext/vector-types";
 import { MemoryLockService } from "@connext/vector-utils";
 import { BaseLogger } from "pino";
+
+import { ServerNodeLockError } from "../helpers/errors";
 
 export class LockService implements ILockService {
   private constructor(
@@ -27,7 +36,7 @@ export class LockService implements ILockService {
     // this callback
     return this.messagingService.onReceiveLockMessage(
       this.publicIdentifier,
-      async (lockRequest: Result<LockInformation, LockError>, from: string, inbox: string) => {
+      async (lockRequest: Result<LockInformation, NodeError>, from: string, inbox: string) => {
         if (lockRequest.isError) {
           // Handle a lock failure here
           // TODO: is there anything that has to happen here?
@@ -43,8 +52,11 @@ export class LockService implements ILockService {
         }
         const { type, lockName, lockValue } = lockRequest.getValue();
         if (type === "acquire") {
+          let acqValue;
+          let method = "acquireLock";
           try {
-            const acqValue = await this.acquireLock(lockName, true);
+            acqValue = await this.acquireLock(lockName, true);
+            method = "respondToLockMessage";
             await this.messagingService.respondToLockMessage(inbox, Result.ok({ lockName, lockValue: acqValue, type }));
           } catch (e) {
             this.log.error(
@@ -56,12 +68,20 @@ export class LockService implements ILockService {
             );
             await this.messagingService.respondToLockMessage(
               inbox,
-              Result.fail(new LockError(e.message, lockName, { type })),
+              Result.fail(
+                new ServerNodeLockError(ServerNodeLockError.reasons.AcquireLockFailed, lockName, lockValue, {
+                  acqValue,
+                  failingMethod: method,
+                  lockError: e.message,
+                }),
+              ),
             );
           }
         } else if (type === "release") {
+          let method = "releaseLock";
           try {
             await this.releaseLock(lockName, lockValue!, true);
+            method = "respondToLockMessage";
             await this.messagingService.respondToLockMessage(inbox, Result.ok({ lockName, type }));
           } catch (e) {
             this.log.error(
@@ -73,7 +93,13 @@ export class LockService implements ILockService {
             );
             await this.messagingService.respondToLockMessage(
               inbox,
-              Result.fail(new LockError(e.message, lockName, { type })),
+              Result.fail(
+                new ServerNodeLockError(ServerNodeLockError.reasons.FailedToReleaseLock, lockName, lockValue, {
+                  failingMethod: method,
+                  releaseError: e.message,
+                  ...(e.context ?? {}),
+                }),
+              ),
             );
           }
         }
@@ -91,11 +117,18 @@ export class LockService implements ILockService {
         this.publicIdentifier,
       );
       if (res.isError) {
-        throw res.getError()!;
+        throw new ServerNodeLockError(ServerNodeLockError.reasons.AcquireMessageFailed, lockName, undefined, {
+          counterpartyPublicIdentifier,
+          isAlice,
+          messagingError: jsonifyError(res.getError()!),
+        });
       }
       const { lockValue } = res.getValue();
       if (!lockValue) {
-        throw new LockError("Could not get lock, successfully sent lock message", lockName);
+        throw new ServerNodeLockError(ServerNodeLockError.reasons.SentMessageAcquisitionFailed, lockName, lockValue, {
+          counterpartyPublicIdentifier,
+          isAlice,
+        });
       }
       this.log.debug({ method: "acquireLock", lockName, lockValue }, "Acquired lock");
       return lockValue;
@@ -117,7 +150,11 @@ export class LockService implements ILockService {
         this.publicIdentifier,
       );
       if (result.isError) {
-        throw result.getError()!;
+        throw new ServerNodeLockError(ServerNodeLockError.reasons.ReleaseMessageFailed, lockName, lockValue, {
+          messagingError: jsonifyError(result.getError()!),
+          counterpartyPublicIdentifier,
+          isAlice,
+        });
       }
       this.log.debug({ method: "releaseLock", lockName, lockValue }, "Released lock");
     }

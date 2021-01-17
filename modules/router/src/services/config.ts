@@ -1,18 +1,17 @@
 import { Result } from "@connext/vector-types";
+import { getAddress } from "@ethersproject/address";
 
 import { config, RebalanceProfile } from "../config";
-import { ForwardTransferError } from "../errors";
+import { ConfigServiceError } from "../errors";
 
-export const getRebalanceProfile = (
-  chainId: number,
-  assetId: string,
-): Result<RebalanceProfile, ForwardTransferError> => {
+export const getRebalanceProfile = (chainId: number, assetId: string): Result<RebalanceProfile, ConfigServiceError> => {
+  const asset = getAddress(assetId);
   const rebalanceProfile = config.rebalanceProfiles.find(
-    (profile) => profile.assetId === assetId && profile.chainId === chainId,
+    (profile) => profile.assetId === asset && profile.chainId === chainId,
   );
   if (!rebalanceProfile) {
     return Result.fail(
-      new ForwardTransferError(ForwardTransferError.reasons.UnableToGetRebalanceProfile, { chainId, assetId }),
+      new ConfigServiceError(ConfigServiceError.reasons.UnableToGetRebalanceProfile, chainId, assetId),
     );
   }
 

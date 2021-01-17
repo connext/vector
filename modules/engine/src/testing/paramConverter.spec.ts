@@ -11,6 +11,7 @@ import {
   TransferNames,
   ChainError,
   UpdateType,
+  jsonifyError,
 } from "@connext/vector-types";
 import {
   createTestChannelState,
@@ -25,15 +26,16 @@ import {
 import { expect } from "chai";
 import Sinon from "sinon";
 import { VectorChainReader, WithdrawCommitment } from "@connext/vector-contracts";
+import { getAddress } from "@ethersproject/address";
 import { BigNumber } from "@ethersproject/bignumber";
 import { AddressZero } from "@ethersproject/constants";
 
-import { InvalidTransferType } from "../errors";
 import {
   convertConditionalTransferParams,
   convertResolveConditionParams,
   convertWithdrawParams,
 } from "../paramConverter";
+import { ParameterConversionError } from "../errors";
 
 import { env } from "./env";
 
@@ -101,7 +103,8 @@ describe("ParamConverter", () => {
     };
 
     it("should fail if params.type is a name and chainReader.getRegisteredTransferByName fails", async () => {
-      chainReader.getRegisteredTransferByName.resolves(Result.fail(new ChainError("Failure")));
+      const chainErr = new ChainError("Failure");
+      chainReader.getRegisteredTransferByName.resolves(Result.fail(chainErr));
       const params: any = generateParams();
       // Set incorrect type
       params.conditionType = "FailingTest";
@@ -115,11 +118,17 @@ describe("ParamConverter", () => {
       });
       const ret = await convertConditionalTransferParams(params, signerA, channelState, chainAddresses, chainReader);
       expect(ret.isError).to.be.true;
-      expect(ret.getError()).to.contain(new InvalidTransferType("Failure"));
+      const err = ret.getError();
+      expect(err?.message).to.be.eq(ParameterConversionError.reasons.FailedToGetRegisteredTransfer);
+      expect(err?.context.channelAddress).to.be.eq(channelState.channelAddress);
+      expect(err?.context.publicIdentifier).to.be.eq(signerA.publicIdentifier);
+      expect(err?.context.params).to.be.deep.eq(params);
+      expect(err?.context.registryError).to.be.deep.eq(jsonifyError(chainErr));
     });
 
     it("should fail if params.type is an address and chainReader.getRegisteredTransferByDefinition fails", async () => {
-      chainReader.getRegisteredTransferByDefinition.resolves(Result.fail(new ChainError("Failure")));
+      const chainErr = new ChainError("Failure");
+      chainReader.getRegisteredTransferByDefinition.resolves(Result.fail(chainErr));
       const params: any = generateParams();
       // Set incorrect type
       params.type = getRandomAddress();
@@ -133,7 +142,12 @@ describe("ParamConverter", () => {
       });
       const ret = await convertConditionalTransferParams(params, signerA, channelState, chainAddresses, chainReader);
       expect(ret.isError).to.be.true;
-      expect(ret.getError()).to.contain(new InvalidTransferType("Failure"));
+      const err = ret.getError();
+      expect(err?.message).to.be.eq(ParameterConversionError.reasons.FailedToGetRegisteredTransfer);
+      expect(err?.context.channelAddress).to.be.eq(channelState.channelAddress);
+      expect(err?.context.publicIdentifier).to.be.eq(signerA.publicIdentifier);
+      expect(err?.context.params).to.be.deep.eq(params);
+      expect(err?.context.registryError).to.be.deep.eq(jsonifyError(chainErr));
     });
 
     it("should fail if initiator is receiver for same chain/network", async () => {
@@ -150,17 +164,21 @@ describe("ParamConverter", () => {
       const ret = await convertConditionalTransferParams(params, signerB, channelState, chainAddresses, chainReader);
 
       expect(ret.isError).to.be.true;
-      expect(ret.getError()).to.contain(new InvalidTransferType("An initiator cannot be a receiver on the same chain"));
+      const err = ret.getError();
+      expect(err?.message).to.be.eq(ParameterConversionError.reasons.CannotSendToSelf);
+      expect(err?.context.channelAddress).to.be.eq(channelState.channelAddress);
+      expect(err?.context.publicIdentifier).to.be.eq(signerA.publicIdentifier);
+      expect(err?.context.params).to.be.deep.eq(params);
     });
 
-    const runTest = async (params: any, result: CreateTransferParams, isUserA: boolean) => {
+    const runTest = (params: any, result: CreateTransferParams, isUserA: boolean) => {
       expect(result).to.deep.eq({
         channelAddress: params.channelAddress,
         balance: {
           amount: [params.amount, "0"],
           to: isUserA ? [signerA.address, signerB.address] : [signerB.address, signerA.address],
         },
-        assetId: params.assetId,
+        assetId: getAddress(params.assetId),
         transferDefinition: transferRegisteredInfo.definition,
         transferInitialState: {
           lockHash: params.details.lockHash,
@@ -212,7 +230,7 @@ describe("ParamConverter", () => {
           const params = { ...baseParams, recipientChainId: 2 };
 
           const result = await testSetup(params, isUserA);
-          runTest(params, result.getValue(), isUserA);
+          await runTest(params, result.getValue(), isUserA);
         });
         it("should work with default params.recipientChainId", async () => {
           const params = { ...baseParams, recipientChainId: undefined };
@@ -272,7 +290,7 @@ describe("ParamConverter", () => {
           const params = { ...baseParams, type: TransferNames.Withdraw };
 
           const result = await testSetup(params, isUserA);
-          runTest(params, result.getValue(), isUserA);
+          await runTest(params, result.getValue(), isUserA);
         });
         it("should work when params.type is an address (transferDefinition)", async () => {
           const params = { ...baseParams, type: getRandomBytes32() };
@@ -378,9 +396,11 @@ describe("ParamConverter", () => {
         channelAddress: channelState.channelAddress,
         balance: {
           amount: [BigNumber.from(params.amount).add(params.fee).toString(), "0"],
-          to: isUserA ? [params.recipient, channelState.bob] : [params.recipient, channelState.alice],
+          to: isUserA
+            ? [getAddress(params.recipient), channelState.bob]
+            : [getAddress(params.recipient), channelState.alice],
         },
-        assetId: params.assetId,
+        assetId: getAddress(params.assetId),
         transferDefinition: withdrawRegisteredInfo.definition,
         transferInitialState: {
           initiatorSignature: signature,
@@ -402,18 +422,24 @@ describe("ParamConverter", () => {
     it("should fail if signer fails to sign message", async () => {
       const params = generateParams();
       signerA.signMessage.rejects(new Error("fail"));
-      const { channelState, result } = await testSetup(params, true);
+      const { result } = await testSetup(params, true);
 
       expect(result.isError).to.be.true;
       expect(result.getError()).to.contain(new Error(`${signerA.publicIdentifier} failed to sign: fail`));
     });
     it("should fail if it cannot get registry information", async () => {
       const params = generateParams();
-      chainReader.getRegisteredTransferByName.resolves(Result.fail(new ChainError("Failure")));
+      const chainErr = new ChainError("Failure");
+      chainReader.getRegisteredTransferByName.resolves(Result.fail(chainErr));
       const { channelState, result } = await testSetup(params, true);
 
       expect(result.isError).to.be.true;
-      expect(result.getError()).to.contain(new InvalidTransferType("Failure"));
+      const err = result.getError();
+      expect(err?.message).to.be.eq(ParameterConversionError.reasons.FailedToGetRegisteredTransfer);
+      expect(err?.context.channelAddress).to.be.eq(channelState.channelAddress);
+      expect(err?.context.publicIdentifier).to.be.eq(signerA.publicIdentifier);
+      expect(err?.context.params).to.be.deep.eq(params);
+      expect(err?.context.registryError).to.be.deep.eq(jsonifyError(chainErr));
     });
 
     const users = ["A", "B"];
@@ -430,35 +456,35 @@ describe("ParamConverter", () => {
 
           const { channelState, result } = await testSetup(params, true);
 
-          runTest(params, channelState, result.getValue(), isUserA);
+          await runTest(params, channelState, result.getValue(), isUserA);
         });
         it("should work without provided params.fee", async () => {
           const params = { ...baseParams, fee: undefined };
 
           const { channelState, result } = await testSetup(params, true);
           const expectedParams = { ...baseParams, fee: "0" };
-          runTest(expectedParams, channelState, result.getValue(), isUserA);
+          await runTest(expectedParams, channelState, result.getValue(), isUserA);
         });
         it("should work with provided params.callTo", async () => {
           const params = { ...baseParams, callTo: AddressZero };
 
           const { channelState, result } = await testSetup(params, true);
 
-          runTest(params, channelState, result.getValue(), isUserA);
+          await runTest(params, channelState, result.getValue(), isUserA);
         });
         it("should work without provided params.callTo", async () => {
           const params = { ...baseParams, callTo: undefined };
 
           const { channelState, result } = await testSetup(params, true);
           const expectedParams = { ...baseParams, callTo: AddressZero };
-          runTest(expectedParams, channelState, result.getValue(), isUserA);
+          await runTest(expectedParams, channelState, result.getValue(), isUserA);
         });
         it("should work with provided params.callData", async () => {
           const params = { ...baseParams, callData: "0x" };
 
           const { channelState, result } = await testSetup(params, true);
 
-          runTest(params, channelState, result.getValue(), isUserA);
+          await runTest(params, channelState, result.getValue(), isUserA);
         });
         it("should work without provided params.callData", async () => {
           const params = { ...baseParams, callData: undefined };
@@ -466,7 +492,7 @@ describe("ParamConverter", () => {
           const { channelState, result } = await testSetup(params, true);
 
           const expectedParams = { ...baseParams, callData: "0x" };
-          runTest(expectedParams, channelState, result.getValue(), isUserA);
+          await runTest(expectedParams, channelState, result.getValue(), isUserA);
         });
       });
     }
