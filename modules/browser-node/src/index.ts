@@ -18,6 +18,8 @@ import {
   EngineEvents,
   ConditionalTransferCreatedPayload,
   FullChannelState,
+  jsonifyError,
+  VectorErrorJson,
 } from "@connext/vector-types";
 import {
   constructRpcRequest,
@@ -258,7 +260,7 @@ export class BrowserNode implements INodeService {
     const toAssetId = getAddress(params.toAssetId);
 
     const storeParams: CrossChainTransferParams = {
-      amount: amount,
+      amount,
       fromAssetId: fromAssetId,
       fromChainId: fromChainId,
       reconcileDeposit: reconcileDeposit ?? false,
@@ -542,8 +544,13 @@ export class BrowserNode implements INodeService {
   }
 
   // separate from init(), can eventually be called as part of that
-  async resumePendingCrossChainTransfers(): Promise<void> {
+  async resumePendingCrossChainTransfers(): Promise<{
+    [crossChainTransferId: string]: { withdrawalTx?: string; withdrawalAmount?: string; error?: VectorErrorJson };
+  }> {
     const transfers = getCrossChainTransfers();
+    const results: {
+      [crossChainTransferId: string]: { withdrawalTx?: string; withdrawalAmount?: string; error?: VectorErrorJson };
+    } = {};
     for (const transfer of transfers) {
       if (transfer.error) {
         this.logger.error({ transfer }, "Found errored transfer, TODO: handle these properly");
@@ -551,14 +558,31 @@ export class BrowserNode implements INodeService {
       }
       this.logger.info({ transfer }, "Starting pending crossChainTransfer");
       try {
-        await this.resumePendingCrossChainTransfer(transfer);
+        const transferRes = await this.resumePendingCrossChainTransfer(transfer);
+        results[transfer.crossChainTransferId] = transferRes;
       } catch (e) {
         this.logger.error({ e: e.message, ...transfer }, "Failed to resume transfer");
+        results[transfer.crossChainTransferId] = { error: jsonifyError(e) };
+        saveCrossChainTransfer(transfer.crossChainTransferId, transfer.status, {
+          amount: transfer.amount,
+          error: true,
+          fromAssetId: transfer.fromAssetId,
+          fromChainId: transfer.fromChainId,
+          reconcileDeposit: transfer.reconcileDeposit,
+          toAssetId: transfer.toAssetId,
+          toChainId: transfer.toChainId,
+          preImage: transfer.preImage,
+          withdrawalAddress: transfer.withdrawalAddress,
+          withdrawalAmount: transfer.withdrawalAmount,
+        });
       }
     }
+    return results;
   }
 
-  private async resumePendingCrossChainTransfer(transferData: StoredCrossChainTransfer) {
+  private async resumePendingCrossChainTransfer(
+    transferData: StoredCrossChainTransfer,
+  ): Promise<{ withdrawalTx?: string; withdrawalAmount?: string }> {
     const {
       amount,
       withdrawalAddress,
@@ -573,7 +597,7 @@ export class BrowserNode implements INodeService {
       withdrawalAmount,
     } = transferData;
 
-    await this.crossChainTransfer({
+    return this.crossChainTransfer({
       amount,
       fromAssetId,
       fromChainId,
