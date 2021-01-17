@@ -18,6 +18,7 @@ import {
 import { BaseLogger } from "pino";
 import { BigNumber } from "@ethersproject/bignumber";
 import { getRandomBytes32 } from "@connext/vector-utils";
+import { AddressZero } from "@ethersproject/constants";
 
 import { getSwappedAmount } from "./services/swap";
 import { IRouterStore, RouterUpdateType, RouterUpdateStatus, RouterStoredUpdate } from "./services/store";
@@ -27,7 +28,6 @@ import {
   attemptTransferWithCollateralization,
   transferWithCollateralization,
 } from "./services/transfer";
-import { AddressZero } from "@ethersproject/constants";
 
 export async function forwardTransferCreation(
   data: ConditionalTransferCreatedPayload,
@@ -766,6 +766,11 @@ const handlePendingUpdates = async (
         );
         erroredUpdates.push(routerUpdate);
       } else {
+        await store.setUpdateStatus(
+          routerUpdate.id,
+          RouterUpdateStatus.COMPLETE,
+          "Update complete: forwarded transfer creation",
+        );
         logger.info({ method, methodId, updateId: routerUpdate.id }, "Successfully handled checkIn update");
       }
       continue;
@@ -792,6 +797,11 @@ const handlePendingUpdates = async (
       );
       erroredUpdates.push(routerUpdate);
     } else {
+      await store.setUpdateStatus(
+        routerUpdate.id,
+        RouterUpdateStatus.COMPLETE,
+        "Update complete: forwarded transfer resolution",
+      );
       logger.info({ method, methodId, updateId: routerUpdate.id }, "Successfully handled update");
     }
   }
