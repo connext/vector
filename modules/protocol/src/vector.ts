@@ -130,8 +130,11 @@ export class Vector implements IVectorProtocol {
   private async executeUpdate(
     params: UpdateParams<any>,
   ): Promise<Result<FullChannelState, OutboundChannelUpdateError>> {
+    const method = "executeUpdate";
+    const methodId = getRandomBytes32();
     this.logger.debug({
-      method: "executeUpdate",
+      method,
+      methodId,
       step: "start",
       params,
       channelAddress: params.channelAddress,
@@ -167,12 +170,9 @@ export class Vector implements IVectorProtocol {
     try {
       await this.lockService.releaseLock(params.channelAddress, key, isAlice, counterpartyIdentifier);
     } catch (e) {
-      return Result.fail(
-        new OutboundChannelUpdateError(OutboundChannelUpdateError.reasons.ReleaseLockFailed, params, channel, {
-          lockError: e.message,
-          outboundResult: outboundRes.toJson(),
-        }),
-      );
+      // lock errors should not cause downstream errors because the lock
+      // will time out eventually and the update has been saved
+      this.logger.error({ method, methodId, error: jsonifyError(e) }, "Lock release failed, update is saved.");
     }
 
     return outboundRes;

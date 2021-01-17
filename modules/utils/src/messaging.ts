@@ -20,6 +20,7 @@ import axios, { AxiosResponse } from "axios";
 import pino, { BaseLogger } from "pino";
 import { INatsService, natsServiceFactory } from "ts-natsutil";
 
+import { delay } from "./delay";
 import { isNode } from "./env";
 import { safeJsonParse, safeJsonStringify } from "./json";
 
@@ -242,16 +243,14 @@ export class NatsBasicMessagingService implements IBasicMessaging {
     this.log.debug({ method, subject: subscriptionSubject }, `Subscription created`);
   }
 
-  // TODO: error typing
-  protected async sendMessage<T = any, R = any>(
+  private async sendMessage<T = any, R = any>(
     data: Result<T, any>,
     subjectSuffix: string,
     to: string,
     from: string,
     timeout: number,
-    numRetries: number,
     method: string,
-  ): Promise<Result<R, any>> {
+  ): Promise<Result<R>> {
     this.assertConnected();
     const subject = `${to}.${from}.${subjectSuffix}`;
     try {
@@ -283,6 +282,31 @@ export class NatsBasicMessagingService implements IBasicMessaging {
     }
   }
 
+  // TODO: error typing
+  protected async sendMessageWithRetries<T = any, R = any>(
+    data: Result<T, any>,
+    subjectSuffix: string,
+    to: string,
+    from: string,
+    timeout: number,
+    numRetries: number,
+    method: string,
+  ): Promise<Result<R, any>> {
+    let result: Result<R>;
+    for (let attempt = 1; attempt++; attempt <= numRetries) {
+      result = await this.sendMessage(data, subjectSuffix, to, from, timeout, method);
+      if (result.isError && result.getError()!.message === MessagingError.reasons.Timeout) {
+        this.log.warn({ attempt, numRetries }, "Message timed out, retrying");
+        // wait a bit
+        await delay(1000);
+        continue;
+      }
+      // not an error, break
+      break;
+    }
+    return result;
+  }
+
   protected parseIncomingMessage<R>(msg: any): { result: Result<R, any>; parsed: any } {
     const parsedMsg = typeof msg === `string` ? safeJsonParse(msg) : msg;
     const parsedData = typeof msg.data === `string` ? safeJsonParse(msg.data) : msg.data;
@@ -306,7 +330,7 @@ export class NatsMessagingService extends NatsBasicMessagingService implements I
     timeout = 30_000,
     numRetries = 0,
   ): Promise<Result<{ update: ChannelUpdate<any>; previousUpdate: ChannelUpdate<any> }, ProtocolError>> {
-    return this.sendMessage(
+    return this.sendMessageWithRetries(
       Result.ok({ update: channelUpdate, previousUpdate }),
       "protocol",
       channelUpdate.toIdentifier,
@@ -353,7 +377,15 @@ export class NatsMessagingService extends NatsBasicMessagingService implements I
     timeout?: number,
     numRetries?: number,
   ): Promise<Result<{ channel: FullChannelState; activeTransfers: FullTransferState[] } | void, EngineError>> {
-    return this.sendMessage(restoreData, "restore", to, from, timeout, numRetries, "sendRestoreStateMessage");
+    return this.sendMessageWithRetries(
+      restoreData,
+      "restore",
+      to,
+      from,
+      timeout,
+      numRetries,
+      "sendRestoreStateMessage",
+    );
   }
 
   async onReceiveRestoreStateMessage(
@@ -384,7 +416,7 @@ export class NatsMessagingService extends NatsBasicMessagingService implements I
     numRetries = 0,
   ): Promise<Result<{ channelAddress: string }, MessagingError>> {
     const method = "sendSetupMessage";
-    return this.sendMessage(setupInfo, "setup", to, from, timeout, numRetries, method);
+    return this.sendMessageWithRetries(setupInfo, "setup", to, from, timeout, numRetries, method);
   }
 
   async onReceiveSetupMessage(
@@ -411,7 +443,7 @@ export class NatsMessagingService extends NatsBasicMessagingService implements I
     timeout = 30_000,
     numRetries = 0,
   ): Promise<Result<undefined, VectorError>> {
-    return this.sendMessage(
+    return this.sendMessageWithRetries(
       requestCollateralParams,
       "request-collateral",
       to,
@@ -449,7 +481,7 @@ export class NatsMessagingService extends NatsBasicMessagingService implements I
     timeout = 30_000, // TODO this timeout is copied from memolock
     numRetries = 0,
   ): Promise<Result<LockInformation, NodeError>> {
-    return this.sendMessage(lockInfo, "lock", to, from, timeout, numRetries, "sendLockMessage");
+    return this.sendMessageWithRetries(lockInfo, "lock", to, from, timeout, numRetries, "sendLockMessage");
   }
 
   async onReceiveLockMessage(
@@ -472,7 +504,7 @@ export class NatsMessagingService extends NatsBasicMessagingService implements I
     timeout?: number,
     numRetries?: number,
   ): Promise<Result<{ channelAddress: string }, VectorError>> {
-    return this.sendMessage(isAlive, "isalive", to, from, timeout, numRetries, "sendIsAliveMessage");
+    return this.sendMessageWithRetries(isAlive, "isalive", to, from, timeout, numRetries, "sendIsAliveMessage");
   }
 
   onReceiveIsAliveMessage(
@@ -499,7 +531,15 @@ export class NatsMessagingService extends NatsBasicMessagingService implements I
     timeout?: number,
     numRetries?: number,
   ): Promise<Result<RouterConfigResponse, RouterError | MessagingError>> {
-    return this.sendMessage(configRequest, "config", to, from, timeout, numRetries, "sendRouterConfigMessage");
+    return this.sendMessageWithRetries(
+      configRequest,
+      "config",
+      to,
+      from,
+      timeout,
+      numRetries,
+      "sendRouterConfigMessage",
+    );
   }
   ////////////
 }
