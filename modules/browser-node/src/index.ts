@@ -37,6 +37,7 @@ import { DirectProvider, IframeChannelProvider, IRpcChannelProvider } from "./ch
 import {
   CrossChainTransferParams,
   CrossChainTransferStatus,
+  getCrossChainTransfer,
   getCrossChainTransfers,
   removeCrossChainTransfer,
   saveCrossChainTransfer,
@@ -151,6 +152,22 @@ export class BrowserNode implements INodeService {
     node.channelProvider = new DirectProvider(engine);
     node.publicIdentifier = config.signer.publicIdentifier;
     node.signerAddress = config.signer.address;
+
+    // Add listener for cross chain transfer cancellations
+    node.on(EngineEvents.CONDITIONAL_TRANSFER_RESOLVED, (data) => {
+      // remove from the storage if sender transfer was canceled
+      const routingId = data.transfer.meta?.routingId;
+      if (!routingId) {
+        return;
+      }
+      const resolver = Object.values(data.transfer.transferResolver)[0];
+      if (resolver !== HashZero) {
+        return;
+      }
+      node.logger.warn({ transfer: data.transfer }, "Transfer cancelled, removing from store");
+      // remove from store
+      removeCrossChainTransfer(routingId);
+    });
     return node;
   }
 
@@ -201,6 +218,22 @@ export class BrowserNode implements INodeService {
         this.logger.info({ channel, chainId });
       }),
     );
+
+    // Add listener for cross chain transfer cancellations
+    this.on(EngineEvents.CONDITIONAL_TRANSFER_RESOLVED, (data) => {
+      // remove from the storage if sender transfer was canceled
+      const routingId = data.transfer.meta?.routingId;
+      if (!routingId) {
+        return;
+      }
+      const resolver = Object.values(data.transfer.transferResolver)[0];
+      if (resolver !== HashZero) {
+        return;
+      }
+      this.logger.warn({ transfer: data.transfer }, "Transfer cancelled, removing from store");
+      // remove from store
+      removeCrossChainTransfer(routingId);
+    });
   }
 
   // IFRAME SPECIFIC
@@ -301,10 +334,17 @@ export class BrowserNode implements INodeService {
     }
 
     const crossChainTransferId = params.crossChainTransferId ?? getRandomBytes32();
-    saveCrossChainTransfer(crossChainTransferId, CrossChainTransferStatus.INITIAL, storeParams);
+    // add to stored transfers
+    saveCrossChainTransfer(crossChainTransferId, startStage, storeParams);
 
     const { meta, ...res } = params;
-    const updatedMeta = { ...res, crossChainTransferId, routingId: crossChainTransferId, ...(meta ?? {}) };
+    const updatedMeta = {
+      ...res,
+      crossChainTransferId,
+      routingId: crossChainTransferId,
+      requireOnline: true,
+      ...(meta ?? {}),
+    };
 
     if (startStage < CrossChainTransferStatus.DEPOSITED) {
       if (reconcileDeposit) {
@@ -332,18 +372,6 @@ export class BrowserNode implements INodeService {
 
     let senderTransferId = "";
     if (startStage < CrossChainTransferStatus.TRANSFER_1) {
-      // remove from the storage if sender transfer was canceled
-      this.on(EngineEvents.CONDITIONAL_TRANSFER_RESOLVED, (data) => {
-        if (
-          data.transfer.meta.routingId === crossChainTransferId &&
-          data.channelAddress === senderChannel.channelAddress &&
-          Object.values(data.transfer.transferResolver)[0] === HashZero
-        ) {
-          this.logger.warn({ transfer: data.transfer }, "Transfer cancelled, removing from store");
-          removeCrossChainTransfer(crossChainTransferId);
-        }
-      });
-
       const transferParams = {
         amount: amount,
         assetId: fromAssetId,
@@ -373,10 +401,10 @@ export class BrowserNode implements INodeService {
       saveCrossChainTransfer(crossChainTransferId, CrossChainTransferStatus.TRANSFER_1, storeParams);
     }
 
-    let receiverTransferData: ConditionalTransferCreatedPayload | undefined;
+    let receiverTransferData: ConditionalTransferCreatedPayload | string | undefined;
     let withdrawalAmount = params.withdrawalAmount;
     if (startStage < CrossChainTransferStatus.TRANSFER_2) {
-      // first try to pull the transfer from store in case this was called through the reclaimPendingCrossChainTransfer function
+      // first try to pull the transfer from store in case this was called through the resumePendingCrossChainTransfer function
       const receiverTransferDataPromise = new Promise<ConditionalTransferCreatedPayload>((res) => {
         this.on(EngineEvents.CONDITIONAL_TRANSFER_CREATED, (data) => {
           if (
@@ -400,7 +428,22 @@ export class BrowserNode implements INodeService {
       this.logger.info({ existingReceiverTransfer }, "Existing receiver transfer");
 
       if (!existingReceiverTransfer) {
-        receiverTransferData = await receiverTransferDataPromise;
+        // NOTE: i know it is dumb to do this on a setInterval. i know that.
+        // i'm doing it this way to avoid adding excess listeners
+        let clear: NodeJS.Timeout | undefined = undefined;
+        const senderTransferCancelledPromise = new Promise<string>((res) => {
+          clear = setInterval(() => {
+            const stored = getCrossChainTransfer(crossChainTransferId);
+            if (stored) {
+              return;
+            }
+            res("Sender transfer cancelled");
+          }, 500);
+        });
+        receiverTransferData = await Promise.race([receiverTransferDataPromise, senderTransferCancelledPromise]);
+        if (clear) {
+          clearInterval(clear);
+        }
         if (!receiverTransferData) {
           this.logger.error(
             { routingId: crossChainTransferId, channelAddress: receiverChannel.channelAddress },
@@ -412,6 +455,16 @@ export class BrowserNode implements INodeService {
           });
           throw new CrossChainTransferError(
             CrossChainTransferError.reasons.ReceiverEventMissed,
+            this.publicIdentifier,
+            params,
+            { senderTransfer: senderTransferId, preImage },
+          );
+        }
+        if (typeof receiverTransferData === "string") {
+          // Sender transfer was cancelled, removed from
+          // store
+          throw new CrossChainTransferError(
+            CrossChainTransferError.reasons.SenderTransferCancelled,
             this.publicIdentifier,
             params,
             { senderTransfer: senderTransferId, preImage },
@@ -450,13 +503,18 @@ export class BrowserNode implements INodeService {
     let withdrawalTx: string | undefined;
     const withdrawalMeta = { ...res, crossChainTransferId, ...(meta ?? {}) };
     if (withdrawalAddress) {
-      withdrawalAmount = params.withdrawalAmount ?? receiverTransferData?.transfer.balance.amount[0];
+      withdrawalAmount =
+        params.withdrawalAmount ??
+        (receiverTransferData as ConditionalTransferCreatedPayload)?.transfer.balance.amount[0];
       if (!withdrawalAmount) {
         throw new CrossChainTransferError(
           CrossChainTransferError.reasons.MissingWithdrawalAmount,
           this.publicIdentifier,
           params,
-          { senderTransfer: senderTransferId, receiverTransfer: receiverTransferData?.transfer.transferId },
+          {
+            senderTransfer: senderTransferId,
+            receiverTransfer: (receiverTransferData as ConditionalTransferCreatedPayload)?.transfer.transferId,
+          },
         );
       }
       this.logger.info({ withdrawalAddress: withdrawalAddress, withdrawalAmount }, "Withdrawing to configured address");
@@ -478,24 +536,29 @@ export class BrowserNode implements INodeService {
       this.logger.info({ withdrawal }, "Withdrawal completed");
       withdrawalTx = withdrawal.transactionHash;
     }
+    // remove from store
     removeCrossChainTransfer(crossChainTransferId);
     return { withdrawalTx, withdrawalAmount };
   }
 
   // separate from init(), can eventually be called as part of that
-  async reclaimPendingCrossChainTransfers(): Promise<void> {
+  async resumePendingCrossChainTransfers(): Promise<void> {
     const transfers = await getCrossChainTransfers();
     for (const transfer of transfers) {
-      this.logger.info({ transfer }, "Starting pending crossChainTransfer");
       if (transfer.error) {
         this.logger.error({ transfer }, "Found errored transfer, TODO: handle these properly");
         continue;
       }
-      await this.reclaimPendingCrossChainTransfer(transfer);
+      this.logger.info({ transfer }, "Starting pending crossChainTransfer");
+      try {
+        await this.resumePendingCrossChainTransfer(transfer);
+      } catch (e) {
+        this.logger.error({ e: e.message, ...transfer }, "Failed to resume transfer");
+      }
     }
   }
 
-  private async reclaimPendingCrossChainTransfer(transferData: StoredCrossChainTransfer) {
+  private async resumePendingCrossChainTransfer(transferData: StoredCrossChainTransfer) {
     const {
       amount,
       withdrawalAddress,
