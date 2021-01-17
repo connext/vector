@@ -97,8 +97,8 @@ export async function outbound(
       {
         method,
         methodId,
-        update: update.nonce,
-        counterparty: (error as InboundChannelUpdateError).context.update.nonce,
+        proposed: update.nonce,
+        error: jsonifyError(error),
       },
       `Behind, syncing and retrying`,
     );
@@ -404,6 +404,16 @@ const syncStateAndRecreateUpdate = async (
   // parameters.
 
   const counterpartyUpdate = receivedError.context.update;
+  if (!counterpartyUpdate) {
+    return Result.fail(
+      new OutboundChannelUpdateError(
+        OutboundChannelUpdateError.reasons.NoUpdateToSync,
+        attemptedParams,
+        previousState,
+        { receivedError: jsonifyError(receivedError) },
+      ),
+    );
+  }
 
   // make sure you *can* sync
   const diff = counterpartyUpdate.nonce - (previousState?.nonce ?? 0);
