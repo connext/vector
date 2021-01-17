@@ -4,6 +4,7 @@ import {
   ChannelRpcMethodsPayloadMap,
   TransferNames,
   EngineEvents,
+  FullChannelState,
 } from "@connext/vector-types";
 import {
   expect,
@@ -22,7 +23,7 @@ import "mock-local-storage";
 (window as any).localStorage = global.localStorage;
 
 import { DirectProvider } from "../channelProvider";
-import { BrowserNode } from "../index";
+import { BrowserNode, UserSuppliedCrossChainTransferParams } from "../index";
 import * as crossChainStore from "../services/crossChainTransferStore";
 
 import { env } from "./env";
@@ -39,12 +40,12 @@ const depositChainId = 1337;
 const withdrawChainId = 1338;
 const depositAssetId = mkAddress("0x1337");
 const withdrawAssetId = mkAddress("0x1338");
-const transferAmount = "1";
 
 describe("BrowserNode", () => {
   let directProvider: Sinon.SinonStubbedInstance<DirectProvider>;
   let saveCrossChainTransferStub: Sinon.SinonStub;
   let getCrossChainTransferStub: Sinon.SinonStub;
+  let browserNode: BrowserNode;
 
   beforeEach(async () => {
     // provider stub
@@ -53,6 +54,18 @@ describe("BrowserNode", () => {
     // local storage stubs
     saveCrossChainTransferStub = Sinon.stub(crossChainStore, "saveCrossChainTransfer");
     getCrossChainTransferStub = Sinon.stub(crossChainStore, "getCrossChainTransfer");
+
+    // create browser node
+    // create browser instance
+    browserNode = new BrowserNode({
+      logger: log,
+      routerPublicIdentifier,
+      supportedChains: [1337, 1338],
+      chainProviders: { [depositChainId]: "http://localhost:8545", [withdrawChainId]: "http://localhost:8546" },
+    });
+    // TODO: set these by connecting or initing!]
+    browserNode.channelProvider = directProvider as any;
+    browserNode.publicIdentifier = senderPublicIdentifier;
   });
 
   afterEach(async () => {
@@ -76,8 +89,24 @@ describe("BrowserNode", () => {
     });
   };
 
-  it.only("should be able to make crossChain transfer for ETH", async () => {
-    // channel states
+  // This will create stubs that will allow for a happy-case transfer to
+  // succeed based on the passed in context
+  type CrossChainTestContext = {
+    depositChannelState: FullChannelState;
+    withdrawChannelState: FullChannelState;
+    depositTransferId: string;
+    withdrawTransferId: string;
+    crossChainTransferId: string;
+    transferAmount: string;
+    withdrawTx: string;
+    withdrawalAddress?: string;
+    reconcileDeposit?: boolean;
+    startStage?: number;
+    preImage?: string;
+    withdrawalAmount?: string;
+  };
+
+  const createCrossChainTestContext = (overrides: Partial<CrossChainTestContext> = {}): CrossChainTestContext => {
     const { channel: depositChannelState } = createTestChannelState("setup", {
       alice: routerSigner,
       aliceIdentifier: routerPublicIdentifier,
@@ -101,32 +130,52 @@ describe("BrowserNode", () => {
       },
     });
     const withdrawTransferId = getRandomBytes32();
-
-    // create browser instance
-    const browserNode = new BrowserNode({
-      logger: log,
-      routerPublicIdentifier,
-      supportedChains: [1337, 1338],
-      chainProviders: { [depositChainId]: "http://localhost:8545", [withdrawChainId]: "http://localhost:8546" },
-    });
-    // TODO: set these by connecting or initing!]
-    browserNode.channelProvider = directProvider as any;
-    browserNode.publicIdentifier = senderPublicIdentifier;
-
-    // Create test params
     const crossChainTransferId = getRandomBytes32();
     const withdrawalAddress = getRandomAddress();
-    const params = {
-      amount: transferAmount,
+    const transferAmount = "12345";
+    return {
+      withdrawTx: mkHash("0x1338eeeaaa"),
+      depositChannelState,
+      withdrawChannelState,
+      depositTransferId,
+      withdrawTransferId,
+      crossChainTransferId,
+      transferAmount,
+      withdrawalAddress,
+      reconcileDeposit: true,
+      startStage: undefined,
+      preImage: undefined,
+      withdrawalAmount: undefined,
+      ...overrides,
+    };
+  };
+
+  const prepEnv = (
+    overrides: Partial<CrossChainTestContext> = {},
+  ): { ctx: CrossChainTestContext; params: UserSuppliedCrossChainTransferParams } => {
+    const ctx = createCrossChainTestContext(overrides);
+    let params: UserSuppliedCrossChainTransferParams = {
+      amount: ctx.transferAmount,
       fromChainId: depositChainId,
       fromAssetId: depositAssetId,
       toChainId: withdrawChainId,
       toAssetId: withdrawAssetId,
-      reconcileDeposit: true,
-      withdrawalAddress,
-      crossChainTransferId,
+      reconcileDeposit: ctx.reconcileDeposit,
+      withdrawalAddress: ctx.withdrawalAddress,
+      crossChainTransferId: ctx.crossChainTransferId,
+      startStage: ctx.startStage,
+      withdrawalAmount: ctx.withdrawalAmount ?? ctx.transferAmount,
     };
+    if (ctx.preImage) {
+      params = {
+        ...params,
+        preImage: ctx.preImage,
+      };
+    }
 
+    //////////////////////////////
+    //////// Setup mocks ////////
+    /////////////////////////////
     // mock out all calls to `send` in the crossChainTransfer function
     // get sender channel
     stubWithArgsVerification(
@@ -136,7 +185,7 @@ describe("BrowserNode", () => {
         chainId: depositChainId,
         alice: routerPublicIdentifier,
       },
-      depositChannelState,
+      ctx.depositChannelState,
     );
 
     // get receiver channel
@@ -147,7 +196,7 @@ describe("BrowserNode", () => {
         chainId: withdrawChainId,
         alice: routerPublicIdentifier,
       },
-      withdrawChannelState,
+      ctx.withdrawChannelState,
     );
 
     // get router config
@@ -176,9 +225,9 @@ describe("BrowserNode", () => {
       ChannelRpcMethods.chan_deposit,
       {
         assetId: depositAssetId,
-        channelAddress: depositChannelState.channelAddress,
+        channelAddress: ctx.depositChannelState.channelAddress,
       },
-      { channelAddress: depositChannelState.channelAddress },
+      { channelAddress: ctx.depositChannelState.channelAddress },
     );
 
     // get sender channel post deposit
@@ -186,9 +235,9 @@ describe("BrowserNode", () => {
       4,
       ChannelRpcMethods.chan_getChannelState,
       {
-        channelAddress: depositChannelState.channelAddress,
+        channelAddress: ctx.depositChannelState.channelAddress,
       },
-      depositChannelState,
+      ctx.depositChannelState,
     );
 
     // sender creates conditional transfer
@@ -196,25 +245,25 @@ describe("BrowserNode", () => {
       5,
       ChannelRpcMethods.chan_createTransfer,
       {
-        amount: transferAmount,
+        amount: ctx.transferAmount,
         assetId: depositAssetId,
-        channelAddress: depositChannelState.channelAddress,
+        channelAddress: ctx.depositChannelState.channelAddress,
         type: TransferNames.HashlockTransfer,
         recipient: senderPublicIdentifier,
         recipientAssetId: withdrawAssetId,
         recipientChainId: withdrawChainId,
         meta: {
-          routingId: crossChainTransferId,
-          crossChainTransferId,
+          routingId: ctx.crossChainTransferId,
+          crossChainTransferId: ctx.crossChainTransferId,
           requireOnline: true,
         },
       },
       {
-        ...depositChannelState,
+        ...ctx.depositChannelState,
         latestUpdate: {
           details: {
-            transferId: depositTransferId,
-            meta: { routingId: crossChainTransferId },
+            transferId: ctx.depositTransferId,
+            meta: { routingId: ctx.crossChainTransferId },
           },
         },
       },
@@ -225,35 +274,35 @@ describe("BrowserNode", () => {
       6,
       ChannelRpcMethods.chan_getTransferStateByRoutingId,
       {
-        channelAddress: withdrawChannelState.channelAddress,
-        routingId: crossChainTransferId,
+        channelAddress: ctx.withdrawChannelState.channelAddress,
+        routingId: ctx.crossChainTransferId,
       },
       undefined,
     );
 
     // sender transfer should not be cancelled (left in store)
     // NOTE: this just needs to return any object
-    getCrossChainTransferStub.returns({ crossChainTransferId });
+    getCrossChainTransferStub.returns({ crossChainTransferId: ctx.crossChainTransferId });
 
     // resolve on with ConditionalTransferCreatedPayload
     const withdrawTransfer = createTestFullHashlockTransferState({
-      channelAddress: withdrawChannelState.channelAddress,
+      channelAddress: ctx.withdrawChannelState.channelAddress,
       chainId: withdrawChainId,
       initiator: routerSigner,
       initiatorIdentifier: routerPublicIdentifier,
       responder: senderPublicIdentifier,
       responderIdentifier: senderSigner,
       assetId: withdrawAssetId,
-      transferId: withdrawTransferId,
-      meta: { routingId: crossChainTransferId },
-      balance: { to: [routerSigner, senderSigner], amount: [transferAmount, "0"] },
+      transferId: ctx.withdrawTransferId,
+      meta: { routingId: ctx.crossChainTransferId },
+      balance: { to: [routerSigner, senderSigner], amount: [ctx.transferAmount, "0"] },
     });
     directProvider.on.callsFake((event, callback) => {
       expect(event).to.be.eq(EngineEvents.CONDITIONAL_TRANSFER_CREATED);
       const payload = {
         aliceIdentifier: routerPublicIdentifier,
         bobIdentifier: senderPublicIdentifier,
-        channelAddress: withdrawChannelState.channelAddress,
+        channelAddress: ctx.withdrawChannelState.channelAddress,
         channelBalance: { to: [routerSigner, senderSigner], amount: ["10", "231"] },
         transfer: withdrawTransfer,
         conditionType: TransferNames.HashlockTransfer,
@@ -266,50 +315,54 @@ describe("BrowserNode", () => {
       7,
       ChannelRpcMethods.chan_resolveTransfer,
       {
-        transferId: withdrawTransferId,
-        channelAddress: withdrawChannelState.channelAddress,
+        transferId: ctx.withdrawTransferId,
+        channelAddress: ctx.withdrawChannelState.channelAddress,
       },
       {
-        ...withdrawChannelState,
+        ...ctx.withdrawChannelState,
         latestUpdate: {
           details: {
-            transferId: withdrawTransferId,
-            meta: { routingId: crossChainTransferId },
+            transferId: ctx.withdrawTransferId,
+            meta: { routingId: ctx.crossChainTransferId },
           },
         },
       },
     );
 
     // withdraw from receiver channel
-    const withdrawTx = mkHash("0x1338eeeaaa");
     stubWithArgsVerification(
       8,
       ChannelRpcMethods.chan_withdraw,
       {
-        channelAddress: withdrawChannelState.channelAddress,
+        channelAddress: ctx.withdrawChannelState.channelAddress,
         assetId: withdrawAssetId,
-        amount: transferAmount,
+        amount: ctx.transferAmount,
         recipient: params.withdrawalAddress,
       },
       {
         channel: {
-          ...withdrawChannelState,
+          ...ctx.withdrawChannelState,
           latestUpdate: {
             details: {
-              transferId: withdrawTransferId,
-              meta: { routingId: crossChainTransferId },
+              transferId: ctx.withdrawTransferId,
+              meta: { routingId: ctx.crossChainTransferId },
             },
           },
         },
-        transactionHash: withdrawTx,
+        transactionHash: ctx.withdrawTx,
       },
     );
 
-    // assert each call to saveCrossChainTransfer happens properly
+    return { ctx, params };
+  };
+
+  it.only("should be able to make crossChain transfer for ETH", async () => {
+    // Create test params
+    const { ctx, params } = prepEnv();
 
     const result = await browserNode.crossChainTransfer(params);
     console.log("result: ", result);
-    expect(result).to.containSubset({ withdrawalTx: withdrawTx, withdrawalAmount: transferAmount });
+    expect(result).to.containSubset({ withdrawalTx: ctx.withdrawTx, withdrawalAmount: ctx.transferAmount });
 
     ///////// Verify all local storage calls
     // save after verifying params
@@ -317,21 +370,21 @@ describe("BrowserNode", () => {
     const { crossChainTransferId: id, ...res } = params;
     // first call -- save initial transfer state
     expect(saveTransferCalls[0].args).to.containSubset([
-      crossChainTransferId,
+      ctx.crossChainTransferId,
       crossChainStore.CrossChainTransferStatus.INITIAL,
       { ...res, error: false },
     ]);
 
     // second call -- save deposit transfer state
     expect(saveTransferCalls[1].args).to.containSubset([
-      crossChainTransferId,
+      ctx.crossChainTransferId,
       crossChainStore.CrossChainTransferStatus.DEPOSITED,
       { ...res, error: false },
     ]);
 
     // third call -- save sender create transfer state
     expect(saveTransferCalls[2].args).to.containSubset([
-      crossChainTransferId,
+      ctx.crossChainTransferId,
       crossChainStore.CrossChainTransferStatus.TRANSFER_1,
       { ...res, error: false },
     ]);
@@ -339,9 +392,9 @@ describe("BrowserNode", () => {
 
     // fourth call -- save receiver create transfer state
     expect(saveTransferCalls[3].args).to.containSubset([
-      crossChainTransferId,
+      ctx.crossChainTransferId,
       crossChainStore.CrossChainTransferStatus.TRANSFER_2,
-      { ...res, withdrawalAmount: transferAmount, error: false },
+      { ...res, withdrawalAmount: ctx.transferAmount, error: false },
     ]);
     expect(saveTransferCalls[3].args[2].preImage).to.be.ok;
   });
