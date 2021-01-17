@@ -25,21 +25,21 @@ export type StoredCrossChainTransfer = CrossChainTransferParams & {
 
 // const OLD_CROSS_CHAIN_TRANSFER_LOCAL_STORAGE_KEY = "crossChainTransfer";
 const CROSS_CHAIN_TRANSFER_LOCAL_STORAGE_KEY = "pendingCrossChainTransfers";
+const getLocalStorageKey = (crossChainTransferId: string): string =>
+  `${CROSS_CHAIN_TRANSFER_LOCAL_STORAGE_KEY}_${crossChainTransferId}`;
 
-export async function getCrossChainTransfers(): Promise<StoredCrossChainTransfer[]> {
-  const transfers = await Promise.all(
-    Object.keys(window.localStorage).map(async (key) => {
-      if (key.startsWith(CROSS_CHAIN_TRANSFER_LOCAL_STORAGE_KEY)) {
-        return getCrossChainTransfer(key);
-      }
-      return undefined;
-    }),
-  );
+export function getCrossChainTransfers(): StoredCrossChainTransfer[] {
+  const transfers = Object.keys(window.localStorage).map((key) => {
+    if (key.startsWith(CROSS_CHAIN_TRANSFER_LOCAL_STORAGE_KEY)) {
+      return getCrossChainTransfer(key);
+    }
+    return undefined;
+  });
   return transfers.filter((t) => !!t) as StoredCrossChainTransfer[];
 }
 
 export function getCrossChainTransfer(crossChainTransferId: string): StoredCrossChainTransfer | undefined {
-  const retrieved = window.localStorage.getItem(crossChainTransferId);
+  const retrieved = window.localStorage.getItem(getLocalStorageKey(crossChainTransferId));
   if (retrieved) {
     return JSON.parse(retrieved);
   }
@@ -56,9 +56,9 @@ export function saveCrossChainTransfer(
     status,
     ...params,
   });
-  window.localStorage.setItem(`${CROSS_CHAIN_TRANSFER_LOCAL_STORAGE_KEY}_${crossChainTransferId}`, stringified);
+  window.localStorage.setItem(getLocalStorageKey(crossChainTransferId), stringified);
 }
 
 export function removeCrossChainTransfer(crossChainTransferId: string): void {
-  window.localStorage.removeItem(`${CROSS_CHAIN_TRANSFER_LOCAL_STORAGE_KEY}_${crossChainTransferId}`);
+  window.localStorage.removeItem(getLocalStorageKey(crossChainTransferId));
 }
