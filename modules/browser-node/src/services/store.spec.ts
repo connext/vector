@@ -18,7 +18,7 @@ import pino from "pino";
 import { BrowserStore } from "./store";
 const logger = pino();
 
-describe("store", () => {
+describe("Vector store", () => {
   let store: BrowserStore;
 
   before(async () => {
