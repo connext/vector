@@ -2,6 +2,8 @@
 
 ## Next Release
 
+## 0.1.7
+
 - \[router\] Update status of processed stored updates
 
 ## 0.1.6
