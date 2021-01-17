@@ -2,6 +2,8 @@
 
 ## Next Release
 
+## 0.1.6
+
 - \[browser-node\] Save crossChainTransfer error state
 
 ## 0.1.5
