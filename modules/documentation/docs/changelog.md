@@ -2,6 +2,8 @@
 
 ## Next Release
 
+- \[browser-node\] Save crossChainTransfer error state
+
 ## 0.1.5
 
 - \[browser-node\] Fix bug in `crossChainTransferStore` key
