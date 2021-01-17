@@ -170,8 +170,9 @@ export class Vector implements IVectorProtocol {
     try {
       await this.lockService.releaseLock(params.channelAddress, key, isAlice, counterpartyIdentifier);
     } catch (e) {
-      // lock errors should not cause downstream errors because the lock will time out eventually
-      this.logger.warn({ method, methodId, error: jsonifyError(e) }, "Lock error, catching so that we do not sync");
+      // lock errors should not cause downstream errors because the lock
+      // will time out eventually and the update has been saved
+      this.logger.error({ method, methodId, error: jsonifyError(e) }, "Lock release failed, update is saved.");
     }
 
     return outboundRes;
