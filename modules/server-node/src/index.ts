@@ -497,7 +497,7 @@ server.post<{ Body: NodeParams.SendDepositTx }>(
       if (depositRes.getError()!.message === ChainError.reasons.NotEnoughFunds) {
         return reply.status(400).send({ message: depositRes.getError()!.message });
       }
-      logger.error({ error: depositRes.getError()!.toJson() });
+      logger.error({ error: jsonifyError(depositRes.getError()!) });
       return reply.status(500).send({ message: depositRes.getError()!.message.substring(0, 100) });
     }
     return reply.status(200).send({ txHash: depositRes.getValue().hash });

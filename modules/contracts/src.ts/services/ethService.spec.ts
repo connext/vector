@@ -118,6 +118,7 @@ describe("EthereumChainService", function () {
         bob: rando.address,
         channelAddress,
       },
+      BigNumber.from(1000),
       {
         amount: "0x01",
         assetId: AddressZero,
