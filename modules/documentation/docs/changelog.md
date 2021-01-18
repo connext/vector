@@ -1,7 +1,7 @@
 # Vector Changelog
 
 ## Next Release
-## 0.1.8-beta.1
+## 0.1.8-beta.2
 
 - \[messaging\] Fix for loop in message retry code
 
