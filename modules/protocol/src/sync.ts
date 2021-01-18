@@ -90,8 +90,8 @@ export async function outbound(
   let counterpartyResult = await messagingService.sendProtocolMessage(
     update,
     previousState?.latestUpdate,
-    LOCK_TTL / 10,
-    5,
+    // LOCK_TTL / 10,
+    // 5,
   );
 
   // IFF the result failed because the update is stale, our channel is behind
