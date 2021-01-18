@@ -130,8 +130,11 @@ export class Vector implements IVectorProtocol {
   private async executeUpdate(
     params: UpdateParams<any>,
   ): Promise<Result<FullChannelState, OutboundChannelUpdateError>> {
+    const method = "executeUpdate";
+    const methodId = getRandomBytes32();
     this.logger.debug({
-      method: "executeUpdate",
+      method,
+      methodId,
       step: "start",
       params,
       channelAddress: params.channelAddress,
@@ -169,8 +172,8 @@ export class Vector implements IVectorProtocol {
     } catch (e) {
       return Result.fail(
         new OutboundChannelUpdateError(OutboundChannelUpdateError.reasons.ReleaseLockFailed, params, channel, {
-          lockError: e.message,
           outboundResult: outboundRes.toJson(),
+          lockError: jsonifyError(e),
         }),
       );
     }

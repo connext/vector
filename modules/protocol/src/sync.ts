@@ -14,7 +14,7 @@ import {
   MessagingError,
   jsonifyError,
 } from "@connext/vector-types";
-import { getRandomBytes32 } from "@connext/vector-utils";
+import { getRandomBytes32, LOCK_TTL } from "@connext/vector-utils";
 import pino from "pino";
 
 import { InboundChannelUpdateError, OutboundChannelUpdateError } from "./errors";
@@ -87,7 +87,12 @@ export async function outbound(
 
   // Send and wait for response
   logger.debug({ method, methodId, to: update.toIdentifier, type: update.type }, "Sending protocol message");
-  let counterpartyResult = await messagingService.sendProtocolMessage(update, previousState?.latestUpdate);
+  let counterpartyResult = await messagingService.sendProtocolMessage(
+    update,
+    previousState?.latestUpdate,
+    // LOCK_TTL / 10,
+    // 5,
+  );
 
   // IFF the result failed because the update is stale, our channel is behind
   // so we should try to sync the channel and resend the update
@@ -97,8 +102,8 @@ export async function outbound(
       {
         method,
         methodId,
-        update: update.nonce,
-        counterparty: (error as InboundChannelUpdateError).context.update.nonce,
+        proposed: update.nonce,
+        error: jsonifyError(error),
       },
       `Behind, syncing and retrying`,
     );
@@ -404,6 +409,16 @@ const syncStateAndRecreateUpdate = async (
   // parameters.
 
   const counterpartyUpdate = receivedError.context.update;
+  if (!counterpartyUpdate) {
+    return Result.fail(
+      new OutboundChannelUpdateError(
+        OutboundChannelUpdateError.reasons.NoUpdateToSync,
+        attemptedParams,
+        previousState,
+        { receivedError: jsonifyError(receivedError) },
+      ),
+    );
+  }
 
   // make sure you *can* sync
   const diff = counterpartyUpdate.nonce - (previousState?.nonce ?? 0);
