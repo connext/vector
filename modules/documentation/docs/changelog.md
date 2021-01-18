@@ -2,6 +2,13 @@
 
 ## Next Release
 
+## 0.1.8-beta.1
+
+- \[protocol\] Remove retrying on protocol messages
+- \[protocol\] Hard error for lock release
+
+(Kids -- don't debug on prod)
+
 ## 0.1.8-beta.0
 
 - \[protocol\] Retry sending messages
