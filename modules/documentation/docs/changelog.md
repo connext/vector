@@ -2,6 +2,8 @@
 
 ## Next Release
 
+- \[messaging\] Fix for loop in message retry code
+
 ## 0.1.8-beta.1
 
 - \[protocol\] Remove retrying on protocol messages
