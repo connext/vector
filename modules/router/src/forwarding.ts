@@ -319,7 +319,12 @@ export async function forwardTransferCreation(
   const error = transferRes.getError()!;
   logger.error({ ...jsonifyError(error) }, "Failed to forward transfer");
   if (error.context.shouldCancelSender) {
-    return cancelSenderTransferAndReturnError(routingId, senderTransfer, error.message);
+    return cancelSenderTransferAndReturnError(
+      routingId,
+      senderTransfer,
+      error.message,
+      recipientChannel.channelAddress,
+    );
   }
 
   // There was an error, but we cannot safely cancel the sender transfer
