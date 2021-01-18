@@ -293,7 +293,7 @@ export class NatsBasicMessagingService implements IBasicMessaging {
     method: string,
   ): Promise<Result<R, any>> {
     let result: Result<R>;
-    for (let attempt = 0; attempt++; attempt < numRetries) {
+    for (let attempt = 0; attempt++; attempt < numRetries + 1) {
       result = await this.sendMessage(data, subjectSuffix, to, from, timeout, method);
       if (result.isError && result.getError()!.message === MessagingError.reasons.Timeout) {
         this.log.warn({ attempt, numRetries }, "Message timed out, retrying");
