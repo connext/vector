@@ -243,14 +243,7 @@ export class EthereumChainReader implements IVectorChainReader {
     } catch (e) {
       // Likely means channel contract was not deployed
       // TODO: check for reason?
-      try {
-        onchainBalance =
-          assetId === AddressZero
-            ? await provider!.getBalance(channelAddress)
-            : await new Contract(assetId, ERC20Abi, provider).balanceOf(channelAddress);
-      } catch (e) {
-        return Result.fail(e);
-      }
+      return this.getOnchainBalance(assetId, channelAddress, chainId);
     }
     return Result.ok(onchainBalance);
   }
@@ -498,6 +491,23 @@ export class EthereumChainReader implements IVectorChainReader {
     } catch (e) {
       return Result.fail(e);
     }
+  }
+
+  async getOnchainBalance(assetId: string, balanceOf: string, chainId: number): Promise<Result<BigNumber, ChainError>> {
+    const provider = this.chainProviders[chainId];
+    if (!provider) {
+      return Result.fail(new ChainError(ChainError.reasons.ProviderNotFound));
+    }
+    let onchainBalance: BigNumber;
+    try {
+      onchainBalance =
+        assetId === AddressZero
+          ? await provider!.getBalance(balanceOf)
+          : await new Contract(assetId, ERC20Abi, provider).balanceOf(balanceOf);
+    } catch (e) {
+      return Result.fail(e);
+    }
+    return Result.ok(onchainBalance);
   }
 
   private tryEvm(encodedFunctionData: string, bytecode: string): Result<Uint8Array, Error> {
