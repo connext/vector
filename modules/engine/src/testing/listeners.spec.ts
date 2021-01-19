@@ -34,6 +34,8 @@ import {
   createTestChannelState,
   mkHash,
   MemoryMessagingService,
+  mkPublicIdentifier,
+  ChannelSigner,
 } from "@connext/vector-utils";
 import { Vector } from "@connext/vector-protocol";
 import { Evt } from "evt";
@@ -43,7 +45,7 @@ import { BigNumber } from "@ethersproject/bignumber";
 import { hexlify } from "@ethersproject/bytes";
 import { randomBytes } from "@ethersproject/random";
 
-import { setupEngineListeners } from "../listeners";
+import { handleIsAlive, setupEngineListeners } from "../listeners";
 import { getEngineEvtContainer } from "../utils";
 
 import { env } from "./env";
@@ -484,6 +486,26 @@ describe(testName, () => {
 
     it("should properly respond to resolve event with alice withdrawing eth (bob, alice stores + submits)", async () => {
       await runWithdrawalResolveTest();
+    });
+
+    it("should handle isAlive and resolve active withdrawals", async () => {
+      const from = mkPublicIdentifier("vectorAAA");
+      const testChannelState = createTestChannelState("setup", { aliceIdentifier: from });
+      const signer = Sinon.createStubInstance(ChannelSigner);
+
+      await handleIsAlive(
+        from,
+        "hello",
+        testChannelState.channel.channelAddress,
+        signer,
+        store,
+        messaging,
+        chainAddresses,
+        chainService,
+        vector,
+        getEngineEvtContainer(),
+        log,
+      );
     });
   });
 });

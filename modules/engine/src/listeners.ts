@@ -35,7 +35,6 @@ import {
   IS_ALIVE_EVENT,
   Values,
   jsonifyError,
-  IVectorStore,
 } from "@connext/vector-types";
 import { getRandomBytes32 } from "@connext/vector-utils";
 import { BigNumber } from "@ethersproject/bignumber";
@@ -283,44 +282,19 @@ export async function setupEngineListeners(
       }
 
       const { channelAddress } = params.getValue();
-
-      const channel = await store.getChannelState(params.getValue().channelAddress);
-
-      if (!channel) {
-        logger.error({ channelAddress, method, methodId }, "Channel not found");
-        return messaging.respondToIsAliveMessage(
-          inbox,
-          Result.fail(new IsAliveError(IsAliveError.reasons.ChannelNotFound, channelAddress, signer.publicIdentifier)),
-        );
-      }
-
-      // TODO: why is this here
-      // // Post to evt (i.e. so router can track responses)
-      // evts[IS_ALIVE_EVENT].post({
-      //   channelAddress,
-      // });
-
-      // check for withdrawals between you and counterparty that need to be resolved
-      const activeTransfers = await vector.getActiveTransfers(channelAddress);
-      logger.info({ method, methodId }, "Got active transfers in isAlive channel");
-      // active transfer needs to be a withdrawal
-      const withdrawalsToComplete = activeTransfers.filter(
-        (transfer) =>
-          isWithdrawTransfer({ updatedChannelState: channel }, chainAddresses, chainService) &&
-          transfer.initiatorIdentifier === from &&
-          !transfer.transferResolver,
+      await handleIsAlive(
+        from,
+        inbox,
+        channelAddress,
+        signer,
+        store,
+        messaging,
+        chainAddresses,
+        chainService,
+        vector,
+        evts,
+        logger,
       );
-      await Promise.all(
-        withdrawalsToComplete.map(async (transfer) => {
-          logger.info({ method, methodId, transfer }, "Found withdrawal to handle");
-          await resolveWithdrawal(channel, vector, evts, store, signer, chainService, logger);
-          logger.info({ method, methodId, transfer }, "Resolved withdrawal");
-        }),
-      );
-
-      // should be safe to wait until the above is finished, it shouldnt take too long to resolve withdrawals
-      // Just return an ack
-      return messaging.respondToIsAliveMessage(inbox, params);
     },
   );
 
@@ -398,6 +372,61 @@ export async function setupEngineListeners(
       res.isError ? Result.fail(res.getError()!) : Result.ok({ channelAddress: res.getValue().channelAddress }),
     );
   });
+}
+
+export async function handleIsAlive(
+  from: string,
+  inbox: string,
+  channelAddress: string,
+  signer: IChannelSigner,
+  store: IEngineStore,
+  messaging: IMessagingService,
+  chainAddresses: ChainAddresses,
+  chainService: IVectorChainService,
+  vector: IVectorProtocol,
+  evts: EngineEvtContainer,
+  logger: BaseLogger,
+): Promise<void> {
+  const method = "handleIsAlive";
+  const methodId = getRandomBytes32();
+
+  const channel = await store.getChannelState(channelAddress);
+
+  if (!channel) {
+    logger.error({ channelAddress, method, methodId }, "Channel not found");
+    return messaging.respondToIsAliveMessage(
+      inbox,
+      Result.fail(new IsAliveError(IsAliveError.reasons.ChannelNotFound, channelAddress, signer.publicIdentifier)),
+    );
+  }
+
+  // TODO: why is this here
+  // // Post to evt (i.e. so router can track responses)
+  // evts[IS_ALIVE_EVENT].post({
+  //   channelAddress,
+  // });
+
+  // check for withdrawals between you and counterparty that need to be resolved
+  const activeTransfers = await vector.getActiveTransfers(channelAddress);
+  logger.info({ method, methodId }, "Got active transfers in isAlive channel");
+  // active transfer needs to be a withdrawal
+  const withdrawalsToComplete = activeTransfers.filter(
+    (transfer) =>
+      isWithdrawTransfer({ updatedChannelState: channel }, chainAddresses, chainService) &&
+      transfer.initiatorIdentifier === from &&
+      !transfer.transferResolver,
+  );
+  await Promise.all(
+    withdrawalsToComplete.map(async (transfer) => {
+      logger.info({ method, methodId, transfer }, "Found withdrawal to handle");
+      await resolveWithdrawal(channel, vector, evts, store, signer, chainService, logger);
+      logger.info({ method, methodId, transfer }, "Resolved withdrawal");
+    }),
+  );
+
+  // should be safe to wait until the above is finished, it shouldnt take too long to resolve withdrawals
+  // Just return an ack
+  return messaging.respondToIsAliveMessage(inbox, Result.ok({ channelAddress }));
 }
 
 function handleSetup(

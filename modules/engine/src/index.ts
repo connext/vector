@@ -36,6 +36,7 @@ import {
 import pino from "pino";
 import Ajv from "ajv";
 import { Evt } from "evt";
+import { EXTRA_GAS_PRICE } from "@connext/vector-contracts/dist/src.ts/services/ethService";
 
 import { version } from "../package.json";
 
@@ -48,7 +49,6 @@ import {
 import { setupEngineListeners } from "./listeners";
 import { getEngineEvtContainer } from "./utils";
 import { sendIsAlive } from "./isAlive";
-import { EXTRA_GAS_PRICE } from "@connext/vector-contracts/dist/src.ts/services/ethService";
 
 export const ajv = new Ajv();
 
