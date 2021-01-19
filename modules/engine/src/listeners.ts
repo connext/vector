@@ -35,9 +35,11 @@ import {
   IS_ALIVE_EVENT,
   Values,
   jsonifyError,
+  IVectorStore,
 } from "@connext/vector-types";
+import { getRandomBytes32 } from "@connext/vector-utils";
 import { BigNumber } from "@ethersproject/bignumber";
-import Pino from "pino";
+import Pino, { BaseLogger } from "pino";
 
 import { CheckInError, IsAliveError, RestoreError } from "./errors";
 
@@ -274,8 +276,9 @@ export async function setupEngineListeners(
         return;
       }
       const method = "onReceiveIsAliveMessage";
+      const methodId = getRandomBytes32();
       if (params.isError) {
-        logger.warn({ error: params.getError()?.message, method }, "Error received");
+        logger.warn({ error: params.getError()?.message, method, methodId }, "Error received");
         return;
       }
 
@@ -284,18 +287,38 @@ export async function setupEngineListeners(
       const channel = await store.getChannelState(params.getValue().channelAddress);
 
       if (!channel) {
-        logger.error({ channelAddress, method }, "Channel not found");
+        logger.error({ channelAddress, method, methodId }, "Channel not found");
         return messaging.respondToIsAliveMessage(
           inbox,
           Result.fail(new IsAliveError(IsAliveError.reasons.ChannelNotFound, channelAddress, signer.publicIdentifier)),
         );
       }
 
+      // TODO: why is this here
       // // Post to evt (i.e. so router can track responses)
       // evts[IS_ALIVE_EVENT].post({
       //   channelAddress,
       // });
 
+      // check for withdrawals between you and counterparty that need to be resolved
+      const activeTransfers = await vector.getActiveTransfers(channelAddress);
+      logger.info({ method, methodId }, "Got active transfers in isAlive channel");
+      // active transfer needs to be a withdrawal
+      const withdrawalsToComplete = activeTransfers.filter(
+        (transfer) =>
+          isWithdrawTransfer({ updatedChannelState: channel }, chainAddresses, chainService) &&
+          transfer.initiatorIdentifier === from &&
+          !transfer.transferResolver,
+      );
+      await Promise.all(
+        withdrawalsToComplete.map(async (transfer) => {
+          logger.info({ method, methodId, transfer }, "Found withdrawal to handle");
+          await resolveWithdrawal(channel, vector, evts, store, signer, chainService, logger);
+          logger.info({ method, methodId, transfer }, "Resolved withdrawal");
+        }),
+      );
+
+      // should be safe to wait until the above is finished, it shouldnt take too long to resolve withdrawals
       // Just return an ack
       return messaging.respondToIsAliveMessage(inbox, params);
     },
@@ -587,7 +610,7 @@ async function handleWithdrawalTransferCreation(
   const isWithdrawRes = await isWithdrawTransfer(event, chainAddresses, chainService);
   if (isWithdrawRes.isError) {
     logger.warn(
-      { method: "isWithdrawRes", ...isWithdrawRes.getError()!.context },
+      { method: "handleWithdrawalTransferCreation", error: jsonifyError(isWithdrawRes.getError()!) },
       "Failed to determine if transfer is withdrawal",
     );
     return;
@@ -595,143 +618,7 @@ async function handleWithdrawalTransferCreation(
   if (!isWithdrawRes.getValue()) {
     return;
   }
-  const method = "handleWithdrawalTransferCreation";
-  // If you receive a withdrawal creation, you should
-  // resolve the withdrawal with your signature
-  const {
-    aliceIdentifier,
-    bobIdentifier,
-    channelAddress,
-    balances,
-    assetIds,
-    alice,
-    bob,
-    latestUpdate: {
-      details: { transferId, transferInitialState },
-      assetId,
-      fromIdentifier,
-    },
-  } = event.updatedChannelState as FullChannelState;
-  logger.info({ channelAddress, transferId, assetId, method }, "Started");
-
-  // Get the recipient + amount from the transfer state
-  const transfer = (await store.getTransferState(transferId))!;
-  const {
-    nonce,
-    initiatorSignature,
-    fee,
-    initiator,
-    responder,
-    callTo,
-    callData,
-  } = transferInitialState as WithdrawState;
-
-  const withdrawalAmount = transfer.balance.amount.reduce((prev, curr) => prev.add(curr), BigNumber.from(0)).sub(fee);
-  logger.debug({ withdrawalAmount: withdrawalAmount.toString(), initiator, responder, fee }, "Withdrawal info");
-
-  // Post to evt
-  const assetIdx = assetIds.findIndex((a) => a === assetId);
-  const payload: WithdrawalCreatedPayload = {
-    aliceIdentifier,
-    bobIdentifier,
-    assetId,
-    amount: withdrawalAmount.toString(),
-    fee,
-    recipient: transfer.balance.to[0],
-    channelBalance: balances[assetIdx],
-    channelAddress,
-    transfer,
-    callTo,
-    callData,
-  };
-  evts[EngineEvents.WITHDRAWAL_CREATED].post(payload);
-
-  // If it is not from counterparty, do not respond
-  if (fromIdentifier === signer.publicIdentifier) {
-    logger.info({ method }, "Waiting for counterparty sig");
-    return;
-  }
-
-  // TODO: should inject validation to make sure that a withdrawal transfer
-  // is properly signed before its been merged into your channel
-  const commitment = new WithdrawCommitment(
-    channelAddress,
-    alice,
-    bob,
-    transfer.balance.to[0],
-    assetId,
-    withdrawalAmount.toString(),
-    nonce,
-    callTo,
-    callData,
-  );
-
-  // Generate your signature on the withdrawal commitment
-  const responderSignature = await signer.signMessage(commitment.hashToSign());
-  await commitment.addSignatures(initiatorSignature, responderSignature);
-
-  // Store the double signed commitment
-  await store.saveWithdrawalCommitment(transferId, commitment.toJson());
-
-  // Assume that only alice will try to submit the withdrawal to chain.
-  // Alice may or may not charge a fee for this service, and both parties
-  // are welcome to submit the commitment if the other party does not.
-
-  // NOTE: if bob is the withdrawal creator and alice has charged a fee
-  // for submitting the withdrawal, bob will refuse to sign the resolve
-  // update until the transaction is properly submitted onchain (enforced
-  // via injected validation)
-  let transactionHash: string | undefined = undefined;
-  if (signer.address === alice) {
-    // Submit withdrawal to chain
-    logger.info(
-      { method, withdrawalAmount: withdrawalAmount.toString(), channelAddress },
-      "Submitting withdrawal to chain",
-    );
-    const withdrawalResponse = await chainService.sendWithdrawTx(
-      event.updatedChannelState,
-      await commitment.getSignedTransaction(),
-    );
-
-    // IFF the withdrawal was successfully submitted, resolve the transfer
-    // with the transactionHash in the meta
-    if (!withdrawalResponse.isError) {
-      transactionHash = withdrawalResponse.getValue()!.hash;
-      logger.info({ method, transactionHash }, "Submitted tx");
-      // Post to reconciliation evt on submission
-      evts[WITHDRAWAL_RECONCILED_EVENT].post({
-        aliceIdentifier,
-        bobIdentifier,
-        channelAddress,
-        transferId,
-        transactionHash,
-      });
-    } else {
-      // log the transaction error, try to resolve with an undefined hash
-      logger.warn({ error: withdrawalResponse.getError()!.message, method }, "Failed to submit tx");
-    }
-  }
-
-  // Resolve withdrawal from counterparty
-  // See note above re: fees + injected validation
-  const resolveRes = await vector.resolve({
-    transferResolver: { responderSignature },
-    transferId,
-    channelAddress,
-    meta: { transactionHash, ...(transfer.meta ?? {}) },
-  });
-
-  // Handle the error
-  if (resolveRes.isError) {
-    logger.error(
-      { method, error: resolveRes.getError()!.message, transferId, channelAddress, transactionHash },
-      "Failed to resolve",
-    );
-    return;
-  }
-
-  // Withdrawal successfully resolved
-  logger.info({ method, amount: withdrawalAmount.toString(), assetId, fee }, "Withdrawal resolved");
+  await resolveWithdrawal(event.updatedChannelState, vector, evts, store, signer, chainService, logger);
 }
 
 async function handleWithdrawalTransferResolution(
@@ -907,4 +794,150 @@ const isWithdrawTransfer = async (
   }
   const { definition } = withdrawInfo.getValue();
   return Result.ok((details as ResolveUpdateDetails).transferDefinition === definition);
+};
+
+const resolveWithdrawal = async (
+  channelState: FullChannelState,
+  vector: IVectorProtocol,
+  evts: EngineEvtContainer,
+  store: IEngineStore,
+  signer: IChannelSigner,
+  chainService: IVectorChainService,
+  logger: BaseLogger,
+): Promise<void> => {
+  const method = "resolveWithdrawal";
+  const methodId = getRandomBytes32();
+  // If you receive a withdrawal creation, you should
+  // resolve the withdrawal with your signature
+  const {
+    aliceIdentifier,
+    bobIdentifier,
+    channelAddress,
+    balances,
+    assetIds,
+    alice,
+    bob,
+    latestUpdate: {
+      details: { transferId, transferInitialState },
+      assetId,
+      fromIdentifier,
+    },
+  } = channelState as FullChannelState;
+  logger.info({ channelAddress, transferId, assetId, method, methodId }, "Started");
+
+  // Get the recipient + amount from the transfer state
+  const transfer = (await store.getTransferState(transferId))!;
+  const {
+    nonce,
+    initiatorSignature,
+    fee,
+    initiator,
+    responder,
+    callTo,
+    callData,
+  } = transferInitialState as WithdrawState;
+
+  const withdrawalAmount = transfer.balance.amount.reduce((prev, curr) => prev.add(curr), BigNumber.from(0)).sub(fee);
+  logger.debug({ withdrawalAmount: withdrawalAmount.toString(), initiator, responder, fee }, "Withdrawal info");
+
+  // Post to evt
+  const assetIdx = assetIds.findIndex((a) => a === assetId);
+  const payload: WithdrawalCreatedPayload = {
+    aliceIdentifier,
+    bobIdentifier,
+    assetId,
+    amount: withdrawalAmount.toString(),
+    fee,
+    recipient: transfer.balance.to[0],
+    channelBalance: balances[assetIdx],
+    channelAddress,
+    transfer,
+    callTo,
+    callData,
+  };
+  evts[EngineEvents.WITHDRAWAL_CREATED].post(payload);
+
+  // If it is not from counterparty, do not respond
+  if (fromIdentifier === signer.publicIdentifier) {
+    logger.info({ method }, "Waiting for counterparty sig");
+    return;
+  }
+
+  // TODO: should inject validation to make sure that a withdrawal transfer
+  // is properly signed before its been merged into your channel
+  const commitment = new WithdrawCommitment(
+    channelAddress,
+    alice,
+    bob,
+    transfer.balance.to[0],
+    assetId,
+    withdrawalAmount.toString(),
+    nonce,
+    callTo,
+    callData,
+  );
+
+  // Generate your signature on the withdrawal commitment
+  const responderSignature = await signer.signMessage(commitment.hashToSign());
+  await commitment.addSignatures(initiatorSignature, responderSignature);
+
+  // Store the double signed commitment
+  await store.saveWithdrawalCommitment(transferId, commitment.toJson());
+
+  // Assume that only alice will try to submit the withdrawal to chain.
+  // Alice may or may not charge a fee for this service, and both parties
+  // are welcome to submit the commitment if the other party does not.
+
+  // NOTE: if bob is the withdrawal creator and alice has charged a fee
+  // for submitting the withdrawal, bob will refuse to sign the resolve
+  // update until the transaction is properly submitted onchain (enforced
+  // via injected validation)
+  let transactionHash: string | undefined = undefined;
+  if (signer.address === alice) {
+    // Submit withdrawal to chain
+    logger.info(
+      { method, withdrawalAmount: withdrawalAmount.toString(), channelAddress },
+      "Submitting withdrawal to chain",
+    );
+    const withdrawalResponse = await chainService.sendWithdrawTx(channelState, await commitment.getSignedTransaction());
+
+    // IFF the withdrawal was successfully submitted, resolve the transfer
+    // with the transactionHash in the meta
+    if (!withdrawalResponse.isError) {
+      transactionHash = withdrawalResponse.getValue()!.hash;
+      logger.info({ method, transactionHash }, "Submitted tx");
+      // Post to reconciliation evt on submission
+      evts[WITHDRAWAL_RECONCILED_EVENT].post({
+        aliceIdentifier,
+        bobIdentifier,
+        channelAddress,
+        transferId,
+        transactionHash,
+      });
+    } else {
+      // log the transaction error, try to resolve with an undefined hash
+      logger.warn({ error: withdrawalResponse.getError()!.message, method }, "Failed to submit tx");
+    }
+  }
+
+  // Resolve withdrawal from counterparty
+  // See note above re: fees + injected validation
+  const resolveRes = await vector.resolve({
+    transferResolver: { responderSignature },
+    transferId,
+    channelAddress,
+    meta: { transactionHash, ...(transfer.meta ?? {}) },
+  });
+
+  // Handle the error
+  if (resolveRes.isError) {
+    logger.error(
+      { method, error: resolveRes.getError()!.message, transferId, channelAddress, transactionHash },
+      "Failed to resolve",
+    );
+    return;
+  }
+
+  // Withdrawal successfully resolved
+  logger.info({ method, amount: withdrawalAmount.toString(), assetId, fee }, "Withdrawal resolved");
 };
