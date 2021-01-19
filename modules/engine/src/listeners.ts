@@ -825,7 +825,7 @@ const isWithdrawTransfer = async (
   return Result.ok((details as ResolveUpdateDetails).transferDefinition === definition);
 };
 
-const resolveWithdrawal = async (
+export const resolveWithdrawal = async (
   channelState: FullChannelState,
   vector: IVectorProtocol,
   evts: EngineEvtContainer,

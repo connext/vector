@@ -36,6 +36,7 @@ import {
   MemoryMessagingService,
   mkPublicIdentifier,
   ChannelSigner,
+  createTestFullHashlockTransferState,
 } from "@connext/vector-utils";
 import { Vector } from "@connext/vector-protocol";
 import { Evt } from "evt";
@@ -488,10 +489,15 @@ describe(testName, () => {
       await runWithdrawalResolveTest();
     });
 
-    it("should handle isAlive and resolve active withdrawals", async () => {
+    it.only("should handle isAlive and resolve active withdrawals", async () => {
       const from = mkPublicIdentifier("vectorAAA");
       const testChannelState = createTestChannelState("setup", { aliceIdentifier: from });
       const signer = Sinon.createStubInstance(ChannelSigner);
+      store.getChannelState.resolves(testChannelState.channel);
+
+      // create unresolved withdrawal transfer states
+      const transfers = [createTestFullHashlockTransferState(testChannelState.channel)];
+      vector.getActiveTransfers.resolves(transfers);
 
       await handleIsAlive(
         from,
@@ -506,6 +512,8 @@ describe(testName, () => {
         getEngineEvtContainer(),
         log,
       );
+
+      // should just mock out handleWithdraw and test that separately
     });
   });
 });
