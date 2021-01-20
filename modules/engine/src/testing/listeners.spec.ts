@@ -312,7 +312,7 @@ describe(testName, () => {
       );
 
       // Post to the evt
-      evt.post({ updatedChannelState });
+      evt.post({ updatedChannelState, updatedTransfer: transfer, updatedTransfers: [transfer] });
 
       // Get the emitted event
       const emitted = await createdEvent;
@@ -429,7 +429,7 @@ describe(testName, () => {
       );
 
       // Post to the evt
-      evt.post({ updatedChannelState });
+      evt.post({ updatedChannelState, updatedTransfer: transfer });
 
       // Get the emitted event
       const emitted = await resolvedEvent;
