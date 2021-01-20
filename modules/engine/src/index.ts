@@ -1,4 +1,5 @@
 import { Vector } from "@connext/vector-protocol";
+import { EXTRA_GAS_PRICE } from "@connext/vector-contracts";
 import {
   ChainAddresses,
   IChannelSigner,
@@ -36,7 +37,6 @@ import {
 import pino from "pino";
 import Ajv from "ajv";
 import { Evt } from "evt";
-import { EXTRA_GAS_PRICE } from "@connext/vector-contracts/dist/src.ts/services/ethService";
 
 import { version } from "../package.json";
 
