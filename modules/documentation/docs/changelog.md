@@ -2,6 +2,19 @@
 
 ## Next Release
 
+## 0.1.8-beta.4
+
+- \[contracts\] Add `drip` task to hardhat
+- \[engine\] Ensure created withdrawals are resolved on startup
+
+## 0.1.8-beta.3
+
+- \[messaging\] Fix for loop in message retry code
+
+## 0.1.8-beta.2
+
+- \[messaging\] Fix for loop in message retry code
+
 ## 0.1.8-beta.1
 
 - \[protocol\] Remove retrying on protocol messages
