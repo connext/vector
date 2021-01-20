@@ -1,4 +1,5 @@
 import { Vector } from "@connext/vector-protocol";
+import { EXTRA_GAS_PRICE } from "@connext/vector-contracts";
 import {
   ChainAddresses,
   IChannelSigner,
@@ -48,7 +49,6 @@ import {
 import { setupEngineListeners } from "./listeners";
 import { getEngineEvtContainer } from "./utils";
 import { sendIsAlive } from "./isAlive";
-import { EXTRA_GAS_PRICE } from "@connext/vector-contracts/dist/src.ts/services/ethService";
 
 export const ajv = new Ajv();
 

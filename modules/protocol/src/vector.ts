@@ -265,7 +265,7 @@ export class Vector implements IVectorProtocol {
         this.evts[ProtocolEventName.CHANNEL_UPDATE_EVENT].post({
           updatedChannelState: updatedChannel,
           updatedTransfers: updatedActiveTransfers,
-          updatedTransfer: updatedTransfer,
+          updatedTransfer,
         });
         this.logger.debug({ method, methodId }, "Method complete");
       },
