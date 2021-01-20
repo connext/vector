@@ -34,9 +34,6 @@ import {
   createTestChannelState,
   mkHash,
   MemoryMessagingService,
-  mkPublicIdentifier,
-  ChannelSigner,
-  createTestFullHashlockTransferState,
 } from "@connext/vector-utils";
 import { Vector } from "@connext/vector-protocol";
 import { Evt } from "evt";
@@ -46,7 +43,7 @@ import { BigNumber } from "@ethersproject/bignumber";
 import { hexlify } from "@ethersproject/bytes";
 import { randomBytes } from "@ethersproject/random";
 
-import { handleIsAlive, setupEngineListeners } from "../listeners";
+import { resolveExistingWithdrawals, setupEngineListeners } from "../listeners";
 import { getEngineEvtContainer } from "../utils";
 
 import { env } from "./env";
@@ -489,31 +486,39 @@ describe(testName, () => {
       await runWithdrawalResolveTest();
     });
 
-    it.only("should handle isAlive and resolve active withdrawals", async () => {
-      const from = mkPublicIdentifier("vectorAAA");
-      const testChannelState = createTestChannelState("setup", { aliceIdentifier: from });
-      const signer = Sinon.createStubInstance(ChannelSigner);
-      store.getChannelState.resolves(testChannelState.channel);
+    it("resolveExistingWithdrawals should work", async () => {
+      const initiator = getRandomChannelSigner();
+      const responder = getRandomChannelSigner();
+      const { commitment, resolver, transfer } = await getWithdrawalCommitment(initiator, responder);
+      const channel = createTestChannelStateWithSigners([initiator, responder], UpdateType.deposit, {
+        channelAddress: commitment.channelAddress,
+        networkContext: { chainId },
+        latestUpdate: { details: transfer.transferId } as any,
+      });
 
       // create unresolved withdrawal transfer states
-      const transfers = [createTestFullHashlockTransferState(testChannelState.channel)];
-      vector.getActiveTransfers.resolves(transfers);
+      vector.getActiveTransfers.resolves([transfer]);
+      store.getTransferState.resolves(transfer);
+      chainService.getRegisteredTransferByName.resolves(Result.ok(withdrawRegisteredInfo));
+      vector.resolve.resolves(Result.ok(channel));
 
-      await handleIsAlive(
-        from,
-        "hello",
-        testChannelState.channel.channelAddress,
-        signer,
+      await resolveExistingWithdrawals(
+        channel,
+        responder,
         store,
-        messaging,
+        vector,
         chainAddresses,
         chainService,
-        vector,
         getEngineEvtContainer(),
         log,
       );
 
-      // should just mock out handleWithdraw and test that separately
+      expect(vector.resolve.getCall(0).args[0]).to.containSubset({
+        transferResolver: resolver,
+        transferId: transfer.transferId,
+        channelAddress: channel.channelAddress,
+        meta: transfer.meta,
+      });
     });
   });
 });

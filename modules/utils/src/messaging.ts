@@ -20,7 +20,6 @@ import axios, { AxiosResponse } from "axios";
 import pino, { BaseLogger } from "pino";
 import { INatsService, natsServiceFactory } from "ts-natsutil";
 
-import { delay } from "./delay";
 import { isNode } from "./env";
 import { safeJsonParse, safeJsonStringify } from "./json";
 
