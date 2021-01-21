@@ -10,6 +10,7 @@
     "build-bundle": "webpack --config ops/webpack.config.js",
     "start": "prisma migrate up --experimental && node dist/index.js",
     "test": "bash ops/test.sh",
+    "protobuf:generate": "npx protoc --ts_opt server_grpc,client_promise,generate_dependencies,optimize_code_size --proto_path proto --ts_out ./src/grpc/gen proto/*.proto",
     "migration:generate": "prisma migrate save --experimental"
   },
   "dependencies": {
@@ -21,7 +22,9 @@
     "@grpc/grpc-js": "1.2.4",
     "@grpc/proto-loader": "0.5.6",
     "@prisma/client": "2.12.1",
-    "@protobuf-ts/runtime": "1.0.12",
+    "@protobuf-ts/plugin": "2.0.0-alpha.11",
+    "@protobuf-ts/protoc": "2.0.0-alpha.11",
+    "@protobuf-ts/runtime": "2.0.0-alpha.11",
     "@sinclair/typebox": "0.12.7",
     "ajv": "6.12.6",
     "axios": "0.21.0",
@@ -37,7 +40,6 @@
     "ts-nats": "1.2.15"
   },
   "devDependencies": {
-    "@protobuf-ts/plugin": "1.0.12",
     "@prisma/cli": "2.12.1",
     "@types/chai": "4.2.14",
     "@types/chai-as-promised": "7.1.3",
