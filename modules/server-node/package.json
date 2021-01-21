@@ -10,7 +10,7 @@
     "build-bundle": "webpack --config ops/webpack.config.js",
     "start": "prisma migrate up --experimental && node dist/index.js",
     "test": "bash ops/test.sh",
-    "protobuf:generate": "npx protoc --ts_opt server_grpc,client_promise,generate_dependencies,optimize_code_size --proto_path proto --ts_out ./src/grpc/gen proto/*.proto",
+    "protobuf:generate": "protoc --ts_opt server_grpc,client_promise,generate_dependencies,optimize_code_size --proto_path proto --ts_out ./src/grpc/gen proto/*.proto",
     "migration:generate": "prisma migrate save --experimental"
   },
   "dependencies": {

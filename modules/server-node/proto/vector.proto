@@ -381,7 +381,8 @@ message EthProviderRequest {
 
 message CreateNodeRequest {
     int32 index = 1;
-    string mnemonic  = 2;    
+    string mnemonic  = 2;
+    bool skipCheckIn = 3;
 }
 
 
