@@ -1,0 +1,716 @@
+
+syntax = "proto3";
+
+import "google/protobuf/any.proto";
+
+package com.vector;
+
+
+service VectorService {
+    rpc GetPing (Empty) returns (Pong) {}
+    rpc GetConfig (Empty) returns (Configs) {}
+    rpc GetStatus (TPublicIdentifier) returns (Status) {}
+    rpc GetChannelState (ChannelStateRequest) returns (FullChannelStateOrUndefined) {}
+    rpc GetChannelStates (Empty) returns (FullChannelStates) {}
+    rpc GetChannelStateByParticipants (ChannelStateByParticipantsRequest) returns (FullChannelStateOrUndefined) {}
+    rpc TransferState (TransfersRequest) returns (TransferStateReply) {}
+    rpc GetTransferStateByRoutingId (TransferStateByRoutingIdRequest) returns (FullTransferStateOrUndefined) {}
+    rpc GetTransferStatesByRoutingId (TransferStatesByRoutingIdRequest) returns (FullTransferStates) {}
+    rpc GetActiveTransfers (ActiveTransfersRequest) returns (FullTransferStates) {}
+    //rpc GetChannelStates (ChannelStatesRequest) returns (FullTransferStates) {}
+    rpc GetRegisteredTransfers (RegisteredTransfersRequest) returns (RegisteredTransfers) {}
+    rpc Setup (SetupRequest) returns (SetupReply) {}
+    rpc InternalSetup (SetupRequest) returns (FullChannelState) {}
+    rpc Deposit (DepositRequest) returns (FullChannelState) {}
+    rpc SendDepositTx (DepositTxRequest) returns (TxHash) {}
+    rpc SendDisputeChannelTx (ChannelResquest) returns (TxHash) {}
+    rpc SendDefundChannelTx (ChannelResquest) returns (TxHash) {}
+    rpc SendDisputeTransfer (TransferResquest) returns (TxHash) {}
+    rpc SendDefundTransfer (TransferResquest) returns (TxHash) {}
+    rpc SendRequestCollateral (DepositRequest) returns (CollateralReply) {}
+    rpc CreateTransfer (ConditionalTransferRequest) returns (ResolveTransferReply) {}
+    rpc ResolveTransfer (ResolveTransferRequest) returns (ResolveTransferReply) {}
+    rpc Withdraw (WithdrawRequest) returns (WithdrawReply) {}
+    rpc RestoreState (RestoreStateRequest) returns (RestoreStateReply) {}
+    //   [ChannelRpcMethods.chan_restoreState]: FullChannelState;
+    //   { schema: { body: NodeParams.RestoreStateSchema, response: NodeResponses.RestoreStateSchema } },
+    //   NodeResponses.RestoreState
+    rpc Subscribe (SubscribeRequest) returns (SubscribeReply) {}
+    //   [ChannelRpcMethods.chan_subscribe]: { event: string; once: boolean };
+    //   body: NodeParams.RegisterListenerSchema
+    //  
+    //rpc GetUrl (GetUrlRequest) returns (ListenerSchemaReply) {}
+    rpc GetSubscription (SubscriptionRequest) returns (Subscription) {}
+    rpc GetSubscriptionWithOnlyPublicIdentifier (SubscriptionWithPublicIdentifierRequest) returns (SubscriptionWithPublicIdentifierReply) {}
+    /*   [ChannelRpcMethods.chan_subscription]: {
+     *   subscription: string;
+     *   data: any;
+     *   };\
+    */
+    //  NodeParams.GetListenerSchema,
+    rpc ClearStore (ClearStoreRequest) returns (ClearStoreReply) {}
+    rpc CreateNode (CreateNodeRequest) returns (CreateNodeReply) {}
+    rpc EthProvider (EthProviderRequest) returns (EthProviderReply) {}
+    /*
+     * const JsonRpcRequestSchema = Type.Object({
+     * method: Type.String(),
+     * params: Type.Any(),
+     * });
+     */
+     
+}
+
+
+message ClearStoreReply {
+    string message = 1;
+}
+
+message SubscriptionRequest {
+    oneof EventName {
+        string is_alive_event = 1;
+        string setup_event = 2;
+        string conditional_transfer_created_event = 3;
+        string conditional_transfer_resolved_event = 4;
+        string deposit_reconciled_event = 5;
+        string request_collateral_event = 6;
+        string restore_state_event = 7;
+        //string setup_event 
+        string withdraw_created_event = 8;
+        string withdraw_resolved_event = 9;
+        string withdraw_reconciled_event = 10;
+
+    }
+    TPublicIdentifier public_identifier = 11;
+}
+
+message Subscription {
+    message TUrl {
+        string url = 1;
+    }
+    TUrl url = 1;
+}
+
+message ListenerSchemaReply {
+    string url = 1;
+}
+
+message Balance {
+    repeated string amount = 1;
+    repeated string to = 2;
+}
+
+message Address {
+    string address = 1;
+}
+
+message CoreChannelState {
+    Address channel_address = 1;
+    Address alice = 2;
+    Address bob = 3;
+    repeated string asset_ids = 4;
+    repeated Balance balances = 5;
+    repeated string processed_deposits_a = 6;
+    repeated string processed_deposits_b = 7;
+    repeated string defund_nounces = 8;
+    string timeout = 9;
+    int64 nonce = 10;
+    string merkle_root = 11;
+}
+
+
+message WithdrawState {
+    string initiator_signature = 1;
+    Address initiator = 2;
+    Address responder = 3;
+    bytes data = 4;
+    int64 nonce = 5;
+    string fee = 6;
+    Address call_to = 7;
+    string call_data = 8;
+
+}
+
+message HashlockTransferState {
+    string lock_hash = 1;
+    string expiry = 2;
+}
+
+message TransferStateMap {
+    map<string, HashlockTransferState> hashlock_transfer_state = 1;
+    map<string, WithdrawState> withdraw_state = 2;
+}
+
+message TransferState {
+    oneof values {
+        TransferStateMap transfer_state_map = 1;
+        google.protobuf.Any any = 2;
+    }
+
+}
+
+
+message HashlockTransferResolver {
+    string pre_image = 1;
+}
+
+message WithdrawResolver {
+    string responder_signature = 1;
+}
+
+message TransferResolverMap {
+    map<string, HashlockTransferResolver> hashlock_transfer_resolver = 1;
+    map<string, WithdrawResolver> withdraw_resolver = 2;
+}
+
+message TransferResolver {
+    oneof values {
+        TransferResolverMap transfer_resolver_map = 1;
+        google.protobuf.Any any = 2;
+    }
+}
+
+message ContractAddresses {
+    Address channel_factory_address = 1;
+    Address transfer_registry_address = 2;
+}
+
+message NetworkContext {
+    ContractAddresses contract_addresses = 1;
+    int32 chain_id = 2;
+    string provider_url = 3;
+}
+
+message CreateUpdateDetails {
+    string transfer_id = 1;
+    Balance balance = 2;
+    Address transfer_definition = 3;
+    string transfer_timeout = 4;
+    TransferState transfer_initial_state = 5;
+    repeated string transfer_encodings = 6;
+    repeated string merkle_proof_data = 7;
+    string merkle_root = 8;
+    google.protobuf.Any meta = 9;
+}
+
+message ResolveUpdateDetails {
+    string transfer_id = 1;
+    Address transfer_definition = 2;
+    TransferResolver transfer_resolver = 3;
+    string merkle_root = 4;
+    google.protobuf.Any  meta = 5;
+}
+
+
+message DepositUpdateDetails {
+    string total_deposits_alice = 1;
+    string total_deposits_bob = 2;
+    google.protobuf.Any meta  = 3;
+}
+
+message SetupUpdateDetails {
+    string timeout = 1;
+    NetworkContext network_context = 2;
+    google.protobuf.Any  meta = 3;
+}
+
+message ChannelUpdateDetailsMap {
+    map<string, CreateUpdateDetails> create_update_details = 1;
+    map<string, ResolveUpdateDetails> deposit_update_details = 2;
+    map<string, ResolveUpdateDetails> resolve_update_details = 3;
+    map<string, SetupUpdateDetails> setup_update_details = 4;
+}
+
+message ChannelUpdate {
+    string channel_address = 1;
+    string from_identifier = 2;
+    string to_identifier = 3;
+    string type = 4;
+    int64 nonce = 5;
+    Balance balance = 6;
+    Address asset_id = 7;
+    ChannelUpdateDetailsMap details = 8;
+    string aliceSignature = 9;
+    string bob_signature = 10;
+}
+
+message FullChannelState {
+    CoreChannelState core_channel_state = 1;
+    string alice_identifier = 2;
+    string bob_identifier = 3;
+    ChannelUpdate latest_update = 4;
+    NetworkContext network_context = 5;
+    bool in_dispute = 6;
+
+}
+
+message FullChannelStateOrUndefined {
+    oneof full_channel_state {
+        FullChannelState full_channel = 1;
+        google.protobuf.Any undefined = 2;
+    }
+
+}
+
+message FullChannelStates {
+    repeated FullChannelState  full_channel_state = 1;
+}
+
+
+message TxHash {
+    string txHash = 1;
+}
+
+message Pong {
+    string message = 1;
+}
+
+message Empty {}
+
+message Configs {
+    repeated Config config = 1;
+}
+
+message Config {
+    int32 index = 1;
+    string public_identifier = 2;
+    string signer_address = 3;
+}
+
+
+message Status {
+    message Obj {
+        string starting_block = 1;
+        string current_block = 2;
+        string highest_block = 3;
+    }
+    oneof ProviderSyncing {
+        bool bool_stat = 1;
+        Obj obj = 2;
+        string my_stat = 3;
+        google.protobuf.Any undefined_stat = 4;
+    }
+    string public_identifier = 5;
+    string signer_address = 6;
+    string version = 7;
+}
+
+message DefundNonces {
+    repeated string nonce = 1;
+}
+
+message Deposits {
+    repeated string deposit = 1;
+}
+
+message ChannelStateRequest {
+    string channel_address = 1;
+    string alice = 2;
+    string bob = 3;
+    repeated Address asset_id = 4;
+    repeated Balance balances = 5;
+    Deposits processed_deposits_a = 6;
+    Deposits processed_deposits_b = 7;
+    DefundNonces defund_nonces  = 8;
+    string timeout = 9;
+    int32 nonce = 10;
+    string merkle_root = 11;
+    string alice_identifier = 12;
+    string bo_identifier = 13;
+    ChannelUpdate latest_update = 14;
+
+    
+}
+
+message CoreTransferState {
+    Address channel_address = 1;
+    string transfer_id = 2;
+    Address transfer_definition = 3;
+    Address initiator = 4;
+    Address responder = 5;
+    Address asset_id = 6;
+    Balance balance = 7;
+    string transfer_timeout = 8;
+    string initial_state_hash = 9;
+}
+
+message FullTransferState {
+    CoreTransferState core_transfer_state = 1;
+    int32 number = 2;
+    repeated string transfer_encodings = 3;
+    google.protobuf.Any  transfer_state = 4;
+    google.protobuf.Any  transfer_resolver = 5;
+    google.protobuf.Any meta = 6;
+    bool in_dispute = 7;
+    int64 channel_nonce = 8;
+    string initiator_identifier = 9;
+    string responder_identifier = 10;
+}
+
+
+message FullTransferStates {
+    repeated FullTransferState full_transfer_state = 1;
+}
+
+message FullTransferStateOrUndefined {
+    oneof full_Channel {
+        FullTransferState full_transfer = 1;
+        google.protobuf.Any undefined = 2;
+    }
+}
+
+message RegisteredTransfer {
+    string state_encoding = 1;
+    string resolver_encoding = 2;
+    Address definition = 3;
+    string name = 4;
+    string encoded_cancel = 5;
+}
+
+message RegisteredTransfers {
+    repeated RegisteredTransfer registered_transfer = 1;
+}
+
+message Body {
+    string method = 1;
+    google.protobuf.Any params = 2;
+}
+
+message EthProviderRequest {
+    int32 chain_id = 1;
+    Body body = 2;
+}
+
+message CreateNodeRequest {
+    int32 index = 1;
+    string mnemonic  = 2;    
+}
+
+
+message CreateNodeReply {
+    string public_identifier = 1;
+    string signer_address  = 2;
+    int32 index = 3;    
+}
+
+message ClearStoreRequest {
+    message AdminToken {
+        string example = 1;
+        string description = 2;
+    }
+    AdminToken admin_token = 1;
+}
+
+message TPublicIdentifier {
+    string public_identifier = 1;
+}
+
+message SubscriptionWithPublicIdentifierRequest {
+    TPublicIdentifier public_identifier = 1;
+}
+
+message SubscriptionWithPublicIdentifierReply {
+    map<string, string> url = 1;
+}
+
+
+message SubscribeRequest {
+    message RegisterListenerBodySchema {
+        TPublicIdentifier public_identifier = 1;
+        map<string, string> events = 2;
+
+    }
+    RegisterListenerBodySchema body = 1;
+}
+
+message SubscribeReply {
+    string  message  = 1;
+
+}
+
+message RestoreStateRequest {
+    TPublicIdentifier counterparty_identifier = 1;
+    string chain_id = 2;
+    TPublicIdentifier public_identifier = 3;
+}
+
+message TAddress {
+    string channel_address = 1;
+}
+
+message RestoreStateReply {
+    TAddress channel_address = 1;
+}
+
+message  WithdrawReply {
+    TAddress channel_address = 1;
+    bytes transfer_id = 2;
+    bytes transaction_hash = 3;
+}
+
+message TBasicMeta {
+    //map<google.protobuf.Any, google.protobuf.Any> basic_meta = 1;
+    map<string, google.protobuf.Any> basic_meta = 1;
+}
+
+message WithdrawRequestSchema {
+    TAddress channel_address = 1;
+    string amount = 2;
+    TAddress asset_id = 3;
+    TAddress recipient = 4;
+    string fee = 5;
+    TAddress call_to = 6;
+    string call_data = 7;
+    TBasicMeta meta = 8;
+
+}
+
+message WithdrawRequest {
+    WithdrawRequestSchema withdraw_schema = 1;
+    TPublicIdentifier public_identifier = 2;
+}
+
+message ResolveTransferSchema {
+    TAddress channel_address = 1;
+    bytes transfer_id = 2;
+    TBasicMeta meta = 3;
+    TransferResolverSchema transfer_resolver = 4;
+}
+
+message TransferResolverSchema {
+    //map<google.protobuf.Any, google.protobuf.Any> resolver = 1;
+    map<string, google.protobuf.Any> resolver = 1;
+}
+
+message ResolveTransferRequest {
+    ResolveTransferSchema resolver_transfer_schema = 1;
+    TPublicIdentifier public_identifier = 2;
+}
+
+message ResolveTransferReply {
+    TAddress channel_address = 1;
+    bytes transfer_id = 2;
+    bytes routing_id = 3;
+}
+
+message CreateConditionalTransferParamsSchema {
+    TAddress channel_address = 1;
+    string amount = 2;
+    TAddress asset_id = 3;
+    TPublicIdentifier recipient = 4;
+    int32 recipient_chainId = 5;
+    TAddress recipient_assetId = 6;
+    string timeout = 7;
+    TBasicMeta meta = 8;
+    string type = 9;
+    //map<google.protobuf.Any, google.protobuf.Any> details = 10;
+    map<string, google.protobuf.Any> details = 10;
+}
+
+message ConditionalTransferRequest {
+    CreateConditionalTransferParamsSchema create_conditional_transfer_params_schema = 1;
+    TPublicIdentifier public_identifier = 2;
+}
+
+
+message CollateralReply {
+    FullChannelState full_channel_state = 1;
+    TAddress channel_address = 2;
+}
+
+
+message RequestCollateralSchema {
+    TAddress channel_address = 1;
+    TAddress asset_id = 2;
+    string amount = 3;
+}
+
+message CollateralRequest {
+    RequestCollateralSchema collateral_request = 1;
+    TPublicIdentifier public_identifier = 2;
+}
+
+message DepositEngineParamsSchema {
+    TAddress channel_address = 1;
+    TAddress asset_id = 2;
+    TBasicMeta meta = 3;
+}
+
+
+message DepositRequest {
+    DepositEngineParamsSchema deposit_engine_params_schema = 1;
+    TPublicIdentifier public_identifier = 2;
+}
+
+
+message DefundTransferParamsSchema {
+    bytes transfer_id = 1;
+}
+
+message TransferResquest {
+    DefundTransferParamsSchema defund_transfer_params_schema = 1;
+    TPublicIdentifier public_identifier = 2;
+}  
+
+message DefundChannelParamsSchema {
+    TAddress channel_address = 1;
+}
+
+message ChannelResquest {
+    DefundChannelParamsSchema defund_channel_params_schema = 1;
+    TPublicIdentifier public_identifier = 2;
+}  
+
+message DepositTxRequest {
+    TAddress channel_address = 1;
+    string amount = 2;
+    TAddress asset_id = 3;
+    int32 chain_id = 4;
+    TPublicIdentifier public_identifier = 5;
+}
+
+
+message SetupRequest {
+    TPublicIdentifier counterparty_identifier = 1;
+    int32 chain_id = 2;
+    string timeout = 3;
+    TBasicMeta meta = 4;
+    TPublicIdentifier public_identifier = 5;
+}
+
+message SetupReply {
+    FullChannelState full_channel_state = 1;
+    TAddress channel_address = 2;
+}
+
+message RegisteredTransfersRequest {
+    int32 chain_id = 1;
+    TPublicIdentifier public_identifier = 2;    
+}
+
+message ChannelStatesRequest {
+    TPublicIdentifier public_identifier = 1;
+}
+
+message ActiveTransfersRequest {
+    TAddress channel_address = 1;
+    TPublicIdentifier public_identifier = 2;
+}
+
+message  TransferStatesByRoutingIdRequest {
+   TAddress channel_address = 1;
+   bytes routing_id = 2;
+   TPublicIdentifier public_identifier = 3;
+}
+
+message  TransferStateByRoutingIdRequest {
+    bytes routing_id = 1;
+    TPublicIdentifier public_identifier = 2;
+}
+
+message  TransfersRequest {
+    bytes transfer_id = 1;
+    TPublicIdentifier public_identifier = 2;
+}
+
+message TransferEncodingSchema {
+    string encoding = 1;
+}
+
+message TransferStateSchema {
+    //map<google.protobuf.Any, google.protobuf.Any> state = 1;
+    map<string, google.protobuf.Any> state = 1;
+}
+
+//message TransferResolverSchema {
+//    map<google.protobuf.Any, google.protobuf.Any> state = 1;
+//}
+
+
+message TFullTransferState {
+    TBalance balance = 1;
+    TAddress asset_id = 2;
+    TAddress channel_address = 3;
+    bool in_dispute = 4;
+    bytes transfer_id = 5;
+    TAddress transfer_definition = 6;
+    string transfer_timeout = 7;
+    bytes initial_statehash = 8;
+    TAddress initiator = 9; // either alice or bob
+    TAddress responder = 10; // either alice or bob
+    TAddress channel_factory_address = 11; // networkContext?
+    int32 chain_id = 12;
+    repeated TransferEncodingSchema transfer_encodings = 13; // Initial state encoding, resolver encoding
+    TransferStateSchema transfer_state = 14;
+    TransferResolverSchema transferResolver = 15; // undefined iff not resolved
+    TBasicMeta meta = 16;
+    int64 channel_nonce = 17;
+    TPublicIdentifier initiator_identifier = 18;
+    TPublicIdentifier responder_identifier = 19;
+}
+
+message TransferStateReply {
+    oneof Response {
+        string defined = 1;
+        TFullTransferState  tfull_transfer_state = 2;
+    }
+
+}
+
+
+message ChannelStateByParticipantsRequest {
+    TPublicIdentifier public_identifier = 1;
+    TPublicIdentifier counterparty = 2;
+    int32 chain_id = 3;
+
+}
+
+message AssetIds {
+    TAddress asset_id = 1;
+}
+
+
+message TBalance {
+    repeated TAddress to = 1;
+    repeated string amount = 2;
+}  
+
+
+message EthProviderReply {
+    google.protobuf.Any  response = 1;
+}
+/**
+
+message TFullChannelState {
+  repeated AssetIds asset_ids = 1;
+  repeated Balances balances = 2;
+  TAddress channel_address = 3;
+  TAddress alice = 4;
+  TAddress bob = 5;
+  bytes merkleRoot = 6;
+  int64 nonce = 7;
+  repeated string processed_deposits_a = 8;
+  repeated string processed_deposits_b = 9;
+  string timeout = 10;
+  TPublicIdentifier alice_identifier = 11;
+  TPublicIdentifier bobIdentifier = 12;
+  TChannelUpdate latestUpdate = 13;
+  NetworkContext networkContext = 14;
+  repeated string defund_nounces = 15;
+  bool in_dispute = 16;
+}
+
+
+message TChannelUpdate {
+    string channel_address = 1;
+    string from_identifier = 2;
+    string to_identifier = 3;
+    string type = 4;
+    int64 nonce = 5;
+    Balance balance = 6;
+    TAddress asset_id = 7;
+    map<google.protobuf.Any, google.protobuf.Any> details = 8;
+    string aliceSignature = 9;
+    string bob_signature = 10;
+}
+
+**/
