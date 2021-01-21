@@ -107,6 +107,7 @@ export class OutboundChannelUpdateError extends ProtocolError {
     ExternalValidationFailed: "Failed external outbound validation",
     GenerateUpdateFailed: "Failed to generate update",
     InvalidParams: "Invalid params",
+    NoUpdateToSync: "No update provided from responder to sync from",
     OutboundValidationFailed: "Failed to validate outbound update",
     RegenerateUpdateFailed: "Failed to regenerate update after sync",
     ReleaseLockFailed: "Failed to release lock",

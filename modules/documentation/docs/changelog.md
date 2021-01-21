@@ -2,6 +2,77 @@
 
 ## Next Release
 
+## 0.1.8-beta.4
+
+- \[contracts\] Add `drip` task to hardhat
+- \[engine\] Ensure created withdrawals are resolved on startup
+
+## 0.1.8-beta.3
+
+- \[messaging\] Fix for loop in message retry code
+
+## 0.1.8-beta.2
+
+- \[messaging\] Fix for loop in message retry code
+
+## 0.1.8-beta.1
+
+- \[protocol\] Remove retrying on protocol messages
+- \[protocol\] Hard error for lock release
+
+(Kids -- don't debug on prod)
+
+## 0.1.8-beta.0
+
+- \[protocol\] Retry sending messages
+- \[protocol\] Do not throw error if lock is not released
+- \[messaging\] Add retry logic
+
+## 0.1.7
+
+- \[router\] Update status of processed stored updates
+
+## 0.1.6
+
+- \[browser-node\] Save crossChainTransfer error state
+
+## 0.1.5
+
+- \[browser-node\] Fix bug in `crossChainTransferStore` key
+
+## 0.1.4
+
+- \[contracts\] Fix bug in `chainService`
+
+## 0.1.3
+
+- \[browser-node\] Remove from storage if transfer is cancelled.
+- \[browser-node\] Register listener for sender cancellations once
+- \[browser-node\] Don't hang on `crossChainTransfer` if sender-side transfer cancelled
+- \[router\] Handle unverified (sent a single-signed) updates for transfer forwarding on check-in (using `reconcileDeposit` for state consensus)
+- \[contracts\] Improvements with `gasPrice` and `gasLimit` in chain servce
+
+## 0.1.3-beta.1
+
+- \[browser-node\] Remove from storage if transfer is cancelled.
+
+## 0.1.2
+
+- \[router\] Add NATS client
+- \[browser-node, server-node\] Add methods to get router config
+- \[browser-node\] Verify swap supported before `crossChainTransfer`
+- \[router\] Hotfix `toString()` undefined
+- \[ops\] Add LogDNA tag support to router config
+
+## 0.1.1
+
+- \[all\] Improve logging
+- \[contracts\] Add etherscan verification plugin
+- \[router\] Correctly reclaim from the sender's channel
+- \[contracts\] Check if channel is deployed right before deploying
+- \[router\] Checksum config assetIds
+- \[engine\] Checksum user input assetIds
+
 ## 0.1.0
 
 - \[all\] Mainnet release :tada:

@@ -19,7 +19,7 @@ export async function validateChannelUpdateSignatures(
   };
   // Generate the commitment
   const { networkContext, ...core } = state;
-  let hash;
+  let hash: string;
   try {
     hash = hashChannelCommitment(core);
   } catch (e) {

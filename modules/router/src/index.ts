@@ -5,7 +5,13 @@ import metricsPlugin from "fastify-metrics";
 import pino from "pino";
 import { Evt } from "evt";
 import { VectorChainReader } from "@connext/vector-contracts";
-import { EventCallbackConfig, hydrateProviders, RestServerNodeService } from "@connext/vector-utils";
+import {
+  EventCallbackConfig,
+  hydrateProviders,
+  RestServerNodeService,
+  ChannelSigner,
+  getPublicIdentifierFromPublicKey,
+} from "@connext/vector-utils";
 import {
   IsAlivePayload,
   ConditionalTransferCreatedPayload,
@@ -15,10 +21,12 @@ import {
   RequestCollateralPayload,
 } from "@connext/vector-types";
 import { Registry } from "prom-client";
+import { Wallet } from "ethers";
 
 import { config } from "./config";
 import { IRouter, Router } from "./router";
 import { PrismaStore } from "./services/store";
+import { NatsRouterMessagingService } from "./services/messaging";
 
 const routerPort = 8000;
 const routerBase = `http://router:${routerPort}`;
@@ -55,7 +63,9 @@ const evts: EventCallbackConfig = {
   [EngineEvents.WITHDRAWAL_RESOLVED]: {},
 };
 
-const logger = pino();
+const configuredIdentifier = getPublicIdentifierFromPublicKey(Wallet.fromMnemonic(config.mnemonic).publicKey);
+
+const logger = pino({ name: configuredIdentifier });
 logger.info({ config }, "Loaded config from environment");
 const server = fastify({ logger, pluginTimeout: 300_000, disableRequestLogging: config.logLevel !== "debug" });
 
@@ -66,6 +76,13 @@ let router: IRouter;
 const store = new PrismaStore();
 
 server.addHook("onReady", async () => {
+  const signer = new ChannelSigner(Wallet.fromMnemonic(config.mnemonic).privateKey);
+
+  const messagingService = new NatsRouterMessagingService({
+    signer,
+    logger: logger.child({ module: "NatsRouterMessagingService" }),
+    messagingUrl: config.messagingUrl,
+  });
   const nodeService = await RestServerNodeService.connect(
     config.nodeUrl,
     logger.child({ module: "RouterNodeService" }),
@@ -77,12 +94,14 @@ server.addHook("onReady", async () => {
     hydrateProviders(config.chainProviders),
     logger.child({ module: "RouterChainReader" }),
   );
+
   router = await Router.connect(
     nodeService.publicIdentifier,
     nodeService.signerAddress,
     nodeService,
     chainService,
     store,
+    messagingService,
     logger,
     register,
   );

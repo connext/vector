@@ -1,4 +1,17 @@
 import { UpdateParams, FullChannelState, ChannelUpdate } from "./channel";
+
+export const jsonifyError = (error: VectorError | Error): VectorErrorJson => {
+  if (error instanceof VectorError) {
+    return error.toJson();
+  }
+  return {
+    message: error.message,
+    type: error.name,
+    context: {},
+    stack: error.stack,
+  };
+};
+
 export class Result<T, Y extends Error = any> {
   private value?: T;
   private error?: Y;
@@ -35,7 +48,7 @@ export class Result<T, Y extends Error = any> {
     }
     return {
       isError: true,
-      error: VectorError.jsonify(this.error!),
+      error: jsonifyError(this.error!),
     };
   }
 
@@ -87,19 +100,7 @@ export class VectorError extends Error {
     super(msg);
   }
 
-  public static jsonify(error: VectorError | Error): VectorErrorJson {
-    if (error instanceof VectorError) {
-      return error.toJson();
-    }
-    return {
-      message: error.message,
-      type: error.name,
-      context: {},
-      stack: error.stack,
-    };
-  }
-
-  private toJson(): VectorErrorJson {
+  public toJson(): VectorErrorJson {
     return {
       message: this.msg,
       context: this.context,

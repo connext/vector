@@ -56,6 +56,7 @@ function App() {
         chainProviders: config.chainProviders,
       });
       await client.init();
+      await client.resumePendingCrossChainTransfers();
       const channelsRes = await client.getStateChannels();
       if (channelsRes.isError) {
         setConnectError(channelsRes.getError().message);
@@ -205,6 +206,17 @@ function App() {
   ) => {
     setTransferLoading(true);
     try {
+      const crossChainTransferId = getRandomBytes32();
+      node.on(EngineEvents.CONDITIONAL_TRANSFER_RESOLVED, (data) => {
+        console.log("====================> EngineEvents.CONDITIONAL_TRANSFER_RESOLVED", data);
+        if (
+          data.transfer.meta.crossChainTransferId === crossChainTransferId &&
+          data.transfer.transferResolver &&
+          Object.values(data.transfer.transferResolver)[0] === constants.HashZero
+        ) {
+          setTransferLoading(false);
+        }
+      });
       await node.crossChainTransfer({
         amount,
         fromAssetId,
@@ -213,10 +225,11 @@ function App() {
         toChainId,
         reconcileDeposit: true,
         withdrawalAddress,
+        crossChainTransferId,
       });
       console.log(`Cross chain transfer complete!`);
     } catch (e) {
-      console.error("Error cross chain transferring", e);
+      console.error("Error cross chain transferring", !!e["toJson"] ? e.toJson() : e);
     }
     setTransferLoading(false);
   };

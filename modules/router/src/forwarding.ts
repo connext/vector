@@ -13,13 +13,15 @@ import {
   FullTransferState,
   IVectorChainReader,
   NodeError,
-  VectorError,
+  jsonifyError,
 } from "@connext/vector-types";
 import { BaseLogger } from "pino";
 import { BigNumber } from "@ethersproject/bignumber";
+import { getRandomBytes32 } from "@connext/vector-utils";
+import { AddressZero } from "@ethersproject/constants";
 
 import { getSwappedAmount } from "./services/swap";
-import { IRouterStore, RouterUpdateType, RouterUpdateStatus } from "./services/store";
+import { IRouterStore, RouterUpdateType, RouterUpdateStatus, RouterStoredUpdate } from "./services/store";
 import { CheckInError, ForwardTransferCreationError, ForwardTransferResolutionError } from "./errors";
 import {
   cancelCreatedTransfer,
@@ -37,10 +39,20 @@ export async function forwardTransferCreation(
   chainReader: IVectorChainReader,
 ): Promise<Result<any, ForwardTransferCreationError>> {
   const method = "forwardTransferCreation";
+  const methodId = getRandomBytes32();
   logger.info(
-    { data, method, node: { routerSignerAddress, routerPublicIdentifier } },
-    "Received transfer event, starting forwarding",
+    {
+      method,
+      methodId,
+      routerPublicIdentifier,
+      routerSignerAddress,
+      senderTransferId: data.transfer.transferId,
+      senderChannelAddress: data.channelAddress,
+      routingId: data.transfer?.meta?.routingId,
+    },
+    "Method started",
   );
+  logger.debug({ method, methodId, event: data }, "Event data");
 
   /*
   A note on the transfer event data and conditionalTransfer() params:
@@ -71,6 +83,18 @@ export async function forwardTransferCreation(
     receiverChannel = "",
     context: any = {},
   ): Promise<Result<any, ForwardTransferCreationError>> => {
+    logger.warn(
+      {
+        method,
+        methodId,
+        senderChannelAddress: senderTransfer.channelAddress,
+        senderTransferId: senderTransfer.transferId,
+        routingId,
+        receiverChannelAddress: receiverChannel,
+        cancellationReason: errorReason,
+      },
+      "Cancelling sender transfer",
+    );
     const cancelRes = await cancelCreatedTransfer(
       errorReason,
       senderTransfer,
@@ -112,7 +136,6 @@ export async function forwardTransferCreation(
     channelAddress: senderChannelAddress,
     initiator,
     transferTimeout,
-    transferDefinition: senderTransferDefinition,
   } = senderTransfer;
   const meta = { ...untypedMeta } as RouterSchemas.RouterMeta & any;
   const { routingId } = meta ?? {};
@@ -147,7 +170,7 @@ export async function forwardTransferCreation(
         senderTransfer.transferId,
         "",
         {
-          nodeError: VectorError.jsonify(senderChannelRes.getError()!),
+          nodeError: senderChannelRes.getError()!.toJson(),
         },
       ),
     );
@@ -176,7 +199,18 @@ export async function forwardTransferCreation(
   // potential swaps/crosschain stuff
   let recipientAmount = senderAmount;
   if (recipientAssetId !== senderAssetId || recipientChainId !== senderChainId) {
-    logger.warn({ method, recipientAssetId, senderAssetId, recipientChainId }, "Detected inflight swap");
+    logger.info(
+      {
+        method,
+        methodId,
+        recipientAssetId,
+        senderAssetId,
+        recipientChainId,
+        senderChainId,
+        conditionType,
+      },
+      "Detected inflight swap",
+    );
     const swapRes = getSwappedAmount(senderAmount, senderAssetId, senderChainId, recipientAssetId, recipientChainId);
     if (swapRes.isError) {
       return cancelSenderTransferAndReturnError(
@@ -191,16 +225,12 @@ export async function forwardTransferCreation(
     }
     recipientAmount = swapRes.getValue();
 
-    logger.warn(
+    logger.info(
       {
         method,
-        recipientAssetId,
+        methodId,
         recipientAmount,
-        recipientChainId,
-        senderTransferDefinition,
         senderAmount,
-        senderAssetId,
-        conditionType,
       },
       "Inflight swap calculated",
     );
@@ -219,7 +249,7 @@ export async function forwardTransferCreation(
       ForwardTransferCreationError.reasons.RecipientChannelNotFound,
       "",
       {
-        storeError: VectorError.jsonify(recipientChannelRes.getError()!),
+        storeError: recipientChannelRes.getError()!.toJson(),
         recipientChainId,
         recipientIdentifier,
       },
@@ -256,7 +286,7 @@ export async function forwardTransferCreation(
     details,
     meta: newMeta,
   };
-  logger.info({ params, method }, "Generated new transfer params");
+  logger.info({ method, methodId, params }, "Generated new transfer params");
 
   const transferRes = await attemptTransferWithCollateralization(
     params,
@@ -287,13 +317,32 @@ export async function forwardTransferCreation(
 
   // check if you should cancel the sender
   const error = transferRes.getError()!;
+  logger.error({ ...jsonifyError(error) }, "Failed to forward transfer");
   if (error.context.shouldCancelSender) {
-    logger.warn({ ...error }, "Cancelling sender-side transfer");
-    return cancelSenderTransferAndReturnError(routingId, senderTransfer, error.message);
+    return cancelSenderTransferAndReturnError(
+      routingId,
+      senderTransfer,
+      error.message,
+      recipientChannel.channelAddress,
+    );
   }
 
+  // There was an error, but we cannot safely cancel the sender transfer
+  // because we have sent a single signed update to the receiver.
+  // In this case, we need to know if the transfer was successfully sent
+  // to the receiver, or if we should retry the transfer. This case can
+  // be handled on check-in, so store the update as an update pending
+  // verification
+  await store.queueUpdate(
+    recipientChannel.channelAddress,
+    RouterUpdateType.TRANSFER_CREATION,
+    params,
+    RouterUpdateStatus.UNVERIFIED,
+  );
+
   // return failure without cancelling
-  return Result.fail(transferRes.getError()!);
+  logger.info({ method, methodId }, "Method complete");
+  return Result.fail(error);
 }
 
 export async function forwardTransferResolution(
@@ -303,12 +352,22 @@ export async function forwardTransferResolution(
   nodeService: INodeService,
   store: IRouterStore,
   logger: BaseLogger,
-): Promise<Result<undefined | NodeResponses.ResolveTransfer, ForwardTransferResolutionError>> {
+): Promise<Result<undefined | (NodeResponses.ResolveTransfer & { assetId: string }), ForwardTransferResolutionError>> {
   const method = "forwardTransferResolution";
+  const methodId = getRandomBytes32();
   logger.info(
-    { data, method, node: { routerSignerAddress, routerPublicIdentifier } },
-    "Received transfer resolution, starting forwarding",
+    {
+      method,
+      methodId,
+      routerPublicIdentifier,
+      routerSignerAddress,
+      receiverTransferId: data.transfer.transferId,
+      receiverChannelAddress: data.channelAddress,
+      routingId: data.transfer?.meta?.routingId,
+    },
+    "Method started",
   );
+  logger.debug({ methodId, method, data }, "Handling event");
   const {
     channelAddress,
     transfer: { transferId, transferResolver, meta },
@@ -330,7 +389,7 @@ export async function forwardTransferResolution(
         channelAddress,
         transferId,
         {
-          getChannelError: VectorError.jsonify(transfersRes.getError()!),
+          getChannelError: transfersRes.getError()!.toJson(),
         },
       ),
     );
@@ -360,10 +419,31 @@ export async function forwardTransferResolution(
     transferResolver,
     publicIdentifier: routerPublicIdentifier,
   };
+  logger.info(
+    {
+      method,
+      methodId,
+      transferResolver,
+      senderTransferId: incomingTransfer.transferId,
+      senderChannelAddress: incomingTransfer.channelAddress,
+      routingId,
+    },
+    "Forwarding resolution",
+  );
   const resolution = await nodeService.resolveTransfer(resolveParams);
   if (resolution.isError) {
+    logger.warn(
+      {
+        method,
+        methodId,
+        error: jsonifyError(resolution.getError()!),
+        routingId,
+        senderTransferId: incomingTransfer.transferId,
+        senderChannelAddress: incomingTransfer.channelAddress,
+      },
+      "Failed to forward resolution, queueing",
+    );
     // Store the transfer, retry later
-    // TODO: add logic to periodically retry resolving transfers
     const type = RouterUpdateType.TRANSFER_RESOLUTION;
     await store.queueUpdate(incomingTransfer.channelAddress, type, resolveParams);
     return Result.fail(
@@ -375,14 +455,15 @@ export async function forwardTransferResolution(
         channelAddress,
         transferId,
         {
-          resolutionError: VectorError.jsonify(resolution.getError()!),
+          resolutionError: jsonifyError(resolution.getError()!),
           transferResolver,
         },
       ),
     );
   }
 
-  return Result.ok(resolution.getValue());
+  logger.info({ method, methodId }, "Method complete");
+  return Result.ok({ ...resolution.getValue(), assetId: incomingTransfer.assetId });
 }
 
 export async function handleIsAlive(
@@ -395,15 +476,251 @@ export async function handleIsAlive(
   logger: BaseLogger,
 ): Promise<Result<undefined, CheckInError>> {
   const method = "handleIsAlive";
+  const methodId = getRandomBytes32();
   logger.info(
-    { data, method, node: { signerAddress, routerPublicIdentifier } },
-    "Received isAlive event, starting handler",
+    {
+      method,
+      methodId,
+      routerPublicIdentifier,
+      routerSignerAddress: signerAddress,
+      channelAddress: data.channelAddress,
+    },
+    "Method started",
   );
+  logger.info({ method, methodId, event: data }, "Handling event");
 
   if (data.skipCheckIn) {
-    logger.info({ method, data }, "Skipping isAlive handler");
+    logger.info({ method, methodId, channelAddress: data.channelAddress }, "Skipping isAlive handler");
     return Result.ok(undefined);
   }
+
+  const pending = await handlePendingUpdates(data, routerPublicIdentifier, nodeService, store, chainReader, logger);
+
+  const unverified = await handleUnverifiedUpdates(
+    data,
+    routerPublicIdentifier,
+    nodeService,
+    store,
+    chainReader,
+    logger,
+  );
+
+  if (pending.isError && unverified.isError) {
+    return Result.fail(
+      new CheckInError(CheckInError.reasons.PendingAndUnverifiedFailed, data.channelAddress, {
+        pending: jsonifyError(pending.getError()!),
+        unverified: jsonifyError(unverified.getError()!),
+      }),
+    );
+  }
+
+  if (pending.isError) {
+    return pending;
+  }
+
+  if (unverified.isError) {
+    return unverified;
+  }
+
+  return Result.ok(undefined);
+}
+
+const handleUnverifiedUpdates = async (
+  data: IsAlivePayload,
+  routerPublicIdentifier: string,
+  nodeService: INodeService,
+  store: IRouterStore,
+  chainReader: IVectorChainReader,
+  logger: BaseLogger,
+): Promise<Result<undefined, CheckInError>> => {
+  const method = "handleUnverifiedUpdates";
+  const methodId = getRandomBytes32();
+  logger.debug(
+    {
+      method,
+      methodId,
+      routerPublicIdentifier,
+      channelAddress: data.channelAddress,
+    },
+    "Method started",
+  );
+
+  // This should handle updates where a single-signed update creating
+  // the transfer with a recipient was generated, but the router does
+  // not know whether or not the transfer was installed or should be
+  // cancelled with the sender
+
+  // Get all verified updates
+  const updates = await store.getQueuedUpdates(data.channelAddress, RouterUpdateStatus.UNVERIFIED);
+
+  // Get the channel (if needed, should only query 1x for it)
+  const channelRes = await nodeService.getStateChannel({ channelAddress: data.channelAddress });
+  if (channelRes.isError || !channelRes.getValue()) {
+    // Do not proceed with processing updates
+    return Result.fail(
+      new CheckInError(CheckInError.reasons.CouldNotGetChannel, data.channelAddress, {
+        getChannelError: channelRes.getError()?.message,
+      }),
+    );
+  }
+  const channel = channelRes.getValue() as FullChannelState;
+
+  const erroredUpdates: RouterStoredUpdate<any>[] = [];
+  const handleUpdateErr = async (update: RouterStoredUpdate<any>, msg: string, context: any = {}) => {
+    logger.error({ update, ...context }, msg);
+    await store.setUpdateStatus(update.id, RouterUpdateStatus.FAILED, msg);
+    erroredUpdates.push(update);
+  };
+  for (const update of updates) {
+    if (update.type !== RouterUpdateType.TRANSFER_CREATION) {
+      await handleUpdateErr(update, "Can't verify non-create updates");
+      continue;
+    }
+
+    await store.setUpdateStatus(update.id, RouterUpdateStatus.PROCESSING);
+    logger.info({ method, methodId, updateType: update.type, updateId: update.id }, "Processing unverified update");
+
+    // First, reconcile deposit on the channel to come to consensus on the
+    // merkle root
+    const reconcile = await nodeService.reconcileDeposit({
+      publicIdentifier: routerPublicIdentifier,
+      channelAddress: data.channelAddress,
+      assetId: AddressZero,
+    });
+    if (reconcile.isError) {
+      await handleUpdateErr(update, "Could not reconcile deposit", {
+        reconcileError: jsonifyError(reconcile.getError()!),
+      });
+      continue;
+    }
+
+    // If transfer was created (included in root), mark update as processed
+    // and continue
+    const routingId = (update as RouterStoredUpdate<"TRANSFER_CREATION">).payload.meta?.routingId;
+    const requireOnline = update.payload.meta?.requireOnline ?? false;
+    if (!routingId) {
+      await handleUpdateErr(update, "No routingId in update.payload.meta");
+      continue;
+    }
+    const transfers = await nodeService.getTransfersByRoutingId({
+      routingId,
+      publicIdentifier: routerPublicIdentifier,
+    });
+    if (transfers.isError) {
+      await handleUpdateErr(update, "Could not get transfers by routingId", {
+        routingId,
+        transfersError: jsonifyError(transfers.getError()!),
+      });
+      continue;
+    }
+    const receiverTransfer = transfers.getValue().find((t) => {
+      return t.initiatorIdentifier === routerPublicIdentifier;
+    });
+    if (receiverTransfer) {
+      await store.setUpdateStatus(
+        update.id,
+        RouterUpdateStatus.COMPLETE,
+        "Update verified: receiver installed transfer",
+      );
+      logger.info({ method, methodId, update: update.id }, "Update verified: receiver installed transfer");
+      continue;
+    }
+
+    // If the transfer was not created:
+    // - forward receiver transfer if transfer.meta.requireOnline == false
+    // - cancel sender transfer if the transfer.meta.requireOnline == true
+    if (!requireOnline) {
+      // Retry creating receiver transfer
+      const createRes = await transferWithCollateralization(
+        update.payload as NodeParams.ConditionalTransfer,
+        channel,
+        routerPublicIdentifier,
+        nodeService,
+        chainReader,
+        logger,
+      );
+      if (createRes.isError) {
+        await handleUpdateErr(update, "Failed to create with receiver", {
+          createError: jsonifyError(createRes.getError()!),
+        });
+        continue;
+      }
+      logger.info({ method, methodId, update: update.id }, "Update verified: receiver transfer created");
+      continue;
+    }
+
+    // cancel sender transfer
+    const senderTransfer = transfers.getValue().find((t) => {
+      return t.responderIdentifier === routerPublicIdentifier;
+    });
+    if (!senderTransfer) {
+      await handleUpdateErr(update, "No sender transfer to cancel", {
+        transfers,
+      });
+      continue;
+    }
+
+    const cancelRes = await cancelCreatedTransfer(
+      "Receiver offline",
+      senderTransfer,
+      routerPublicIdentifier,
+      nodeService,
+      store,
+      logger,
+      data.channelAddress,
+      {},
+      true, // sender transfer cancellation queued
+    );
+    // the receiver update was handled successfully, and the sender
+    // update was enqueued if failed. So remove the update from pending
+    if (cancelRes.isError) {
+      logger.warn(
+        { cancelError: jsonifyError(cancelRes.getError()!) },
+        "Update verified: could not cancel sender transfer, cancellation enqueued",
+      );
+    }
+    await store.setUpdateStatus(
+      update.id,
+      RouterUpdateStatus.COMPLETE,
+      "Update verified: receiver transfer not installed, sender cancelled",
+    );
+    logger.info(
+      { method, methodId, update: update.id },
+      "Update verified: receiver transfer not installed, sender cancelled",
+    );
+    continue;
+  }
+  if (erroredUpdates.length > 0) {
+    logger.error({ method, methodId, erroredUpdates }, "Failed to handle updates");
+    return Result.fail(
+      new CheckInError(CheckInError.reasons.UpdatesFailed, data.channelAddress, {
+        failedIds: erroredUpdates.map((update) => update.id),
+      }),
+    );
+  }
+
+  return Result.ok(undefined);
+};
+
+const handlePendingUpdates = async (
+  data: IsAlivePayload,
+  routerPublicIdentifier: string,
+  nodeService: INodeService,
+  store: IRouterStore,
+  chainReader: IVectorChainReader,
+  logger: BaseLogger,
+): Promise<Result<undefined, CheckInError>> => {
+  const method = "handlePendingUpdates";
+  const methodId = getRandomBytes32();
+  logger.debug(
+    {
+      method,
+      methodId,
+      routerPublicIdentifier,
+      channelAddress: data.channelAddress,
+    },
+    "Method started",
+  );
   // This means the user is online and has checked in. Get all updates that are
   // queued and then execute them.
   const updates = await store.getQueuedUpdates(data.channelAddress, RouterUpdateStatus.PENDING);
@@ -424,7 +741,8 @@ export async function handleIsAlive(
   for (const routerUpdate of updates) {
     // set status to processing to avoid race conditions
     await store.setUpdateStatus(routerUpdate.id, RouterUpdateStatus.PROCESSING);
-    logger.info({ method, update: routerUpdate }, "Found update for checkIn channel");
+    logger.info({ method, methodId, updateType: routerUpdate.type, updateId: routerUpdate.id }, "Processing update");
+    logger.debug({ method, methodId, update: routerUpdate }, "Update details");
     const { type, payload } = routerUpdate;
 
     // Handle transfer creation updates
@@ -442,8 +760,8 @@ export async function handleIsAlive(
       );
       if (createRes.isError) {
         logger.error(
-          { createError: createRes.getError()?.message, update: routerUpdate },
-          "Handling router update failed",
+          { method, methodId, transferError: jsonifyError(createRes.getError()!), update: routerUpdate },
+          "Handling update failed",
         );
         const error = createRes.getError()?.context?.transferError;
         await store.setUpdateStatus(
@@ -453,7 +771,12 @@ export async function handleIsAlive(
         );
         erroredUpdates.push(routerUpdate);
       } else {
-        logger.info({ update: routerUpdate.id, method }, "Successfully handled checkIn update");
+        await store.setUpdateStatus(
+          routerUpdate.id,
+          RouterUpdateStatus.COMPLETE,
+          "Update complete: forwarded transfer creation",
+        );
+        logger.info({ method, methodId, updateId: routerUpdate.id }, "Successfully handled checkIn update");
       }
       continue;
     }
@@ -467,7 +790,10 @@ export async function handleIsAlive(
     const resolveRes = await nodeService.resolveTransfer(payload as NodeParams.ResolveTransfer);
     // If failed, retry later
     if (resolveRes.isError) {
-      logger.error({ resolveError: resolveRes.getError()?.message, routerUpdate }, "Handling router update failed");
+      logger.error(
+        { method, methodId, resolveError: jsonifyError(resolveRes.getError()!), update: routerUpdate },
+        "Handling update failed",
+      );
       const error = resolveRes.getError()?.message;
       await store.setUpdateStatus(
         routerUpdate.id,
@@ -476,15 +802,22 @@ export async function handleIsAlive(
       );
       erroredUpdates.push(routerUpdate);
     } else {
-      logger.info({ update: routerUpdate.id, method }, "Successfully handled checkIn update");
+      await store.setUpdateStatus(
+        routerUpdate.id,
+        RouterUpdateStatus.COMPLETE,
+        "Update complete: forwarded transfer resolution",
+      );
+      logger.info({ method, methodId, updateId: routerUpdate.id }, "Successfully handled update");
     }
   }
   if (erroredUpdates.length > 0) {
+    logger.error({ method, methodId, erroredUpdates }, "Failed to handle updates");
     return Result.fail(
       new CheckInError(CheckInError.reasons.UpdatesFailed, data.channelAddress, {
         failedIds: erroredUpdates.map((update) => update.id),
       }),
     );
   }
+  logger.info({ method, methodId }, "Method complete");
   return Result.ok(undefined);
-}
+};

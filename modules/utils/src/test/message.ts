@@ -1,4 +1,4 @@
-import { UpdateType, VectorChannelMessage, VectorErrorMessage, VectorMessage } from "@connext/vector-types";
+import { UpdateType, VectorChannelMessage } from "@connext/vector-types";
 
 import { createTestChannelUpdate, PartialChannelUpdate } from "./channel";
 import { mkPublicIdentifier } from "./util";

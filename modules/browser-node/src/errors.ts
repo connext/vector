@@ -32,11 +32,14 @@ export class CrossChainTransferError extends NodeError {
   static readonly type = "CrossChainTransferError";
 
   static readonly reasons = {
+    ChainNotSupported: "Router does not support chains requested",
     MissingReceiverChannel: "Missing channel on receiver chain",
     MissingSenderChannel: "Missing channel on sender chain",
     MissingWithdrawalAmount: "Withdrawal amount not specified",
     MultinodeProhibitted: "Cannot configure multiple nodes for browser",
     ReceiverEventMissed: "Failed to get receiver event",
+    SenderTransferCancelled: "Sender-side transfer was cancelled",
+    SwapNotSupported: "Router does not support requested swap",
   } as const;
 
   readonly context: BrowserNodeErrorContext;

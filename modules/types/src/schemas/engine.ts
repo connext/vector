@@ -21,6 +21,10 @@ import {
 // from the rpc, converts them to proper protocol parameters,
 // and returns the protocol response.
 
+const GetRouterConfigParamsSchema = Type.Object({
+  routerIdentifier: TPublicIdentifier,
+});
+
 // Get transfer state by resolver id params
 const GetTransferStateByRoutingIdParamsSchema = Type.Object({
   channelAddress: TAddress,
@@ -169,6 +173,9 @@ const RpcRequestEngineParamsSchema = Type.Object({
 export namespace EngineParams {
   export const RpcRequestSchema = RpcRequestEngineParamsSchema;
   export type RpcRequest = Static<typeof RpcRequestEngineParamsSchema>;
+
+  export const GetRouterConfigSchema = GetRouterConfigParamsSchema;
+  export type GetRouterConfig = Static<typeof GetRouterConfigParamsSchema>;
 
   export const SignUtilityMessageSchema = SignUtilityMessageParamsSchema;
   export type SignUtilityMessage = Static<typeof SignUtilityMessageParamsSchema>;

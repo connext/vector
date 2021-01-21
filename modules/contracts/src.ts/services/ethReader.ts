@@ -19,7 +19,7 @@ import { encodeBalance, encodeTransferResolver, encodeTransferState } from "@con
 import { BigNumber } from "@ethersproject/bignumber";
 import { AddressZero, HashZero } from "@ethersproject/constants";
 import { Contract } from "@ethersproject/contracts";
-import { JsonRpcProvider } from "@ethersproject/providers";
+import { JsonRpcProvider, TransactionRequest } from "@ethersproject/providers";
 import pino from "pino";
 
 import { ChannelFactory, ChannelMastercopy, TransferDefinition, TransferRegistry, VectorChannel } from "../artifacts";
@@ -243,14 +243,7 @@ export class EthereumChainReader implements IVectorChainReader {
     } catch (e) {
       // Likely means channel contract was not deployed
       // TODO: check for reason?
-      try {
-        onchainBalance =
-          assetId === AddressZero
-            ? await provider!.getBalance(channelAddress)
-            : await new Contract(assetId, ERC20Abi, provider).balanceOf(channelAddress);
-      } catch (e) {
-        return Result.fail(e);
-      }
+      return this.getOnchainBalance(assetId, channelAddress, chainId);
     }
     return Result.ok(onchainBalance);
   }
@@ -454,6 +447,32 @@ export class EthereumChainReader implements IVectorChainReader {
     }
   }
 
+  async getGasPrice(chainId: number): Promise<Result<BigNumber, ChainError>> {
+    const provider = this.chainProviders[chainId];
+    if (!provider) {
+      return Result.fail(new ChainError(ChainError.reasons.ProviderNotFound));
+    }
+    try {
+      const gasPrice = await provider.getGasPrice();
+      return Result.ok(gasPrice);
+    } catch (e) {
+      return Result.fail(e);
+    }
+  }
+
+  async estimateGas(chainId: number, transaction: TransactionRequest): Promise<Result<BigNumber, ChainError>> {
+    const provider = this.chainProviders[chainId];
+    if (!provider) {
+      return Result.fail(new ChainError(ChainError.reasons.ProviderNotFound));
+    }
+    try {
+      const gas = await provider.estimateGas(transaction);
+      return Result.ok(gas);
+    } catch (e) {
+      return Result.fail(e);
+    }
+  }
+
   async getTokenAllowance(
     tokenAddress: string,
     owner: string,
@@ -472,6 +491,23 @@ export class EthereumChainReader implements IVectorChainReader {
     } catch (e) {
       return Result.fail(e);
     }
+  }
+
+  async getOnchainBalance(assetId: string, balanceOf: string, chainId: number): Promise<Result<BigNumber, ChainError>> {
+    const provider = this.chainProviders[chainId];
+    if (!provider) {
+      return Result.fail(new ChainError(ChainError.reasons.ProviderNotFound));
+    }
+    let onchainBalance: BigNumber;
+    try {
+      onchainBalance =
+        assetId === AddressZero
+          ? await provider!.getBalance(balanceOf)
+          : await new Contract(assetId, ERC20Abi, provider).balanceOf(balanceOf);
+    } catch (e) {
+      return Result.fail(e);
+    }
+    return Result.ok(onchainBalance);
   }
 
   private tryEvm(encodedFunctionData: string, bytecode: string): Result<Uint8Array, Error> {

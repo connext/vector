@@ -210,6 +210,7 @@ services:
       VECTOR_CONFIG: '$config'
       VECTOR_NODE_URL: 'http://roger:$internal_node_port'
       VECTOR_PORT: '$router_port'
+      VECTOR_MNEMONIC: '$roger_mnemonic'
 
   $observability_services
 
