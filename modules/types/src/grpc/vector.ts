@@ -3,7 +3,7 @@
 // tslint:disable
 import { ServiceType } from "@protobuf-ts/runtime-rpc";
 import { MessageType } from "@protobuf-ts/runtime";
-import { Any } from "./google/protobuf/any";
+import { Any } from "./any";
 /**
  * @generated from protobuf message com.vector.ClearStoreReply
  */
@@ -983,6 +983,10 @@ export interface CreateNodeRequest {
      * @generated from protobuf field: string mnemonic = 2;
      */
     mnemonic: string;
+    /**
+     * @generated from protobuf field: bool skipCheckIn = 3;
+     */
+    skipCheckIn: boolean;
 }
 /**
  * @generated from protobuf message com.vector.CreateNodeReply
@@ -2422,7 +2426,8 @@ class CreateNodeRequest$Type extends MessageType<CreateNodeRequest> {
     constructor() {
         super("com.vector.CreateNodeRequest", [
             { no: 1, name: "index", kind: "scalar", T: 5 /*ScalarType.INT32*/ },
-            { no: 2, name: "mnemonic", kind: "scalar", T: 9 /*ScalarType.STRING*/ }
+            { no: 2, name: "mnemonic", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 3, name: "skipCheckIn", kind: "scalar", T: 8 /*ScalarType.BOOL*/ }
         ]);
     }
 }

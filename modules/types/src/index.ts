@@ -9,6 +9,7 @@ export * from "./engine";
 export * from "./error";
 export * from "./event";
 export * from "./externalValidation";
+export * as GrpcTypes from "./grpc";
 export * from "./lock";
 export * from "./messaging";
 export * from "./network";

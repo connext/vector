@@ -4,21 +4,19 @@
 // https://github.com/timostamm/protobuf-ts/tree/master/packages/example-node-grpc-server
 
 import * as grpc from "@grpc/grpc-js";
-import { jsonifyError } from "@connext/vector-types";
+import { jsonifyError, GrpcTypes } from "@connext/vector-types";
 
-import { logger, store } from "..";
-import { createNode, deleteNodes } from "../helpers/nodes";
+import { createNode, deleteNodes } from "./helpers/nodes";
 
-import { CreateNodeReply, CreateNodeRequest } from "./gen/vector";
-import { vectorServiceDefinition, IVectorService } from "./gen/vector.grpc-server";
+import { logger, store } from ".";
 
 const host = "0.0.0.0:5000";
 
-const vectorService: IVectorService = {
+const vectorService: GrpcTypes.IVectorService = {
   clearStore: () => undefined,
   async createNode(
-    call: grpc.ServerUnaryCall<CreateNodeRequest, CreateNodeReply>,
-    callback: grpc.sendUnaryData<CreateNodeReply>,
+    call: grpc.ServerUnaryCall<GrpcTypes.CreateNodeRequest, GrpcTypes.CreateNodeReply>,
+    callback: grpc.sendUnaryData<GrpcTypes.CreateNodeReply>,
   ): Promise<void> {
     try {
       let storedMnemonic = await store.getMnemonic();
@@ -72,7 +70,7 @@ const vectorService: IVectorService = {
 
 function getServer(): grpc.Server {
   const server = new grpc.Server();
-  server.addService(vectorServiceDefinition, vectorService);
+  server.addService(GrpcTypes.vectorServiceDefinition, vectorService);
   return server;
 }
 
