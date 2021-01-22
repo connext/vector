@@ -20,10 +20,10 @@ const logger = pino();
 
 describe("store", () => {
   let store: BrowserStore;
+  const pubId = mkPublicIdentifier();
 
   before(async () => {
-    store = new BrowserStore(logger.child({ module: "BrowserStore" }), indexedDB, IDBKeyRange);
-    await store.connect();
+    store = await BrowserStore.create(pubId, logger, indexedDB, IDBKeyRange);
   });
 
   beforeEach(async () => {

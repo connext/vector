@@ -18,14 +18,29 @@ import { BaseLogger } from "pino";
 
 type StoredTransfer = FullTransferState & { createUpdateNonce: number; resolveUpdateNonce: number; routingId: string };
 
+const storedTransferToTransferState = (stored: StoredTransfer): FullTransferState => {
+  const transfer: any = stored;
+  delete transfer.createUpdateNonce;
+  delete transfer.resolveUpdateNonce;
+  delete transfer.routingId;
+  return transfer as FullTransferState;
+};
+
+const getStoreName = (publicIdentifier: string) => {
+  return `${publicIdentifier.substr(0, 10)}Store`;
+};
+const NON_NAMESPACED_STORE = "VectorIndexedDBDatabase";
 class VectorIndexedDBDatabase extends Dexie {
   channels: Dexie.Table<FullChannelState, string>;
   transfers: Dexie.Table<StoredTransfer, string>;
   transactions: Dexie.Table<StoredTransaction, string>;
   withdrawCommitment: Dexie.Table<WithdrawCommitmentJson & { transferId: string }, string>;
   values: Dexie.Table<any, string>;
+  // database name
+  name: string;
 
   constructor(
+    name: string,
     // eslint-disable-next-line @typescript-eslint/ban-types
     indexedDB?: { open: Function },
     // eslint-disable-next-line @typescript-eslint/ban-types
@@ -35,7 +50,7 @@ class VectorIndexedDBDatabase extends Dexie {
     if (indexedDB && idbKeyRange) {
       options = { indexedDB, IDBKeyRange: idbKeyRange };
     }
-    super("VectorIndexedDBDatabase", options);
+    super(name, options);
     this.version(1).stores({
       channels:
         "channelAddress, [aliceIdentifier+bobIdentifier+networkContext.chainId], [alice+bob+networkContext.chainId]",
@@ -50,28 +65,22 @@ class VectorIndexedDBDatabase extends Dexie {
     this.transactions = this.table("transactions");
     this.withdrawCommitment = this.table("withdrawCommitment");
     this.values = this.table("values");
+    this.name = name;
   }
 }
-
-const storedTransferToTransferState = (stored: StoredTransfer): FullTransferState => {
-  const transfer: any = stored;
-  delete transfer.createUpdateNonce;
-  delete transfer.resolveUpdateNonce;
-  delete transfer.routingId;
-  return transfer as FullTransferState;
-};
 
 export class BrowserStore implements IEngineStore, IChainServiceStore {
   private db: VectorIndexedDBDatabase;
 
-  constructor(
+  private constructor(
+    private readonly dbName: string,
     private readonly log: BaseLogger,
     // eslint-disable-next-line @typescript-eslint/ban-types
     indexedDB?: { open: Function },
     // eslint-disable-next-line @typescript-eslint/ban-types
     idbKeyRange?: { bound: Function; lowerBound: Function; upperBound: Function },
   ) {
-    this.db = new VectorIndexedDBDatabase(indexedDB, idbKeyRange);
+    this.db = new VectorIndexedDBDatabase(dbName, indexedDB, idbKeyRange);
   }
 
   async saveChannelDispute(
@@ -85,7 +94,21 @@ export class BrowserStore implements IEngineStore, IChainServiceStore {
     }
   }
 
-  async connect(): Promise<void> {
+  public static async create(
+    publicIdentifer: string,
+    log: BaseLogger,
+    // eslint-disable-next-line @typescript-eslint/ban-types
+    indexedDB?: { open: Function },
+    // eslint-disable-next-line @typescript-eslint/ban-types
+    idbKeyRange?: { bound: Function; lowerBound: Function; upperBound: Function },
+  ): Promise<BrowserStore> {
+    const name = (await Dexie.exists(NON_NAMESPACED_STORE)) ? NON_NAMESPACED_STORE : getStoreName(publicIdentifer);
+    const store = new BrowserStore(name, log, indexedDB, idbKeyRange);
+    await store.connect();
+    return store;
+  }
+
+  public async connect(): Promise<void> {
     await this.db.open();
   }
 

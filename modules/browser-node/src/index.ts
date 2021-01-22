@@ -17,12 +17,7 @@ import {
   FullChannelState,
   DEFAULT_CHANNEL_TIMEOUT,
 } from "@connext/vector-types";
-import {
-  constructRpcRequest,
-  getPublicIdentifierFromPublicKey,
-  hydrateProviders,
-  NatsMessagingService,
-} from "@connext/vector-utils";
+import { constructRpcRequest, hydrateProviders, NatsMessagingService } from "@connext/vector-utils";
 import pino, { BaseLogger } from "pino";
 
 import { BrowserStore } from "./services/store";
@@ -69,8 +64,7 @@ export class BrowserNode implements INodeService {
   // method for signer-based connections
   static async connect(config: BrowserNodeSignerConfig): Promise<BrowserNode> {
     if (!config.logger) {
-      const configuredIdentifier = getPublicIdentifierFromPublicKey(config.signer.publicKey);
-      config.logger = pino({ name: configuredIdentifier });
+      config.logger = pino({ name: config.signer.publicIdentifier });
     }
     const node = new BrowserNode({ logger: config.logger, chainProviders: config.chainProviders });
     // TODO: validate schema
@@ -87,7 +81,10 @@ export class BrowserNode implements INodeService {
       signer: config.signer,
     });
     await messaging.connect();
-    const store = new BrowserStore(config.signer.publicIdentifier, config.logger.child({ module: "BrowserStore" }));
+    const store = await BrowserStore.create(
+      config.signer.publicIdentifier,
+      config.logger.child({ module: "BrowserStore" }),
+    );
     const lock = new BrowserLockService(
       config.signer.publicIdentifier,
       messaging,
