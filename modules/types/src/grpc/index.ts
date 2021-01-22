@@ -1,3 +1,3 @@
-export * from "./vector.grpc-server";
-export * from "./vector.promise-client";
-export * from "./vector";
+export * from "./servernode.grpc-server";
+export * from "./servernode.promise-client";
+export * from "./servernode";

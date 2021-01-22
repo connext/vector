@@ -1,4 +1,16 @@
-import { INodeService, NodeParams, NodeResponses, OptionalPublicIdentifier, Result } from "@connext/vector-types";
+import {
+  INodeService,
+  NodeParams,
+  NodeResponses,
+  OptionalPublicIdentifier,
+  Result,
+  EngineEvent,
+  EngineEventMap,
+  GrpcTypes,
+  jsonifyError,
+} from "@connext/vector-types";
+import { ChannelCredentials } from "@grpc/grpc-js";
+import { GrpcTransport } from "@protobuf-ts/grpc-transport";
 import { BaseLogger } from "pino";
 
 import { ServerNodeServiceError } from "./errors";
@@ -6,8 +18,15 @@ import { ServerNodeServiceError } from "./errors";
 export class GRPCServerNodeService implements INodeService {
   public publicIdentifier = "";
   public signerAddress = "";
+  private client: GrpcTypes.ServerNodeServiceClient;
 
-  private constructor(private readonly serverNodeUrl: string, private readonly logger: BaseLogger) {}
+  private constructor(private readonly serverNodeUrl: string, private readonly logger: BaseLogger) {
+    const transport = new GrpcTransport({
+      host: serverNodeUrl,
+      channelCredentials: ChannelCredentials.createInsecure(),
+    });
+    this.client = new GrpcTypes.ServerNodeServiceClient(transport);
+  }
 
   static async connect(
     serverNodeUrl: string,
@@ -33,303 +52,174 @@ export class GRPCServerNodeService implements INodeService {
     return service;
   }
 
+  async getPing(): Promise<Result<string, ServerNodeServiceError>> {
+    try {
+      const ping = await this.client.getPing({});
+      console.log("getPing:::ping: ", ping);
+      return Result.ok(ping.message);
+    } catch (e) {
+      this.logger.error({ error: jsonifyError(e) }, "Error in getPing");
+      return Result.fail(
+        new ServerNodeServiceError(ServerNodeServiceError.reasons.InternalServerError, "", "ping", undefined, {
+          error: jsonifyError(e),
+        }),
+      );
+    }
+  }
+
   getStatus(publicIdentifer?: string): Promise<Result<NodeResponses.GetStatus, ServerNodeServiceError>> {
-    return this.executeHttpRequest(
-      `${publicIdentifer ?? this.publicIdentifier}/status`,
-      "get",
-      {},
-      NodeParams.GetConfigSchema,
-    );
+    throw new Error("unimplemented");
   }
 
   getRouterConfig(
     params: OptionalPublicIdentifier<NodeParams.GetRouterConfig>,
   ): Promise<Result<NodeResponses.GetRouterConfig, ServerNodeServiceError>> {
-    return this.executeHttpRequest(
-      `${params.publicIdentifier ?? this.publicIdentifier}/router/config/${params.routerIdentifier}`,
-      "get",
-      params,
-      NodeParams.GetRouterConfigSchema,
-    );
+    throw new Error("unimplemented");
   }
 
   async getConfig(): Promise<Result<NodeResponses.GetConfig, ServerNodeServiceError>> {
-    return this.executeHttpRequest("config", "get", {}, NodeParams.GetConfigSchema);
+    throw new Error("unimplemented");
   }
 
   sendDisputeChannelTx(
     params: OptionalPublicIdentifier<NodeParams.SendDisputeChannelTx>,
   ): Promise<Result<NodeResponses.SendDisputeChannelTx, ServerNodeServiceError>> {
-    return this.executeHttpRequest(`send-dispute-channel-tx`, "post", params, NodeParams.SendDisputeChannelTxSchema);
+    throw new Error("unimplemented");
   }
 
   sendDefundChannelTx(
     params: OptionalPublicIdentifier<NodeParams.SendDefundChannelTx>,
   ): Promise<Result<NodeResponses.SendDefundChannelTx, ServerNodeServiceError>> {
-    return this.executeHttpRequest(`send-defund-channel-tx`, "post", params, NodeParams.SendDefundChannelTxSchema);
+    throw new Error("unimplemented");
   }
 
   sendDisputeTransferTx(
     params: OptionalPublicIdentifier<NodeParams.SendDisputeTransferTx>,
   ): Promise<Result<NodeResponses.SendDisputeTransferTx, ServerNodeServiceError>> {
-    return this.executeHttpRequest(`send-dispute-transfer-tx`, "post", params, NodeParams.SendDisputeTransferTxSchema);
+    throw new Error("unimplemented");
   }
 
   sendDefundTransferTx(
     params: OptionalPublicIdentifier<NodeParams.SendDefundTransferTx>,
   ): Promise<Result<NodeResponses.SendDefundTransferTx, ServerNodeServiceError>> {
-    return this.executeHttpRequest(`send-defund-transfer-tx`, "post", params, NodeParams.SendDefundTransferTxSchema);
+    throw new Error("unimplemented");
   }
 
   async createNode(params: NodeParams.CreateNode): Promise<Result<NodeResponses.CreateNode, ServerNodeServiceError>> {
-    const res = await this.executeHttpRequest<NodeResponses.CreateNode>(
-      `node`,
-      "post",
-      params,
-      NodeParams.CreateNodeSchema,
-    );
-    if (res.isError) {
-      return res;
-    }
-
-    if (!this.evts) {
-      return res;
-    }
-
-    // Register listener subscription
-    const { publicIdentifier } = res.getValue();
-
-    // Check if the events have been registered (i.e. this called
-    // twice)
-    if (this.ctxs[publicIdentifier]) {
-      return res;
-    }
-
-    const urls = Object.fromEntries(
-      Object.entries(this.evts).map(([event, config]) => {
-        return [event, config.url ?? ""];
-      }),
-    );
-
-    // Create an evt context for this public identifier only
-    // (see not in `off`)
-    this.ctxs[publicIdentifier] = Evt.newCtx();
-    const subscriptionParams: NodeParams.RegisterListener = {
-      events: urls,
-      publicIdentifier,
-    };
-    // IFF the public identifier is undefined, it should be overridden by
-    // the pubId defined in the parameters.
-    const subscription = await this.executeHttpRequest(
-      `event/subscribe`,
-      "post",
-      subscriptionParams,
-      NodeParams.RegisterListenerSchema,
-    );
-    if (subscription.isError) {
-      this.logger.error({ error: subscription.getError()!, publicIdentifier }, "Failed to create subscription");
-      return Result.fail(subscription.getError()!);
-    }
-    this.logger.info({ urls, method: "createNode", publicIdentifier }, "Engine event subscription created");
-
-    return res;
+    throw new Error("unimplemented");
   }
 
   async getStateChannel(
     params: OptionalPublicIdentifier<NodeParams.GetChannelState>,
   ): Promise<Result<NodeResponses.GetChannelState, ServerNodeServiceError>> {
-    return this.executeHttpRequest(
-      `${params.publicIdentifier ?? this.publicIdentifier}/channels/${params.channelAddress}`,
-      "get",
-      params,
-      NodeParams.GetChannelStateSchema,
-    );
+    throw new Error("unimplemented");
   }
 
   async getStateChannels(
     params: OptionalPublicIdentifier<NodeParams.GetChannelStates>,
   ): Promise<Result<NodeResponses.GetChannelStates, ServerNodeServiceError>> {
-    return this.executeHttpRequest(
-      `${params.publicIdentifier ?? this.publicIdentifier}/channels`,
-      "get",
-      params,
-      NodeParams.GetChannelStatesSchema,
-    );
+    throw new Error("unimplemented");
   }
 
   async getTransfersByRoutingId(
     params: OptionalPublicIdentifier<NodeParams.GetTransferStatesByRoutingId>,
   ): Promise<Result<NodeResponses.GetTransferStatesByRoutingId, ServerNodeServiceError>> {
-    return this.executeHttpRequest(
-      `${params.publicIdentifier ?? this.publicIdentifier}/transfers/routing-id/${params.routingId}`,
-      "get",
-      params,
-      NodeParams.GetTransferStatesByRoutingIdSchema,
-    );
+    throw new Error("unimplemented");
   }
 
   async getTransferByRoutingId(
     params: OptionalPublicIdentifier<NodeParams.GetTransferStateByRoutingId>,
   ): Promise<Result<NodeResponses.GetTransferStateByRoutingId, ServerNodeServiceError>> {
-    return this.executeHttpRequest(
-      `${params.publicIdentifier ?? this.publicIdentifier}/channels/${params.channelAddress}/transfers/routing-id/${
-        params.routingId
-      }`,
-      "get",
-      params,
-      NodeParams.GetTransferStateByRoutingIdSchema,
-    );
+    throw new Error("unimplemented");
   }
 
   async getTransfer(
     params: OptionalPublicIdentifier<NodeParams.GetTransferState>,
   ): Promise<Result<NodeResponses.GetTransferState, ServerNodeServiceError>> {
-    return this.executeHttpRequest(
-      `${params.publicIdentifier ?? this.publicIdentifier}/transfers/${params.transferId}`,
-      "get",
-      params,
-      NodeParams.GetTransferStateSchema,
-    );
+    throw new Error("unimplemented");
   }
-
   async getActiveTransfers(
     params: OptionalPublicIdentifier<NodeParams.GetActiveTransfersByChannelAddress>,
   ): Promise<Result<NodeResponses.GetActiveTransfersByChannelAddress, ServerNodeServiceError>> {
-    return this.executeHttpRequest(
-      `${params.publicIdentifier ?? this.publicIdentifier}/channels/${params.channelAddress}/active-transfers`,
-      "get",
-      params,
-      NodeParams.GetActiveTransfersByChannelAddressSchema,
-    );
+    throw new Error("unimplemented");
   }
 
   async getStateChannelByParticipants(
     params: OptionalPublicIdentifier<NodeParams.GetChannelStateByParticipants>,
   ): Promise<Result<NodeResponses.GetChannelStateByParticipants, ServerNodeServiceError>> {
-    return this.executeHttpRequest(
-      `${params.publicIdentifier ?? this.publicIdentifier}/channels/counterparty/${params.counterparty}/chain-id/${
-        params.chainId
-      }`,
-      "get",
-      params,
-      NodeParams.GetChannelStateByParticipantsSchema,
-    );
+    throw new Error("unimplemented");
   }
 
   getRegisteredTransfers(
     params: OptionalPublicIdentifier<NodeParams.GetRegisteredTransfers>,
   ): Promise<Result<NodeResponses.GetRegisteredTransfers, ServerNodeServiceError>> {
-    return this.executeHttpRequest(
-      `${params.publicIdentifier ?? this.publicIdentifier}/registered-transfers/chain-id/${params.chainId}`,
-      "get",
-      params,
-      NodeParams.GetRegisteredTransfersSchema,
-    );
+    throw new Error("unimplemented");
   }
 
   restoreState(
     params: OptionalPublicIdentifier<NodeParams.RestoreState>,
   ): Promise<Result<NodeResponses.RestoreState, ServerNodeServiceError>> {
-    return this.executeHttpRequest<NodeResponses.RestoreState>(
-      `restore`,
-      "post",
-      params,
-      NodeParams.RestoreStateSchema,
-    );
+    throw new Error("unimplemented");
   }
 
   async setup(
     params: OptionalPublicIdentifier<NodeParams.RequestSetup>,
   ): Promise<Result<NodeResponses.RequestSetup, ServerNodeServiceError>> {
-    return this.executeHttpRequest<NodeResponses.RequestSetup>("setup", "post", params, NodeParams.RequestSetupSchema);
+    throw new Error("unimplemented");
   }
 
   async internalSetup(
     params: OptionalPublicIdentifier<NodeParams.Setup>,
   ): Promise<Result<NodeResponses.Setup, ServerNodeServiceError>> {
-    return this.executeHttpRequest<NodeResponses.Setup>("internal-setup", "post", params, NodeParams.SetupSchema);
+    throw new Error("unimplemented");
   }
 
   async sendDepositTx(
     params: OptionalPublicIdentifier<NodeParams.SendDepositTx>,
   ): Promise<Result<NodeResponses.SendDepositTx, ServerNodeServiceError>> {
-    return this.executeHttpRequest<NodeResponses.SendDepositTx>(
-      "send-deposit-tx",
-      "post",
-      params,
-      NodeParams.SendDepositTxSchema,
-    );
+    throw new Error("unimplemented");
   }
 
   async reconcileDeposit(
     params: OptionalPublicIdentifier<NodeParams.Deposit>,
   ): Promise<Result<NodeResponses.Deposit, ServerNodeServiceError>> {
-    return this.executeHttpRequest<NodeResponses.Deposit>(
-      "deposit",
-      "post",
-      {
-        channelAddress: params.channelAddress,
-        assetId: params.assetId,
-        publicIdentifier: params.publicIdentifier,
-      },
-      NodeParams.DepositSchema,
-    );
+    throw new Error("unimplemented");
   }
 
   async requestCollateral(
     params: OptionalPublicIdentifier<NodeParams.RequestCollateral>,
   ): Promise<Result<NodeResponses.RequestCollateral, ServerNodeServiceError>> {
-    return this.executeHttpRequest<NodeResponses.RequestCollateral>(
-      "request-collateral",
-      "post",
-      params,
-      NodeParams.RequestCollateralSchema,
-    );
+    throw new Error("unimplemented");
   }
 
   async conditionalTransfer(
     params: OptionalPublicIdentifier<NodeParams.ConditionalTransfer>,
   ): Promise<Result<NodeResponses.ConditionalTransfer, ServerNodeServiceError>> {
-    return this.executeHttpRequest<NodeResponses.ConditionalTransfer>(
-      `transfers/create`,
-      "post",
-      params,
-      NodeParams.ConditionalTransferSchema,
-    );
+    throw new Error("unimplemented");
   }
 
   async resolveTransfer(
     params: OptionalPublicIdentifier<NodeParams.ResolveTransfer>,
   ): Promise<Result<NodeResponses.ResolveTransfer, ServerNodeServiceError>> {
-    return this.executeHttpRequest<NodeResponses.ResolveTransfer>(
-      `transfers/resolve`,
-      "post",
-      params,
-      NodeParams.ResolveTransferSchema,
-    );
+    throw new Error("unimplemented");
   }
 
   async withdraw(
     params: OptionalPublicIdentifier<NodeParams.Withdraw>,
   ): Promise<Result<NodeResponses.Withdraw, ServerNodeServiceError>> {
-    return this.executeHttpRequest<NodeResponses.Withdraw>(`withdraw`, "post", params, NodeParams.WithdrawSchema);
+    throw new Error("unimplemented");
   }
 
   signUtilityMessage(
     params: OptionalPublicIdentifier<NodeParams.SignUtilityMessage>,
   ): Promise<Result<NodeResponses.SignUtilityMessage, ServerNodeServiceError>> {
-    return this.executeHttpRequest<NodeResponses.SignUtilityMessage>(
-      `sign-utility-message`,
-      "post",
-      params,
-      NodeParams.SignUtilityMessageSchema,
-    );
+    throw new Error("unimplemented");
   }
 
   sendIsAliveMessage(
     params: OptionalPublicIdentifier<NodeParams.SendIsAlive>,
   ): Promise<Result<NodeResponses.SendIsAlive, ServerNodeServiceError>> {
-    return this.executeHttpRequest<NodeResponses.SendIsAlive>(`is-alive`, "post", params, NodeParams.SendIsAliveSchema);
+    throw new Error("unimplemented");
   }
 
   public once<T extends EngineEvent>(
@@ -338,29 +228,7 @@ export class GRPCServerNodeService implements INodeService {
     filter: (payload: EngineEventMap[T]) => boolean = () => true,
     publicIdentifier?: string,
   ): void {
-    if (!this.evts || !this.evts[event]?.evt) {
-      throw new ServerNodeServiceError(
-        ServerNodeServiceError.reasons.NoEvts,
-        publicIdentifier ?? this.publicIdentifier,
-        "",
-        { event, publicIdentifier },
-      );
-    }
-    const pubId = publicIdentifier ?? this.publicIdentifier;
-    if (!pubId) {
-      throw new ServerNodeServiceError(ServerNodeServiceError.reasons.NoPublicIdentifier, "", "", {
-        event,
-        publicIdentifier,
-      });
-    }
-    const ctx = this.ctxs[publicIdentifier ?? this.publicIdentifier];
-    this.evts[event].evt
-      .pipe(ctx)
-      .pipe((data: EngineEventMap[T]) => {
-        const filtered = filter(data);
-        return filtered && (data.aliceIdentifier === pubId || data.bobIdentifier === pubId);
-      })
-      .attachOnce(callback);
+    throw new Error("unimplemented");
   }
 
   public on<T extends EngineEvent>(
@@ -369,29 +237,7 @@ export class GRPCServerNodeService implements INodeService {
     filter: (payload: EngineEventMap[T]) => boolean = () => true,
     publicIdentifier?: string,
   ): void {
-    if (!this.evts || !this.evts[event]?.evt) {
-      throw new ServerNodeServiceError(
-        ServerNodeServiceError.reasons.NoEvts,
-        publicIdentifier ?? this.publicIdentifier,
-        "",
-        { event, publicIdentifier },
-      );
-    }
-    const pubId = publicIdentifier ?? this.publicIdentifier;
-    if (!pubId) {
-      throw new ServerNodeServiceError(ServerNodeServiceError.reasons.NoPublicIdentifier, "", "", {
-        event,
-        publicIdentifier,
-      });
-    }
-    const ctx = this.ctxs[pubId];
-    this.evts[event].evt
-      .pipe(ctx)
-      .pipe((data: EngineEventMap[T]) => {
-        const filtered = filter(data);
-        return filtered && (data.aliceIdentifier === pubId || data.bobIdentifier === pubId);
-      })
-      .attach(callback);
+    throw new Error("unimplemented");
   }
 
   public waitFor<T extends EngineEvent>(
@@ -400,94 +246,10 @@ export class GRPCServerNodeService implements INodeService {
     filter: (payload: EngineEventMap[T]) => boolean = () => true,
     publicIdentifier?: string,
   ): Promise<EngineEventMap[T] | undefined> {
-    if (!this.evts || !this.evts[event]?.evt) {
-      throw new ServerNodeServiceError(
-        ServerNodeServiceError.reasons.NoEvts,
-        publicIdentifier ?? this.publicIdentifier,
-        "",
-        { event, timeout, publicIdentifier },
-      );
-    }
-    const pubId = publicIdentifier ?? this.publicIdentifier;
-    if (!pubId) {
-      throw new ServerNodeServiceError(ServerNodeServiceError.reasons.NoPublicIdentifier, "", "", {
-        event,
-        publicIdentifier,
-      });
-    }
-    const ctx = this.ctxs[pubId];
-    return this.evts[event].evt
-      .pipe(ctx)
-      .pipe((data: EngineEventMap[T]) => {
-        const filtered = filter(data);
-        return filtered && (data.aliceIdentifier === pubId || data.bobIdentifier === pubId);
-      })
-      .waitFor(timeout) as Promise<EngineEventMap[T]>;
+    throw new Error("unimplemented");
   }
 
   public off<T extends EngineEvent>(event: T, publicIdentifier?: string): void {
-    if (!this.evts || !this.evts[event]?.evt) {
-      throw new ServerNodeServiceError(
-        ServerNodeServiceError.reasons.NoEvts,
-        publicIdentifier ?? this.publicIdentifier,
-        "",
-        { event, publicIdentifier },
-      );
-    }
-    if (!publicIdentifier && !this.publicIdentifier) {
-      throw new ServerNodeServiceError(ServerNodeServiceError.reasons.NoPublicIdentifier, "", "", {
-        event,
-        publicIdentifier,
-      });
-    }
-    const ctx = this.ctxs[publicIdentifier ?? this.publicIdentifier];
-    ctx.done();
-  }
-
-  // Helper methods
-  private async executeHttpRequest<U>(
-    urlPath: string,
-    method: "get" | "post",
-    params: any,
-    paramSchema: any,
-  ): Promise<Result<U, ServerNodeServiceError>> {
-    const url = `${this.serverNodeUrl}/${urlPath}`;
-    // Validate parameters are in line with schema
-    const validate = ajv.compile(paramSchema);
-    // IFF the public identifier is undefined, it should be overridden by
-    // the pubId defined in the parameters.
-    const filled = { publicIdentifier: this.publicIdentifier, ...params };
-    if (!validate(filled)) {
-      return Result.fail(
-        new ServerNodeServiceError(
-          ServerNodeServiceError.reasons.InvalidParams,
-          filled.publicIdentifer,
-          urlPath,
-          params,
-          {
-            paramsError: validate.errors?.map((err) => err.message).join(","),
-          },
-        ),
-      );
-    }
-
-    // Attempt request
-    try {
-      const res = method === "get" ? await Axios.get(url) : await Axios.post(url, filled);
-      return Result.ok(res.data);
-    } catch (e) {
-      const jsonErr = Object.keys(e).includes("toJSON") ? e.toJSON() : e;
-      const msg = e.response?.data?.message ?? jsonErr.message ?? ServerNodeServiceError.reasons.InternalServerError;
-      const toThrow = new ServerNodeServiceError(
-        msg.includes("timed out") || msg.includes("timeout") ? ServerNodeServiceError.reasons.Timeout : msg,
-        filled.publicIdentifier,
-        urlPath,
-        params,
-        {
-          ...(e.response?.data ?? { stack: jsonErr.stack ?? "" }),
-        },
-      );
-      return Result.fail(toThrow);
-    }
+    throw new Error("unimplemented");
   }
 }
