@@ -3,12 +3,12 @@ import * as proto_loader from "@grpc/proto-loader";
 import * as grpc from "grpc";
 import { GrpcMockServer, ProtoUtils } from "@rhlsthrm/grpc-mock-server";
 import { GrpcTypes } from "@connext/vector-types";
-import { JsonValue } from "@protobuf-ts/runtime";
-import { MethodInfo, RpcOptions } from "@protobuf-ts/runtime-rpc";
+import { RpcOptions } from "@protobuf-ts/runtime-rpc";
 
 import { getTestLoggers } from "../test/logger";
 
 import { GRPCServerNodeService } from "./grpcServerNode";
+import { equal } from "assert";
 
 const PROTO_PATH = "./node_modules/@connext/vector-types/proto/servernode.proto";
 const PKG_NAME = "com.vector";
@@ -152,6 +152,7 @@ describe("GRPCServerNode", () => {
 
   it.only("should ping", async () => {
     const ping = await client.getPing();
-    console.log("ping: ", ping.getValue());
+    expect(ping.getError()).to.not.be.ok;
+    expect(ping.getValue()).to.eq("pong");
   });
 });
