@@ -20,6 +20,7 @@ import {
   FullChannelState,
   jsonifyError,
   VectorErrorJson,
+  DEFAULT_CHANNEL_TIMEOUT,
 } from "@connext/vector-types";
 import {
   constructRpcRequest,
@@ -176,23 +177,25 @@ export class BrowserNode implements INodeService {
   // method for non-signer based apps to connect to iframe
   async init(): Promise<void> {
     // TODO: validate config
-    let iframeSrc = this.iframeSrc;
-    if (!iframeSrc) {
-      iframeSrc = "https://wallet.connext.network";
-    }
-    this.logger.info({ method: "connect", iframeSrc }, "Connecting with iframe provider");
-    this.channelProvider = await IframeChannelProvider.connect({
-      src: iframeSrc!,
-      id: "connext-iframe",
-    });
+    const method = "init";
+    this.logger.debug({ method }, "Method started");
+    const iframeSrc = this.iframeSrc ?? "https://wallet.connext.network";
+    this.logger.info({ method, iframeSrc }, "Connecting with iframe provider");
+    // Don't reconnect to iframe
+    this.channelProvider =
+      this.channelProvider ??
+      (await IframeChannelProvider.connect({
+        src: iframeSrc,
+        id: "connext-iframe",
+      }));
     const rpc = constructRpcRequest("connext_authenticate", { chainProviders: this.chainProviders });
     const auth = await this.channelProvider.send(rpc);
-    this.logger.info({ method: "connect", response: auth }, "Received response from auth method");
+    this.logger.info({ method, response: auth }, "Received response from auth method");
     const [nodeConfig] = await this.getConfig();
     this.publicIdentifier = nodeConfig.publicIdentifier;
     this.signerAddress = nodeConfig.signerAddress;
     this.logger.info(
-      { supportedChains: this.supportedChains, routerPublicIdentifier: this.routerPublicIdentifier },
+      { supportedChains: this.supportedChains, routerPublicIdentifier: this.routerPublicIdentifier, method },
       "Checking for existing channels",
     );
     await Promise.all(
@@ -204,22 +207,24 @@ export class BrowserNode implements INodeService {
         if (channelRes.isError) {
           throw channelRes.getError();
         }
-        let channel = channelRes.getValue();
-        if (!channel) {
-          this.logger.info({ chainId }, "Setting up channel");
-          const address = await this.setup({
-            chainId,
-            counterpartyIdentifier: this.routerPublicIdentifier!,
-            timeout: "100000",
-          });
-          if (address.isError) {
-            throw address.getError();
-          }
-          channel = (await this.getStateChannel(address.getValue())).getValue();
+        const channel = channelRes.getValue();
+        if (channel) {
+          this.logger.info({ channelAddress: channel.channelAddress, chainId, method }, "Found setup channel");
+          return;
         }
-        this.logger.info({ channel, chainId });
+        this.logger.info({ chainId, method }, "Setting up channel");
+        const address = await this.setup({
+          chainId,
+          counterpartyIdentifier: this.routerPublicIdentifier!,
+          timeout: DEFAULT_CHANNEL_TIMEOUT.toString(),
+        });
+        if (address.isError) {
+          throw address.getError();
+        }
+        this.logger.info({ channelAddress: address.getValue(), chainId, method }, "Created channel");
       }),
     );
+    this.logger.debug({ method }, "Method complete");
 
     // Add listener for cross chain transfer cancellations
     this.on(EngineEvents.CONDITIONAL_TRANSFER_RESOLVED, (data) => {
