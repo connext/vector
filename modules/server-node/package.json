@@ -20,7 +20,6 @@
     "@connext/vector-utils": "0.1.8-beta.4",
     "@ethersproject/wallet": "5.0.9",
     "@grpc/grpc-js": "1.2.4",
-    "@grpc/proto-loader": "0.5.6",
     "@prisma/client": "2.12.1",
     "@protobuf-ts/plugin": "2.0.0-alpha.11",
     "@protobuf-ts/protoc": "2.0.0-alpha.11",

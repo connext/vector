@@ -5,7 +5,7 @@ import "any.proto";
 package com.vector;
 
 
-service VectorService {
+service ServerNodeService {
     rpc GetPing (Empty) returns (Pong) {}
     rpc GetConfig (Empty) returns (Configs) {}
     rpc GetStatus (TPublicIdentifier) returns (Status) {}
