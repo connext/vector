@@ -10,9 +10,9 @@ import { createNode, deleteNodes } from "./helpers/nodes";
 
 import { logger, store } from ".";
 
-const host = "0.0.0.0:5000";
+const DEFAULT_PORT = 5000;
 
-const vectorService: GrpcTypes.IVectorService = {
+const vectorService: GrpcTypes.IServerNodeService = {
   clearStore: () => undefined,
   async createNode(
     call: grpc.ServerUnaryCall<GrpcTypes.CreateNodeRequest, GrpcTypes.CreateNodeReply>,
@@ -46,7 +46,13 @@ const vectorService: GrpcTypes.IVectorService = {
   getChannelStateByParticipants: () => undefined,
   getChannelStates: () => undefined,
   getConfig: () => undefined,
-  getPing: () => undefined,
+  async getPing(
+    call: grpc.ServerUnaryCall<GrpcTypes.Empty, GrpcTypes.Pong>,
+    callback: grpc.sendUnaryData<GrpcTypes.Pong>,
+  ): Promise<void> {
+    console.log("getPing >>>>> call: ", call);
+    callback(null, { message: "pong" });
+  },
   getRegisteredTransfers: () => undefined,
   getStatus: () => undefined,
   getSubscription: () => undefined,
@@ -70,14 +76,14 @@ const vectorService: GrpcTypes.IVectorService = {
 
 function getServer(): grpc.Server {
   const server = new grpc.Server();
-  server.addService(GrpcTypes.vectorServiceDefinition, vectorService);
+  server.addService(GrpcTypes.serverNodeServiceDefinition, vectorService);
   return server;
 }
 
-export const setupServer = async (): Promise<grpc.Server> => {
+export const setupServer = async (port = DEFAULT_PORT): Promise<grpc.Server> => {
   return new Promise((res, rej) => {
     const server = getServer();
-    server.bindAsync(host, grpc.ServerCredentials.createInsecure(), (err: Error | null, port: number) => {
+    server.bindAsync(`0.0.0.0:${port}`, grpc.ServerCredentials.createInsecure(), (err: Error | null, port: number) => {
       if (err) {
         console.error(`Server error: ${err.message}`);
         rej(err);

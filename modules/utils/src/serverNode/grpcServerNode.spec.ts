@@ -6,6 +6,7 @@ import { GrpcTypes } from "@connext/vector-types";
 import { RpcOptions } from "@protobuf-ts/runtime-rpc";
 
 import { getTestLoggers } from "../test/logger";
+import { getRandomIdentifier, getSignerAddressFromPublicIdentifier } from "../identifiers";
 
 import { GRPCServerNodeService } from "./grpcServerNode";
 
@@ -17,15 +18,27 @@ const pkgDef = grpc.loadPackageDefinition(proto_loader.loadSync(PROTO_PATH));
 const proto = ProtoUtils.getProtoFromPkgDefinition("com.vector", pkgDef);
 
 const implementations = {
-  async getPing(call: GrpcTypes.Empty, callback: any) {
-    const response: any = new proto.Pong.constructor({ message: "pong" });
+  async getPing(call: any, callback: any) {
+    const response = new proto.Pong.constructor({ message: "pong" });
     callback(null, response);
   },
-  getConfig(input: GrpcTypes.Empty, options?: RpcOptions): Promise<GrpcTypes.Configs> {
+  getConfig(input: any, callback: any): Promise<GrpcTypes.Configs> {
     throw new Error("Method not implemented.");
   },
-  getStatus(input: GrpcTypes.TPublicIdentifier, options?: RpcOptions): Promise<GrpcTypes.Status> {
-    throw new Error("Method not implemented.");
+  async getStatus(input: any, callback: any) {
+    console.log("getStatus =======> input: ", input);
+    const response: GrpcTypes.Status = new proto.Status.constructor({
+      public_identifier: input.request.publicIdentifier,
+      signer_address: getSignerAddressFromPublicIdentifier(input.request.publicIdentifier),
+      Obj: {
+        starting_block: "0x1",
+        current_block: "0x1",
+        highest_block: "0x1",
+      },
+      ProviderSyncing: true,
+      version: "0.0.1",
+    });
+    callback(null, response);
   },
   getChannelState(
     input: GrpcTypes.ChannelStateRequest,
@@ -149,9 +162,18 @@ describe("GRPCServerNode", () => {
     client = await GRPCServerNodeService.connect(server.serverAddress, log);
   });
 
-  it.only("should ping", async () => {
-    const ping = await client.getPing();
-    expect(ping.getError()).to.not.be.ok;
-    expect(ping.getValue()).to.eq("pong");
+  it("should ping", async () => {
+    const result = await client.getPing();
+    expect(result.getError()).to.not.be.ok;
+    expect(result.getValue()).to.eq("pong");
+  });
+
+  it.only("should getStatus", async () => {
+    const pub = getRandomIdentifier();
+    console.log("pub: ", pub);
+    const result = await client.getStatus(pub);
+    console.log("result: ", result);
+    expect(result.getError()).to.not.be.ok;
+    expect(result.getValue()).to.deep.eq({});
   });
 });

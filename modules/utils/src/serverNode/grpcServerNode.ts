@@ -55,13 +55,18 @@ export class GRPCServerNodeService implements INodeService {
   }
 
   async getPing(): Promise<Result<string, ServerNodeServiceError>> {
-    this.client.getPing;
     const res = await this.validateAndExecuteGrpcRequest<GrpcTypes.Empty, GrpcTypes.Pong>("getPing", {});
     return res.isError ? Result.fail(res.getError()) : Result.ok(res.getValue().message);
   }
 
-  async getStatus(publicIdentifer?: string): Promise<Result<NodeResponses.GetStatus, ServerNodeServiceError>> {
-    throw new Error("unimplemented");
+  async getStatus(publicIdentifier?: string): Promise<Result<NodeResponses.GetStatus, ServerNodeServiceError>> {
+    return this.validateAndExecuteGrpcRequest<OptionalPublicIdentifier<GrpcTypes.TPublicIdentifier>, GrpcTypes.Status>(
+      "getStatus",
+      {
+        publicIdentifier,
+      },
+      NodeParams.GetConfigSchema,
+    ) as Promise<any>;
   }
 
   getRouterConfig(
@@ -275,10 +280,13 @@ export class GRPCServerNodeService implements INodeService {
 
     // Attempt request
     try {
+      console.log("validateAndExecuteGrpcRequest ===> filled: ", filled);
+      console.log("validateAndExecuteGrpcRequest ===> methodName: ", methodName);
       const res = await this.client[methodName](filled);
       console.log("validateAndExecuteGrpcRequest ===> res: ", res);
       return Result.ok(res);
     } catch (e) {
+      console.log("e: ", e);
       const toThrow = new ServerNodeServiceError(
         ServerNodeServiceError.reasons.InternalServerError,
         filled.publicIdentifier,
