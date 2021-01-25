@@ -57,7 +57,6 @@ export class GRPCServerNodeService implements INodeService {
   async getPing(): Promise<Result<string, ServerNodeServiceError>> {
     this.client.getPing;
     const res = await this.validateAndExecuteGrpcRequest<GrpcTypes.Empty, GrpcTypes.Pong>("getPing", {});
-    console.log("res: ", res.getValue());
     return res.isError ? Result.fail(res.getError()) : Result.ok(res.getValue().message);
   }
 
