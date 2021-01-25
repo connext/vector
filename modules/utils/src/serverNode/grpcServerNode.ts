@@ -12,9 +12,11 @@ import {
 import { ChannelCredentials } from "@grpc/grpc-js";
 import { GrpcTransport } from "@protobuf-ts/grpc-transport";
 import { BaseLogger } from "pino";
+import Ajv from "ajv";
 
 import { ServerNodeServiceError } from "./errors";
 
+const ajv = new Ajv();
 export class GRPCServerNodeService implements INodeService {
   public publicIdentifier = "";
   public signerAddress = "";
@@ -53,21 +55,13 @@ export class GRPCServerNodeService implements INodeService {
   }
 
   async getPing(): Promise<Result<string, ServerNodeServiceError>> {
-    try {
-      const ping = await this.client.getPing({});
-      console.log("getPing:::ping: ", ping);
-      return Result.ok(ping.message);
-    } catch (e) {
-      this.logger.error({ error: jsonifyError(e) }, "Error in getPing");
-      return Result.fail(
-        new ServerNodeServiceError(ServerNodeServiceError.reasons.InternalServerError, "", "ping", undefined, {
-          error: jsonifyError(e),
-        }),
-      );
-    }
+    this.client.getPing;
+    const res = await this.validateAndExecuteGrpcRequest<GrpcTypes.Empty, GrpcTypes.Pong>("getPing", {});
+    console.log("res: ", res.getValue());
+    return res.isError ? Result.fail(res.getError()) : Result.ok(res.getValue().message);
   }
 
-  getStatus(publicIdentifer?: string): Promise<Result<NodeResponses.GetStatus, ServerNodeServiceError>> {
+  async getStatus(publicIdentifer?: string): Promise<Result<NodeResponses.GetStatus, ServerNodeServiceError>> {
     throw new Error("unimplemented");
   }
 
@@ -251,5 +245,51 @@ export class GRPCServerNodeService implements INodeService {
 
   public off<T extends EngineEvent>(event: T, publicIdentifier?: string): void {
     throw new Error("unimplemented");
+  }
+
+  // Helper methods
+  private async validateAndExecuteGrpcRequest<T, U>(
+    methodName: string,
+    params: T,
+    paramSchema?: any,
+  ): Promise<Result<U, ServerNodeServiceError>> {
+    const filled = { publicIdentifier: this.publicIdentifier, ...params };
+    if (paramSchema) {
+      // Validate parameters are in line with schema
+      const validate = ajv.compile(paramSchema);
+      // IFF the public identifier is undefined, it should be overridden by
+      // the pubId defined in the parameters.
+      if (!validate(filled)) {
+        return Result.fail(
+          new ServerNodeServiceError(
+            ServerNodeServiceError.reasons.InvalidParams,
+            (filled as any).publicIdentifer,
+            methodName,
+            params,
+            {
+              paramsError: validate.errors?.map((err) => err.message).join(","),
+            },
+          ),
+        );
+      }
+    }
+
+    // Attempt request
+    try {
+      const res = await this.client[methodName](filled);
+      console.log("validateAndExecuteGrpcRequest ===> res: ", res);
+      return Result.ok(res);
+    } catch (e) {
+      const toThrow = new ServerNodeServiceError(
+        ServerNodeServiceError.reasons.InternalServerError,
+        filled.publicIdentifier,
+        methodName,
+        params,
+        {
+          error: jsonifyError(e),
+        },
+      );
+      return Result.fail(toThrow);
+    }
   }
 }

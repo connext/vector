@@ -8,7 +8,6 @@ import { RpcOptions } from "@protobuf-ts/runtime-rpc";
 import { getTestLoggers } from "../test/logger";
 
 import { GRPCServerNodeService } from "./grpcServerNode";
-import { equal } from "assert";
 
 const PROTO_PATH = "./node_modules/@connext/vector-types/proto/servernode.proto";
 const PKG_NAME = "com.vector";
