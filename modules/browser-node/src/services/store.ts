@@ -27,7 +27,7 @@ const storedTransferToTransferState = (stored: StoredTransfer): FullTransferStat
 };
 
 const getStoreName = (publicIdentifier: string) => {
-  return `${publicIdentifier.substr(0, 10)}Store`;
+  return `${publicIdentifier}-store`;
 };
 const NON_NAMESPACED_STORE = "VectorIndexedDBDatabase";
 class VectorIndexedDBDatabase extends Dexie {
