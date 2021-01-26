@@ -55,18 +55,21 @@ export class GRPCServerNodeService implements INodeService {
   }
 
   async getPing(): Promise<Result<string, ServerNodeServiceError>> {
-    const res = await this.validateAndExecuteGrpcRequest<GrpcTypes.Empty, GrpcTypes.Pong>("getPing", {});
+    const res = await this.validateAndExecuteGrpcRequest<GrpcTypes.Empty, GrpcTypes.GenericMessageResponse>(
+      "getPing",
+      {},
+    );
     return res.isError ? Result.fail(res.getError()) : Result.ok(res.getValue().message);
   }
 
   async getStatus(publicIdentifier?: string): Promise<Result<NodeResponses.GetStatus, ServerNodeServiceError>> {
-    return this.validateAndExecuteGrpcRequest<OptionalPublicIdentifier<GrpcTypes.TPublicIdentifier>, GrpcTypes.Status>(
+    return this.validateAndExecuteGrpcRequest<OptionalPublicIdentifier<GrpcTypes.GetStatusRequest>, GrpcTypes.Status>(
       "getStatus",
       {
         publicIdentifier,
       },
       NodeParams.GetConfigSchema,
-    ) as Promise<any>;
+    );
   }
 
   getRouterConfig(

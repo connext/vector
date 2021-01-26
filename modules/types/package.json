@@ -14,7 +14,7 @@
   ],
   "scripts": {
     "build": "rm -rf dist && tsc && rollup -c",
-    "protobuf:generate": "protoc --experimental_allow_proto3_optional --ts_opt server_grpc,client_promise,generate_dependencies,optimize_code_size --proto_path proto --ts_out ./src/grpc proto/*.proto"
+    "protobuf:generate": "protoc --experimental_allow_proto3_optional --ts_opt server_grpc,client_promise,generate_dependencies --proto_path proto --ts_out ./src/grpc proto/*.proto"
   },
   "dependencies": {
     "@ethersproject/abstract-provider": "5.0.7",

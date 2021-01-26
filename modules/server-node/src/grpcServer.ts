@@ -5,16 +5,27 @@
 
 import * as grpc from "@grpc/grpc-js";
 import { jsonifyError, GrpcTypes, ChannelRpcMethods } from "@connext/vector-types";
+import { constructRpcRequest } from "@connext/vector-utils";
 
 import { createNode, deleteNodes, getNode } from "./helpers/nodes";
+import { ServerNodeError } from "./helpers/errors";
 
 import { logger, store } from ".";
-import { ServerNodeError } from "./helpers/errors";
-import { constructRpcRequest } from "@connext/vector-utils";
 
 const DEFAULT_PORT = 5000;
 
 const vectorService: GrpcTypes.IServerNodeService = {
+  conditionalTransferCreatedStream: () => undefined,
+  conditionalTransferResolvedStream: () => undefined,
+  depositReconciledStream: () => undefined,
+  getTransferState: () => undefined,
+  isAliveStream: () => undefined,
+  requestCollateralStream: () => undefined,
+  restoreStateStream: () => undefined,
+  setupStream: () => undefined,
+  withdrawalCreatedStream: () => undefined,
+  withdrawalReconciledStream: () => undefined,
+  withdrawalResolvedStream: () => undefined,
   clearStore: () => undefined,
   async createNode(
     call: grpc.ServerUnaryCall<GrpcTypes.CreateNodeRequest, GrpcTypes.CreateNodeReply>,
@@ -49,14 +60,14 @@ const vectorService: GrpcTypes.IServerNodeService = {
   getChannelStates: () => undefined,
   getConfig: () => undefined,
   async getPing(
-    call: grpc.ServerUnaryCall<GrpcTypes.Empty, GrpcTypes.Pong>,
-    callback: grpc.sendUnaryData<GrpcTypes.Pong>,
+    call: grpc.ServerUnaryCall<GrpcTypes.Empty, GrpcTypes.GenericMessageResponse>,
+    callback: grpc.sendUnaryData<GrpcTypes.GenericMessageResponse>,
   ): Promise<void> {
     callback(null, { message: "pong" });
   },
   getRegisteredTransfers: () => undefined,
   async getStatus(
-    call: grpc.ServerUnaryCall<GrpcTypes.TPublicIdentifier, GrpcTypes.Status>,
+    call: grpc.ServerUnaryCall<GrpcTypes.GetStatusRequest, GrpcTypes.Status>,
     callback: grpc.sendUnaryData<GrpcTypes.Status>,
   ): Promise<void> {
     const engine = getNode(call.request.publicIdentifier);
