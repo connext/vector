@@ -5,368 +5,33 @@ import { ServiceType } from "@protobuf-ts/runtime-rpc";
 import { MessageType } from "@protobuf-ts/runtime";
 import { Any } from "./any";
 /**
- * @generated from protobuf message com.vector.ClearStoreReply
+ * generic defs
+ *
+ * @generated from protobuf message com.vector.Empty
  */
-export interface ClearStoreReply {
+export interface Empty {
+}
+/**
+ * @generated from protobuf message com.vector.GenericMessageResponse
+ */
+export interface GenericMessageResponse {
     /**
      * @generated from protobuf field: string message = 1;
      */
     message: string;
 }
 /**
- * @generated from protobuf message com.vector.SubscriptionRequest
+ * @generated from protobuf message com.vector.TxHash
  */
-export interface SubscriptionRequest {
+export interface TxHash {
     /**
-     * @generated from protobuf oneof: EventName
+     * @generated from protobuf field: string txHash = 1;
      */
-    eventName: {
-        oneofKind: "isAliveEvent";
-        /**
-         * @generated from protobuf field: string is_alive_event = 1;
-         */
-        isAliveEvent: string;
-    } | {
-        oneofKind: "setupEvent";
-        /**
-         * @generated from protobuf field: string setup_event = 2;
-         */
-        setupEvent: string;
-    } | {
-        oneofKind: "conditionalTransferCreatedEvent";
-        /**
-         * @generated from protobuf field: string conditional_transfer_created_event = 3;
-         */
-        conditionalTransferCreatedEvent: string;
-    } | {
-        oneofKind: "conditionalTransferResolvedEvent";
-        /**
-         * @generated from protobuf field: string conditional_transfer_resolved_event = 4;
-         */
-        conditionalTransferResolvedEvent: string;
-    } | {
-        oneofKind: "depositReconciledEvent";
-        /**
-         * @generated from protobuf field: string deposit_reconciled_event = 5;
-         */
-        depositReconciledEvent: string;
-    } | {
-        oneofKind: "requestCollateralEvent";
-        /**
-         * @generated from protobuf field: string request_collateral_event = 6;
-         */
-        requestCollateralEvent: string;
-    } | {
-        oneofKind: "restoreStateEvent";
-        /**
-         * @generated from protobuf field: string restore_state_event = 7;
-         */
-        restoreStateEvent: string;
-    } | {
-        oneofKind: "withdrawCreatedEvent";
-        /**
-         * string setup_event
-         *
-         * @generated from protobuf field: string withdraw_created_event = 8;
-         */
-        withdrawCreatedEvent: string;
-    } | {
-        oneofKind: "withdrawResolvedEvent";
-        /**
-         * @generated from protobuf field: string withdraw_resolved_event = 9;
-         */
-        withdrawResolvedEvent: string;
-    } | {
-        oneofKind: "withdrawReconciledEvent";
-        /**
-         * @generated from protobuf field: string withdraw_reconciled_event = 10;
-         */
-        withdrawReconciledEvent: string;
-    } | {
-        oneofKind: undefined;
-    };
-    /**
-     * @generated from protobuf field: com.vector.TPublicIdentifier public_identifier = 11;
-     */
-    publicIdentifier?: TPublicIdentifier;
+    txHash: string;
 }
 /**
- * @generated from protobuf message com.vector.Subscription
- */
-export interface Subscription {
-    /**
-     * @generated from protobuf field: com.vector.Subscription.TUrl url = 1;
-     */
-    url?: Subscription_TUrl;
-}
-/**
- * @generated from protobuf message com.vector.Subscription.TUrl
- */
-export interface Subscription_TUrl {
-    /**
-     * @generated from protobuf field: string url = 1;
-     */
-    url: string;
-}
-/**
- * @generated from protobuf message com.vector.ListenerSchemaReply
- */
-export interface ListenerSchemaReply {
-    /**
-     * @generated from protobuf field: string url = 1;
-     */
-    url: string;
-}
-/**
- * @generated from protobuf message com.vector.Balance
- */
-export interface Balance {
-    /**
-     * @generated from protobuf field: repeated string amount = 1;
-     */
-    amount: string[];
-    /**
-     * @generated from protobuf field: repeated string to = 2;
-     */
-    to: string[];
-}
-/**
- * @generated from protobuf message com.vector.Address
- */
-export interface Address {
-    /**
-     * @generated from protobuf field: string address = 1;
-     */
-    address: string;
-}
-/**
- * @generated from protobuf message com.vector.CoreChannelState
- */
-export interface CoreChannelState {
-    /**
-     * @generated from protobuf field: com.vector.Address channel_address = 1;
-     */
-    channelAddress?: Address;
-    /**
-     * @generated from protobuf field: com.vector.Address alice = 2;
-     */
-    alice?: Address;
-    /**
-     * @generated from protobuf field: com.vector.Address bob = 3;
-     */
-    bob?: Address;
-    /**
-     * @generated from protobuf field: repeated string asset_ids = 4;
-     */
-    assetIds: string[];
-    /**
-     * @generated from protobuf field: repeated com.vector.Balance balances = 5;
-     */
-    balances: Balance[];
-    /**
-     * @generated from protobuf field: repeated string processed_deposits_a = 6;
-     */
-    processedDepositsA: string[];
-    /**
-     * @generated from protobuf field: repeated string processed_deposits_b = 7;
-     */
-    processedDepositsB: string[];
-    /**
-     * @generated from protobuf field: repeated string defund_nounces = 8;
-     */
-    defundNounces: string[];
-    /**
-     * @generated from protobuf field: string timeout = 9;
-     */
-    timeout: string;
-    /**
-     * @generated from protobuf field: int64 nonce = 10;
-     */
-    nonce: bigint;
-    /**
-     * @generated from protobuf field: string merkle_root = 11;
-     */
-    merkleRoot: string;
-}
-/**
- * @generated from protobuf message com.vector.WithdrawState
- */
-export interface WithdrawState {
-    /**
-     * @generated from protobuf field: string initiator_signature = 1;
-     */
-    initiatorSignature: string;
-    /**
-     * @generated from protobuf field: com.vector.Address initiator = 2;
-     */
-    initiator?: Address;
-    /**
-     * @generated from protobuf field: com.vector.Address responder = 3;
-     */
-    responder?: Address;
-    /**
-     * @generated from protobuf field: bytes data = 4;
-     */
-    data: Uint8Array;
-    /**
-     * @generated from protobuf field: int64 nonce = 5;
-     */
-    nonce: bigint;
-    /**
-     * @generated from protobuf field: string fee = 6;
-     */
-    fee: string;
-    /**
-     * @generated from protobuf field: com.vector.Address call_to = 7;
-     */
-    callTo?: Address;
-    /**
-     * @generated from protobuf field: string call_data = 8;
-     */
-    callData: string;
-}
-/**
- * @generated from protobuf message com.vector.HashlockTransferState
- */
-export interface HashlockTransferState {
-    /**
-     * @generated from protobuf field: string lock_hash = 1;
-     */
-    lockHash: string;
-    /**
-     * @generated from protobuf field: string expiry = 2;
-     */
-    expiry: string;
-}
-/**
- * @generated from protobuf message com.vector.TransferStateMap
- */
-export interface TransferStateMap {
-    /**
-     * @generated from protobuf field: map<string, com.vector.HashlockTransferState> hashlock_transfer_state = 1;
-     */
-    hashlockTransferState: {
-        [key: string]: HashlockTransferState;
-    };
-    /**
-     * @generated from protobuf field: map<string, com.vector.WithdrawState> withdraw_state = 2;
-     */
-    withdrawState: {
-        [key: string]: WithdrawState;
-    };
-}
-/**
- * @generated from protobuf message com.vector.TransferState
- */
-export interface TransferState {
-    /**
-     * @generated from protobuf oneof: values
-     */
-    values: {
-        oneofKind: "transferStateMap";
-        /**
-         * @generated from protobuf field: com.vector.TransferStateMap transfer_state_map = 1;
-         */
-        transferStateMap: TransferStateMap;
-    } | {
-        oneofKind: "any";
-        /**
-         * @generated from protobuf field: google.protobuf.Any any = 2;
-         */
-        any: Any;
-    } | {
-        oneofKind: undefined;
-    };
-}
-/**
- * @generated from protobuf message com.vector.HashlockTransferResolver
- */
-export interface HashlockTransferResolver {
-    /**
-     * @generated from protobuf field: string pre_image = 1;
-     */
-    preImage: string;
-}
-/**
- * @generated from protobuf message com.vector.WithdrawResolver
- */
-export interface WithdrawResolver {
-    /**
-     * @generated from protobuf field: string responder_signature = 1;
-     */
-    responderSignature: string;
-}
-/**
- * @generated from protobuf message com.vector.TransferResolverMap
- */
-export interface TransferResolverMap {
-    /**
-     * @generated from protobuf field: map<string, com.vector.HashlockTransferResolver> hashlock_transfer_resolver = 1;
-     */
-    hashlockTransferResolver: {
-        [key: string]: HashlockTransferResolver;
-    };
-    /**
-     * @generated from protobuf field: map<string, com.vector.WithdrawResolver> withdraw_resolver = 2;
-     */
-    withdrawResolver: {
-        [key: string]: WithdrawResolver;
-    };
-}
-/**
- * @generated from protobuf message com.vector.TransferResolver
- */
-export interface TransferResolver {
-    /**
-     * @generated from protobuf oneof: values
-     */
-    values: {
-        oneofKind: "transferResolverMap";
-        /**
-         * @generated from protobuf field: com.vector.TransferResolverMap transfer_resolver_map = 1;
-         */
-        transferResolverMap: TransferResolverMap;
-    } | {
-        oneofKind: "any";
-        /**
-         * @generated from protobuf field: google.protobuf.Any any = 2;
-         */
-        any: Any;
-    } | {
-        oneofKind: undefined;
-    };
-}
-/**
- * @generated from protobuf message com.vector.ContractAddresses
- */
-export interface ContractAddresses {
-    /**
-     * @generated from protobuf field: com.vector.Address channel_factory_address = 1;
-     */
-    channelFactoryAddress?: Address;
-    /**
-     * @generated from protobuf field: com.vector.Address transfer_registry_address = 2;
-     */
-    transferRegistryAddress?: Address;
-}
-/**
- * @generated from protobuf message com.vector.NetworkContext
- */
-export interface NetworkContext {
-    /**
-     * @generated from protobuf field: com.vector.ContractAddresses contract_addresses = 1;
-     */
-    contractAddresses?: ContractAddresses;
-    /**
-     * @generated from protobuf field: int32 chain_id = 2;
-     */
-    chainId: number;
-    /**
-     * @generated from protobuf field: string provider_url = 3;
-     */
-    providerUrl: string;
-}
-/**
+ * channel update related fields
+ *
  * @generated from protobuf message com.vector.CreateUpdateDetails
  */
 export interface CreateUpdateDetails {
@@ -379,17 +44,17 @@ export interface CreateUpdateDetails {
      */
     balance?: Balance;
     /**
-     * @generated from protobuf field: com.vector.Address transfer_definition = 3;
+     * @generated from protobuf field: string transfer_definition = 3;
      */
-    transferDefinition?: Address;
+    transferDefinition: string;
     /**
      * @generated from protobuf field: string transfer_timeout = 4;
      */
     transferTimeout: string;
     /**
-     * @generated from protobuf field: com.vector.TransferState transfer_initial_state = 5;
+     * @generated from protobuf field: google.protobuf.Any transfer_initial_state = 5;
      */
-    transferInitialState?: TransferState;
+    transferInitialState?: Any;
     /**
      * @generated from protobuf field: repeated string transfer_encodings = 6;
      */
@@ -403,7 +68,7 @@ export interface CreateUpdateDetails {
      */
     merkleRoot: string;
     /**
-     * @generated from protobuf field: google.protobuf.Any meta = 9;
+     * @generated from protobuf field: optional google.protobuf.Any meta = 9;
      */
     meta?: Any;
 }
@@ -416,19 +81,19 @@ export interface ResolveUpdateDetails {
      */
     transferId: string;
     /**
-     * @generated from protobuf field: com.vector.Address transfer_definition = 2;
+     * @generated from protobuf field: string transfer_definition = 2;
      */
-    transferDefinition?: Address;
+    transferDefinition: string;
     /**
-     * @generated from protobuf field: com.vector.TransferResolver transfer_resolver = 3;
+     * @generated from protobuf field: google.protobuf.Any transfer_resolver = 3;
      */
-    transferResolver?: TransferResolver;
+    transferResolver?: Any;
     /**
      * @generated from protobuf field: string merkle_root = 4;
      */
     merkleRoot: string;
     /**
-     * @generated from protobuf field: google.protobuf.Any meta = 5;
+     * @generated from protobuf field: optional google.protobuf.Any meta = 5;
      */
     meta?: Any;
 }
@@ -445,7 +110,7 @@ export interface DepositUpdateDetails {
      */
     totalDepositsBob: string;
     /**
-     * @generated from protobuf field: google.protobuf.Any meta = 3;
+     * @generated from protobuf field: optional google.protobuf.Any meta = 3;
      */
     meta?: Any;
 }
@@ -462,38 +127,9 @@ export interface SetupUpdateDetails {
      */
     networkContext?: NetworkContext;
     /**
-     * @generated from protobuf field: google.protobuf.Any meta = 3;
+     * @generated from protobuf field: optional google.protobuf.Any meta = 3;
      */
     meta?: Any;
-}
-/**
- * @generated from protobuf message com.vector.ChannelUpdateDetailsMap
- */
-export interface ChannelUpdateDetailsMap {
-    /**
-     * @generated from protobuf field: map<string, com.vector.CreateUpdateDetails> create_update_details = 1;
-     */
-    createUpdateDetails: {
-        [key: string]: CreateUpdateDetails;
-    };
-    /**
-     * @generated from protobuf field: map<string, com.vector.ResolveUpdateDetails> deposit_update_details = 2;
-     */
-    depositUpdateDetails: {
-        [key: string]: ResolveUpdateDetails;
-    };
-    /**
-     * @generated from protobuf field: map<string, com.vector.ResolveUpdateDetails> resolve_update_details = 3;
-     */
-    resolveUpdateDetails: {
-        [key: string]: ResolveUpdateDetails;
-    };
-    /**
-     * @generated from protobuf field: map<string, com.vector.SetupUpdateDetails> setup_update_details = 4;
-     */
-    setupUpdateDetails: {
-        [key: string]: SetupUpdateDetails;
-    };
 }
 /**
  * @generated from protobuf message com.vector.ChannelUpdate
@@ -524,73 +160,163 @@ export interface ChannelUpdate {
      */
     balance?: Balance;
     /**
-     * @generated from protobuf field: com.vector.Address asset_id = 7;
+     * @generated from protobuf field: string asset_id = 7;
      */
-    assetId?: Address;
+    assetId: string;
     /**
-     * @generated from protobuf field: com.vector.ChannelUpdateDetailsMap details = 8;
+     * @generated from protobuf oneof: details
      */
-    details?: ChannelUpdateDetailsMap;
+    details: {
+        oneofKind: "setupUpdateDetails";
+        /**
+         * @generated from protobuf field: com.vector.SetupUpdateDetails setup_update_details = 8;
+         */
+        setupUpdateDetails: SetupUpdateDetails;
+    } | {
+        oneofKind: "depositUpdateDetails";
+        /**
+         * @generated from protobuf field: com.vector.DepositUpdateDetails deposit_update_details = 9;
+         */
+        depositUpdateDetails: DepositUpdateDetails;
+    } | {
+        oneofKind: "createUpdateDetails";
+        /**
+         * @generated from protobuf field: com.vector.CreateUpdateDetails create_update_details = 10;
+         */
+        createUpdateDetails: CreateUpdateDetails;
+    } | {
+        oneofKind: "resolveUpdateDetails";
+        /**
+         * @generated from protobuf field: com.vector.ResolveUpdateDetails resolve_update_details = 11;
+         */
+        resolveUpdateDetails: ResolveUpdateDetails;
+    } | {
+        oneofKind: undefined;
+    };
     /**
-     * @generated from protobuf field: string aliceSignature = 9;
+     * @generated from protobuf field: string aliceSignature = 12;
      */
     aliceSignature: string;
     /**
-     * @generated from protobuf field: string bob_signature = 10;
+     * @generated from protobuf field: string bob_signature = 13;
      */
     bobSignature: string;
 }
 /**
+ * channel state helpers
+ *
+ * @generated from protobuf message com.vector.Balance
+ */
+export interface Balance {
+    /**
+     * @generated from protobuf field: repeated string amount = 1;
+     */
+    amount: string[];
+    /**
+     * @generated from protobuf field: repeated string to = 2;
+     */
+    to: string[];
+}
+/**
+ * @generated from protobuf message com.vector.Contractstringes
+ */
+export interface Contractstringes {
+    /**
+     * @generated from protobuf field: string channel_factory_address = 1;
+     */
+    channelFactoryAddress: string;
+    /**
+     * @generated from protobuf field: string transfer_registry_address = 2;
+     */
+    transferRegistryAddress: string;
+}
+/**
+ * @generated from protobuf message com.vector.NetworkContext
+ */
+export interface NetworkContext {
+    /**
+     * @generated from protobuf field: com.vector.Contractstringes contract_addresses = 1;
+     */
+    contractAddresses?: Contractstringes;
+    /**
+     * @generated from protobuf field: int32 chain_id = 2;
+     */
+    chainId: number;
+    /**
+     * @generated from protobuf field: string provider_url = 3;
+     */
+    providerUrl: string;
+}
+/**
+ * channel state
+ *
  * @generated from protobuf message com.vector.FullChannelState
  */
 export interface FullChannelState {
     /**
-     * @generated from protobuf field: com.vector.CoreChannelState core_channel_state = 1;
+     * @generated from protobuf field: string channel_address = 1;
      */
-    coreChannelState?: CoreChannelState;
+    channelAddress: string;
     /**
-     * @generated from protobuf field: string alice_identifier = 2;
+     * @generated from protobuf field: string alice = 2;
+     */
+    alice: string;
+    /**
+     * @generated from protobuf field: string bob = 3;
+     */
+    bob: string;
+    /**
+     * @generated from protobuf field: string alice_identifier = 4;
      */
     aliceIdentifier: string;
     /**
-     * @generated from protobuf field: string bob_identifier = 3;
+     * @generated from protobuf field: string bob_identifier = 5;
      */
     bobIdentifier: string;
     /**
-     * @generated from protobuf field: com.vector.ChannelUpdate latest_update = 4;
+     * @generated from protobuf field: repeated string asset_ids = 6;
+     */
+    assetIds: string[];
+    /**
+     * @generated from protobuf field: repeated com.vector.Balance balances = 7;
+     */
+    balances: Balance[];
+    /**
+     * @generated from protobuf field: repeated string processed_deposits_a = 8;
+     */
+    processedDepositsA: string[];
+    /**
+     * @generated from protobuf field: repeated string processed_deposits_b = 9;
+     */
+    processedDepositsB: string[];
+    /**
+     * @generated from protobuf field: repeated string defund_nounces = 10;
+     */
+    defundNounces: string[];
+    /**
+     * @generated from protobuf field: int64 nonce = 11;
+     */
+    nonce: bigint;
+    /**
+     * @generated from protobuf field: string merkle_root = 12;
+     */
+    merkleRoot: string;
+    /**
+     * @generated from protobuf field: bool in_dispute = 13;
+     */
+    inDispute: boolean;
+    /**
+     * @generated from protobuf field: com.vector.ChannelUpdate latest_update = 14;
      */
     latestUpdate?: ChannelUpdate;
     /**
-     * @generated from protobuf field: com.vector.NetworkContext network_context = 5;
+     * @generated from protobuf field: com.vector.NetworkContext network_context = 15;
      */
     networkContext?: NetworkContext;
     /**
-     * @generated from protobuf field: bool in_dispute = 6;
+     * @generated from protobuf field: string timeout = 16;
      */
-    inDispute: boolean;
-}
-/**
- * @generated from protobuf message com.vector.FullChannelStateOrUndefined
- */
-export interface FullChannelStateOrUndefined {
-    /**
-     * @generated from protobuf oneof: full_channel_state
-     */
-    fullChannelState: {
-        oneofKind: "fullChannel";
-        /**
-         * @generated from protobuf field: com.vector.FullChannelState full_channel = 1;
-         */
-        fullChannel: FullChannelState;
-    } | {
-        oneofKind: "undefined";
-        /**
-         * @generated from protobuf field: google.protobuf.Any undefined = 2;
-         */
-        undefined: Any;
-    } | {
-        oneofKind: undefined;
-    };
+    timeout: string;
 }
 /**
  * @generated from protobuf message com.vector.FullChannelStates
@@ -602,27 +328,490 @@ export interface FullChannelStates {
     fullChannelState: FullChannelState[];
 }
 /**
- * @generated from protobuf message com.vector.TxHash
+ * transfer states
+ *
+ * @generated from protobuf message com.vector.FullTransferState
  */
-export interface TxHash {
+export interface FullTransferState {
     /**
-     * @generated from protobuf field: string txHash = 1;
+     * @generated from protobuf field: string transfer_id = 1;
      */
-    txHash: string;
+    transferId: string;
+    /**
+     * @generated from protobuf field: string channel_address = 2;
+     */
+    channelAddress: string;
+    /**
+     * @generated from protobuf field: string transfer_definition = 3;
+     */
+    transferDefinition: string;
+    /**
+     * @generated from protobuf field: string initiator = 4;
+     */
+    initiator: string;
+    /**
+     * @generated from protobuf field: string responder = 5;
+     */
+    responder: string;
+    /**
+     * @generated from protobuf field: string initiator_identifier = 6;
+     */
+    initiatorIdentifier: string;
+    /**
+     * @generated from protobuf field: string responder_identifier = 7;
+     */
+    responderIdentifier: string;
+    /**
+     * @generated from protobuf field: string asset_id = 8;
+     */
+    assetId: string;
+    /**
+     * @generated from protobuf field: com.vector.Balance balance = 9;
+     */
+    balance?: Balance;
+    /**
+     * @generated from protobuf field: string transfer_timeout = 10;
+     */
+    transferTimeout: string;
+    /**
+     * @generated from protobuf field: string initial_state_hash = 11;
+     */
+    initialStateHash: string;
+    /**
+     * @generated from protobuf field: repeated string transfer_encodings = 12;
+     */
+    transferEncodings: string[];
+    /**
+     * @generated from protobuf field: google.protobuf.Any transfer_state = 13;
+     */
+    transferState?: Any;
+    /**
+     * @generated from protobuf field: google.protobuf.Any transfer_resolver = 14;
+     */
+    transferResolver?: Any;
+    /**
+     * @generated from protobuf field: bool in_dispute = 15;
+     */
+    inDispute: boolean;
+    /**
+     * @generated from protobuf field: int64 channel_nonce = 16;
+     */
+    channelNonce: bigint;
+    /**
+     * @generated from protobuf field: optional google.protobuf.Any meta = 17;
+     */
+    meta?: Any;
 }
 /**
- * @generated from protobuf message com.vector.Pong
+ * @generated from protobuf message com.vector.FullTransferStates
  */
-export interface Pong {
+export interface FullTransferStates {
     /**
-     * @generated from protobuf field: string message = 1;
+     * @generated from protobuf field: repeated com.vector.FullTransferState full_transfer_state = 1;
      */
-    message: string;
+    fullTransferState: FullTransferState[];
 }
 /**
- * @generated from protobuf message com.vector.Empty
+ * requests
+ *
+ * @generated from protobuf message com.vector.GetStatusRequest
  */
-export interface Empty {
+export interface GetStatusRequest {
+    /**
+     * @generated from protobuf field: string public_identifier = 1;
+     */
+    publicIdentifier: string;
+}
+/**
+ * @generated from protobuf message com.vector.ConditionalTransferRequest
+ */
+export interface ConditionalTransferRequest {
+    /**
+     * @generated from protobuf field: string public_identifier = 1;
+     */
+    publicIdentifier: string;
+    /**
+     * @generated from protobuf field: string channel_address = 2;
+     */
+    channelAddress: string;
+    /**
+     * @generated from protobuf field: string amount = 3;
+     */
+    amount: string;
+    /**
+     * @generated from protobuf field: string asset_id = 4;
+     */
+    assetId: string;
+    /**
+     * @generated from protobuf field: string recipient = 5;
+     */
+    recipient: string;
+    /**
+     * @generated from protobuf field: int32 recipient_chainId = 6;
+     */
+    recipientChainId: number;
+    /**
+     * @generated from protobuf field: string recipient_assetId = 7;
+     */
+    recipientAssetId: string;
+    /**
+     * @generated from protobuf field: string timeout = 8;
+     */
+    timeout: string;
+    /**
+     * @generated from protobuf field: string type = 9;
+     */
+    type: string;
+    /**
+     * @generated from protobuf field: google.protobuf.Any details = 10;
+     */
+    details?: Any;
+    /**
+     * @generated from protobuf field: optional google.protobuf.Any meta = 11;
+     */
+    meta?: Any;
+}
+/**
+ * @generated from protobuf message com.vector.CollateralRequest
+ */
+export interface CollateralRequest {
+    /**
+     * @generated from protobuf field: string public_identifier = 1;
+     */
+    publicIdentifier: string;
+    /**
+     * @generated from protobuf field: string channel_address = 2;
+     */
+    channelAddress: string;
+    /**
+     * @generated from protobuf field: string asset_id = 3;
+     */
+    assetId: string;
+    /**
+     * @generated from protobuf field: string amount = 4;
+     */
+    amount: string;
+}
+/**
+ * @generated from protobuf message com.vector.DepositRequest
+ */
+export interface DepositRequest {
+    /**
+     * @generated from protobuf field: string public_identifier = 1;
+     */
+    publicIdentifier: string;
+    /**
+     * @generated from protobuf field: string channel_address = 2;
+     */
+    channelAddress: string;
+    /**
+     * @generated from protobuf field: string asset_id = 3;
+     */
+    assetId: string;
+    /**
+     * @generated from protobuf field: optional google.protobuf.Any meta = 4;
+     */
+    meta?: Any;
+}
+/**
+ * @generated from protobuf message com.vector.TransferRequest
+ */
+export interface TransferRequest {
+    /**
+     * @generated from protobuf field: string public_identifier = 1;
+     */
+    publicIdentifier: string;
+    /**
+     * @generated from protobuf field: string transfer_id = 2;
+     */
+    transferId: string;
+}
+/**
+ * @generated from protobuf message com.vector.ChannelStateRequest
+ */
+export interface ChannelStateRequest {
+    /**
+     * @generated from protobuf field: string public_identifier = 1;
+     */
+    publicIdentifier: string;
+    /**
+     * @generated from protobuf field: string channel_address = 2;
+     */
+    channelAddress: string;
+}
+/**
+ * @generated from protobuf message com.vector.DepositTxRequest
+ */
+export interface DepositTxRequest {
+    /**
+     * @generated from protobuf field: string channel_address = 1;
+     */
+    channelAddress: string;
+    /**
+     * @generated from protobuf field: string amount = 2;
+     */
+    amount: string;
+    /**
+     * @generated from protobuf field: string asset_id = 3;
+     */
+    assetId: string;
+    /**
+     * @generated from protobuf field: int32 chain_id = 4;
+     */
+    chainId: number;
+    /**
+     * @generated from protobuf field: string public_identifier = 5;
+     */
+    publicIdentifier: string;
+}
+/**
+ * @generated from protobuf message com.vector.SetupRequest
+ */
+export interface SetupRequest {
+    /**
+     * @generated from protobuf field: string public_identifier = 1;
+     */
+    publicIdentifier: string;
+    /**
+     * @generated from protobuf field: string counterparty_identifier = 2;
+     */
+    counterpartyIdentifier: string;
+    /**
+     * @generated from protobuf field: int32 chain_id = 3;
+     */
+    chainId: number;
+    /**
+     * @generated from protobuf field: string timeout = 4;
+     */
+    timeout: string;
+    /**
+     * @generated from protobuf field: optional google.protobuf.Any meta = 5;
+     */
+    meta?: Any;
+}
+/**
+ * @generated from protobuf message com.vector.RegisteredTransfersRequest
+ */
+export interface RegisteredTransfersRequest {
+    /**
+     * @generated from protobuf field: string public_identifier = 1;
+     */
+    publicIdentifier: string;
+    /**
+     * @generated from protobuf field: int32 chain_id = 2;
+     */
+    chainId: number;
+}
+/**
+ * @generated from protobuf message com.vector.ChannelStatesRequest
+ */
+export interface ChannelStatesRequest {
+    /**
+     * @generated from protobuf field: string public_identifier = 1;
+     */
+    publicIdentifier: string;
+}
+/**
+ * @generated from protobuf message com.vector.ActiveTransfersRequest
+ */
+export interface ActiveTransfersRequest {
+    /**
+     * @generated from protobuf field: string public_identifier = 1;
+     */
+    publicIdentifier: string;
+    /**
+     * @generated from protobuf field: string channel_address = 2;
+     */
+    channelAddress: string;
+}
+/**
+ * @generated from protobuf message com.vector.TransferStatesByRoutingIdRequest
+ */
+export interface TransferStatesByRoutingIdRequest {
+    /**
+     * @generated from protobuf field: string public_identifier = 1;
+     */
+    publicIdentifier: string;
+    /**
+     * @generated from protobuf field: string channel_address = 2;
+     */
+    channelAddress: string;
+    /**
+     * @generated from protobuf field: bytes routing_id = 3;
+     */
+    routingId: Uint8Array;
+}
+/**
+ * @generated from protobuf message com.vector.TransferStateByRoutingIdRequest
+ */
+export interface TransferStateByRoutingIdRequest {
+    /**
+     * @generated from protobuf field: string public_identifier = 1;
+     */
+    publicIdentifier: string;
+    /**
+     * @generated from protobuf field: bytes routing_id = 2;
+     */
+    routingId: Uint8Array;
+}
+/**
+ * @generated from protobuf message com.vector.TransfersRequest
+ */
+export interface TransfersRequest {
+    /**
+     * @generated from protobuf field: string public_identifier = 1;
+     */
+    publicIdentifier: string;
+    /**
+     * @generated from protobuf field: bytes transfer_id = 2;
+     */
+    transferId: Uint8Array;
+}
+/**
+ * @generated from protobuf message com.vector.ChannelStateByParticipantsRequest
+ */
+export interface ChannelStateByParticipantsRequest {
+    /**
+     * @generated from protobuf field: string public_identifier = 1;
+     */
+    publicIdentifier: string;
+    /**
+     * @generated from protobuf field: string counterparty = 2;
+     */
+    counterparty: string;
+    /**
+     * @generated from protobuf field: int32 chain_id = 3;
+     */
+    chainId: number;
+}
+/**
+ * @generated from protobuf message com.vector.WithdrawRequest
+ */
+export interface WithdrawRequest {
+    /**
+     * @generated from protobuf field: string public_identifier = 1;
+     */
+    publicIdentifier: string;
+    /**
+     * @generated from protobuf field: string channel_address = 2;
+     */
+    channelAddress: string;
+    /**
+     * @generated from protobuf field: string amount = 3;
+     */
+    amount: string;
+    /**
+     * @generated from protobuf field: string asset_id = 4;
+     */
+    assetId: string;
+    /**
+     * @generated from protobuf field: string recipient = 5;
+     */
+    recipient: string;
+    /**
+     * @generated from protobuf field: string fee = 6;
+     */
+    fee: string;
+    /**
+     * @generated from protobuf field: string call_to = 7;
+     */
+    callTo: string;
+    /**
+     * @generated from protobuf field: string call_data = 8;
+     */
+    callData: string;
+    /**
+     * @generated from protobuf field: optional google.protobuf.Any meta = 9;
+     */
+    meta?: Any;
+}
+/**
+ * @generated from protobuf message com.vector.ResolveTransferRequest
+ */
+export interface ResolveTransferRequest {
+    /**
+     * @generated from protobuf field: string public_identifier = 1;
+     */
+    publicIdentifier: string;
+    /**
+     * @generated from protobuf field: string channel_address = 2;
+     */
+    channelAddress: string;
+    /**
+     * @generated from protobuf field: bytes transfer_id = 3;
+     */
+    transferId: Uint8Array;
+    /**
+     * @generated from protobuf field: google.protobuf.Any transfer_resolver = 4;
+     */
+    transferResolver?: Any;
+    /**
+     * @generated from protobuf field: optional google.protobuf.Any meta = 5;
+     */
+    meta?: Any;
+}
+/**
+ * @generated from protobuf message com.vector.Body
+ */
+export interface Body {
+    /**
+     * @generated from protobuf field: string method = 1;
+     */
+    method: string;
+    /**
+     * @generated from protobuf field: google.protobuf.Any params = 2;
+     */
+    params?: Any;
+}
+/**
+ * @generated from protobuf message com.vector.EthProviderRequest
+ */
+export interface EthProviderRequest {
+    /**
+     * @generated from protobuf field: int32 chain_id = 1;
+     */
+    chainId: number;
+    /**
+     * @generated from protobuf field: com.vector.Body body = 2;
+     */
+    body?: Body;
+}
+/**
+ * responses
+ *
+ * @generated from protobuf message com.vector.RestoreStateReply
+ */
+export interface RestoreStateReply {
+    /**
+     * @generated from protobuf field: string channel_address = 1;
+     */
+    channelAddress: string;
+}
+/**
+ * @generated from protobuf message com.vector.WithdrawReply
+ */
+export interface WithdrawReply {
+    /**
+     * @generated from protobuf field: string channel_address = 1;
+     */
+    channelAddress: string;
+    /**
+     * @generated from protobuf field: bytes transfer_id = 2;
+     */
+    transferId: Uint8Array;
+    /**
+     * @generated from protobuf field: bytes transaction_hash = 3;
+     */
+    transactionHash: Uint8Array;
+}
+/**
+ * @generated from protobuf message com.vector.EthProviderReply
+ */
+export interface EthProviderReply {
+    /**
+     * @generated from protobuf field: google.protobuf.Any response = 1;
+     */
+    response?: Any;
 }
 /**
  * @generated from protobuf message com.vector.Configs
@@ -651,6 +840,15 @@ export interface Config {
     signerAddress: string;
 }
 /**
+ * @generated from protobuf message com.vector.RouterConfig
+ */
+export interface RouterConfig {
+    /**
+     * @generated from protobuf field: repeated int32 supported_chains = 1;
+     */
+    supportedChains: number[];
+}
+/**
  * @generated from protobuf message com.vector.ProviderSyncing
  */
 export interface ProviderSyncing {
@@ -676,220 +874,23 @@ export interface ProviderSyncing {
  */
 export interface Status {
     /**
-     * @generated from protobuf field: map<int32, com.vector.ProviderSyncing> provider_syncing = 5;
+     * @generated from protobuf field: map<int32, com.vector.ProviderSyncing> provider_syncing = 1;
      */
     providerSyncing: {
         [key: number]: ProviderSyncing;
     };
     /**
-     * @generated from protobuf field: string public_identifier = 6;
+     * @generated from protobuf field: string public_identifier = 2;
      */
     publicIdentifier: string;
     /**
-     * @generated from protobuf field: string signer_address = 7;
+     * @generated from protobuf field: string signer_address = 3;
      */
     signerAddress: string;
     /**
-     * @generated from protobuf field: string version = 8;
+     * @generated from protobuf field: string version = 4;
      */
     version: string;
-}
-/**
- * @generated from protobuf message com.vector.DefundNonces
- */
-export interface DefundNonces {
-    /**
-     * @generated from protobuf field: repeated string nonce = 1;
-     */
-    nonce: string[];
-}
-/**
- * @generated from protobuf message com.vector.Deposits
- */
-export interface Deposits {
-    /**
-     * @generated from protobuf field: repeated string deposit = 1;
-     */
-    deposit: string[];
-}
-/**
- * @generated from protobuf message com.vector.ChannelStateRequest
- */
-export interface ChannelStateRequest {
-    /**
-     * @generated from protobuf field: string channel_address = 1;
-     */
-    channelAddress: string;
-    /**
-     * @generated from protobuf field: string alice = 2;
-     */
-    alice: string;
-    /**
-     * @generated from protobuf field: string bob = 3;
-     */
-    bob: string;
-    /**
-     * @generated from protobuf field: repeated com.vector.Address asset_id = 4;
-     */
-    assetId: Address[];
-    /**
-     * @generated from protobuf field: repeated com.vector.Balance balances = 5;
-     */
-    balances: Balance[];
-    /**
-     * @generated from protobuf field: com.vector.Deposits processed_deposits_a = 6;
-     */
-    processedDepositsA?: Deposits;
-    /**
-     * @generated from protobuf field: com.vector.Deposits processed_deposits_b = 7;
-     */
-    processedDepositsB?: Deposits;
-    /**
-     * @generated from protobuf field: com.vector.DefundNonces defund_nonces = 8;
-     */
-    defundNonces?: DefundNonces;
-    /**
-     * @generated from protobuf field: string timeout = 9;
-     */
-    timeout: string;
-    /**
-     * @generated from protobuf field: int32 nonce = 10;
-     */
-    nonce: number;
-    /**
-     * @generated from protobuf field: string merkle_root = 11;
-     */
-    merkleRoot: string;
-    /**
-     * @generated from protobuf field: string alice_identifier = 12;
-     */
-    aliceIdentifier: string;
-    /**
-     * @generated from protobuf field: string bo_identifier = 13;
-     */
-    boIdentifier: string;
-    /**
-     * @generated from protobuf field: com.vector.ChannelUpdate latest_update = 14;
-     */
-    latestUpdate?: ChannelUpdate;
-}
-/**
- * @generated from protobuf message com.vector.CoreTransferState
- */
-export interface CoreTransferState {
-    /**
-     * @generated from protobuf field: com.vector.Address channel_address = 1;
-     */
-    channelAddress?: Address;
-    /**
-     * @generated from protobuf field: string transfer_id = 2;
-     */
-    transferId: string;
-    /**
-     * @generated from protobuf field: com.vector.Address transfer_definition = 3;
-     */
-    transferDefinition?: Address;
-    /**
-     * @generated from protobuf field: com.vector.Address initiator = 4;
-     */
-    initiator?: Address;
-    /**
-     * @generated from protobuf field: com.vector.Address responder = 5;
-     */
-    responder?: Address;
-    /**
-     * @generated from protobuf field: com.vector.Address asset_id = 6;
-     */
-    assetId?: Address;
-    /**
-     * @generated from protobuf field: com.vector.Balance balance = 7;
-     */
-    balance?: Balance;
-    /**
-     * @generated from protobuf field: string transfer_timeout = 8;
-     */
-    transferTimeout: string;
-    /**
-     * @generated from protobuf field: string initial_state_hash = 9;
-     */
-    initialStateHash: string;
-}
-/**
- * @generated from protobuf message com.vector.FullTransferState
- */
-export interface FullTransferState {
-    /**
-     * @generated from protobuf field: com.vector.CoreTransferState core_transfer_state = 1;
-     */
-    coreTransferState?: CoreTransferState;
-    /**
-     * @generated from protobuf field: int32 number = 2;
-     */
-    number: number;
-    /**
-     * @generated from protobuf field: repeated string transfer_encodings = 3;
-     */
-    transferEncodings: string[];
-    /**
-     * @generated from protobuf field: google.protobuf.Any transfer_state = 4;
-     */
-    transferState?: Any;
-    /**
-     * @generated from protobuf field: google.protobuf.Any transfer_resolver = 5;
-     */
-    transferResolver?: Any;
-    /**
-     * @generated from protobuf field: google.protobuf.Any meta = 6;
-     */
-    meta?: Any;
-    /**
-     * @generated from protobuf field: bool in_dispute = 7;
-     */
-    inDispute: boolean;
-    /**
-     * @generated from protobuf field: int64 channel_nonce = 8;
-     */
-    channelNonce: bigint;
-    /**
-     * @generated from protobuf field: string initiator_identifier = 9;
-     */
-    initiatorIdentifier: string;
-    /**
-     * @generated from protobuf field: string responder_identifier = 10;
-     */
-    responderIdentifier: string;
-}
-/**
- * @generated from protobuf message com.vector.FullTransferStates
- */
-export interface FullTransferStates {
-    /**
-     * @generated from protobuf field: repeated com.vector.FullTransferState full_transfer_state = 1;
-     */
-    fullTransferState: FullTransferState[];
-}
-/**
- * @generated from protobuf message com.vector.FullTransferStateOrUndefined
- */
-export interface FullTransferStateOrUndefined {
-    /**
-     * @generated from protobuf oneof: full_Channel
-     */
-    fullChannel: {
-        oneofKind: "fullTransfer";
-        /**
-         * @generated from protobuf field: com.vector.FullTransferState full_transfer = 1;
-         */
-        fullTransfer: FullTransferState;
-    } | {
-        oneofKind: "undefined";
-        /**
-         * @generated from protobuf field: google.protobuf.Any undefined = 2;
-         */
-        undefined: Any;
-    } | {
-        oneofKind: undefined;
-    };
 }
 /**
  * @generated from protobuf message com.vector.RegisteredTransfer
@@ -904,9 +905,9 @@ export interface RegisteredTransfer {
      */
     resolverEncoding: string;
     /**
-     * @generated from protobuf field: com.vector.Address definition = 3;
+     * @generated from protobuf field: string definition = 3;
      */
-    definition?: Address;
+    definition: string;
     /**
      * @generated from protobuf field: string name = 4;
      */
@@ -926,30 +927,233 @@ export interface RegisteredTransfers {
     registeredTransfer: RegisteredTransfer[];
 }
 /**
- * @generated from protobuf message com.vector.Body
+ * event payloads
+ *
+ * @generated from protobuf message com.vector.IsAlivePayload
  */
-export interface Body {
+export interface IsAlivePayload {
     /**
-     * @generated from protobuf field: string method = 1;
+     * @generated from protobuf field: string channel_address = 1;
      */
-    method: string;
+    channelAddress: string;
     /**
-     * @generated from protobuf field: google.protobuf.Any params = 2;
+     * @generated from protobuf field: string alice_identifier = 2;
      */
-    params?: Any;
-}
-/**
- * @generated from protobuf message com.vector.EthProviderRequest
- */
-export interface EthProviderRequest {
+    aliceIdentifier: string;
     /**
-     * @generated from protobuf field: int32 chain_id = 1;
+     * @generated from protobuf field: string bob_identifier = 3;
+     */
+    bobIdentifier: string;
+    /**
+     * @generated from protobuf field: int32 chain_id = 4;
      */
     chainId: number;
     /**
-     * @generated from protobuf field: com.vector.Body body = 2;
+     * @generated from protobuf field: optional bool skip_check_in = 5;
      */
-    body?: Body;
+    skipCheckIn?: boolean;
+}
+/**
+ * @generated from protobuf message com.vector.SetupPayload
+ */
+export interface SetupPayload {
+    /**
+     * @generated from protobuf field: string channel_address = 1;
+     */
+    channelAddress: string;
+    /**
+     * @generated from protobuf field: string alice_identifier = 2;
+     */
+    aliceIdentifier: string;
+    /**
+     * @generated from protobuf field: string bob_identifier = 3;
+     */
+    bobIdentifier: string;
+    /**
+     * @generated from protobuf field: int32 chain_id = 4;
+     */
+    chainId: number;
+    /**
+     * @generated from protobuf field: optional google.protobuf.Any meta = 5;
+     */
+    meta?: Any;
+}
+/**
+ * @generated from protobuf message com.vector.ConditionalTransferCreatedPayload
+ */
+export interface ConditionalTransferCreatedPayload {
+    /**
+     * @generated from protobuf field: string channel_address = 1;
+     */
+    channelAddress: string;
+    /**
+     * @generated from protobuf field: string alice_identifier = 2;
+     */
+    aliceIdentifier: string;
+    /**
+     * @generated from protobuf field: string bob_identifier = 3;
+     */
+    bobIdentifier: string;
+    /**
+     * @generated from protobuf field: com.vector.FullTransferState transfer = 4;
+     */
+    transfer?: FullTransferState;
+    /**
+     * @generated from protobuf field: com.vector.Balance channel_balance = 5;
+     */
+    channelBalance?: Balance;
+    /**
+     * @generated from protobuf field: string condition_type = 6;
+     */
+    conditionType: string;
+    /**
+     * @generated from protobuf field: repeated string active_transfer_ids = 7;
+     */
+    activeTransferIds: string[];
+    /**
+     * @generated from protobuf field: optional google.protobuf.Any meta = 8;
+     */
+    meta?: Any;
+}
+/**
+ * @generated from protobuf message com.vector.DepositReconciledPayload
+ */
+export interface DepositReconciledPayload {
+    /**
+     * @generated from protobuf field: string channel_address = 1;
+     */
+    channelAddress: string;
+    /**
+     * @generated from protobuf field: string alice_identifier = 2;
+     */
+    aliceIdentifier: string;
+    /**
+     * @generated from protobuf field: string bob_identifier = 3;
+     */
+    bobIdentifier: string;
+    /**
+     * @generated from protobuf field: string asset_id = 4;
+     */
+    assetId: string;
+    /**
+     * @generated from protobuf field: com.vector.Balance channel_balance = 5;
+     */
+    channelBalance?: Balance;
+    /**
+     * @generated from protobuf field: optional google.protobuf.Any meta = 6;
+     */
+    meta?: Any;
+}
+/**
+ * @generated from protobuf message com.vector.RequestCollateralPayload
+ */
+export interface RequestCollateralPayload {
+    /**
+     * @generated from protobuf field: string channel_address = 1;
+     */
+    channelAddress: string;
+    /**
+     * @generated from protobuf field: string alice_identifier = 2;
+     */
+    aliceIdentifier: string;
+    /**
+     * @generated from protobuf field: string bob_identifier = 3;
+     */
+    bobIdentifier: string;
+    /**
+     * @generated from protobuf field: string asset_id = 4;
+     */
+    assetId: string;
+    /**
+     * @generated from protobuf field: optional string amount = 5;
+     */
+    amount?: string;
+    /**
+     * @generated from protobuf field: optional google.protobuf.Any meta = 6;
+     */
+    meta?: Any;
+}
+/**
+ * @generated from protobuf message com.vector.WithdrawalCreatedPayload
+ */
+export interface WithdrawalCreatedPayload {
+    /**
+     * @generated from protobuf field: string channel_address = 1;
+     */
+    channelAddress: string;
+    /**
+     * @generated from protobuf field: string alice_identifier = 2;
+     */
+    aliceIdentifier: string;
+    /**
+     * @generated from protobuf field: string bob_identifier = 3;
+     */
+    bobIdentifier: string;
+    /**
+     * @generated from protobuf field: com.vector.FullTransferState transfer = 4;
+     */
+    transfer?: FullTransferState;
+    /**
+     * @generated from protobuf field: string fee = 5;
+     */
+    fee: string;
+    /**
+     * @generated from protobuf field: string asset_id = 6;
+     */
+    assetId: string;
+    /**
+     * @generated from protobuf field: string amount = 7;
+     */
+    amount: string;
+    /**
+     * @generated from protobuf field: string recipient = 8;
+     */
+    recipient: string;
+    /**
+     * @generated from protobuf field: string call_to = 9;
+     */
+    callTo: string;
+    /**
+     * @generated from protobuf field: string call_data = 10;
+     */
+    callData: string;
+    /**
+     * @generated from protobuf field: com.vector.Balance channel_balance = 11;
+     */
+    channelBalance?: Balance;
+    /**
+     * @generated from protobuf field: optional google.protobuf.Any meta = 12;
+     */
+    meta?: Any;
+}
+/**
+ * @generated from protobuf message com.vector.WithdrawalReconciledPayload
+ */
+export interface WithdrawalReconciledPayload {
+    /**
+     * @generated from protobuf field: string channel_address = 1;
+     */
+    channelAddress: string;
+    /**
+     * @generated from protobuf field: string alice_identifier = 2;
+     */
+    aliceIdentifier: string;
+    /**
+     * @generated from protobuf field: string bob_identifier = 3;
+     */
+    bobIdentifier: string;
+    /**
+     * @generated from protobuf field: string transaction_hash = 4;
+     */
+    transactionHash: string;
+    /**
+     * @generated from protobuf field: string transfer_id = 5;
+     */
+    transferId: string;
+    /**
+     * @generated from protobuf field: optional google.protobuf.Any meta = 6;
+     */
+    meta?: Any;
 }
 /**
  * @generated from protobuf message com.vector.CreateNodeRequest
@@ -990,1023 +1194,70 @@ export interface CreateNodeReply {
  */
 export interface ClearStoreRequest {
     /**
-     * @generated from protobuf field: com.vector.ClearStoreRequest.AdminToken admin_token = 1;
+     * @generated from protobuf field: string admin_token = 1;
      */
-    adminToken?: ClearStoreRequest_AdminToken;
-}
-/**
- * @generated from protobuf message com.vector.ClearStoreRequest.AdminToken
- */
-export interface ClearStoreRequest_AdminToken {
-    /**
-     * @generated from protobuf field: string example = 1;
-     */
-    example: string;
-    /**
-     * @generated from protobuf field: string description = 2;
-     */
-    description: string;
-}
-/**
- * @generated from protobuf message com.vector.TPublicIdentifier
- */
-export interface TPublicIdentifier {
-    /**
-     * @generated from protobuf field: string public_identifier = 1;
-     */
-    publicIdentifier: string;
-}
-/**
- * @generated from protobuf message com.vector.SubscriptionWithPublicIdentifierRequest
- */
-export interface SubscriptionWithPublicIdentifierRequest {
-    /**
-     * @generated from protobuf field: com.vector.TPublicIdentifier public_identifier = 1;
-     */
-    publicIdentifier?: TPublicIdentifier;
-}
-/**
- * @generated from protobuf message com.vector.SubscriptionWithPublicIdentifierReply
- */
-export interface SubscriptionWithPublicIdentifierReply {
-    /**
-     * @generated from protobuf field: map<string, string> url = 1;
-     */
-    url: {
-        [key: string]: string;
-    };
-}
-/**
- * @generated from protobuf message com.vector.SubscribeRequest
- */
-export interface SubscribeRequest {
-    /**
-     * @generated from protobuf field: com.vector.SubscribeRequest.RegisterListenerBodySchema body = 1;
-     */
-    body?: SubscribeRequest_RegisterListenerBodySchema;
-}
-/**
- * @generated from protobuf message com.vector.SubscribeRequest.RegisterListenerBodySchema
- */
-export interface SubscribeRequest_RegisterListenerBodySchema {
-    /**
-     * @generated from protobuf field: com.vector.TPublicIdentifier public_identifier = 1;
-     */
-    publicIdentifier?: TPublicIdentifier;
-    /**
-     * @generated from protobuf field: map<string, string> events = 2;
-     */
-    events: {
-        [key: string]: string;
-    };
-}
-/**
- * @generated from protobuf message com.vector.SubscribeReply
- */
-export interface SubscribeReply {
-    /**
-     * @generated from protobuf field: string message = 1;
-     */
-    message: string;
+    adminToken: string;
 }
 /**
  * @generated from protobuf message com.vector.RestoreStateRequest
  */
 export interface RestoreStateRequest {
     /**
-     * @generated from protobuf field: com.vector.TPublicIdentifier counterparty_identifier = 1;
+     * @generated from protobuf field: string counterparty_identifier = 1;
      */
-    counterpartyIdentifier?: TPublicIdentifier;
+    counterpartyIdentifier: string;
     /**
      * @generated from protobuf field: string chain_id = 2;
      */
     chainId: string;
     /**
-     * @generated from protobuf field: com.vector.TPublicIdentifier public_identifier = 3;
+     * @generated from protobuf field: string public_identifier = 3;
      */
-    publicIdentifier?: TPublicIdentifier;
-}
-/**
- * @generated from protobuf message com.vector.TAddress
- */
-export interface TAddress {
-    /**
-     * @generated from protobuf field: string channel_address = 1;
-     */
-    channelAddress: string;
-}
-/**
- * @generated from protobuf message com.vector.RestoreStateReply
- */
-export interface RestoreStateReply {
-    /**
-     * @generated from protobuf field: com.vector.TAddress channel_address = 1;
-     */
-    channelAddress?: TAddress;
-}
-/**
- * @generated from protobuf message com.vector.WithdrawReply
- */
-export interface WithdrawReply {
-    /**
-     * @generated from protobuf field: com.vector.TAddress channel_address = 1;
-     */
-    channelAddress?: TAddress;
-    /**
-     * @generated from protobuf field: bytes transfer_id = 2;
-     */
-    transferId: Uint8Array;
-    /**
-     * @generated from protobuf field: bytes transaction_hash = 3;
-     */
-    transactionHash: Uint8Array;
-}
-/**
- * @generated from protobuf message com.vector.TBasicMeta
- */
-export interface TBasicMeta {
-    /**
-     * map<google.protobuf.Any, google.protobuf.Any> basic_meta = 1;
-     *
-     * @generated from protobuf field: map<string, google.protobuf.Any> basic_meta = 1;
-     */
-    basicMeta: {
-        [key: string]: Any;
-    };
-}
-/**
- * @generated from protobuf message com.vector.WithdrawRequestSchema
- */
-export interface WithdrawRequestSchema {
-    /**
-     * @generated from protobuf field: com.vector.TAddress channel_address = 1;
-     */
-    channelAddress?: TAddress;
-    /**
-     * @generated from protobuf field: string amount = 2;
-     */
-    amount: string;
-    /**
-     * @generated from protobuf field: com.vector.TAddress asset_id = 3;
-     */
-    assetId?: TAddress;
-    /**
-     * @generated from protobuf field: com.vector.TAddress recipient = 4;
-     */
-    recipient?: TAddress;
-    /**
-     * @generated from protobuf field: string fee = 5;
-     */
-    fee: string;
-    /**
-     * @generated from protobuf field: com.vector.TAddress call_to = 6;
-     */
-    callTo?: TAddress;
-    /**
-     * @generated from protobuf field: string call_data = 7;
-     */
-    callData: string;
-    /**
-     * @generated from protobuf field: com.vector.TBasicMeta meta = 8;
-     */
-    meta?: TBasicMeta;
-}
-/**
- * @generated from protobuf message com.vector.WithdrawRequest
- */
-export interface WithdrawRequest {
-    /**
-     * @generated from protobuf field: com.vector.WithdrawRequestSchema withdraw_schema = 1;
-     */
-    withdrawSchema?: WithdrawRequestSchema;
-    /**
-     * @generated from protobuf field: com.vector.TPublicIdentifier public_identifier = 2;
-     */
-    publicIdentifier?: TPublicIdentifier;
-}
-/**
- * @generated from protobuf message com.vector.ResolveTransferSchema
- */
-export interface ResolveTransferSchema {
-    /**
-     * @generated from protobuf field: com.vector.TAddress channel_address = 1;
-     */
-    channelAddress?: TAddress;
-    /**
-     * @generated from protobuf field: bytes transfer_id = 2;
-     */
-    transferId: Uint8Array;
-    /**
-     * @generated from protobuf field: com.vector.TBasicMeta meta = 3;
-     */
-    meta?: TBasicMeta;
-    /**
-     * @generated from protobuf field: com.vector.TransferResolverSchema transfer_resolver = 4;
-     */
-    transferResolver?: TransferResolverSchema;
-}
-/**
- * @generated from protobuf message com.vector.TransferResolverSchema
- */
-export interface TransferResolverSchema {
-    /**
-     * map<google.protobuf.Any, google.protobuf.Any> resolver = 1;
-     *
-     * @generated from protobuf field: map<string, google.protobuf.Any> resolver = 1;
-     */
-    resolver: {
-        [key: string]: Any;
-    };
-}
-/**
- * @generated from protobuf message com.vector.ResolveTransferRequest
- */
-export interface ResolveTransferRequest {
-    /**
-     * @generated from protobuf field: com.vector.ResolveTransferSchema resolver_transfer_schema = 1;
-     */
-    resolverTransferSchema?: ResolveTransferSchema;
-    /**
-     * @generated from protobuf field: com.vector.TPublicIdentifier public_identifier = 2;
-     */
-    publicIdentifier?: TPublicIdentifier;
-}
-/**
- * @generated from protobuf message com.vector.ResolveTransferReply
- */
-export interface ResolveTransferReply {
-    /**
-     * @generated from protobuf field: com.vector.TAddress channel_address = 1;
-     */
-    channelAddress?: TAddress;
-    /**
-     * @generated from protobuf field: bytes transfer_id = 2;
-     */
-    transferId: Uint8Array;
-    /**
-     * @generated from protobuf field: bytes routing_id = 3;
-     */
-    routingId: Uint8Array;
-}
-/**
- * @generated from protobuf message com.vector.CreateConditionalTransferParamsSchema
- */
-export interface CreateConditionalTransferParamsSchema {
-    /**
-     * @generated from protobuf field: com.vector.TAddress channel_address = 1;
-     */
-    channelAddress?: TAddress;
-    /**
-     * @generated from protobuf field: string amount = 2;
-     */
-    amount: string;
-    /**
-     * @generated from protobuf field: com.vector.TAddress asset_id = 3;
-     */
-    assetId?: TAddress;
-    /**
-     * @generated from protobuf field: com.vector.TPublicIdentifier recipient = 4;
-     */
-    recipient?: TPublicIdentifier;
-    /**
-     * @generated from protobuf field: int32 recipient_chainId = 5;
-     */
-    recipientChainId: number;
-    /**
-     * @generated from protobuf field: com.vector.TAddress recipient_assetId = 6;
-     */
-    recipientAssetId?: TAddress;
-    /**
-     * @generated from protobuf field: string timeout = 7;
-     */
-    timeout: string;
-    /**
-     * @generated from protobuf field: com.vector.TBasicMeta meta = 8;
-     */
-    meta?: TBasicMeta;
-    /**
-     * @generated from protobuf field: string type = 9;
-     */
-    type: string;
-    /**
-     * map<google.protobuf.Any, google.protobuf.Any> details = 10;
-     *
-     * @generated from protobuf field: map<string, google.protobuf.Any> details = 10;
-     */
-    details: {
-        [key: string]: Any;
-    };
-}
-/**
- * @generated from protobuf message com.vector.ConditionalTransferRequest
- */
-export interface ConditionalTransferRequest {
-    /**
-     * @generated from protobuf field: com.vector.CreateConditionalTransferParamsSchema create_conditional_transfer_params_schema = 1;
-     */
-    createConditionalTransferParamsSchema?: CreateConditionalTransferParamsSchema;
-    /**
-     * @generated from protobuf field: com.vector.TPublicIdentifier public_identifier = 2;
-     */
-    publicIdentifier?: TPublicIdentifier;
-}
-/**
- * @generated from protobuf message com.vector.CollateralReply
- */
-export interface CollateralReply {
-    /**
-     * @generated from protobuf field: com.vector.FullChannelState full_channel_state = 1;
-     */
-    fullChannelState?: FullChannelState;
-    /**
-     * @generated from protobuf field: com.vector.TAddress channel_address = 2;
-     */
-    channelAddress?: TAddress;
-}
-/**
- * @generated from protobuf message com.vector.RequestCollateralSchema
- */
-export interface RequestCollateralSchema {
-    /**
-     * @generated from protobuf field: com.vector.TAddress channel_address = 1;
-     */
-    channelAddress?: TAddress;
-    /**
-     * @generated from protobuf field: com.vector.TAddress asset_id = 2;
-     */
-    assetId?: TAddress;
-    /**
-     * @generated from protobuf field: string amount = 3;
-     */
-    amount: string;
-}
-/**
- * @generated from protobuf message com.vector.CollateralRequest
- */
-export interface CollateralRequest {
-    /**
-     * @generated from protobuf field: com.vector.RequestCollateralSchema collateral_request = 1;
-     */
-    collateralRequest?: RequestCollateralSchema;
-    /**
-     * @generated from protobuf field: com.vector.TPublicIdentifier public_identifier = 2;
-     */
-    publicIdentifier?: TPublicIdentifier;
-}
-/**
- * @generated from protobuf message com.vector.DepositEngineParamsSchema
- */
-export interface DepositEngineParamsSchema {
-    /**
-     * @generated from protobuf field: com.vector.TAddress channel_address = 1;
-     */
-    channelAddress?: TAddress;
-    /**
-     * @generated from protobuf field: com.vector.TAddress asset_id = 2;
-     */
-    assetId?: TAddress;
-    /**
-     * @generated from protobuf field: com.vector.TBasicMeta meta = 3;
-     */
-    meta?: TBasicMeta;
-}
-/**
- * @generated from protobuf message com.vector.DepositRequest
- */
-export interface DepositRequest {
-    /**
-     * @generated from protobuf field: com.vector.DepositEngineParamsSchema deposit_engine_params_schema = 1;
-     */
-    depositEngineParamsSchema?: DepositEngineParamsSchema;
-    /**
-     * @generated from protobuf field: com.vector.TPublicIdentifier public_identifier = 2;
-     */
-    publicIdentifier?: TPublicIdentifier;
-}
-/**
- * @generated from protobuf message com.vector.DefundTransferParamsSchema
- */
-export interface DefundTransferParamsSchema {
-    /**
-     * @generated from protobuf field: bytes transfer_id = 1;
-     */
-    transferId: Uint8Array;
-}
-/**
- * @generated from protobuf message com.vector.TransferResquest
- */
-export interface TransferResquest {
-    /**
-     * @generated from protobuf field: com.vector.DefundTransferParamsSchema defund_transfer_params_schema = 1;
-     */
-    defundTransferParamsSchema?: DefundTransferParamsSchema;
-    /**
-     * @generated from protobuf field: com.vector.TPublicIdentifier public_identifier = 2;
-     */
-    publicIdentifier?: TPublicIdentifier;
-}
-/**
- * @generated from protobuf message com.vector.DefundChannelParamsSchema
- */
-export interface DefundChannelParamsSchema {
-    /**
-     * @generated from protobuf field: com.vector.TAddress channel_address = 1;
-     */
-    channelAddress?: TAddress;
-}
-/**
- * @generated from protobuf message com.vector.ChannelResquest
- */
-export interface ChannelResquest {
-    /**
-     * @generated from protobuf field: com.vector.DefundChannelParamsSchema defund_channel_params_schema = 1;
-     */
-    defundChannelParamsSchema?: DefundChannelParamsSchema;
-    /**
-     * @generated from protobuf field: com.vector.TPublicIdentifier public_identifier = 2;
-     */
-    publicIdentifier?: TPublicIdentifier;
-}
-/**
- * @generated from protobuf message com.vector.DepositTxRequest
- */
-export interface DepositTxRequest {
-    /**
-     * @generated from protobuf field: com.vector.TAddress channel_address = 1;
-     */
-    channelAddress?: TAddress;
-    /**
-     * @generated from protobuf field: string amount = 2;
-     */
-    amount: string;
-    /**
-     * @generated from protobuf field: com.vector.TAddress asset_id = 3;
-     */
-    assetId?: TAddress;
-    /**
-     * @generated from protobuf field: int32 chain_id = 4;
-     */
-    chainId: number;
-    /**
-     * @generated from protobuf field: com.vector.TPublicIdentifier public_identifier = 5;
-     */
-    publicIdentifier?: TPublicIdentifier;
-}
-/**
- * @generated from protobuf message com.vector.SetupRequest
- */
-export interface SetupRequest {
-    /**
-     * @generated from protobuf field: com.vector.TPublicIdentifier counterparty_identifier = 1;
-     */
-    counterpartyIdentifier?: TPublicIdentifier;
-    /**
-     * @generated from protobuf field: int32 chain_id = 2;
-     */
-    chainId: number;
-    /**
-     * @generated from protobuf field: string timeout = 3;
-     */
-    timeout: string;
-    /**
-     * @generated from protobuf field: com.vector.TBasicMeta meta = 4;
-     */
-    meta?: TBasicMeta;
-    /**
-     * @generated from protobuf field: com.vector.TPublicIdentifier public_identifier = 5;
-     */
-    publicIdentifier?: TPublicIdentifier;
-}
-/**
- * @generated from protobuf message com.vector.SetupReply
- */
-export interface SetupReply {
-    /**
-     * @generated from protobuf field: com.vector.FullChannelState full_channel_state = 1;
-     */
-    fullChannelState?: FullChannelState;
-    /**
-     * @generated from protobuf field: com.vector.TAddress channel_address = 2;
-     */
-    channelAddress?: TAddress;
-}
-/**
- * @generated from protobuf message com.vector.RegisteredTransfersRequest
- */
-export interface RegisteredTransfersRequest {
-    /**
-     * @generated from protobuf field: int32 chain_id = 1;
-     */
-    chainId: number;
-    /**
-     * @generated from protobuf field: com.vector.TPublicIdentifier public_identifier = 2;
-     */
-    publicIdentifier?: TPublicIdentifier;
-}
-/**
- * @generated from protobuf message com.vector.ChannelStatesRequest
- */
-export interface ChannelStatesRequest {
-    /**
-     * @generated from protobuf field: com.vector.TPublicIdentifier public_identifier = 1;
-     */
-    publicIdentifier?: TPublicIdentifier;
-}
-/**
- * @generated from protobuf message com.vector.ActiveTransfersRequest
- */
-export interface ActiveTransfersRequest {
-    /**
-     * @generated from protobuf field: com.vector.TAddress channel_address = 1;
-     */
-    channelAddress?: TAddress;
-    /**
-     * @generated from protobuf field: com.vector.TPublicIdentifier public_identifier = 2;
-     */
-    publicIdentifier?: TPublicIdentifier;
-}
-/**
- * @generated from protobuf message com.vector.TransferStatesByRoutingIdRequest
- */
-export interface TransferStatesByRoutingIdRequest {
-    /**
-     * @generated from protobuf field: com.vector.TAddress channel_address = 1;
-     */
-    channelAddress?: TAddress;
-    /**
-     * @generated from protobuf field: bytes routing_id = 2;
-     */
-    routingId: Uint8Array;
-    /**
-     * @generated from protobuf field: com.vector.TPublicIdentifier public_identifier = 3;
-     */
-    publicIdentifier?: TPublicIdentifier;
-}
-/**
- * @generated from protobuf message com.vector.TransferStateByRoutingIdRequest
- */
-export interface TransferStateByRoutingIdRequest {
-    /**
-     * @generated from protobuf field: bytes routing_id = 1;
-     */
-    routingId: Uint8Array;
-    /**
-     * @generated from protobuf field: com.vector.TPublicIdentifier public_identifier = 2;
-     */
-    publicIdentifier?: TPublicIdentifier;
-}
-/**
- * @generated from protobuf message com.vector.TransfersRequest
- */
-export interface TransfersRequest {
-    /**
-     * @generated from protobuf field: bytes transfer_id = 1;
-     */
-    transferId: Uint8Array;
-    /**
-     * @generated from protobuf field: com.vector.TPublicIdentifier public_identifier = 2;
-     */
-    publicIdentifier?: TPublicIdentifier;
-}
-/**
- * @generated from protobuf message com.vector.TransferEncodingSchema
- */
-export interface TransferEncodingSchema {
-    /**
-     * @generated from protobuf field: string encoding = 1;
-     */
-    encoding: string;
-}
-/**
- * @generated from protobuf message com.vector.TransferStateSchema
- */
-export interface TransferStateSchema {
-    /**
-     * map<google.protobuf.Any, google.protobuf.Any> state = 1;
-     *
-     * @generated from protobuf field: map<string, google.protobuf.Any> state = 1;
-     */
-    state: {
-        [key: string]: Any;
-    };
-}
-// message TransferResolverSchema {
-//    map<google.protobuf.Any, google.protobuf.Any> state = 1;
-// }
-
-/**
- * @generated from protobuf message com.vector.TFullTransferState
- */
-export interface TFullTransferState {
-    /**
-     * @generated from protobuf field: com.vector.TBalance balance = 1;
-     */
-    balance?: TBalance;
-    /**
-     * @generated from protobuf field: com.vector.TAddress asset_id = 2;
-     */
-    assetId?: TAddress;
-    /**
-     * @generated from protobuf field: com.vector.TAddress channel_address = 3;
-     */
-    channelAddress?: TAddress;
-    /**
-     * @generated from protobuf field: bool in_dispute = 4;
-     */
-    inDispute: boolean;
-    /**
-     * @generated from protobuf field: bytes transfer_id = 5;
-     */
-    transferId: Uint8Array;
-    /**
-     * @generated from protobuf field: com.vector.TAddress transfer_definition = 6;
-     */
-    transferDefinition?: TAddress;
-    /**
-     * @generated from protobuf field: string transfer_timeout = 7;
-     */
-    transferTimeout: string;
-    /**
-     * @generated from protobuf field: bytes initial_statehash = 8;
-     */
-    initialStatehash: Uint8Array;
-    /**
-     * @generated from protobuf field: com.vector.TAddress initiator = 9;
-     */
-    initiator?: TAddress; // either alice or bob
-    /**
-     * @generated from protobuf field: com.vector.TAddress responder = 10;
-     */
-    responder?: TAddress; // either alice or bob
-    /**
-     * @generated from protobuf field: com.vector.TAddress channel_factory_address = 11;
-     */
-    channelFactoryAddress?: TAddress; // networkContext?
-    /**
-     * @generated from protobuf field: int32 chain_id = 12;
-     */
-    chainId: number;
-    /**
-     * @generated from protobuf field: repeated com.vector.TransferEncodingSchema transfer_encodings = 13;
-     */
-    transferEncodings: TransferEncodingSchema[]; // Initial state encoding, resolver encoding
-    /**
-     * @generated from protobuf field: com.vector.TransferStateSchema transfer_state = 14;
-     */
-    transferState?: TransferStateSchema;
-    /**
-     * @generated from protobuf field: com.vector.TransferResolverSchema transferResolver = 15;
-     */
-    transferResolver?: TransferResolverSchema; // undefined iff not resolved
-    /**
-     * @generated from protobuf field: com.vector.TBasicMeta meta = 16;
-     */
-    meta?: TBasicMeta;
-    /**
-     * @generated from protobuf field: int64 channel_nonce = 17;
-     */
-    channelNonce: bigint;
-    /**
-     * @generated from protobuf field: com.vector.TPublicIdentifier initiator_identifier = 18;
-     */
-    initiatorIdentifier?: TPublicIdentifier;
-    /**
-     * @generated from protobuf field: com.vector.TPublicIdentifier responder_identifier = 19;
-     */
-    responderIdentifier?: TPublicIdentifier;
-}
-/**
- * @generated from protobuf message com.vector.TransferStateReply
- */
-export interface TransferStateReply {
-    /**
-     * @generated from protobuf oneof: Response
-     */
-    response: {
-        oneofKind: "defined";
-        /**
-         * @generated from protobuf field: string defined = 1;
-         */
-        defined: string;
-    } | {
-        oneofKind: "tfullTransferState";
-        /**
-         * @generated from protobuf field: com.vector.TFullTransferState tfull_transfer_state = 2;
-         */
-        tfullTransferState: TFullTransferState;
-    } | {
-        oneofKind: undefined;
-    };
-}
-/**
- * @generated from protobuf message com.vector.ChannelStateByParticipantsRequest
- */
-export interface ChannelStateByParticipantsRequest {
-    /**
-     * @generated from protobuf field: com.vector.TPublicIdentifier public_identifier = 1;
-     */
-    publicIdentifier?: TPublicIdentifier;
-    /**
-     * @generated from protobuf field: com.vector.TPublicIdentifier counterparty = 2;
-     */
-    counterparty?: TPublicIdentifier;
-    /**
-     * @generated from protobuf field: int32 chain_id = 3;
-     */
-    chainId: number;
-}
-/**
- * @generated from protobuf message com.vector.AssetIds
- */
-export interface AssetIds {
-    /**
-     * @generated from protobuf field: com.vector.TAddress asset_id = 1;
-     */
-    assetId?: TAddress;
-}
-/**
- * @generated from protobuf message com.vector.TBalance
- */
-export interface TBalance {
-    /**
-     * @generated from protobuf field: repeated com.vector.TAddress to = 1;
-     */
-    to: TAddress[];
-    /**
-     * @generated from protobuf field: repeated string amount = 2;
-     */
-    amount: string[];
-}
-/**
- * @generated from protobuf message com.vector.EthProviderReply
- */
-export interface EthProviderReply {
-    /**
-     * @generated from protobuf field: google.protobuf.Any response = 1;
-     */
-    response?: Any;
+    publicIdentifier: string;
 }
 // @generated message type with reflection information, may provide speed optimized methods
-class ClearStoreReply$Type extends MessageType<ClearStoreReply> {
+class Empty$Type extends MessageType<Empty> {
     constructor() {
-        super("com.vector.ClearStoreReply", [
+        super("com.vector.Empty", []);
+    }
+}
+/**
+ * @generated MessageType for protobuf message com.vector.Empty
+ */
+export const Empty = new Empty$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class GenericMessageResponse$Type extends MessageType<GenericMessageResponse> {
+    constructor() {
+        super("com.vector.GenericMessageResponse", [
             { no: 1, name: "message", kind: "scalar", T: 9 /*ScalarType.STRING*/ }
         ]);
     }
 }
 /**
- * @generated MessageType for protobuf message com.vector.ClearStoreReply
+ * @generated MessageType for protobuf message com.vector.GenericMessageResponse
  */
-export const ClearStoreReply = new ClearStoreReply$Type();
+export const GenericMessageResponse = new GenericMessageResponse$Type();
 // @generated message type with reflection information, may provide speed optimized methods
-class SubscriptionRequest$Type extends MessageType<SubscriptionRequest> {
+class TxHash$Type extends MessageType<TxHash> {
     constructor() {
-        super("com.vector.SubscriptionRequest", [
-            { no: 1, name: "is_alive_event", kind: "scalar", oneof: "eventName", T: 9 /*ScalarType.STRING*/ },
-            { no: 2, name: "setup_event", kind: "scalar", oneof: "eventName", T: 9 /*ScalarType.STRING*/ },
-            { no: 3, name: "conditional_transfer_created_event", kind: "scalar", oneof: "eventName", T: 9 /*ScalarType.STRING*/ },
-            { no: 4, name: "conditional_transfer_resolved_event", kind: "scalar", oneof: "eventName", T: 9 /*ScalarType.STRING*/ },
-            { no: 5, name: "deposit_reconciled_event", kind: "scalar", oneof: "eventName", T: 9 /*ScalarType.STRING*/ },
-            { no: 6, name: "request_collateral_event", kind: "scalar", oneof: "eventName", T: 9 /*ScalarType.STRING*/ },
-            { no: 7, name: "restore_state_event", kind: "scalar", oneof: "eventName", T: 9 /*ScalarType.STRING*/ },
-            { no: 8, name: "withdraw_created_event", kind: "scalar", oneof: "eventName", T: 9 /*ScalarType.STRING*/ },
-            { no: 9, name: "withdraw_resolved_event", kind: "scalar", oneof: "eventName", T: 9 /*ScalarType.STRING*/ },
-            { no: 10, name: "withdraw_reconciled_event", kind: "scalar", oneof: "eventName", T: 9 /*ScalarType.STRING*/ },
-            { no: 11, name: "public_identifier", kind: "message", T: () => TPublicIdentifier }
+        super("com.vector.TxHash", [
+            { no: 1, name: "txHash", kind: "scalar", T: 9 /*ScalarType.STRING*/ }
         ]);
     }
 }
 /**
- * @generated MessageType for protobuf message com.vector.SubscriptionRequest
+ * @generated MessageType for protobuf message com.vector.TxHash
  */
-export const SubscriptionRequest = new SubscriptionRequest$Type();
-// @generated message type with reflection information, may provide speed optimized methods
-class Subscription$Type extends MessageType<Subscription> {
-    constructor() {
-        super("com.vector.Subscription", [
-            { no: 1, name: "url", kind: "message", T: () => Subscription_TUrl }
-        ]);
-    }
-}
-/**
- * @generated MessageType for protobuf message com.vector.Subscription
- */
-export const Subscription = new Subscription$Type();
-// @generated message type with reflection information, may provide speed optimized methods
-class Subscription_TUrl$Type extends MessageType<Subscription_TUrl> {
-    constructor() {
-        super("com.vector.Subscription.TUrl", [
-            { no: 1, name: "url", kind: "scalar", T: 9 /*ScalarType.STRING*/ }
-        ]);
-    }
-}
-/**
- * @generated MessageType for protobuf message com.vector.Subscription.TUrl
- */
-export const Subscription_TUrl = new Subscription_TUrl$Type();
-// @generated message type with reflection information, may provide speed optimized methods
-class ListenerSchemaReply$Type extends MessageType<ListenerSchemaReply> {
-    constructor() {
-        super("com.vector.ListenerSchemaReply", [
-            { no: 1, name: "url", kind: "scalar", T: 9 /*ScalarType.STRING*/ }
-        ]);
-    }
-}
-/**
- * @generated MessageType for protobuf message com.vector.ListenerSchemaReply
- */
-export const ListenerSchemaReply = new ListenerSchemaReply$Type();
-// @generated message type with reflection information, may provide speed optimized methods
-class Balance$Type extends MessageType<Balance> {
-    constructor() {
-        super("com.vector.Balance", [
-            { no: 1, name: "amount", kind: "scalar", repeat: 2 /*RepeatType.UNPACKED*/, T: 9 /*ScalarType.STRING*/ },
-            { no: 2, name: "to", kind: "scalar", repeat: 2 /*RepeatType.UNPACKED*/, T: 9 /*ScalarType.STRING*/ }
-        ]);
-    }
-}
-/**
- * @generated MessageType for protobuf message com.vector.Balance
- */
-export const Balance = new Balance$Type();
-// @generated message type with reflection information, may provide speed optimized methods
-class Address$Type extends MessageType<Address> {
-    constructor() {
-        super("com.vector.Address", [
-            { no: 1, name: "address", kind: "scalar", T: 9 /*ScalarType.STRING*/ }
-        ]);
-    }
-}
-/**
- * @generated MessageType for protobuf message com.vector.Address
- */
-export const Address = new Address$Type();
-// @generated message type with reflection information, may provide speed optimized methods
-class CoreChannelState$Type extends MessageType<CoreChannelState> {
-    constructor() {
-        super("com.vector.CoreChannelState", [
-            { no: 1, name: "channel_address", kind: "message", T: () => Address },
-            { no: 2, name: "alice", kind: "message", T: () => Address },
-            { no: 3, name: "bob", kind: "message", T: () => Address },
-            { no: 4, name: "asset_ids", kind: "scalar", repeat: 2 /*RepeatType.UNPACKED*/, T: 9 /*ScalarType.STRING*/ },
-            { no: 5, name: "balances", kind: "message", repeat: 1 /*RepeatType.PACKED*/, T: () => Balance },
-            { no: 6, name: "processed_deposits_a", kind: "scalar", repeat: 2 /*RepeatType.UNPACKED*/, T: 9 /*ScalarType.STRING*/ },
-            { no: 7, name: "processed_deposits_b", kind: "scalar", repeat: 2 /*RepeatType.UNPACKED*/, T: 9 /*ScalarType.STRING*/ },
-            { no: 8, name: "defund_nounces", kind: "scalar", repeat: 2 /*RepeatType.UNPACKED*/, T: 9 /*ScalarType.STRING*/ },
-            { no: 9, name: "timeout", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
-            { no: 10, name: "nonce", kind: "scalar", T: 3 /*ScalarType.INT64*/, L: 0 /*LongType.BIGINT*/ },
-            { no: 11, name: "merkle_root", kind: "scalar", T: 9 /*ScalarType.STRING*/ }
-        ]);
-    }
-}
-/**
- * @generated MessageType for protobuf message com.vector.CoreChannelState
- */
-export const CoreChannelState = new CoreChannelState$Type();
-// @generated message type with reflection information, may provide speed optimized methods
-class WithdrawState$Type extends MessageType<WithdrawState> {
-    constructor() {
-        super("com.vector.WithdrawState", [
-            { no: 1, name: "initiator_signature", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
-            { no: 2, name: "initiator", kind: "message", T: () => Address },
-            { no: 3, name: "responder", kind: "message", T: () => Address },
-            { no: 4, name: "data", kind: "scalar", T: 12 /*ScalarType.BYTES*/ },
-            { no: 5, name: "nonce", kind: "scalar", T: 3 /*ScalarType.INT64*/, L: 0 /*LongType.BIGINT*/ },
-            { no: 6, name: "fee", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
-            { no: 7, name: "call_to", kind: "message", T: () => Address },
-            { no: 8, name: "call_data", kind: "scalar", T: 9 /*ScalarType.STRING*/ }
-        ]);
-    }
-}
-/**
- * @generated MessageType for protobuf message com.vector.WithdrawState
- */
-export const WithdrawState = new WithdrawState$Type();
-// @generated message type with reflection information, may provide speed optimized methods
-class HashlockTransferState$Type extends MessageType<HashlockTransferState> {
-    constructor() {
-        super("com.vector.HashlockTransferState", [
-            { no: 1, name: "lock_hash", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
-            { no: 2, name: "expiry", kind: "scalar", T: 9 /*ScalarType.STRING*/ }
-        ]);
-    }
-}
-/**
- * @generated MessageType for protobuf message com.vector.HashlockTransferState
- */
-export const HashlockTransferState = new HashlockTransferState$Type();
-// @generated message type with reflection information, may provide speed optimized methods
-class TransferStateMap$Type extends MessageType<TransferStateMap> {
-    constructor() {
-        super("com.vector.TransferStateMap", [
-            { no: 1, name: "hashlock_transfer_state", kind: "map", K: 9 /*ScalarType.STRING*/, V: { kind: "message", T: () => HashlockTransferState } },
-            { no: 2, name: "withdraw_state", kind: "map", K: 9 /*ScalarType.STRING*/, V: { kind: "message", T: () => WithdrawState } }
-        ]);
-    }
-}
-/**
- * @generated MessageType for protobuf message com.vector.TransferStateMap
- */
-export const TransferStateMap = new TransferStateMap$Type();
-// @generated message type with reflection information, may provide speed optimized methods
-class TransferState$Type extends MessageType<TransferState> {
-    constructor() {
-        super("com.vector.TransferState", [
-            { no: 1, name: "transfer_state_map", kind: "message", oneof: "values", T: () => TransferStateMap },
-            { no: 2, name: "any", kind: "message", oneof: "values", T: () => Any }
-        ]);
-    }
-}
-/**
- * @generated MessageType for protobuf message com.vector.TransferState
- */
-export const TransferState = new TransferState$Type();
-// @generated message type with reflection information, may provide speed optimized methods
-class HashlockTransferResolver$Type extends MessageType<HashlockTransferResolver> {
-    constructor() {
-        super("com.vector.HashlockTransferResolver", [
-            { no: 1, name: "pre_image", kind: "scalar", T: 9 /*ScalarType.STRING*/ }
-        ]);
-    }
-}
-/**
- * @generated MessageType for protobuf message com.vector.HashlockTransferResolver
- */
-export const HashlockTransferResolver = new HashlockTransferResolver$Type();
-// @generated message type with reflection information, may provide speed optimized methods
-class WithdrawResolver$Type extends MessageType<WithdrawResolver> {
-    constructor() {
-        super("com.vector.WithdrawResolver", [
-            { no: 1, name: "responder_signature", kind: "scalar", T: 9 /*ScalarType.STRING*/ }
-        ]);
-    }
-}
-/**
- * @generated MessageType for protobuf message com.vector.WithdrawResolver
- */
-export const WithdrawResolver = new WithdrawResolver$Type();
-// @generated message type with reflection information, may provide speed optimized methods
-class TransferResolverMap$Type extends MessageType<TransferResolverMap> {
-    constructor() {
-        super("com.vector.TransferResolverMap", [
-            { no: 1, name: "hashlock_transfer_resolver", kind: "map", K: 9 /*ScalarType.STRING*/, V: { kind: "message", T: () => HashlockTransferResolver } },
-            { no: 2, name: "withdraw_resolver", kind: "map", K: 9 /*ScalarType.STRING*/, V: { kind: "message", T: () => WithdrawResolver } }
-        ]);
-    }
-}
-/**
- * @generated MessageType for protobuf message com.vector.TransferResolverMap
- */
-export const TransferResolverMap = new TransferResolverMap$Type();
-// @generated message type with reflection information, may provide speed optimized methods
-class TransferResolver$Type extends MessageType<TransferResolver> {
-    constructor() {
-        super("com.vector.TransferResolver", [
-            { no: 1, name: "transfer_resolver_map", kind: "message", oneof: "values", T: () => TransferResolverMap },
-            { no: 2, name: "any", kind: "message", oneof: "values", T: () => Any }
-        ]);
-    }
-}
-/**
- * @generated MessageType for protobuf message com.vector.TransferResolver
- */
-export const TransferResolver = new TransferResolver$Type();
-// @generated message type with reflection information, may provide speed optimized methods
-class ContractAddresses$Type extends MessageType<ContractAddresses> {
-    constructor() {
-        super("com.vector.ContractAddresses", [
-            { no: 1, name: "channel_factory_address", kind: "message", T: () => Address },
-            { no: 2, name: "transfer_registry_address", kind: "message", T: () => Address }
-        ]);
-    }
-}
-/**
- * @generated MessageType for protobuf message com.vector.ContractAddresses
- */
-export const ContractAddresses = new ContractAddresses$Type();
-// @generated message type with reflection information, may provide speed optimized methods
-class NetworkContext$Type extends MessageType<NetworkContext> {
-    constructor() {
-        super("com.vector.NetworkContext", [
-            { no: 1, name: "contract_addresses", kind: "message", T: () => ContractAddresses },
-            { no: 2, name: "chain_id", kind: "scalar", T: 5 /*ScalarType.INT32*/ },
-            { no: 3, name: "provider_url", kind: "scalar", T: 9 /*ScalarType.STRING*/ }
-        ]);
-    }
-}
-/**
- * @generated MessageType for protobuf message com.vector.NetworkContext
- */
-export const NetworkContext = new NetworkContext$Type();
+export const TxHash = new TxHash$Type();
 // @generated message type with reflection information, may provide speed optimized methods
 class CreateUpdateDetails$Type extends MessageType<CreateUpdateDetails> {
     constructor() {
         super("com.vector.CreateUpdateDetails", [
             { no: 1, name: "transfer_id", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
             { no: 2, name: "balance", kind: "message", T: () => Balance },
-            { no: 3, name: "transfer_definition", kind: "message", T: () => Address },
+            { no: 3, name: "transfer_definition", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
             { no: 4, name: "transfer_timeout", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
-            { no: 5, name: "transfer_initial_state", kind: "message", T: () => TransferState },
+            { no: 5, name: "transfer_initial_state", kind: "message", T: () => Any },
             { no: 6, name: "transfer_encodings", kind: "scalar", repeat: 2 /*RepeatType.UNPACKED*/, T: 9 /*ScalarType.STRING*/ },
             { no: 7, name: "merkle_proof_data", kind: "scalar", repeat: 2 /*RepeatType.UNPACKED*/, T: 9 /*ScalarType.STRING*/ },
             { no: 8, name: "merkle_root", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
@@ -2023,8 +1274,8 @@ class ResolveUpdateDetails$Type extends MessageType<ResolveUpdateDetails> {
     constructor() {
         super("com.vector.ResolveUpdateDetails", [
             { no: 1, name: "transfer_id", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
-            { no: 2, name: "transfer_definition", kind: "message", T: () => Address },
-            { no: 3, name: "transfer_resolver", kind: "message", T: () => TransferResolver },
+            { no: 2, name: "transfer_definition", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 3, name: "transfer_resolver", kind: "message", T: () => Any },
             { no: 4, name: "merkle_root", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
             { no: 5, name: "meta", kind: "message", T: () => Any }
         ]);
@@ -2063,21 +1314,6 @@ class SetupUpdateDetails$Type extends MessageType<SetupUpdateDetails> {
  */
 export const SetupUpdateDetails = new SetupUpdateDetails$Type();
 // @generated message type with reflection information, may provide speed optimized methods
-class ChannelUpdateDetailsMap$Type extends MessageType<ChannelUpdateDetailsMap> {
-    constructor() {
-        super("com.vector.ChannelUpdateDetailsMap", [
-            { no: 1, name: "create_update_details", kind: "map", K: 9 /*ScalarType.STRING*/, V: { kind: "message", T: () => CreateUpdateDetails } },
-            { no: 2, name: "deposit_update_details", kind: "map", K: 9 /*ScalarType.STRING*/, V: { kind: "message", T: () => ResolveUpdateDetails } },
-            { no: 3, name: "resolve_update_details", kind: "map", K: 9 /*ScalarType.STRING*/, V: { kind: "message", T: () => ResolveUpdateDetails } },
-            { no: 4, name: "setup_update_details", kind: "map", K: 9 /*ScalarType.STRING*/, V: { kind: "message", T: () => SetupUpdateDetails } }
-        ]);
-    }
-}
-/**
- * @generated MessageType for protobuf message com.vector.ChannelUpdateDetailsMap
- */
-export const ChannelUpdateDetailsMap = new ChannelUpdateDetailsMap$Type();
-// @generated message type with reflection information, may provide speed optimized methods
 class ChannelUpdate$Type extends MessageType<ChannelUpdate> {
     constructor() {
         super("com.vector.ChannelUpdate", [
@@ -2087,10 +1323,13 @@ class ChannelUpdate$Type extends MessageType<ChannelUpdate> {
             { no: 4, name: "type", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
             { no: 5, name: "nonce", kind: "scalar", T: 3 /*ScalarType.INT64*/, L: 0 /*LongType.BIGINT*/ },
             { no: 6, name: "balance", kind: "message", T: () => Balance },
-            { no: 7, name: "asset_id", kind: "message", T: () => Address },
-            { no: 8, name: "details", kind: "message", T: () => ChannelUpdateDetailsMap },
-            { no: 9, name: "aliceSignature", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
-            { no: 10, name: "bob_signature", kind: "scalar", T: 9 /*ScalarType.STRING*/ }
+            { no: 7, name: "asset_id", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 8, name: "setup_update_details", kind: "message", oneof: "details", T: () => SetupUpdateDetails },
+            { no: 9, name: "deposit_update_details", kind: "message", oneof: "details", T: () => DepositUpdateDetails },
+            { no: 10, name: "create_update_details", kind: "message", oneof: "details", T: () => CreateUpdateDetails },
+            { no: 11, name: "resolve_update_details", kind: "message", oneof: "details", T: () => ResolveUpdateDetails },
+            { no: 12, name: "aliceSignature", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 13, name: "bob_signature", kind: "scalar", T: 9 /*ScalarType.STRING*/ }
         ]);
     }
 }
@@ -2099,15 +1338,65 @@ class ChannelUpdate$Type extends MessageType<ChannelUpdate> {
  */
 export const ChannelUpdate = new ChannelUpdate$Type();
 // @generated message type with reflection information, may provide speed optimized methods
+class Balance$Type extends MessageType<Balance> {
+    constructor() {
+        super("com.vector.Balance", [
+            { no: 1, name: "amount", kind: "scalar", repeat: 2 /*RepeatType.UNPACKED*/, T: 9 /*ScalarType.STRING*/ },
+            { no: 2, name: "to", kind: "scalar", repeat: 2 /*RepeatType.UNPACKED*/, T: 9 /*ScalarType.STRING*/ }
+        ]);
+    }
+}
+/**
+ * @generated MessageType for protobuf message com.vector.Balance
+ */
+export const Balance = new Balance$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class Contractstringes$Type extends MessageType<Contractstringes> {
+    constructor() {
+        super("com.vector.Contractstringes", [
+            { no: 1, name: "channel_factory_address", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 2, name: "transfer_registry_address", kind: "scalar", T: 9 /*ScalarType.STRING*/ }
+        ]);
+    }
+}
+/**
+ * @generated MessageType for protobuf message com.vector.Contractstringes
+ */
+export const Contractstringes = new Contractstringes$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class NetworkContext$Type extends MessageType<NetworkContext> {
+    constructor() {
+        super("com.vector.NetworkContext", [
+            { no: 1, name: "contract_addresses", kind: "message", T: () => Contractstringes },
+            { no: 2, name: "chain_id", kind: "scalar", T: 5 /*ScalarType.INT32*/ },
+            { no: 3, name: "provider_url", kind: "scalar", T: 9 /*ScalarType.STRING*/ }
+        ]);
+    }
+}
+/**
+ * @generated MessageType for protobuf message com.vector.NetworkContext
+ */
+export const NetworkContext = new NetworkContext$Type();
+// @generated message type with reflection information, may provide speed optimized methods
 class FullChannelState$Type extends MessageType<FullChannelState> {
     constructor() {
         super("com.vector.FullChannelState", [
-            { no: 1, name: "core_channel_state", kind: "message", T: () => CoreChannelState },
-            { no: 2, name: "alice_identifier", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
-            { no: 3, name: "bob_identifier", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
-            { no: 4, name: "latest_update", kind: "message", T: () => ChannelUpdate },
-            { no: 5, name: "network_context", kind: "message", T: () => NetworkContext },
-            { no: 6, name: "in_dispute", kind: "scalar", T: 8 /*ScalarType.BOOL*/ }
+            { no: 1, name: "channel_address", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 2, name: "alice", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 3, name: "bob", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 4, name: "alice_identifier", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 5, name: "bob_identifier", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 6, name: "asset_ids", kind: "scalar", repeat: 2 /*RepeatType.UNPACKED*/, T: 9 /*ScalarType.STRING*/ },
+            { no: 7, name: "balances", kind: "message", repeat: 1 /*RepeatType.PACKED*/, T: () => Balance },
+            { no: 8, name: "processed_deposits_a", kind: "scalar", repeat: 2 /*RepeatType.UNPACKED*/, T: 9 /*ScalarType.STRING*/ },
+            { no: 9, name: "processed_deposits_b", kind: "scalar", repeat: 2 /*RepeatType.UNPACKED*/, T: 9 /*ScalarType.STRING*/ },
+            { no: 10, name: "defund_nounces", kind: "scalar", repeat: 2 /*RepeatType.UNPACKED*/, T: 9 /*ScalarType.STRING*/ },
+            { no: 11, name: "nonce", kind: "scalar", T: 3 /*ScalarType.INT64*/, L: 0 /*LongType.BIGINT*/ },
+            { no: 12, name: "merkle_root", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 13, name: "in_dispute", kind: "scalar", T: 8 /*ScalarType.BOOL*/ },
+            { no: 14, name: "latest_update", kind: "message", T: () => ChannelUpdate },
+            { no: 15, name: "network_context", kind: "message", T: () => NetworkContext },
+            { no: 16, name: "timeout", kind: "scalar", T: 9 /*ScalarType.STRING*/ }
         ]);
     }
 }
@@ -2115,19 +1404,6 @@ class FullChannelState$Type extends MessageType<FullChannelState> {
  * @generated MessageType for protobuf message com.vector.FullChannelState
  */
 export const FullChannelState = new FullChannelState$Type();
-// @generated message type with reflection information, may provide speed optimized methods
-class FullChannelStateOrUndefined$Type extends MessageType<FullChannelStateOrUndefined> {
-    constructor() {
-        super("com.vector.FullChannelStateOrUndefined", [
-            { no: 1, name: "full_channel", kind: "message", oneof: "fullChannelState", T: () => FullChannelState },
-            { no: 2, name: "undefined", kind: "message", oneof: "fullChannelState", T: () => Any }
-        ]);
-    }
-}
-/**
- * @generated MessageType for protobuf message com.vector.FullChannelStateOrUndefined
- */
-export const FullChannelStateOrUndefined = new FullChannelStateOrUndefined$Type();
 // @generated message type with reflection information, may provide speed optimized methods
 class FullChannelStates$Type extends MessageType<FullChannelStates> {
     constructor() {
@@ -2141,39 +1417,359 @@ class FullChannelStates$Type extends MessageType<FullChannelStates> {
  */
 export const FullChannelStates = new FullChannelStates$Type();
 // @generated message type with reflection information, may provide speed optimized methods
-class TxHash$Type extends MessageType<TxHash> {
+class FullTransferState$Type extends MessageType<FullTransferState> {
     constructor() {
-        super("com.vector.TxHash", [
-            { no: 1, name: "txHash", kind: "scalar", T: 9 /*ScalarType.STRING*/ }
+        super("com.vector.FullTransferState", [
+            { no: 1, name: "transfer_id", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 2, name: "channel_address", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 3, name: "transfer_definition", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 4, name: "initiator", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 5, name: "responder", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 6, name: "initiator_identifier", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 7, name: "responder_identifier", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 8, name: "asset_id", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 9, name: "balance", kind: "message", T: () => Balance },
+            { no: 10, name: "transfer_timeout", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 11, name: "initial_state_hash", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 12, name: "transfer_encodings", kind: "scalar", repeat: 2 /*RepeatType.UNPACKED*/, T: 9 /*ScalarType.STRING*/ },
+            { no: 13, name: "transfer_state", kind: "message", T: () => Any },
+            { no: 14, name: "transfer_resolver", kind: "message", T: () => Any },
+            { no: 15, name: "in_dispute", kind: "scalar", T: 8 /*ScalarType.BOOL*/ },
+            { no: 16, name: "channel_nonce", kind: "scalar", T: 3 /*ScalarType.INT64*/, L: 0 /*LongType.BIGINT*/ },
+            { no: 17, name: "meta", kind: "message", T: () => Any }
         ]);
     }
 }
 /**
- * @generated MessageType for protobuf message com.vector.TxHash
+ * @generated MessageType for protobuf message com.vector.FullTransferState
  */
-export const TxHash = new TxHash$Type();
+export const FullTransferState = new FullTransferState$Type();
 // @generated message type with reflection information, may provide speed optimized methods
-class Pong$Type extends MessageType<Pong> {
+class FullTransferStates$Type extends MessageType<FullTransferStates> {
     constructor() {
-        super("com.vector.Pong", [
-            { no: 1, name: "message", kind: "scalar", T: 9 /*ScalarType.STRING*/ }
+        super("com.vector.FullTransferStates", [
+            { no: 1, name: "full_transfer_state", kind: "message", repeat: 1 /*RepeatType.PACKED*/, T: () => FullTransferState }
         ]);
     }
 }
 /**
- * @generated MessageType for protobuf message com.vector.Pong
+ * @generated MessageType for protobuf message com.vector.FullTransferStates
  */
-export const Pong = new Pong$Type();
+export const FullTransferStates = new FullTransferStates$Type();
 // @generated message type with reflection information, may provide speed optimized methods
-class Empty$Type extends MessageType<Empty> {
+class GetStatusRequest$Type extends MessageType<GetStatusRequest> {
     constructor() {
-        super("com.vector.Empty", []);
+        super("com.vector.GetStatusRequest", [
+            { no: 1, name: "public_identifier", kind: "scalar", T: 9 /*ScalarType.STRING*/ }
+        ]);
     }
 }
 /**
- * @generated MessageType for protobuf message com.vector.Empty
+ * @generated MessageType for protobuf message com.vector.GetStatusRequest
  */
-export const Empty = new Empty$Type();
+export const GetStatusRequest = new GetStatusRequest$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class ConditionalTransferRequest$Type extends MessageType<ConditionalTransferRequest> {
+    constructor() {
+        super("com.vector.ConditionalTransferRequest", [
+            { no: 1, name: "public_identifier", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 2, name: "channel_address", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 3, name: "amount", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 4, name: "asset_id", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 5, name: "recipient", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 6, name: "recipient_chainId", kind: "scalar", T: 5 /*ScalarType.INT32*/ },
+            { no: 7, name: "recipient_assetId", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 8, name: "timeout", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 9, name: "type", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 10, name: "details", kind: "message", T: () => Any },
+            { no: 11, name: "meta", kind: "message", T: () => Any }
+        ]);
+    }
+}
+/**
+ * @generated MessageType for protobuf message com.vector.ConditionalTransferRequest
+ */
+export const ConditionalTransferRequest = new ConditionalTransferRequest$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class CollateralRequest$Type extends MessageType<CollateralRequest> {
+    constructor() {
+        super("com.vector.CollateralRequest", [
+            { no: 1, name: "public_identifier", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 2, name: "channel_address", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 3, name: "asset_id", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 4, name: "amount", kind: "scalar", T: 9 /*ScalarType.STRING*/ }
+        ]);
+    }
+}
+/**
+ * @generated MessageType for protobuf message com.vector.CollateralRequest
+ */
+export const CollateralRequest = new CollateralRequest$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class DepositRequest$Type extends MessageType<DepositRequest> {
+    constructor() {
+        super("com.vector.DepositRequest", [
+            { no: 1, name: "public_identifier", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 2, name: "channel_address", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 3, name: "asset_id", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 4, name: "meta", kind: "message", T: () => Any }
+        ]);
+    }
+}
+/**
+ * @generated MessageType for protobuf message com.vector.DepositRequest
+ */
+export const DepositRequest = new DepositRequest$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class TransferRequest$Type extends MessageType<TransferRequest> {
+    constructor() {
+        super("com.vector.TransferRequest", [
+            { no: 1, name: "public_identifier", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 2, name: "transfer_id", kind: "scalar", T: 9 /*ScalarType.STRING*/ }
+        ]);
+    }
+}
+/**
+ * @generated MessageType for protobuf message com.vector.TransferRequest
+ */
+export const TransferRequest = new TransferRequest$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class ChannelStateRequest$Type extends MessageType<ChannelStateRequest> {
+    constructor() {
+        super("com.vector.ChannelStateRequest", [
+            { no: 1, name: "public_identifier", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 2, name: "channel_address", kind: "scalar", T: 9 /*ScalarType.STRING*/ }
+        ]);
+    }
+}
+/**
+ * @generated MessageType for protobuf message com.vector.ChannelStateRequest
+ */
+export const ChannelStateRequest = new ChannelStateRequest$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class DepositTxRequest$Type extends MessageType<DepositTxRequest> {
+    constructor() {
+        super("com.vector.DepositTxRequest", [
+            { no: 1, name: "channel_address", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 2, name: "amount", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 3, name: "asset_id", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 4, name: "chain_id", kind: "scalar", T: 5 /*ScalarType.INT32*/ },
+            { no: 5, name: "public_identifier", kind: "scalar", T: 9 /*ScalarType.STRING*/ }
+        ]);
+    }
+}
+/**
+ * @generated MessageType for protobuf message com.vector.DepositTxRequest
+ */
+export const DepositTxRequest = new DepositTxRequest$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class SetupRequest$Type extends MessageType<SetupRequest> {
+    constructor() {
+        super("com.vector.SetupRequest", [
+            { no: 1, name: "public_identifier", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 2, name: "counterparty_identifier", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 3, name: "chain_id", kind: "scalar", T: 5 /*ScalarType.INT32*/ },
+            { no: 4, name: "timeout", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 5, name: "meta", kind: "message", T: () => Any }
+        ]);
+    }
+}
+/**
+ * @generated MessageType for protobuf message com.vector.SetupRequest
+ */
+export const SetupRequest = new SetupRequest$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class RegisteredTransfersRequest$Type extends MessageType<RegisteredTransfersRequest> {
+    constructor() {
+        super("com.vector.RegisteredTransfersRequest", [
+            { no: 1, name: "public_identifier", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 2, name: "chain_id", kind: "scalar", T: 5 /*ScalarType.INT32*/ }
+        ]);
+    }
+}
+/**
+ * @generated MessageType for protobuf message com.vector.RegisteredTransfersRequest
+ */
+export const RegisteredTransfersRequest = new RegisteredTransfersRequest$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class ChannelStatesRequest$Type extends MessageType<ChannelStatesRequest> {
+    constructor() {
+        super("com.vector.ChannelStatesRequest", [
+            { no: 1, name: "public_identifier", kind: "scalar", T: 9 /*ScalarType.STRING*/ }
+        ]);
+    }
+}
+/**
+ * @generated MessageType for protobuf message com.vector.ChannelStatesRequest
+ */
+export const ChannelStatesRequest = new ChannelStatesRequest$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class ActiveTransfersRequest$Type extends MessageType<ActiveTransfersRequest> {
+    constructor() {
+        super("com.vector.ActiveTransfersRequest", [
+            { no: 1, name: "public_identifier", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 2, name: "channel_address", kind: "scalar", T: 9 /*ScalarType.STRING*/ }
+        ]);
+    }
+}
+/**
+ * @generated MessageType for protobuf message com.vector.ActiveTransfersRequest
+ */
+export const ActiveTransfersRequest = new ActiveTransfersRequest$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class TransferStatesByRoutingIdRequest$Type extends MessageType<TransferStatesByRoutingIdRequest> {
+    constructor() {
+        super("com.vector.TransferStatesByRoutingIdRequest", [
+            { no: 1, name: "public_identifier", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 2, name: "channel_address", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 3, name: "routing_id", kind: "scalar", T: 12 /*ScalarType.BYTES*/ }
+        ]);
+    }
+}
+/**
+ * @generated MessageType for protobuf message com.vector.TransferStatesByRoutingIdRequest
+ */
+export const TransferStatesByRoutingIdRequest = new TransferStatesByRoutingIdRequest$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class TransferStateByRoutingIdRequest$Type extends MessageType<TransferStateByRoutingIdRequest> {
+    constructor() {
+        super("com.vector.TransferStateByRoutingIdRequest", [
+            { no: 1, name: "public_identifier", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 2, name: "routing_id", kind: "scalar", T: 12 /*ScalarType.BYTES*/ }
+        ]);
+    }
+}
+/**
+ * @generated MessageType for protobuf message com.vector.TransferStateByRoutingIdRequest
+ */
+export const TransferStateByRoutingIdRequest = new TransferStateByRoutingIdRequest$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class TransfersRequest$Type extends MessageType<TransfersRequest> {
+    constructor() {
+        super("com.vector.TransfersRequest", [
+            { no: 1, name: "public_identifier", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 2, name: "transfer_id", kind: "scalar", T: 12 /*ScalarType.BYTES*/ }
+        ]);
+    }
+}
+/**
+ * @generated MessageType for protobuf message com.vector.TransfersRequest
+ */
+export const TransfersRequest = new TransfersRequest$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class ChannelStateByParticipantsRequest$Type extends MessageType<ChannelStateByParticipantsRequest> {
+    constructor() {
+        super("com.vector.ChannelStateByParticipantsRequest", [
+            { no: 1, name: "public_identifier", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 2, name: "counterparty", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 3, name: "chain_id", kind: "scalar", T: 5 /*ScalarType.INT32*/ }
+        ]);
+    }
+}
+/**
+ * @generated MessageType for protobuf message com.vector.ChannelStateByParticipantsRequest
+ */
+export const ChannelStateByParticipantsRequest = new ChannelStateByParticipantsRequest$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class WithdrawRequest$Type extends MessageType<WithdrawRequest> {
+    constructor() {
+        super("com.vector.WithdrawRequest", [
+            { no: 1, name: "public_identifier", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 2, name: "channel_address", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 3, name: "amount", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 4, name: "asset_id", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 5, name: "recipient", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 6, name: "fee", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 7, name: "call_to", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 8, name: "call_data", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 9, name: "meta", kind: "message", T: () => Any }
+        ]);
+    }
+}
+/**
+ * @generated MessageType for protobuf message com.vector.WithdrawRequest
+ */
+export const WithdrawRequest = new WithdrawRequest$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class ResolveTransferRequest$Type extends MessageType<ResolveTransferRequest> {
+    constructor() {
+        super("com.vector.ResolveTransferRequest", [
+            { no: 1, name: "public_identifier", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 2, name: "channel_address", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 3, name: "transfer_id", kind: "scalar", T: 12 /*ScalarType.BYTES*/ },
+            { no: 4, name: "transfer_resolver", kind: "message", T: () => Any },
+            { no: 5, name: "meta", kind: "message", T: () => Any }
+        ]);
+    }
+}
+/**
+ * @generated MessageType for protobuf message com.vector.ResolveTransferRequest
+ */
+export const ResolveTransferRequest = new ResolveTransferRequest$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class Body$Type extends MessageType<Body> {
+    constructor() {
+        super("com.vector.Body", [
+            { no: 1, name: "method", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 2, name: "params", kind: "message", T: () => Any }
+        ]);
+    }
+}
+/**
+ * @generated MessageType for protobuf message com.vector.Body
+ */
+export const Body = new Body$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class EthProviderRequest$Type extends MessageType<EthProviderRequest> {
+    constructor() {
+        super("com.vector.EthProviderRequest", [
+            { no: 1, name: "chain_id", kind: "scalar", T: 5 /*ScalarType.INT32*/ },
+            { no: 2, name: "body", kind: "message", T: () => Body }
+        ]);
+    }
+}
+/**
+ * @generated MessageType for protobuf message com.vector.EthProviderRequest
+ */
+export const EthProviderRequest = new EthProviderRequest$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class RestoreStateReply$Type extends MessageType<RestoreStateReply> {
+    constructor() {
+        super("com.vector.RestoreStateReply", [
+            { no: 1, name: "channel_address", kind: "scalar", T: 9 /*ScalarType.STRING*/ }
+        ]);
+    }
+}
+/**
+ * @generated MessageType for protobuf message com.vector.RestoreStateReply
+ */
+export const RestoreStateReply = new RestoreStateReply$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class WithdrawReply$Type extends MessageType<WithdrawReply> {
+    constructor() {
+        super("com.vector.WithdrawReply", [
+            { no: 1, name: "channel_address", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 2, name: "transfer_id", kind: "scalar", T: 12 /*ScalarType.BYTES*/ },
+            { no: 3, name: "transaction_hash", kind: "scalar", T: 12 /*ScalarType.BYTES*/ }
+        ]);
+    }
+}
+/**
+ * @generated MessageType for protobuf message com.vector.WithdrawReply
+ */
+export const WithdrawReply = new WithdrawReply$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class EthProviderReply$Type extends MessageType<EthProviderReply> {
+    constructor() {
+        super("com.vector.EthProviderReply", [
+            { no: 1, name: "response", kind: "message", T: () => Any }
+        ]);
+    }
+}
+/**
+ * @generated MessageType for protobuf message com.vector.EthProviderReply
+ */
+export const EthProviderReply = new EthProviderReply$Type();
 // @generated message type with reflection information, may provide speed optimized methods
 class Configs$Type extends MessageType<Configs> {
     constructor() {
@@ -2201,6 +1797,18 @@ class Config$Type extends MessageType<Config> {
  */
 export const Config = new Config$Type();
 // @generated message type with reflection information, may provide speed optimized methods
+class RouterConfig$Type extends MessageType<RouterConfig> {
+    constructor() {
+        super("com.vector.RouterConfig", [
+            { no: 1, name: "supported_chains", kind: "scalar", repeat: 1 /*RepeatType.PACKED*/, T: 5 /*ScalarType.INT32*/ }
+        ]);
+    }
+}
+/**
+ * @generated MessageType for protobuf message com.vector.RouterConfig
+ */
+export const RouterConfig = new RouterConfig$Type();
+// @generated message type with reflection information, may provide speed optimized methods
 class ProviderSyncing$Type extends MessageType<ProviderSyncing> {
     constructor() {
         super("com.vector.ProviderSyncing", [
@@ -2219,10 +1827,10 @@ export const ProviderSyncing = new ProviderSyncing$Type();
 class Status$Type extends MessageType<Status> {
     constructor() {
         super("com.vector.Status", [
-            { no: 5, name: "provider_syncing", kind: "map", K: 5 /*ScalarType.INT32*/, V: { kind: "message", T: () => ProviderSyncing } },
-            { no: 6, name: "public_identifier", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
-            { no: 7, name: "signer_address", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
-            { no: 8, name: "version", kind: "scalar", T: 9 /*ScalarType.STRING*/ }
+            { no: 1, name: "provider_syncing", kind: "map", K: 5 /*ScalarType.INT32*/, V: { kind: "message", T: () => ProviderSyncing } },
+            { no: 2, name: "public_identifier", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 3, name: "signer_address", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 4, name: "version", kind: "scalar", T: 9 /*ScalarType.STRING*/ }
         ]);
     }
 }
@@ -2231,127 +1839,12 @@ class Status$Type extends MessageType<Status> {
  */
 export const Status = new Status$Type();
 // @generated message type with reflection information, may provide speed optimized methods
-class DefundNonces$Type extends MessageType<DefundNonces> {
-    constructor() {
-        super("com.vector.DefundNonces", [
-            { no: 1, name: "nonce", kind: "scalar", repeat: 2 /*RepeatType.UNPACKED*/, T: 9 /*ScalarType.STRING*/ }
-        ]);
-    }
-}
-/**
- * @generated MessageType for protobuf message com.vector.DefundNonces
- */
-export const DefundNonces = new DefundNonces$Type();
-// @generated message type with reflection information, may provide speed optimized methods
-class Deposits$Type extends MessageType<Deposits> {
-    constructor() {
-        super("com.vector.Deposits", [
-            { no: 1, name: "deposit", kind: "scalar", repeat: 2 /*RepeatType.UNPACKED*/, T: 9 /*ScalarType.STRING*/ }
-        ]);
-    }
-}
-/**
- * @generated MessageType for protobuf message com.vector.Deposits
- */
-export const Deposits = new Deposits$Type();
-// @generated message type with reflection information, may provide speed optimized methods
-class ChannelStateRequest$Type extends MessageType<ChannelStateRequest> {
-    constructor() {
-        super("com.vector.ChannelStateRequest", [
-            { no: 1, name: "channel_address", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
-            { no: 2, name: "alice", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
-            { no: 3, name: "bob", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
-            { no: 4, name: "asset_id", kind: "message", repeat: 1 /*RepeatType.PACKED*/, T: () => Address },
-            { no: 5, name: "balances", kind: "message", repeat: 1 /*RepeatType.PACKED*/, T: () => Balance },
-            { no: 6, name: "processed_deposits_a", kind: "message", T: () => Deposits },
-            { no: 7, name: "processed_deposits_b", kind: "message", T: () => Deposits },
-            { no: 8, name: "defund_nonces", kind: "message", T: () => DefundNonces },
-            { no: 9, name: "timeout", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
-            { no: 10, name: "nonce", kind: "scalar", T: 5 /*ScalarType.INT32*/ },
-            { no: 11, name: "merkle_root", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
-            { no: 12, name: "alice_identifier", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
-            { no: 13, name: "bo_identifier", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
-            { no: 14, name: "latest_update", kind: "message", T: () => ChannelUpdate }
-        ]);
-    }
-}
-/**
- * @generated MessageType for protobuf message com.vector.ChannelStateRequest
- */
-export const ChannelStateRequest = new ChannelStateRequest$Type();
-// @generated message type with reflection information, may provide speed optimized methods
-class CoreTransferState$Type extends MessageType<CoreTransferState> {
-    constructor() {
-        super("com.vector.CoreTransferState", [
-            { no: 1, name: "channel_address", kind: "message", T: () => Address },
-            { no: 2, name: "transfer_id", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
-            { no: 3, name: "transfer_definition", kind: "message", T: () => Address },
-            { no: 4, name: "initiator", kind: "message", T: () => Address },
-            { no: 5, name: "responder", kind: "message", T: () => Address },
-            { no: 6, name: "asset_id", kind: "message", T: () => Address },
-            { no: 7, name: "balance", kind: "message", T: () => Balance },
-            { no: 8, name: "transfer_timeout", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
-            { no: 9, name: "initial_state_hash", kind: "scalar", T: 9 /*ScalarType.STRING*/ }
-        ]);
-    }
-}
-/**
- * @generated MessageType for protobuf message com.vector.CoreTransferState
- */
-export const CoreTransferState = new CoreTransferState$Type();
-// @generated message type with reflection information, may provide speed optimized methods
-class FullTransferState$Type extends MessageType<FullTransferState> {
-    constructor() {
-        super("com.vector.FullTransferState", [
-            { no: 1, name: "core_transfer_state", kind: "message", T: () => CoreTransferState },
-            { no: 2, name: "number", kind: "scalar", T: 5 /*ScalarType.INT32*/ },
-            { no: 3, name: "transfer_encodings", kind: "scalar", repeat: 2 /*RepeatType.UNPACKED*/, T: 9 /*ScalarType.STRING*/ },
-            { no: 4, name: "transfer_state", kind: "message", T: () => Any },
-            { no: 5, name: "transfer_resolver", kind: "message", T: () => Any },
-            { no: 6, name: "meta", kind: "message", T: () => Any },
-            { no: 7, name: "in_dispute", kind: "scalar", T: 8 /*ScalarType.BOOL*/ },
-            { no: 8, name: "channel_nonce", kind: "scalar", T: 3 /*ScalarType.INT64*/, L: 0 /*LongType.BIGINT*/ },
-            { no: 9, name: "initiator_identifier", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
-            { no: 10, name: "responder_identifier", kind: "scalar", T: 9 /*ScalarType.STRING*/ }
-        ]);
-    }
-}
-/**
- * @generated MessageType for protobuf message com.vector.FullTransferState
- */
-export const FullTransferState = new FullTransferState$Type();
-// @generated message type with reflection information, may provide speed optimized methods
-class FullTransferStates$Type extends MessageType<FullTransferStates> {
-    constructor() {
-        super("com.vector.FullTransferStates", [
-            { no: 1, name: "full_transfer_state", kind: "message", repeat: 1 /*RepeatType.PACKED*/, T: () => FullTransferState }
-        ]);
-    }
-}
-/**
- * @generated MessageType for protobuf message com.vector.FullTransferStates
- */
-export const FullTransferStates = new FullTransferStates$Type();
-// @generated message type with reflection information, may provide speed optimized methods
-class FullTransferStateOrUndefined$Type extends MessageType<FullTransferStateOrUndefined> {
-    constructor() {
-        super("com.vector.FullTransferStateOrUndefined", [
-            { no: 1, name: "full_transfer", kind: "message", oneof: "fullChannel", T: () => FullTransferState },
-            { no: 2, name: "undefined", kind: "message", oneof: "fullChannel", T: () => Any }
-        ]);
-    }
-}
-/**
- * @generated MessageType for protobuf message com.vector.FullTransferStateOrUndefined
- */
-export const FullTransferStateOrUndefined = new FullTransferStateOrUndefined$Type();
-// @generated message type with reflection information, may provide speed optimized methods
 class RegisteredTransfer$Type extends MessageType<RegisteredTransfer> {
     constructor() {
         super("com.vector.RegisteredTransfer", [
             { no: 1, name: "state_encoding", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
             { no: 2, name: "resolver_encoding", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
-            { no: 3, name: "definition", kind: "message", T: () => Address },
+            { no: 3, name: "definition", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
             { no: 4, name: "name", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
             { no: 5, name: "encoded_cancel", kind: "scalar", T: 9 /*ScalarType.STRING*/ }
         ]);
@@ -2374,31 +1867,130 @@ class RegisteredTransfers$Type extends MessageType<RegisteredTransfers> {
  */
 export const RegisteredTransfers = new RegisteredTransfers$Type();
 // @generated message type with reflection information, may provide speed optimized methods
-class Body$Type extends MessageType<Body> {
+class IsAlivePayload$Type extends MessageType<IsAlivePayload> {
     constructor() {
-        super("com.vector.Body", [
-            { no: 1, name: "method", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
-            { no: 2, name: "params", kind: "message", T: () => Any }
+        super("com.vector.IsAlivePayload", [
+            { no: 1, name: "channel_address", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 2, name: "alice_identifier", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 3, name: "bob_identifier", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 4, name: "chain_id", kind: "scalar", T: 5 /*ScalarType.INT32*/ },
+            { no: 5, name: "skip_check_in", kind: "scalar", opt: true, T: 8 /*ScalarType.BOOL*/ }
         ]);
     }
 }
 /**
- * @generated MessageType for protobuf message com.vector.Body
+ * @generated MessageType for protobuf message com.vector.IsAlivePayload
  */
-export const Body = new Body$Type();
+export const IsAlivePayload = new IsAlivePayload$Type();
 // @generated message type with reflection information, may provide speed optimized methods
-class EthProviderRequest$Type extends MessageType<EthProviderRequest> {
+class SetupPayload$Type extends MessageType<SetupPayload> {
     constructor() {
-        super("com.vector.EthProviderRequest", [
-            { no: 1, name: "chain_id", kind: "scalar", T: 5 /*ScalarType.INT32*/ },
-            { no: 2, name: "body", kind: "message", T: () => Body }
+        super("com.vector.SetupPayload", [
+            { no: 1, name: "channel_address", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 2, name: "alice_identifier", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 3, name: "bob_identifier", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 4, name: "chain_id", kind: "scalar", T: 5 /*ScalarType.INT32*/ },
+            { no: 5, name: "meta", kind: "message", T: () => Any }
         ]);
     }
 }
 /**
- * @generated MessageType for protobuf message com.vector.EthProviderRequest
+ * @generated MessageType for protobuf message com.vector.SetupPayload
  */
-export const EthProviderRequest = new EthProviderRequest$Type();
+export const SetupPayload = new SetupPayload$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class ConditionalTransferCreatedPayload$Type extends MessageType<ConditionalTransferCreatedPayload> {
+    constructor() {
+        super("com.vector.ConditionalTransferCreatedPayload", [
+            { no: 1, name: "channel_address", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 2, name: "alice_identifier", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 3, name: "bob_identifier", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 4, name: "transfer", kind: "message", T: () => FullTransferState },
+            { no: 5, name: "channel_balance", kind: "message", T: () => Balance },
+            { no: 6, name: "condition_type", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 7, name: "active_transfer_ids", kind: "scalar", repeat: 2 /*RepeatType.UNPACKED*/, T: 9 /*ScalarType.STRING*/ },
+            { no: 8, name: "meta", kind: "message", T: () => Any }
+        ]);
+    }
+}
+/**
+ * @generated MessageType for protobuf message com.vector.ConditionalTransferCreatedPayload
+ */
+export const ConditionalTransferCreatedPayload = new ConditionalTransferCreatedPayload$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class DepositReconciledPayload$Type extends MessageType<DepositReconciledPayload> {
+    constructor() {
+        super("com.vector.DepositReconciledPayload", [
+            { no: 1, name: "channel_address", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 2, name: "alice_identifier", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 3, name: "bob_identifier", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 4, name: "asset_id", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 5, name: "channel_balance", kind: "message", T: () => Balance },
+            { no: 6, name: "meta", kind: "message", T: () => Any }
+        ]);
+    }
+}
+/**
+ * @generated MessageType for protobuf message com.vector.DepositReconciledPayload
+ */
+export const DepositReconciledPayload = new DepositReconciledPayload$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class RequestCollateralPayload$Type extends MessageType<RequestCollateralPayload> {
+    constructor() {
+        super("com.vector.RequestCollateralPayload", [
+            { no: 1, name: "channel_address", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 2, name: "alice_identifier", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 3, name: "bob_identifier", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 4, name: "asset_id", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 5, name: "amount", kind: "scalar", opt: true, T: 9 /*ScalarType.STRING*/ },
+            { no: 6, name: "meta", kind: "message", T: () => Any }
+        ]);
+    }
+}
+/**
+ * @generated MessageType for protobuf message com.vector.RequestCollateralPayload
+ */
+export const RequestCollateralPayload = new RequestCollateralPayload$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class WithdrawalCreatedPayload$Type extends MessageType<WithdrawalCreatedPayload> {
+    constructor() {
+        super("com.vector.WithdrawalCreatedPayload", [
+            { no: 1, name: "channel_address", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 2, name: "alice_identifier", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 3, name: "bob_identifier", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 4, name: "transfer", kind: "message", T: () => FullTransferState },
+            { no: 5, name: "fee", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 6, name: "asset_id", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 7, name: "amount", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 8, name: "recipient", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 9, name: "call_to", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 10, name: "call_data", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 11, name: "channel_balance", kind: "message", T: () => Balance },
+            { no: 12, name: "meta", kind: "message", T: () => Any }
+        ]);
+    }
+}
+/**
+ * @generated MessageType for protobuf message com.vector.WithdrawalCreatedPayload
+ */
+export const WithdrawalCreatedPayload = new WithdrawalCreatedPayload$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class WithdrawalReconciledPayload$Type extends MessageType<WithdrawalReconciledPayload> {
+    constructor() {
+        super("com.vector.WithdrawalReconciledPayload", [
+            { no: 1, name: "channel_address", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 2, name: "alice_identifier", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 3, name: "bob_identifier", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 4, name: "transaction_hash", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 5, name: "transfer_id", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 6, name: "meta", kind: "message", T: () => Any }
+        ]);
+    }
+}
+/**
+ * @generated MessageType for protobuf message com.vector.WithdrawalReconciledPayload
+ */
+export const WithdrawalReconciledPayload = new WithdrawalReconciledPayload$Type();
 // @generated message type with reflection information, may provide speed optimized methods
 class CreateNodeRequest$Type extends MessageType<CreateNodeRequest> {
     constructor() {
@@ -2431,7 +2023,7 @@ export const CreateNodeReply = new CreateNodeReply$Type();
 class ClearStoreRequest$Type extends MessageType<ClearStoreRequest> {
     constructor() {
         super("com.vector.ClearStoreRequest", [
-            { no: 1, name: "admin_token", kind: "message", T: () => ClearStoreRequest_AdminToken }
+            { no: 1, name: "admin_token", kind: "scalar", T: 9 /*ScalarType.STRING*/ }
         ]);
     }
 }
@@ -2440,98 +2032,12 @@ class ClearStoreRequest$Type extends MessageType<ClearStoreRequest> {
  */
 export const ClearStoreRequest = new ClearStoreRequest$Type();
 // @generated message type with reflection information, may provide speed optimized methods
-class ClearStoreRequest_AdminToken$Type extends MessageType<ClearStoreRequest_AdminToken> {
-    constructor() {
-        super("com.vector.ClearStoreRequest.AdminToken", [
-            { no: 1, name: "example", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
-            { no: 2, name: "description", kind: "scalar", T: 9 /*ScalarType.STRING*/ }
-        ]);
-    }
-}
-/**
- * @generated MessageType for protobuf message com.vector.ClearStoreRequest.AdminToken
- */
-export const ClearStoreRequest_AdminToken = new ClearStoreRequest_AdminToken$Type();
-// @generated message type with reflection information, may provide speed optimized methods
-class TPublicIdentifier$Type extends MessageType<TPublicIdentifier> {
-    constructor() {
-        super("com.vector.TPublicIdentifier", [
-            { no: 1, name: "public_identifier", kind: "scalar", T: 9 /*ScalarType.STRING*/ }
-        ]);
-    }
-}
-/**
- * @generated MessageType for protobuf message com.vector.TPublicIdentifier
- */
-export const TPublicIdentifier = new TPublicIdentifier$Type();
-// @generated message type with reflection information, may provide speed optimized methods
-class SubscriptionWithPublicIdentifierRequest$Type extends MessageType<SubscriptionWithPublicIdentifierRequest> {
-    constructor() {
-        super("com.vector.SubscriptionWithPublicIdentifierRequest", [
-            { no: 1, name: "public_identifier", kind: "message", T: () => TPublicIdentifier }
-        ]);
-    }
-}
-/**
- * @generated MessageType for protobuf message com.vector.SubscriptionWithPublicIdentifierRequest
- */
-export const SubscriptionWithPublicIdentifierRequest = new SubscriptionWithPublicIdentifierRequest$Type();
-// @generated message type with reflection information, may provide speed optimized methods
-class SubscriptionWithPublicIdentifierReply$Type extends MessageType<SubscriptionWithPublicIdentifierReply> {
-    constructor() {
-        super("com.vector.SubscriptionWithPublicIdentifierReply", [
-            { no: 1, name: "url", kind: "map", K: 9 /*ScalarType.STRING*/, V: { kind: "scalar", T: 9 /*ScalarType.STRING*/ } }
-        ]);
-    }
-}
-/**
- * @generated MessageType for protobuf message com.vector.SubscriptionWithPublicIdentifierReply
- */
-export const SubscriptionWithPublicIdentifierReply = new SubscriptionWithPublicIdentifierReply$Type();
-// @generated message type with reflection information, may provide speed optimized methods
-class SubscribeRequest$Type extends MessageType<SubscribeRequest> {
-    constructor() {
-        super("com.vector.SubscribeRequest", [
-            { no: 1, name: "body", kind: "message", T: () => SubscribeRequest_RegisterListenerBodySchema }
-        ]);
-    }
-}
-/**
- * @generated MessageType for protobuf message com.vector.SubscribeRequest
- */
-export const SubscribeRequest = new SubscribeRequest$Type();
-// @generated message type with reflection information, may provide speed optimized methods
-class SubscribeRequest_RegisterListenerBodySchema$Type extends MessageType<SubscribeRequest_RegisterListenerBodySchema> {
-    constructor() {
-        super("com.vector.SubscribeRequest.RegisterListenerBodySchema", [
-            { no: 1, name: "public_identifier", kind: "message", T: () => TPublicIdentifier },
-            { no: 2, name: "events", kind: "map", K: 9 /*ScalarType.STRING*/, V: { kind: "scalar", T: 9 /*ScalarType.STRING*/ } }
-        ]);
-    }
-}
-/**
- * @generated MessageType for protobuf message com.vector.SubscribeRequest.RegisterListenerBodySchema
- */
-export const SubscribeRequest_RegisterListenerBodySchema = new SubscribeRequest_RegisterListenerBodySchema$Type();
-// @generated message type with reflection information, may provide speed optimized methods
-class SubscribeReply$Type extends MessageType<SubscribeReply> {
-    constructor() {
-        super("com.vector.SubscribeReply", [
-            { no: 1, name: "message", kind: "scalar", T: 9 /*ScalarType.STRING*/ }
-        ]);
-    }
-}
-/**
- * @generated MessageType for protobuf message com.vector.SubscribeReply
- */
-export const SubscribeReply = new SubscribeReply$Type();
-// @generated message type with reflection information, may provide speed optimized methods
 class RestoreStateRequest$Type extends MessageType<RestoreStateRequest> {
     constructor() {
         super("com.vector.RestoreStateRequest", [
-            { no: 1, name: "counterparty_identifier", kind: "message", T: () => TPublicIdentifier },
+            { no: 1, name: "counterparty_identifier", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
             { no: 2, name: "chain_id", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
-            { no: 3, name: "public_identifier", kind: "message", T: () => TPublicIdentifier }
+            { no: 3, name: "public_identifier", kind: "scalar", T: 9 /*ScalarType.STRING*/ }
         ]);
     }
 }
@@ -2539,566 +2045,45 @@ class RestoreStateRequest$Type extends MessageType<RestoreStateRequest> {
  * @generated MessageType for protobuf message com.vector.RestoreStateRequest
  */
 export const RestoreStateRequest = new RestoreStateRequest$Type();
-// @generated message type with reflection information, may provide speed optimized methods
-class TAddress$Type extends MessageType<TAddress> {
-    constructor() {
-        super("com.vector.TAddress", [
-            { no: 1, name: "channel_address", kind: "scalar", T: 9 /*ScalarType.STRING*/ }
-        ]);
-    }
-}
-/**
- * @generated MessageType for protobuf message com.vector.TAddress
- */
-export const TAddress = new TAddress$Type();
-// @generated message type with reflection information, may provide speed optimized methods
-class RestoreStateReply$Type extends MessageType<RestoreStateReply> {
-    constructor() {
-        super("com.vector.RestoreStateReply", [
-            { no: 1, name: "channel_address", kind: "message", T: () => TAddress }
-        ]);
-    }
-}
-/**
- * @generated MessageType for protobuf message com.vector.RestoreStateReply
- */
-export const RestoreStateReply = new RestoreStateReply$Type();
-// @generated message type with reflection information, may provide speed optimized methods
-class WithdrawReply$Type extends MessageType<WithdrawReply> {
-    constructor() {
-        super("com.vector.WithdrawReply", [
-            { no: 1, name: "channel_address", kind: "message", T: () => TAddress },
-            { no: 2, name: "transfer_id", kind: "scalar", T: 12 /*ScalarType.BYTES*/ },
-            { no: 3, name: "transaction_hash", kind: "scalar", T: 12 /*ScalarType.BYTES*/ }
-        ]);
-    }
-}
-/**
- * @generated MessageType for protobuf message com.vector.WithdrawReply
- */
-export const WithdrawReply = new WithdrawReply$Type();
-// @generated message type with reflection information, may provide speed optimized methods
-class TBasicMeta$Type extends MessageType<TBasicMeta> {
-    constructor() {
-        super("com.vector.TBasicMeta", [
-            { no: 1, name: "basic_meta", kind: "map", K: 9 /*ScalarType.STRING*/, V: { kind: "message", T: () => Any } }
-        ]);
-    }
-}
-/**
- * @generated MessageType for protobuf message com.vector.TBasicMeta
- */
-export const TBasicMeta = new TBasicMeta$Type();
-// @generated message type with reflection information, may provide speed optimized methods
-class WithdrawRequestSchema$Type extends MessageType<WithdrawRequestSchema> {
-    constructor() {
-        super("com.vector.WithdrawRequestSchema", [
-            { no: 1, name: "channel_address", kind: "message", T: () => TAddress },
-            { no: 2, name: "amount", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
-            { no: 3, name: "asset_id", kind: "message", T: () => TAddress },
-            { no: 4, name: "recipient", kind: "message", T: () => TAddress },
-            { no: 5, name: "fee", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
-            { no: 6, name: "call_to", kind: "message", T: () => TAddress },
-            { no: 7, name: "call_data", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
-            { no: 8, name: "meta", kind: "message", T: () => TBasicMeta }
-        ]);
-    }
-}
-/**
- * @generated MessageType for protobuf message com.vector.WithdrawRequestSchema
- */
-export const WithdrawRequestSchema = new WithdrawRequestSchema$Type();
-// @generated message type with reflection information, may provide speed optimized methods
-class WithdrawRequest$Type extends MessageType<WithdrawRequest> {
-    constructor() {
-        super("com.vector.WithdrawRequest", [
-            { no: 1, name: "withdraw_schema", kind: "message", T: () => WithdrawRequestSchema },
-            { no: 2, name: "public_identifier", kind: "message", T: () => TPublicIdentifier }
-        ]);
-    }
-}
-/**
- * @generated MessageType for protobuf message com.vector.WithdrawRequest
- */
-export const WithdrawRequest = new WithdrawRequest$Type();
-// @generated message type with reflection information, may provide speed optimized methods
-class ResolveTransferSchema$Type extends MessageType<ResolveTransferSchema> {
-    constructor() {
-        super("com.vector.ResolveTransferSchema", [
-            { no: 1, name: "channel_address", kind: "message", T: () => TAddress },
-            { no: 2, name: "transfer_id", kind: "scalar", T: 12 /*ScalarType.BYTES*/ },
-            { no: 3, name: "meta", kind: "message", T: () => TBasicMeta },
-            { no: 4, name: "transfer_resolver", kind: "message", T: () => TransferResolverSchema }
-        ]);
-    }
-}
-/**
- * @generated MessageType for protobuf message com.vector.ResolveTransferSchema
- */
-export const ResolveTransferSchema = new ResolveTransferSchema$Type();
-// @generated message type with reflection information, may provide speed optimized methods
-class TransferResolverSchema$Type extends MessageType<TransferResolverSchema> {
-    constructor() {
-        super("com.vector.TransferResolverSchema", [
-            { no: 1, name: "resolver", kind: "map", K: 9 /*ScalarType.STRING*/, V: { kind: "message", T: () => Any } }
-        ]);
-    }
-}
-/**
- * @generated MessageType for protobuf message com.vector.TransferResolverSchema
- */
-export const TransferResolverSchema = new TransferResolverSchema$Type();
-// @generated message type with reflection information, may provide speed optimized methods
-class ResolveTransferRequest$Type extends MessageType<ResolveTransferRequest> {
-    constructor() {
-        super("com.vector.ResolveTransferRequest", [
-            { no: 1, name: "resolver_transfer_schema", kind: "message", T: () => ResolveTransferSchema },
-            { no: 2, name: "public_identifier", kind: "message", T: () => TPublicIdentifier }
-        ]);
-    }
-}
-/**
- * @generated MessageType for protobuf message com.vector.ResolveTransferRequest
- */
-export const ResolveTransferRequest = new ResolveTransferRequest$Type();
-// @generated message type with reflection information, may provide speed optimized methods
-class ResolveTransferReply$Type extends MessageType<ResolveTransferReply> {
-    constructor() {
-        super("com.vector.ResolveTransferReply", [
-            { no: 1, name: "channel_address", kind: "message", T: () => TAddress },
-            { no: 2, name: "transfer_id", kind: "scalar", T: 12 /*ScalarType.BYTES*/ },
-            { no: 3, name: "routing_id", kind: "scalar", T: 12 /*ScalarType.BYTES*/ }
-        ]);
-    }
-}
-/**
- * @generated MessageType for protobuf message com.vector.ResolveTransferReply
- */
-export const ResolveTransferReply = new ResolveTransferReply$Type();
-// @generated message type with reflection information, may provide speed optimized methods
-class CreateConditionalTransferParamsSchema$Type extends MessageType<CreateConditionalTransferParamsSchema> {
-    constructor() {
-        super("com.vector.CreateConditionalTransferParamsSchema", [
-            { no: 1, name: "channel_address", kind: "message", T: () => TAddress },
-            { no: 2, name: "amount", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
-            { no: 3, name: "asset_id", kind: "message", T: () => TAddress },
-            { no: 4, name: "recipient", kind: "message", T: () => TPublicIdentifier },
-            { no: 5, name: "recipient_chainId", kind: "scalar", T: 5 /*ScalarType.INT32*/ },
-            { no: 6, name: "recipient_assetId", kind: "message", T: () => TAddress },
-            { no: 7, name: "timeout", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
-            { no: 8, name: "meta", kind: "message", T: () => TBasicMeta },
-            { no: 9, name: "type", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
-            { no: 10, name: "details", kind: "map", K: 9 /*ScalarType.STRING*/, V: { kind: "message", T: () => Any } }
-        ]);
-    }
-}
-/**
- * @generated MessageType for protobuf message com.vector.CreateConditionalTransferParamsSchema
- */
-export const CreateConditionalTransferParamsSchema = new CreateConditionalTransferParamsSchema$Type();
-// @generated message type with reflection information, may provide speed optimized methods
-class ConditionalTransferRequest$Type extends MessageType<ConditionalTransferRequest> {
-    constructor() {
-        super("com.vector.ConditionalTransferRequest", [
-            { no: 1, name: "create_conditional_transfer_params_schema", kind: "message", T: () => CreateConditionalTransferParamsSchema },
-            { no: 2, name: "public_identifier", kind: "message", T: () => TPublicIdentifier }
-        ]);
-    }
-}
-/**
- * @generated MessageType for protobuf message com.vector.ConditionalTransferRequest
- */
-export const ConditionalTransferRequest = new ConditionalTransferRequest$Type();
-// @generated message type with reflection information, may provide speed optimized methods
-class CollateralReply$Type extends MessageType<CollateralReply> {
-    constructor() {
-        super("com.vector.CollateralReply", [
-            { no: 1, name: "full_channel_state", kind: "message", T: () => FullChannelState },
-            { no: 2, name: "channel_address", kind: "message", T: () => TAddress }
-        ]);
-    }
-}
-/**
- * @generated MessageType for protobuf message com.vector.CollateralReply
- */
-export const CollateralReply = new CollateralReply$Type();
-// @generated message type with reflection information, may provide speed optimized methods
-class RequestCollateralSchema$Type extends MessageType<RequestCollateralSchema> {
-    constructor() {
-        super("com.vector.RequestCollateralSchema", [
-            { no: 1, name: "channel_address", kind: "message", T: () => TAddress },
-            { no: 2, name: "asset_id", kind: "message", T: () => TAddress },
-            { no: 3, name: "amount", kind: "scalar", T: 9 /*ScalarType.STRING*/ }
-        ]);
-    }
-}
-/**
- * @generated MessageType for protobuf message com.vector.RequestCollateralSchema
- */
-export const RequestCollateralSchema = new RequestCollateralSchema$Type();
-// @generated message type with reflection information, may provide speed optimized methods
-class CollateralRequest$Type extends MessageType<CollateralRequest> {
-    constructor() {
-        super("com.vector.CollateralRequest", [
-            { no: 1, name: "collateral_request", kind: "message", T: () => RequestCollateralSchema },
-            { no: 2, name: "public_identifier", kind: "message", T: () => TPublicIdentifier }
-        ]);
-    }
-}
-/**
- * @generated MessageType for protobuf message com.vector.CollateralRequest
- */
-export const CollateralRequest = new CollateralRequest$Type();
-// @generated message type with reflection information, may provide speed optimized methods
-class DepositEngineParamsSchema$Type extends MessageType<DepositEngineParamsSchema> {
-    constructor() {
-        super("com.vector.DepositEngineParamsSchema", [
-            { no: 1, name: "channel_address", kind: "message", T: () => TAddress },
-            { no: 2, name: "asset_id", kind: "message", T: () => TAddress },
-            { no: 3, name: "meta", kind: "message", T: () => TBasicMeta }
-        ]);
-    }
-}
-/**
- * @generated MessageType for protobuf message com.vector.DepositEngineParamsSchema
- */
-export const DepositEngineParamsSchema = new DepositEngineParamsSchema$Type();
-// @generated message type with reflection information, may provide speed optimized methods
-class DepositRequest$Type extends MessageType<DepositRequest> {
-    constructor() {
-        super("com.vector.DepositRequest", [
-            { no: 1, name: "deposit_engine_params_schema", kind: "message", T: () => DepositEngineParamsSchema },
-            { no: 2, name: "public_identifier", kind: "message", T: () => TPublicIdentifier }
-        ]);
-    }
-}
-/**
- * @generated MessageType for protobuf message com.vector.DepositRequest
- */
-export const DepositRequest = new DepositRequest$Type();
-// @generated message type with reflection information, may provide speed optimized methods
-class DefundTransferParamsSchema$Type extends MessageType<DefundTransferParamsSchema> {
-    constructor() {
-        super("com.vector.DefundTransferParamsSchema", [
-            { no: 1, name: "transfer_id", kind: "scalar", T: 12 /*ScalarType.BYTES*/ }
-        ]);
-    }
-}
-/**
- * @generated MessageType for protobuf message com.vector.DefundTransferParamsSchema
- */
-export const DefundTransferParamsSchema = new DefundTransferParamsSchema$Type();
-// @generated message type with reflection information, may provide speed optimized methods
-class TransferResquest$Type extends MessageType<TransferResquest> {
-    constructor() {
-        super("com.vector.TransferResquest", [
-            { no: 1, name: "defund_transfer_params_schema", kind: "message", T: () => DefundTransferParamsSchema },
-            { no: 2, name: "public_identifier", kind: "message", T: () => TPublicIdentifier }
-        ]);
-    }
-}
-/**
- * @generated MessageType for protobuf message com.vector.TransferResquest
- */
-export const TransferResquest = new TransferResquest$Type();
-// @generated message type with reflection information, may provide speed optimized methods
-class DefundChannelParamsSchema$Type extends MessageType<DefundChannelParamsSchema> {
-    constructor() {
-        super("com.vector.DefundChannelParamsSchema", [
-            { no: 1, name: "channel_address", kind: "message", T: () => TAddress }
-        ]);
-    }
-}
-/**
- * @generated MessageType for protobuf message com.vector.DefundChannelParamsSchema
- */
-export const DefundChannelParamsSchema = new DefundChannelParamsSchema$Type();
-// @generated message type with reflection information, may provide speed optimized methods
-class ChannelResquest$Type extends MessageType<ChannelResquest> {
-    constructor() {
-        super("com.vector.ChannelResquest", [
-            { no: 1, name: "defund_channel_params_schema", kind: "message", T: () => DefundChannelParamsSchema },
-            { no: 2, name: "public_identifier", kind: "message", T: () => TPublicIdentifier }
-        ]);
-    }
-}
-/**
- * @generated MessageType for protobuf message com.vector.ChannelResquest
- */
-export const ChannelResquest = new ChannelResquest$Type();
-// @generated message type with reflection information, may provide speed optimized methods
-class DepositTxRequest$Type extends MessageType<DepositTxRequest> {
-    constructor() {
-        super("com.vector.DepositTxRequest", [
-            { no: 1, name: "channel_address", kind: "message", T: () => TAddress },
-            { no: 2, name: "amount", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
-            { no: 3, name: "asset_id", kind: "message", T: () => TAddress },
-            { no: 4, name: "chain_id", kind: "scalar", T: 5 /*ScalarType.INT32*/ },
-            { no: 5, name: "public_identifier", kind: "message", T: () => TPublicIdentifier }
-        ]);
-    }
-}
-/**
- * @generated MessageType for protobuf message com.vector.DepositTxRequest
- */
-export const DepositTxRequest = new DepositTxRequest$Type();
-// @generated message type with reflection information, may provide speed optimized methods
-class SetupRequest$Type extends MessageType<SetupRequest> {
-    constructor() {
-        super("com.vector.SetupRequest", [
-            { no: 1, name: "counterparty_identifier", kind: "message", T: () => TPublicIdentifier },
-            { no: 2, name: "chain_id", kind: "scalar", T: 5 /*ScalarType.INT32*/ },
-            { no: 3, name: "timeout", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
-            { no: 4, name: "meta", kind: "message", T: () => TBasicMeta },
-            { no: 5, name: "public_identifier", kind: "message", T: () => TPublicIdentifier }
-        ]);
-    }
-}
-/**
- * @generated MessageType for protobuf message com.vector.SetupRequest
- */
-export const SetupRequest = new SetupRequest$Type();
-// @generated message type with reflection information, may provide speed optimized methods
-class SetupReply$Type extends MessageType<SetupReply> {
-    constructor() {
-        super("com.vector.SetupReply", [
-            { no: 1, name: "full_channel_state", kind: "message", T: () => FullChannelState },
-            { no: 2, name: "channel_address", kind: "message", T: () => TAddress }
-        ]);
-    }
-}
-/**
- * @generated MessageType for protobuf message com.vector.SetupReply
- */
-export const SetupReply = new SetupReply$Type();
-// @generated message type with reflection information, may provide speed optimized methods
-class RegisteredTransfersRequest$Type extends MessageType<RegisteredTransfersRequest> {
-    constructor() {
-        super("com.vector.RegisteredTransfersRequest", [
-            { no: 1, name: "chain_id", kind: "scalar", T: 5 /*ScalarType.INT32*/ },
-            { no: 2, name: "public_identifier", kind: "message", T: () => TPublicIdentifier }
-        ]);
-    }
-}
-/**
- * @generated MessageType for protobuf message com.vector.RegisteredTransfersRequest
- */
-export const RegisteredTransfersRequest = new RegisteredTransfersRequest$Type();
-// @generated message type with reflection information, may provide speed optimized methods
-class ChannelStatesRequest$Type extends MessageType<ChannelStatesRequest> {
-    constructor() {
-        super("com.vector.ChannelStatesRequest", [
-            { no: 1, name: "public_identifier", kind: "message", T: () => TPublicIdentifier }
-        ]);
-    }
-}
-/**
- * @generated MessageType for protobuf message com.vector.ChannelStatesRequest
- */
-export const ChannelStatesRequest = new ChannelStatesRequest$Type();
-// @generated message type with reflection information, may provide speed optimized methods
-class ActiveTransfersRequest$Type extends MessageType<ActiveTransfersRequest> {
-    constructor() {
-        super("com.vector.ActiveTransfersRequest", [
-            { no: 1, name: "channel_address", kind: "message", T: () => TAddress },
-            { no: 2, name: "public_identifier", kind: "message", T: () => TPublicIdentifier }
-        ]);
-    }
-}
-/**
- * @generated MessageType for protobuf message com.vector.ActiveTransfersRequest
- */
-export const ActiveTransfersRequest = new ActiveTransfersRequest$Type();
-// @generated message type with reflection information, may provide speed optimized methods
-class TransferStatesByRoutingIdRequest$Type extends MessageType<TransferStatesByRoutingIdRequest> {
-    constructor() {
-        super("com.vector.TransferStatesByRoutingIdRequest", [
-            { no: 1, name: "channel_address", kind: "message", T: () => TAddress },
-            { no: 2, name: "routing_id", kind: "scalar", T: 12 /*ScalarType.BYTES*/ },
-            { no: 3, name: "public_identifier", kind: "message", T: () => TPublicIdentifier }
-        ]);
-    }
-}
-/**
- * @generated MessageType for protobuf message com.vector.TransferStatesByRoutingIdRequest
- */
-export const TransferStatesByRoutingIdRequest = new TransferStatesByRoutingIdRequest$Type();
-// @generated message type with reflection information, may provide speed optimized methods
-class TransferStateByRoutingIdRequest$Type extends MessageType<TransferStateByRoutingIdRequest> {
-    constructor() {
-        super("com.vector.TransferStateByRoutingIdRequest", [
-            { no: 1, name: "routing_id", kind: "scalar", T: 12 /*ScalarType.BYTES*/ },
-            { no: 2, name: "public_identifier", kind: "message", T: () => TPublicIdentifier }
-        ]);
-    }
-}
-/**
- * @generated MessageType for protobuf message com.vector.TransferStateByRoutingIdRequest
- */
-export const TransferStateByRoutingIdRequest = new TransferStateByRoutingIdRequest$Type();
-// @generated message type with reflection information, may provide speed optimized methods
-class TransfersRequest$Type extends MessageType<TransfersRequest> {
-    constructor() {
-        super("com.vector.TransfersRequest", [
-            { no: 1, name: "transfer_id", kind: "scalar", T: 12 /*ScalarType.BYTES*/ },
-            { no: 2, name: "public_identifier", kind: "message", T: () => TPublicIdentifier }
-        ]);
-    }
-}
-/**
- * @generated MessageType for protobuf message com.vector.TransfersRequest
- */
-export const TransfersRequest = new TransfersRequest$Type();
-// @generated message type with reflection information, may provide speed optimized methods
-class TransferEncodingSchema$Type extends MessageType<TransferEncodingSchema> {
-    constructor() {
-        super("com.vector.TransferEncodingSchema", [
-            { no: 1, name: "encoding", kind: "scalar", T: 9 /*ScalarType.STRING*/ }
-        ]);
-    }
-}
-/**
- * @generated MessageType for protobuf message com.vector.TransferEncodingSchema
- */
-export const TransferEncodingSchema = new TransferEncodingSchema$Type();
-// @generated message type with reflection information, may provide speed optimized methods
-class TransferStateSchema$Type extends MessageType<TransferStateSchema> {
-    constructor() {
-        super("com.vector.TransferStateSchema", [
-            { no: 1, name: "state", kind: "map", K: 9 /*ScalarType.STRING*/, V: { kind: "message", T: () => Any } }
-        ]);
-    }
-}
-/**
- * @generated MessageType for protobuf message com.vector.TransferStateSchema
- */
-export const TransferStateSchema = new TransferStateSchema$Type();
-// @generated message type with reflection information, may provide speed optimized methods
-class TFullTransferState$Type extends MessageType<TFullTransferState> {
-    constructor() {
-        super("com.vector.TFullTransferState", [
-            { no: 1, name: "balance", kind: "message", T: () => TBalance },
-            { no: 2, name: "asset_id", kind: "message", T: () => TAddress },
-            { no: 3, name: "channel_address", kind: "message", T: () => TAddress },
-            { no: 4, name: "in_dispute", kind: "scalar", T: 8 /*ScalarType.BOOL*/ },
-            { no: 5, name: "transfer_id", kind: "scalar", T: 12 /*ScalarType.BYTES*/ },
-            { no: 6, name: "transfer_definition", kind: "message", T: () => TAddress },
-            { no: 7, name: "transfer_timeout", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
-            { no: 8, name: "initial_statehash", kind: "scalar", T: 12 /*ScalarType.BYTES*/ },
-            { no: 9, name: "initiator", kind: "message", T: () => TAddress },
-            { no: 10, name: "responder", kind: "message", T: () => TAddress },
-            { no: 11, name: "channel_factory_address", kind: "message", T: () => TAddress },
-            { no: 12, name: "chain_id", kind: "scalar", T: 5 /*ScalarType.INT32*/ },
-            { no: 13, name: "transfer_encodings", kind: "message", repeat: 1 /*RepeatType.PACKED*/, T: () => TransferEncodingSchema },
-            { no: 14, name: "transfer_state", kind: "message", T: () => TransferStateSchema },
-            { no: 15, name: "transferResolver", kind: "message", T: () => TransferResolverSchema },
-            { no: 16, name: "meta", kind: "message", T: () => TBasicMeta },
-            { no: 17, name: "channel_nonce", kind: "scalar", T: 3 /*ScalarType.INT64*/, L: 0 /*LongType.BIGINT*/ },
-            { no: 18, name: "initiator_identifier", kind: "message", T: () => TPublicIdentifier },
-            { no: 19, name: "responder_identifier", kind: "message", T: () => TPublicIdentifier }
-        ]);
-    }
-}
-/**
- * @generated MessageType for protobuf message com.vector.TFullTransferState
- */
-export const TFullTransferState = new TFullTransferState$Type();
-// @generated message type with reflection information, may provide speed optimized methods
-class TransferStateReply$Type extends MessageType<TransferStateReply> {
-    constructor() {
-        super("com.vector.TransferStateReply", [
-            { no: 1, name: "defined", kind: "scalar", oneof: "response", T: 9 /*ScalarType.STRING*/ },
-            { no: 2, name: "tfull_transfer_state", kind: "message", oneof: "response", T: () => TFullTransferState }
-        ]);
-    }
-}
-/**
- * @generated MessageType for protobuf message com.vector.TransferStateReply
- */
-export const TransferStateReply = new TransferStateReply$Type();
-// @generated message type with reflection information, may provide speed optimized methods
-class ChannelStateByParticipantsRequest$Type extends MessageType<ChannelStateByParticipantsRequest> {
-    constructor() {
-        super("com.vector.ChannelStateByParticipantsRequest", [
-            { no: 1, name: "public_identifier", kind: "message", T: () => TPublicIdentifier },
-            { no: 2, name: "counterparty", kind: "message", T: () => TPublicIdentifier },
-            { no: 3, name: "chain_id", kind: "scalar", T: 5 /*ScalarType.INT32*/ }
-        ]);
-    }
-}
-/**
- * @generated MessageType for protobuf message com.vector.ChannelStateByParticipantsRequest
- */
-export const ChannelStateByParticipantsRequest = new ChannelStateByParticipantsRequest$Type();
-// @generated message type with reflection information, may provide speed optimized methods
-class AssetIds$Type extends MessageType<AssetIds> {
-    constructor() {
-        super("com.vector.AssetIds", [
-            { no: 1, name: "asset_id", kind: "message", T: () => TAddress }
-        ]);
-    }
-}
-/**
- * @generated MessageType for protobuf message com.vector.AssetIds
- */
-export const AssetIds = new AssetIds$Type();
-// @generated message type with reflection information, may provide speed optimized methods
-class TBalance$Type extends MessageType<TBalance> {
-    constructor() {
-        super("com.vector.TBalance", [
-            { no: 1, name: "to", kind: "message", repeat: 1 /*RepeatType.PACKED*/, T: () => TAddress },
-            { no: 2, name: "amount", kind: "scalar", repeat: 2 /*RepeatType.UNPACKED*/, T: 9 /*ScalarType.STRING*/ }
-        ]);
-    }
-}
-/**
- * @generated MessageType for protobuf message com.vector.TBalance
- */
-export const TBalance = new TBalance$Type();
-// @generated message type with reflection information, may provide speed optimized methods
-class EthProviderReply$Type extends MessageType<EthProviderReply> {
-    constructor() {
-        super("com.vector.EthProviderReply", [
-            { no: 1, name: "response", kind: "message", T: () => Any }
-        ]);
-    }
-}
-/**
- * @generated MessageType for protobuf message com.vector.EthProviderReply
- */
-export const EthProviderReply = new EthProviderReply$Type();
 /**
  * @generated ServiceType for protobuf service com.vector.ServerNodeService
  */
 export const ServerNodeService = new ServiceType("com.vector.ServerNodeService", [
-    { name: "GetPing", options: {}, I: Empty, O: Pong },
+    { name: "GetPing", options: {}, I: Empty, O: GenericMessageResponse },
     { name: "GetConfig", options: {}, I: Empty, O: Configs },
-    { name: "GetStatus", options: {}, I: TPublicIdentifier, O: Status },
-    { name: "GetChannelState", options: {}, I: ChannelStateRequest, O: FullChannelStateOrUndefined },
+    { name: "GetStatus", options: {}, I: GetStatusRequest, O: Status },
+    { name: "GetChannelState", options: {}, I: ChannelStateRequest, O: FullChannelState },
     { name: "GetChannelStates", options: {}, I: Empty, O: FullChannelStates },
-    { name: "GetChannelStateByParticipants", options: {}, I: ChannelStateByParticipantsRequest, O: FullChannelStateOrUndefined },
-    { name: "TransferState", options: {}, I: TransfersRequest, O: TransferStateReply },
-    { name: "GetTransferStateByRoutingId", options: {}, I: TransferStateByRoutingIdRequest, O: FullTransferStateOrUndefined },
+    { name: "GetChannelStateByParticipants", options: {}, I: ChannelStateByParticipantsRequest, O: FullChannelState },
+    { name: "GetTransferState", options: {}, I: TransfersRequest, O: FullTransferState },
+    { name: "GetTransferStateByRoutingId", options: {}, I: TransferStateByRoutingIdRequest, O: FullTransferState },
     { name: "GetTransferStatesByRoutingId", options: {}, I: TransferStatesByRoutingIdRequest, O: FullTransferStates },
     { name: "GetActiveTransfers", options: {}, I: ActiveTransfersRequest, O: FullTransferStates },
     { name: "GetRegisteredTransfers", options: {}, I: RegisteredTransfersRequest, O: RegisteredTransfers },
-    { name: "Setup", options: {}, I: SetupRequest, O: SetupReply },
+    { name: "ClearStore", options: {}, I: ClearStoreRequest, O: Empty },
+    { name: "CreateNode", options: {}, I: CreateNodeRequest, O: CreateNodeReply },
+    { name: "Setup", options: {}, I: SetupRequest, O: FullChannelState },
     { name: "InternalSetup", options: {}, I: SetupRequest, O: FullChannelState },
     { name: "Deposit", options: {}, I: DepositRequest, O: FullChannelState },
     { name: "SendDepositTx", options: {}, I: DepositTxRequest, O: TxHash },
-    { name: "SendDisputeChannelTx", options: {}, I: ChannelResquest, O: TxHash },
-    { name: "SendDefundChannelTx", options: {}, I: ChannelResquest, O: TxHash },
-    { name: "SendDisputeTransfer", options: {}, I: TransferResquest, O: TxHash },
-    { name: "SendDefundTransfer", options: {}, I: TransferResquest, O: TxHash },
-    { name: "SendRequestCollateral", options: {}, I: DepositRequest, O: CollateralReply },
-    { name: "CreateTransfer", options: {}, I: ConditionalTransferRequest, O: ResolveTransferReply },
-    { name: "ResolveTransfer", options: {}, I: ResolveTransferRequest, O: ResolveTransferReply },
-    { name: "Withdraw", options: {}, I: WithdrawRequest, O: WithdrawReply },
-    { name: "RestoreState", options: {}, I: RestoreStateRequest, O: RestoreStateReply },
-    { name: "Subscribe", options: {}, I: SubscribeRequest, O: SubscribeReply },
-    { name: "GetSubscription", options: {}, I: SubscriptionRequest, O: Subscription },
-    { name: "GetSubscriptionWithOnlyPublicIdentifier", options: {}, I: SubscriptionWithPublicIdentifierRequest, O: SubscriptionWithPublicIdentifierReply },
-    { name: "ClearStore", options: {}, I: ClearStoreRequest, O: ClearStoreReply },
-    { name: "CreateNode", options: {}, I: CreateNodeRequest, O: CreateNodeReply },
+    { name: "SendRequestCollateral", options: {}, I: DepositRequest, O: FullChannelState },
+    { name: "CreateTransfer", options: {}, I: ConditionalTransferRequest, O: FullChannelState },
+    { name: "ResolveTransfer", options: {}, I: ResolveTransferRequest, O: FullChannelState },
+    { name: "Withdraw", options: {}, I: WithdrawRequest, O: FullChannelState },
+    { name: "RestoreState", options: {}, I: RestoreStateRequest, O: FullChannelState },
+    { name: "SendDisputeChannelTx", options: {}, I: ChannelStateRequest, O: TxHash },
+    { name: "SendDefundChannelTx", options: {}, I: ChannelStateRequest, O: TxHash },
+    { name: "SendDisputeTransfer", options: {}, I: TransferRequest, O: TxHash },
+    { name: "SendDefundTransfer", options: {}, I: TransferRequest, O: TxHash },
+    { name: "IsAliveStream", serverStreaming: true, options: {}, I: Empty, O: IsAlivePayload },
+    { name: "SetupStream", serverStreaming: true, options: {}, I: Empty, O: SetupPayload },
+    { name: "ConditionalTransferCreatedStream", serverStreaming: true, options: {}, I: Empty, O: ConditionalTransferCreatedPayload },
+    { name: "ConditionalTransferResolvedStream", serverStreaming: true, options: {}, I: Empty, O: ConditionalTransferCreatedPayload },
+    { name: "DepositReconciledStream", serverStreaming: true, options: {}, I: Empty, O: DepositReconciledPayload },
+    { name: "RequestCollateralStream", serverStreaming: true, options: {}, I: Empty, O: RequestCollateralPayload },
+    { name: "WithdrawalCreatedStream", serverStreaming: true, options: {}, I: Empty, O: WithdrawalCreatedPayload },
+    { name: "WithdrawalResolvedStream", serverStreaming: true, options: {}, I: Empty, O: WithdrawalCreatedPayload },
+    { name: "WithdrawalReconciledStream", serverStreaming: true, options: {}, I: Empty, O: WithdrawalReconciledPayload },
+    { name: "RestoreStateStream", serverStreaming: true, options: {}, I: Empty, O: SetupPayload },
     { name: "EthProvider", options: {}, I: EthProviderRequest, O: EthProviderReply }
 ]);

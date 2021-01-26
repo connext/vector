@@ -3,87 +3,86 @@
 // tslint:disable
 import { EthProviderReply } from "./servernode";
 import { EthProviderRequest } from "./servernode";
-import { CreateNodeReply } from "./servernode";
-import { CreateNodeRequest } from "./servernode";
-import { ClearStoreReply } from "./servernode";
-import { ClearStoreRequest } from "./servernode";
-import { SubscriptionWithPublicIdentifierReply } from "./servernode";
-import { SubscriptionWithPublicIdentifierRequest } from "./servernode";
-import { Subscription } from "./servernode";
-import { SubscriptionRequest } from "./servernode";
-import { SubscribeReply } from "./servernode";
-import { SubscribeRequest } from "./servernode";
-import { RestoreStateReply } from "./servernode";
+import { WithdrawalReconciledPayload } from "./servernode";
+import { WithdrawalCreatedPayload } from "./servernode";
+import { RequestCollateralPayload } from "./servernode";
+import { DepositReconciledPayload } from "./servernode";
+import { ConditionalTransferCreatedPayload } from "./servernode";
+import { SetupPayload } from "./servernode";
+import { IsAlivePayload } from "./servernode";
+import { TransferRequest } from "./servernode";
 import { RestoreStateRequest } from "./servernode";
-import { WithdrawReply } from "./servernode";
 import { WithdrawRequest } from "./servernode";
 import { ResolveTransferRequest } from "./servernode";
-import { ResolveTransferReply } from "./servernode";
 import { ConditionalTransferRequest } from "./servernode";
-import { CollateralReply } from "./servernode";
-import { TransferResquest } from "./servernode";
-import { ChannelResquest } from "./servernode";
 import { TxHash } from "./servernode";
 import { DepositTxRequest } from "./servernode";
 import { DepositRequest } from "./servernode";
-import { FullChannelState } from "./servernode";
-import { SetupReply } from "./servernode";
 import { SetupRequest } from "./servernode";
+import { CreateNodeReply } from "./servernode";
+import { CreateNodeRequest } from "./servernode";
+import { ClearStoreRequest } from "./servernode";
 import { RegisteredTransfers } from "./servernode";
 import { RegisteredTransfersRequest } from "./servernode";
 import { ActiveTransfersRequest } from "./servernode";
 import { FullTransferStates } from "./servernode";
 import { TransferStatesByRoutingIdRequest } from "./servernode";
-import { FullTransferStateOrUndefined } from "./servernode";
 import { TransferStateByRoutingIdRequest } from "./servernode";
-import { TransferStateReply } from "./servernode";
+import { FullTransferState } from "./servernode";
 import { TransfersRequest } from "./servernode";
 import { ChannelStateByParticipantsRequest } from "./servernode";
 import { FullChannelStates } from "./servernode";
-import { FullChannelStateOrUndefined } from "./servernode";
+import { FullChannelState } from "./servernode";
 import { ChannelStateRequest } from "./servernode";
 import { Status } from "./servernode";
-import { TPublicIdentifier } from "./servernode";
+import { GetStatusRequest } from "./servernode";
 import { Configs } from "./servernode";
-import { Pong } from "./servernode";
+import { GenericMessageResponse } from "./servernode";
 import { Empty } from "./servernode";
 import * as grpc from "@grpc/grpc-js";
 /**
+ * Server Node Service
+ * Describes the Vector Server Node's interface
+ *
  * @generated from protobuf service com.vector.ServerNodeService
  */
 export interface IServerNodeService extends grpc.UntypedServiceImplementation {
     /**
-     * @generated from protobuf rpc: GetPing(com.vector.Empty) returns (com.vector.Pong);
+     * general metadata getters
+     *
+     * @generated from protobuf rpc: GetPing(com.vector.Empty) returns (com.vector.GenericMessageResponse);
      */
-    getPing: grpc.handleUnaryCall<Empty, Pong>;
+    getPing: grpc.handleUnaryCall<Empty, GenericMessageResponse>;
     /**
      * @generated from protobuf rpc: GetConfig(com.vector.Empty) returns (com.vector.Configs);
      */
     getConfig: grpc.handleUnaryCall<Empty, Configs>;
     /**
-     * @generated from protobuf rpc: GetStatus(com.vector.TPublicIdentifier) returns (com.vector.Status);
+     * @generated from protobuf rpc: GetStatus(com.vector.GetStatusRequest) returns (com.vector.Status);
      */
-    getStatus: grpc.handleUnaryCall<TPublicIdentifier, Status>;
+    getStatus: grpc.handleUnaryCall<GetStatusRequest, Status>;
     /**
-     * @generated from protobuf rpc: GetChannelState(com.vector.ChannelStateRequest) returns (com.vector.FullChannelStateOrUndefined);
+     * channel and transfer state getters
+     *
+     * @generated from protobuf rpc: GetChannelState(com.vector.ChannelStateRequest) returns (com.vector.FullChannelState);
      */
-    getChannelState: grpc.handleUnaryCall<ChannelStateRequest, FullChannelStateOrUndefined>;
+    getChannelState: grpc.handleUnaryCall<ChannelStateRequest, FullChannelState>;
     /**
      * @generated from protobuf rpc: GetChannelStates(com.vector.Empty) returns (com.vector.FullChannelStates);
      */
     getChannelStates: grpc.handleUnaryCall<Empty, FullChannelStates>;
     /**
-     * @generated from protobuf rpc: GetChannelStateByParticipants(com.vector.ChannelStateByParticipantsRequest) returns (com.vector.FullChannelStateOrUndefined);
+     * @generated from protobuf rpc: GetChannelStateByParticipants(com.vector.ChannelStateByParticipantsRequest) returns (com.vector.FullChannelState);
      */
-    getChannelStateByParticipants: grpc.handleUnaryCall<ChannelStateByParticipantsRequest, FullChannelStateOrUndefined>;
+    getChannelStateByParticipants: grpc.handleUnaryCall<ChannelStateByParticipantsRequest, FullChannelState>;
     /**
-     * @generated from protobuf rpc: TransferState(com.vector.TransfersRequest) returns (com.vector.TransferStateReply);
+     * @generated from protobuf rpc: GetTransferState(com.vector.TransfersRequest) returns (com.vector.FullTransferState);
      */
-    transferState: grpc.handleUnaryCall<TransfersRequest, TransferStateReply>;
+    getTransferState: grpc.handleUnaryCall<TransfersRequest, FullTransferState>;
     /**
-     * @generated from protobuf rpc: GetTransferStateByRoutingId(com.vector.TransferStateByRoutingIdRequest) returns (com.vector.FullTransferStateOrUndefined);
+     * @generated from protobuf rpc: GetTransferStateByRoutingId(com.vector.TransferStateByRoutingIdRequest) returns (com.vector.FullTransferState);
      */
-    getTransferStateByRoutingId: grpc.handleUnaryCall<TransferStateByRoutingIdRequest, FullTransferStateOrUndefined>;
+    getTransferStateByRoutingId: grpc.handleUnaryCall<TransferStateByRoutingIdRequest, FullTransferState>;
     /**
      * @generated from protobuf rpc: GetTransferStatesByRoutingId(com.vector.TransferStatesByRoutingIdRequest) returns (com.vector.FullTransferStates);
      */
@@ -93,15 +92,23 @@ export interface IServerNodeService extends grpc.UntypedServiceImplementation {
      */
     getActiveTransfers: grpc.handleUnaryCall<ActiveTransfersRequest, FullTransferStates>;
     /**
-     * rpc GetChannelStates (ChannelStatesRequest) returns (FullTransferStates) {}
-     *
      * @generated from protobuf rpc: GetRegisteredTransfers(com.vector.RegisteredTransfersRequest) returns (com.vector.RegisteredTransfers);
      */
     getRegisteredTransfers: grpc.handleUnaryCall<RegisteredTransfersRequest, RegisteredTransfers>;
     /**
-     * @generated from protobuf rpc: Setup(com.vector.SetupRequest) returns (com.vector.SetupReply);
+     * external interface for server node functionality
+     *
+     * @generated from protobuf rpc: ClearStore(com.vector.ClearStoreRequest) returns (com.vector.Empty);
      */
-    setup: grpc.handleUnaryCall<SetupRequest, SetupReply>;
+    clearStore: grpc.handleUnaryCall<ClearStoreRequest, Empty>;
+    /**
+     * @generated from protobuf rpc: CreateNode(com.vector.CreateNodeRequest) returns (com.vector.CreateNodeReply);
+     */
+    createNode: grpc.handleUnaryCall<CreateNodeRequest, CreateNodeReply>;
+    /**
+     * @generated from protobuf rpc: Setup(com.vector.SetupRequest) returns (com.vector.FullChannelState);
+     */
+    setup: grpc.handleUnaryCall<SetupRequest, FullChannelState>;
     /**
      * @generated from protobuf rpc: InternalSetup(com.vector.SetupRequest) returns (com.vector.FullChannelState);
      */
@@ -115,73 +122,88 @@ export interface IServerNodeService extends grpc.UntypedServiceImplementation {
      */
     sendDepositTx: grpc.handleUnaryCall<DepositTxRequest, TxHash>;
     /**
-     * @generated from protobuf rpc: SendDisputeChannelTx(com.vector.ChannelResquest) returns (com.vector.TxHash);
+     * @generated from protobuf rpc: SendRequestCollateral(com.vector.DepositRequest) returns (com.vector.FullChannelState);
      */
-    sendDisputeChannelTx: grpc.handleUnaryCall<ChannelResquest, TxHash>;
+    sendRequestCollateral: grpc.handleUnaryCall<DepositRequest, FullChannelState>;
     /**
-     * @generated from protobuf rpc: SendDefundChannelTx(com.vector.ChannelResquest) returns (com.vector.TxHash);
+     * @generated from protobuf rpc: CreateTransfer(com.vector.ConditionalTransferRequest) returns (com.vector.FullChannelState);
      */
-    sendDefundChannelTx: grpc.handleUnaryCall<ChannelResquest, TxHash>;
+    createTransfer: grpc.handleUnaryCall<ConditionalTransferRequest, FullChannelState>;
     /**
-     * @generated from protobuf rpc: SendDisputeTransfer(com.vector.TransferResquest) returns (com.vector.TxHash);
+     * @generated from protobuf rpc: ResolveTransfer(com.vector.ResolveTransferRequest) returns (com.vector.FullChannelState);
      */
-    sendDisputeTransfer: grpc.handleUnaryCall<TransferResquest, TxHash>;
+    resolveTransfer: grpc.handleUnaryCall<ResolveTransferRequest, FullChannelState>;
     /**
-     * @generated from protobuf rpc: SendDefundTransfer(com.vector.TransferResquest) returns (com.vector.TxHash);
+     * @generated from protobuf rpc: Withdraw(com.vector.WithdrawRequest) returns (com.vector.FullChannelState);
      */
-    sendDefundTransfer: grpc.handleUnaryCall<TransferResquest, TxHash>;
+    withdraw: grpc.handleUnaryCall<WithdrawRequest, FullChannelState>;
     /**
-     * @generated from protobuf rpc: SendRequestCollateral(com.vector.DepositRequest) returns (com.vector.CollateralReply);
+     * @generated from protobuf rpc: RestoreState(com.vector.RestoreStateRequest) returns (com.vector.FullChannelState);
      */
-    sendRequestCollateral: grpc.handleUnaryCall<DepositRequest, CollateralReply>;
+    restoreState: grpc.handleUnaryCall<RestoreStateRequest, FullChannelState>;
     /**
-     * @generated from protobuf rpc: CreateTransfer(com.vector.ConditionalTransferRequest) returns (com.vector.ResolveTransferReply);
-     */
-    createTransfer: grpc.handleUnaryCall<ConditionalTransferRequest, ResolveTransferReply>;
-    /**
-     * @generated from protobuf rpc: ResolveTransfer(com.vector.ResolveTransferRequest) returns (com.vector.ResolveTransferReply);
-     */
-    resolveTransfer: grpc.handleUnaryCall<ResolveTransferRequest, ResolveTransferReply>;
-    /**
-     * @generated from protobuf rpc: Withdraw(com.vector.WithdrawRequest) returns (com.vector.WithdrawReply);
-     */
-    withdraw: grpc.handleUnaryCall<WithdrawRequest, WithdrawReply>;
-    /**
-     * @generated from protobuf rpc: RestoreState(com.vector.RestoreStateRequest) returns (com.vector.RestoreStateReply);
-     */
-    restoreState: grpc.handleUnaryCall<RestoreStateRequest, RestoreStateReply>;
-    /**
-     *   [ChannelRpcMethods.chan_restoreState]: FullChannelState;
-     *   { schema: { body: NodeParams.RestoreStateSchema, response: NodeResponses.RestoreStateSchema } },
-     *   NodeResponses.RestoreState
+     * dispute methods
      *
-     * @generated from protobuf rpc: Subscribe(com.vector.SubscribeRequest) returns (com.vector.SubscribeReply);
+     * @generated from protobuf rpc: SendDisputeChannelTx(com.vector.ChannelStateRequest) returns (com.vector.TxHash);
      */
-    subscribe: grpc.handleUnaryCall<SubscribeRequest, SubscribeReply>;
+    sendDisputeChannelTx: grpc.handleUnaryCall<ChannelStateRequest, TxHash>;
     /**
-     *   [ChannelRpcMethods.chan_subscribe]: { event: string; once: boolean };
-     *   body: NodeParams.RegisterListenerSchema
+     * @generated from protobuf rpc: SendDefundChannelTx(com.vector.ChannelStateRequest) returns (com.vector.TxHash);
+     */
+    sendDefundChannelTx: grpc.handleUnaryCall<ChannelStateRequest, TxHash>;
+    /**
+     * @generated from protobuf rpc: SendDisputeTransfer(com.vector.TransferRequest) returns (com.vector.TxHash);
+     */
+    sendDisputeTransfer: grpc.handleUnaryCall<TransferRequest, TxHash>;
+    /**
+     * @generated from protobuf rpc: SendDefundTransfer(com.vector.TransferRequest) returns (com.vector.TxHash);
+     */
+    sendDefundTransfer: grpc.handleUnaryCall<TransferRequest, TxHash>;
+    /**
+     * subscriptions - server to client stream
      *
-     * rpc GetUrl (GetUrlRequest) returns (ListenerSchemaReply) {}
+     * @generated from protobuf rpc: IsAliveStream(com.vector.Empty) returns (stream com.vector.IsAlivePayload);
+     */
+    isAliveStream: grpc.handleServerStreamingCall<Empty, IsAlivePayload>;
+    /**
+     * @generated from protobuf rpc: SetupStream(com.vector.Empty) returns (stream com.vector.SetupPayload);
+     */
+    setupStream: grpc.handleServerStreamingCall<Empty, SetupPayload>;
+    /**
+     * @generated from protobuf rpc: ConditionalTransferCreatedStream(com.vector.Empty) returns (stream com.vector.ConditionalTransferCreatedPayload);
+     */
+    conditionalTransferCreatedStream: grpc.handleServerStreamingCall<Empty, ConditionalTransferCreatedPayload>;
+    /**
+     * @generated from protobuf rpc: ConditionalTransferResolvedStream(com.vector.Empty) returns (stream com.vector.ConditionalTransferCreatedPayload);
+     */
+    conditionalTransferResolvedStream: grpc.handleServerStreamingCall<Empty, ConditionalTransferCreatedPayload>;
+    /**
+     * @generated from protobuf rpc: DepositReconciledStream(com.vector.Empty) returns (stream com.vector.DepositReconciledPayload);
+     */
+    depositReconciledStream: grpc.handleServerStreamingCall<Empty, DepositReconciledPayload>;
+    /**
+     * @generated from protobuf rpc: RequestCollateralStream(com.vector.Empty) returns (stream com.vector.RequestCollateralPayload);
+     */
+    requestCollateralStream: grpc.handleServerStreamingCall<Empty, RequestCollateralPayload>;
+    /**
+     * @generated from protobuf rpc: WithdrawalCreatedStream(com.vector.Empty) returns (stream com.vector.WithdrawalCreatedPayload);
+     */
+    withdrawalCreatedStream: grpc.handleServerStreamingCall<Empty, WithdrawalCreatedPayload>;
+    /**
+     * @generated from protobuf rpc: WithdrawalResolvedStream(com.vector.Empty) returns (stream com.vector.WithdrawalCreatedPayload);
+     */
+    withdrawalResolvedStream: grpc.handleServerStreamingCall<Empty, WithdrawalCreatedPayload>;
+    /**
+     * @generated from protobuf rpc: WithdrawalReconciledStream(com.vector.Empty) returns (stream com.vector.WithdrawalReconciledPayload);
+     */
+    withdrawalReconciledStream: grpc.handleServerStreamingCall<Empty, WithdrawalReconciledPayload>;
+    /**
+     * @generated from protobuf rpc: RestoreStateStream(com.vector.Empty) returns (stream com.vector.SetupPayload);
+     */
+    restoreStateStream: grpc.handleServerStreamingCall<Empty, SetupPayload>;
+    /**
+     * eth provider pass-through
      *
-     * @generated from protobuf rpc: GetSubscription(com.vector.SubscriptionRequest) returns (com.vector.Subscription);
-     */
-    getSubscription: grpc.handleUnaryCall<SubscriptionRequest, Subscription>;
-    /**
-     * @generated from protobuf rpc: GetSubscriptionWithOnlyPublicIdentifier(com.vector.SubscriptionWithPublicIdentifierRequest) returns (com.vector.SubscriptionWithPublicIdentifierReply);
-     */
-    getSubscriptionWithOnlyPublicIdentifier: grpc.handleUnaryCall<SubscriptionWithPublicIdentifierRequest, SubscriptionWithPublicIdentifierReply>;
-    /**
-     *  NodeParams.GetListenerSchema,
-     *
-     * @generated from protobuf rpc: ClearStore(com.vector.ClearStoreRequest) returns (com.vector.ClearStoreReply);
-     */
-    clearStore: grpc.handleUnaryCall<ClearStoreRequest, ClearStoreReply>;
-    /**
-     * @generated from protobuf rpc: CreateNode(com.vector.CreateNodeRequest) returns (com.vector.CreateNodeReply);
-     */
-    createNode: grpc.handleUnaryCall<CreateNodeRequest, CreateNodeReply>;
-    /**
      * @generated from protobuf rpc: EthProvider(com.vector.EthProviderRequest) returns (com.vector.EthProviderReply);
      */
     ethProvider: grpc.handleUnaryCall<EthProviderRequest, EthProviderReply>;
@@ -203,9 +225,9 @@ export const serverNodeServiceDefinition: grpc.ServiceDefinition<IServerNodeServ
         originalName: "GetPing",
         requestStream: false,
         responseStream: false,
-        responseDeserialize: bytes => Pong.fromBinary(bytes),
+        responseDeserialize: bytes => GenericMessageResponse.fromBinary(bytes),
         requestDeserialize: bytes => Empty.fromBinary(bytes),
-        responseSerialize: value => Buffer.from(Pong.toBinary(value)),
+        responseSerialize: value => Buffer.from(GenericMessageResponse.toBinary(value)),
         requestSerialize: value => Buffer.from(Empty.toBinary(value))
     },
     getConfig: {
@@ -224,18 +246,18 @@ export const serverNodeServiceDefinition: grpc.ServiceDefinition<IServerNodeServ
         requestStream: false,
         responseStream: false,
         responseDeserialize: bytes => Status.fromBinary(bytes),
-        requestDeserialize: bytes => TPublicIdentifier.fromBinary(bytes),
+        requestDeserialize: bytes => GetStatusRequest.fromBinary(bytes),
         responseSerialize: value => Buffer.from(Status.toBinary(value)),
-        requestSerialize: value => Buffer.from(TPublicIdentifier.toBinary(value))
+        requestSerialize: value => Buffer.from(GetStatusRequest.toBinary(value))
     },
     getChannelState: {
         path: "/com.vector.ServerNodeService/GetChannelState",
         originalName: "GetChannelState",
         requestStream: false,
         responseStream: false,
-        responseDeserialize: bytes => FullChannelStateOrUndefined.fromBinary(bytes),
+        responseDeserialize: bytes => FullChannelState.fromBinary(bytes),
         requestDeserialize: bytes => ChannelStateRequest.fromBinary(bytes),
-        responseSerialize: value => Buffer.from(FullChannelStateOrUndefined.toBinary(value)),
+        responseSerialize: value => Buffer.from(FullChannelState.toBinary(value)),
         requestSerialize: value => Buffer.from(ChannelStateRequest.toBinary(value))
     },
     getChannelStates: {
@@ -253,19 +275,19 @@ export const serverNodeServiceDefinition: grpc.ServiceDefinition<IServerNodeServ
         originalName: "GetChannelStateByParticipants",
         requestStream: false,
         responseStream: false,
-        responseDeserialize: bytes => FullChannelStateOrUndefined.fromBinary(bytes),
+        responseDeserialize: bytes => FullChannelState.fromBinary(bytes),
         requestDeserialize: bytes => ChannelStateByParticipantsRequest.fromBinary(bytes),
-        responseSerialize: value => Buffer.from(FullChannelStateOrUndefined.toBinary(value)),
+        responseSerialize: value => Buffer.from(FullChannelState.toBinary(value)),
         requestSerialize: value => Buffer.from(ChannelStateByParticipantsRequest.toBinary(value))
     },
-    transferState: {
-        path: "/com.vector.ServerNodeService/TransferState",
-        originalName: "TransferState",
+    getTransferState: {
+        path: "/com.vector.ServerNodeService/GetTransferState",
+        originalName: "GetTransferState",
         requestStream: false,
         responseStream: false,
-        responseDeserialize: bytes => TransferStateReply.fromBinary(bytes),
+        responseDeserialize: bytes => FullTransferState.fromBinary(bytes),
         requestDeserialize: bytes => TransfersRequest.fromBinary(bytes),
-        responseSerialize: value => Buffer.from(TransferStateReply.toBinary(value)),
+        responseSerialize: value => Buffer.from(FullTransferState.toBinary(value)),
         requestSerialize: value => Buffer.from(TransfersRequest.toBinary(value))
     },
     getTransferStateByRoutingId: {
@@ -273,9 +295,9 @@ export const serverNodeServiceDefinition: grpc.ServiceDefinition<IServerNodeServ
         originalName: "GetTransferStateByRoutingId",
         requestStream: false,
         responseStream: false,
-        responseDeserialize: bytes => FullTransferStateOrUndefined.fromBinary(bytes),
+        responseDeserialize: bytes => FullTransferState.fromBinary(bytes),
         requestDeserialize: bytes => TransferStateByRoutingIdRequest.fromBinary(bytes),
-        responseSerialize: value => Buffer.from(FullTransferStateOrUndefined.toBinary(value)),
+        responseSerialize: value => Buffer.from(FullTransferState.toBinary(value)),
         requestSerialize: value => Buffer.from(TransferStateByRoutingIdRequest.toBinary(value))
     },
     getTransferStatesByRoutingId: {
@@ -308,14 +330,34 @@ export const serverNodeServiceDefinition: grpc.ServiceDefinition<IServerNodeServ
         responseSerialize: value => Buffer.from(RegisteredTransfers.toBinary(value)),
         requestSerialize: value => Buffer.from(RegisteredTransfersRequest.toBinary(value))
     },
+    clearStore: {
+        path: "/com.vector.ServerNodeService/ClearStore",
+        originalName: "ClearStore",
+        requestStream: false,
+        responseStream: false,
+        responseDeserialize: bytes => Empty.fromBinary(bytes),
+        requestDeserialize: bytes => ClearStoreRequest.fromBinary(bytes),
+        responseSerialize: value => Buffer.from(Empty.toBinary(value)),
+        requestSerialize: value => Buffer.from(ClearStoreRequest.toBinary(value))
+    },
+    createNode: {
+        path: "/com.vector.ServerNodeService/CreateNode",
+        originalName: "CreateNode",
+        requestStream: false,
+        responseStream: false,
+        responseDeserialize: bytes => CreateNodeReply.fromBinary(bytes),
+        requestDeserialize: bytes => CreateNodeRequest.fromBinary(bytes),
+        responseSerialize: value => Buffer.from(CreateNodeReply.toBinary(value)),
+        requestSerialize: value => Buffer.from(CreateNodeRequest.toBinary(value))
+    },
     setup: {
         path: "/com.vector.ServerNodeService/Setup",
         originalName: "Setup",
         requestStream: false,
         responseStream: false,
-        responseDeserialize: bytes => SetupReply.fromBinary(bytes),
+        responseDeserialize: bytes => FullChannelState.fromBinary(bytes),
         requestDeserialize: bytes => SetupRequest.fromBinary(bytes),
-        responseSerialize: value => Buffer.from(SetupReply.toBinary(value)),
+        responseSerialize: value => Buffer.from(FullChannelState.toBinary(value)),
         requestSerialize: value => Buffer.from(SetupRequest.toBinary(value))
     },
     internalSetup: {
@@ -348,54 +390,14 @@ export const serverNodeServiceDefinition: grpc.ServiceDefinition<IServerNodeServ
         responseSerialize: value => Buffer.from(TxHash.toBinary(value)),
         requestSerialize: value => Buffer.from(DepositTxRequest.toBinary(value))
     },
-    sendDisputeChannelTx: {
-        path: "/com.vector.ServerNodeService/SendDisputeChannelTx",
-        originalName: "SendDisputeChannelTx",
-        requestStream: false,
-        responseStream: false,
-        responseDeserialize: bytes => TxHash.fromBinary(bytes),
-        requestDeserialize: bytes => ChannelResquest.fromBinary(bytes),
-        responseSerialize: value => Buffer.from(TxHash.toBinary(value)),
-        requestSerialize: value => Buffer.from(ChannelResquest.toBinary(value))
-    },
-    sendDefundChannelTx: {
-        path: "/com.vector.ServerNodeService/SendDefundChannelTx",
-        originalName: "SendDefundChannelTx",
-        requestStream: false,
-        responseStream: false,
-        responseDeserialize: bytes => TxHash.fromBinary(bytes),
-        requestDeserialize: bytes => ChannelResquest.fromBinary(bytes),
-        responseSerialize: value => Buffer.from(TxHash.toBinary(value)),
-        requestSerialize: value => Buffer.from(ChannelResquest.toBinary(value))
-    },
-    sendDisputeTransfer: {
-        path: "/com.vector.ServerNodeService/SendDisputeTransfer",
-        originalName: "SendDisputeTransfer",
-        requestStream: false,
-        responseStream: false,
-        responseDeserialize: bytes => TxHash.fromBinary(bytes),
-        requestDeserialize: bytes => TransferResquest.fromBinary(bytes),
-        responseSerialize: value => Buffer.from(TxHash.toBinary(value)),
-        requestSerialize: value => Buffer.from(TransferResquest.toBinary(value))
-    },
-    sendDefundTransfer: {
-        path: "/com.vector.ServerNodeService/SendDefundTransfer",
-        originalName: "SendDefundTransfer",
-        requestStream: false,
-        responseStream: false,
-        responseDeserialize: bytes => TxHash.fromBinary(bytes),
-        requestDeserialize: bytes => TransferResquest.fromBinary(bytes),
-        responseSerialize: value => Buffer.from(TxHash.toBinary(value)),
-        requestSerialize: value => Buffer.from(TransferResquest.toBinary(value))
-    },
     sendRequestCollateral: {
         path: "/com.vector.ServerNodeService/SendRequestCollateral",
         originalName: "SendRequestCollateral",
         requestStream: false,
         responseStream: false,
-        responseDeserialize: bytes => CollateralReply.fromBinary(bytes),
+        responseDeserialize: bytes => FullChannelState.fromBinary(bytes),
         requestDeserialize: bytes => DepositRequest.fromBinary(bytes),
-        responseSerialize: value => Buffer.from(CollateralReply.toBinary(value)),
+        responseSerialize: value => Buffer.from(FullChannelState.toBinary(value)),
         requestSerialize: value => Buffer.from(DepositRequest.toBinary(value))
     },
     createTransfer: {
@@ -403,9 +405,9 @@ export const serverNodeServiceDefinition: grpc.ServiceDefinition<IServerNodeServ
         originalName: "CreateTransfer",
         requestStream: false,
         responseStream: false,
-        responseDeserialize: bytes => ResolveTransferReply.fromBinary(bytes),
+        responseDeserialize: bytes => FullChannelState.fromBinary(bytes),
         requestDeserialize: bytes => ConditionalTransferRequest.fromBinary(bytes),
-        responseSerialize: value => Buffer.from(ResolveTransferReply.toBinary(value)),
+        responseSerialize: value => Buffer.from(FullChannelState.toBinary(value)),
         requestSerialize: value => Buffer.from(ConditionalTransferRequest.toBinary(value))
     },
     resolveTransfer: {
@@ -413,9 +415,9 @@ export const serverNodeServiceDefinition: grpc.ServiceDefinition<IServerNodeServ
         originalName: "ResolveTransfer",
         requestStream: false,
         responseStream: false,
-        responseDeserialize: bytes => ResolveTransferReply.fromBinary(bytes),
+        responseDeserialize: bytes => FullChannelState.fromBinary(bytes),
         requestDeserialize: bytes => ResolveTransferRequest.fromBinary(bytes),
-        responseSerialize: value => Buffer.from(ResolveTransferReply.toBinary(value)),
+        responseSerialize: value => Buffer.from(FullChannelState.toBinary(value)),
         requestSerialize: value => Buffer.from(ResolveTransferRequest.toBinary(value))
     },
     withdraw: {
@@ -423,9 +425,9 @@ export const serverNodeServiceDefinition: grpc.ServiceDefinition<IServerNodeServ
         originalName: "Withdraw",
         requestStream: false,
         responseStream: false,
-        responseDeserialize: bytes => WithdrawReply.fromBinary(bytes),
+        responseDeserialize: bytes => FullChannelState.fromBinary(bytes),
         requestDeserialize: bytes => WithdrawRequest.fromBinary(bytes),
-        responseSerialize: value => Buffer.from(WithdrawReply.toBinary(value)),
+        responseSerialize: value => Buffer.from(FullChannelState.toBinary(value)),
         requestSerialize: value => Buffer.from(WithdrawRequest.toBinary(value))
     },
     restoreState: {
@@ -433,60 +435,150 @@ export const serverNodeServiceDefinition: grpc.ServiceDefinition<IServerNodeServ
         originalName: "RestoreState",
         requestStream: false,
         responseStream: false,
-        responseDeserialize: bytes => RestoreStateReply.fromBinary(bytes),
+        responseDeserialize: bytes => FullChannelState.fromBinary(bytes),
         requestDeserialize: bytes => RestoreStateRequest.fromBinary(bytes),
-        responseSerialize: value => Buffer.from(RestoreStateReply.toBinary(value)),
+        responseSerialize: value => Buffer.from(FullChannelState.toBinary(value)),
         requestSerialize: value => Buffer.from(RestoreStateRequest.toBinary(value))
     },
-    subscribe: {
-        path: "/com.vector.ServerNodeService/Subscribe",
-        originalName: "Subscribe",
+    sendDisputeChannelTx: {
+        path: "/com.vector.ServerNodeService/SendDisputeChannelTx",
+        originalName: "SendDisputeChannelTx",
         requestStream: false,
         responseStream: false,
-        responseDeserialize: bytes => SubscribeReply.fromBinary(bytes),
-        requestDeserialize: bytes => SubscribeRequest.fromBinary(bytes),
-        responseSerialize: value => Buffer.from(SubscribeReply.toBinary(value)),
-        requestSerialize: value => Buffer.from(SubscribeRequest.toBinary(value))
+        responseDeserialize: bytes => TxHash.fromBinary(bytes),
+        requestDeserialize: bytes => ChannelStateRequest.fromBinary(bytes),
+        responseSerialize: value => Buffer.from(TxHash.toBinary(value)),
+        requestSerialize: value => Buffer.from(ChannelStateRequest.toBinary(value))
     },
-    getSubscription: {
-        path: "/com.vector.ServerNodeService/GetSubscription",
-        originalName: "GetSubscription",
+    sendDefundChannelTx: {
+        path: "/com.vector.ServerNodeService/SendDefundChannelTx",
+        originalName: "SendDefundChannelTx",
         requestStream: false,
         responseStream: false,
-        responseDeserialize: bytes => Subscription.fromBinary(bytes),
-        requestDeserialize: bytes => SubscriptionRequest.fromBinary(bytes),
-        responseSerialize: value => Buffer.from(Subscription.toBinary(value)),
-        requestSerialize: value => Buffer.from(SubscriptionRequest.toBinary(value))
+        responseDeserialize: bytes => TxHash.fromBinary(bytes),
+        requestDeserialize: bytes => ChannelStateRequest.fromBinary(bytes),
+        responseSerialize: value => Buffer.from(TxHash.toBinary(value)),
+        requestSerialize: value => Buffer.from(ChannelStateRequest.toBinary(value))
     },
-    getSubscriptionWithOnlyPublicIdentifier: {
-        path: "/com.vector.ServerNodeService/GetSubscriptionWithOnlyPublicIdentifier",
-        originalName: "GetSubscriptionWithOnlyPublicIdentifier",
+    sendDisputeTransfer: {
+        path: "/com.vector.ServerNodeService/SendDisputeTransfer",
+        originalName: "SendDisputeTransfer",
         requestStream: false,
         responseStream: false,
-        responseDeserialize: bytes => SubscriptionWithPublicIdentifierReply.fromBinary(bytes),
-        requestDeserialize: bytes => SubscriptionWithPublicIdentifierRequest.fromBinary(bytes),
-        responseSerialize: value => Buffer.from(SubscriptionWithPublicIdentifierReply.toBinary(value)),
-        requestSerialize: value => Buffer.from(SubscriptionWithPublicIdentifierRequest.toBinary(value))
+        responseDeserialize: bytes => TxHash.fromBinary(bytes),
+        requestDeserialize: bytes => TransferRequest.fromBinary(bytes),
+        responseSerialize: value => Buffer.from(TxHash.toBinary(value)),
+        requestSerialize: value => Buffer.from(TransferRequest.toBinary(value))
     },
-    clearStore: {
-        path: "/com.vector.ServerNodeService/ClearStore",
-        originalName: "ClearStore",
+    sendDefundTransfer: {
+        path: "/com.vector.ServerNodeService/SendDefundTransfer",
+        originalName: "SendDefundTransfer",
         requestStream: false,
         responseStream: false,
-        responseDeserialize: bytes => ClearStoreReply.fromBinary(bytes),
-        requestDeserialize: bytes => ClearStoreRequest.fromBinary(bytes),
-        responseSerialize: value => Buffer.from(ClearStoreReply.toBinary(value)),
-        requestSerialize: value => Buffer.from(ClearStoreRequest.toBinary(value))
+        responseDeserialize: bytes => TxHash.fromBinary(bytes),
+        requestDeserialize: bytes => TransferRequest.fromBinary(bytes),
+        responseSerialize: value => Buffer.from(TxHash.toBinary(value)),
+        requestSerialize: value => Buffer.from(TransferRequest.toBinary(value))
     },
-    createNode: {
-        path: "/com.vector.ServerNodeService/CreateNode",
-        originalName: "CreateNode",
+    isAliveStream: {
+        path: "/com.vector.ServerNodeService/IsAliveStream",
+        originalName: "IsAliveStream",
         requestStream: false,
-        responseStream: false,
-        responseDeserialize: bytes => CreateNodeReply.fromBinary(bytes),
-        requestDeserialize: bytes => CreateNodeRequest.fromBinary(bytes),
-        responseSerialize: value => Buffer.from(CreateNodeReply.toBinary(value)),
-        requestSerialize: value => Buffer.from(CreateNodeRequest.toBinary(value))
+        responseStream: true,
+        responseDeserialize: bytes => IsAlivePayload.fromBinary(bytes),
+        requestDeserialize: bytes => Empty.fromBinary(bytes),
+        responseSerialize: value => Buffer.from(IsAlivePayload.toBinary(value)),
+        requestSerialize: value => Buffer.from(Empty.toBinary(value))
+    },
+    setupStream: {
+        path: "/com.vector.ServerNodeService/SetupStream",
+        originalName: "SetupStream",
+        requestStream: false,
+        responseStream: true,
+        responseDeserialize: bytes => SetupPayload.fromBinary(bytes),
+        requestDeserialize: bytes => Empty.fromBinary(bytes),
+        responseSerialize: value => Buffer.from(SetupPayload.toBinary(value)),
+        requestSerialize: value => Buffer.from(Empty.toBinary(value))
+    },
+    conditionalTransferCreatedStream: {
+        path: "/com.vector.ServerNodeService/ConditionalTransferCreatedStream",
+        originalName: "ConditionalTransferCreatedStream",
+        requestStream: false,
+        responseStream: true,
+        responseDeserialize: bytes => ConditionalTransferCreatedPayload.fromBinary(bytes),
+        requestDeserialize: bytes => Empty.fromBinary(bytes),
+        responseSerialize: value => Buffer.from(ConditionalTransferCreatedPayload.toBinary(value)),
+        requestSerialize: value => Buffer.from(Empty.toBinary(value))
+    },
+    conditionalTransferResolvedStream: {
+        path: "/com.vector.ServerNodeService/ConditionalTransferResolvedStream",
+        originalName: "ConditionalTransferResolvedStream",
+        requestStream: false,
+        responseStream: true,
+        responseDeserialize: bytes => ConditionalTransferCreatedPayload.fromBinary(bytes),
+        requestDeserialize: bytes => Empty.fromBinary(bytes),
+        responseSerialize: value => Buffer.from(ConditionalTransferCreatedPayload.toBinary(value)),
+        requestSerialize: value => Buffer.from(Empty.toBinary(value))
+    },
+    depositReconciledStream: {
+        path: "/com.vector.ServerNodeService/DepositReconciledStream",
+        originalName: "DepositReconciledStream",
+        requestStream: false,
+        responseStream: true,
+        responseDeserialize: bytes => DepositReconciledPayload.fromBinary(bytes),
+        requestDeserialize: bytes => Empty.fromBinary(bytes),
+        responseSerialize: value => Buffer.from(DepositReconciledPayload.toBinary(value)),
+        requestSerialize: value => Buffer.from(Empty.toBinary(value))
+    },
+    requestCollateralStream: {
+        path: "/com.vector.ServerNodeService/RequestCollateralStream",
+        originalName: "RequestCollateralStream",
+        requestStream: false,
+        responseStream: true,
+        responseDeserialize: bytes => RequestCollateralPayload.fromBinary(bytes),
+        requestDeserialize: bytes => Empty.fromBinary(bytes),
+        responseSerialize: value => Buffer.from(RequestCollateralPayload.toBinary(value)),
+        requestSerialize: value => Buffer.from(Empty.toBinary(value))
+    },
+    withdrawalCreatedStream: {
+        path: "/com.vector.ServerNodeService/WithdrawalCreatedStream",
+        originalName: "WithdrawalCreatedStream",
+        requestStream: false,
+        responseStream: true,
+        responseDeserialize: bytes => WithdrawalCreatedPayload.fromBinary(bytes),
+        requestDeserialize: bytes => Empty.fromBinary(bytes),
+        responseSerialize: value => Buffer.from(WithdrawalCreatedPayload.toBinary(value)),
+        requestSerialize: value => Buffer.from(Empty.toBinary(value))
+    },
+    withdrawalResolvedStream: {
+        path: "/com.vector.ServerNodeService/WithdrawalResolvedStream",
+        originalName: "WithdrawalResolvedStream",
+        requestStream: false,
+        responseStream: true,
+        responseDeserialize: bytes => WithdrawalCreatedPayload.fromBinary(bytes),
+        requestDeserialize: bytes => Empty.fromBinary(bytes),
+        responseSerialize: value => Buffer.from(WithdrawalCreatedPayload.toBinary(value)),
+        requestSerialize: value => Buffer.from(Empty.toBinary(value))
+    },
+    withdrawalReconciledStream: {
+        path: "/com.vector.ServerNodeService/WithdrawalReconciledStream",
+        originalName: "WithdrawalReconciledStream",
+        requestStream: false,
+        responseStream: true,
+        responseDeserialize: bytes => WithdrawalReconciledPayload.fromBinary(bytes),
+        requestDeserialize: bytes => Empty.fromBinary(bytes),
+        responseSerialize: value => Buffer.from(WithdrawalReconciledPayload.toBinary(value)),
+        requestSerialize: value => Buffer.from(Empty.toBinary(value))
+    },
+    restoreStateStream: {
+        path: "/com.vector.ServerNodeService/RestoreStateStream",
+        originalName: "RestoreStateStream",
+        requestStream: false,
+        responseStream: true,
+        responseDeserialize: bytes => SetupPayload.fromBinary(bytes),
+        requestDeserialize: bytes => Empty.fromBinary(bytes),
+        responseSerialize: value => Buffer.from(SetupPayload.toBinary(value)),
+        requestSerialize: value => Buffer.from(Empty.toBinary(value))
     },
     ethProvider: {
         path: "/com.vector.ServerNodeService/EthProvider",

@@ -6,88 +6,88 @@ import { ServiceInfo } from "@protobuf-ts/runtime-rpc";
 import { ServerNodeService } from "./servernode";
 import { EthProviderReply } from "./servernode";
 import { EthProviderRequest } from "./servernode";
-import { CreateNodeReply } from "./servernode";
-import { CreateNodeRequest } from "./servernode";
-import { ClearStoreReply } from "./servernode";
-import { ClearStoreRequest } from "./servernode";
-import { SubscriptionWithPublicIdentifierReply } from "./servernode";
-import { SubscriptionWithPublicIdentifierRequest } from "./servernode";
-import { Subscription } from "./servernode";
-import { SubscriptionRequest } from "./servernode";
-import { SubscribeReply } from "./servernode";
-import { SubscribeRequest } from "./servernode";
-import { RestoreStateReply } from "./servernode";
+import { WithdrawalReconciledPayload } from "./servernode";
+import { WithdrawalCreatedPayload } from "./servernode";
+import { RequestCollateralPayload } from "./servernode";
+import { DepositReconciledPayload } from "./servernode";
+import { ConditionalTransferCreatedPayload } from "./servernode";
+import { SetupPayload } from "./servernode";
+import { RpcOutputStreamController } from "@protobuf-ts/runtime-rpc";
+import { IsAlivePayload } from "./servernode";
+import { TransferRequest } from "./servernode";
 import { RestoreStateRequest } from "./servernode";
-import { WithdrawReply } from "./servernode";
 import { WithdrawRequest } from "./servernode";
 import { ResolveTransferRequest } from "./servernode";
-import { ResolveTransferReply } from "./servernode";
 import { ConditionalTransferRequest } from "./servernode";
-import { CollateralReply } from "./servernode";
-import { TransferResquest } from "./servernode";
-import { ChannelResquest } from "./servernode";
 import { TxHash } from "./servernode";
 import { DepositTxRequest } from "./servernode";
 import { DepositRequest } from "./servernode";
-import { FullChannelState } from "./servernode";
-import { SetupReply } from "./servernode";
 import { SetupRequest } from "./servernode";
+import { CreateNodeReply } from "./servernode";
+import { CreateNodeRequest } from "./servernode";
+import { ClearStoreRequest } from "./servernode";
 import { RegisteredTransfers } from "./servernode";
 import { RegisteredTransfersRequest } from "./servernode";
 import { ActiveTransfersRequest } from "./servernode";
 import { FullTransferStates } from "./servernode";
 import { TransferStatesByRoutingIdRequest } from "./servernode";
-import { FullTransferStateOrUndefined } from "./servernode";
 import { TransferStateByRoutingIdRequest } from "./servernode";
-import { TransferStateReply } from "./servernode";
+import { FullTransferState } from "./servernode";
 import { TransfersRequest } from "./servernode";
 import { ChannelStateByParticipantsRequest } from "./servernode";
 import { FullChannelStates } from "./servernode";
-import { FullChannelStateOrUndefined } from "./servernode";
+import { FullChannelState } from "./servernode";
 import { ChannelStateRequest } from "./servernode";
 import { Status } from "./servernode";
-import { TPublicIdentifier } from "./servernode";
+import { GetStatusRequest } from "./servernode";
 import { Configs } from "./servernode";
-import { Pong } from "./servernode";
+import { GenericMessageResponse } from "./servernode";
 import { Empty } from "./servernode";
 import { stackIntercept } from "@protobuf-ts/runtime-rpc";
 import { RpcOptions } from "@protobuf-ts/runtime-rpc";
 /**
+ * Server Node Service
+ * Describes the Vector Server Node's interface
+ *
  * @generated from protobuf service com.vector.ServerNodeService
  */
 export interface IServerNodeServiceClient {
     /**
-     * @generated from protobuf rpc: GetPing(com.vector.Empty) returns (com.vector.Pong);
+     * general metadata getters
+     *
+     * @generated from protobuf rpc: GetPing(com.vector.Empty) returns (com.vector.GenericMessageResponse);
      */
-    getPing(input: Empty, options?: RpcOptions): Promise<Pong>;
+    getPing(input: Empty, options?: RpcOptions): Promise<GenericMessageResponse>;
     /**
      * @generated from protobuf rpc: GetConfig(com.vector.Empty) returns (com.vector.Configs);
      */
     getConfig(input: Empty, options?: RpcOptions): Promise<Configs>;
     /**
-     * @generated from protobuf rpc: GetStatus(com.vector.TPublicIdentifier) returns (com.vector.Status);
+     * @generated from protobuf rpc: GetStatus(com.vector.GetStatusRequest) returns (com.vector.Status);
      */
-    getStatus(input: TPublicIdentifier, options?: RpcOptions): Promise<Status>;
+    getStatus(input: GetStatusRequest, options?: RpcOptions): Promise<Status>;
     /**
-     * @generated from protobuf rpc: GetChannelState(com.vector.ChannelStateRequest) returns (com.vector.FullChannelStateOrUndefined);
+     * channel and transfer state getters
+     *
+     * @generated from protobuf rpc: GetChannelState(com.vector.ChannelStateRequest) returns (com.vector.FullChannelState);
      */
-    getChannelState(input: ChannelStateRequest, options?: RpcOptions): Promise<FullChannelStateOrUndefined>;
+    getChannelState(input: ChannelStateRequest, options?: RpcOptions): Promise<FullChannelState>;
     /**
      * @generated from protobuf rpc: GetChannelStates(com.vector.Empty) returns (com.vector.FullChannelStates);
      */
     getChannelStates(input: Empty, options?: RpcOptions): Promise<FullChannelStates>;
     /**
-     * @generated from protobuf rpc: GetChannelStateByParticipants(com.vector.ChannelStateByParticipantsRequest) returns (com.vector.FullChannelStateOrUndefined);
+     * @generated from protobuf rpc: GetChannelStateByParticipants(com.vector.ChannelStateByParticipantsRequest) returns (com.vector.FullChannelState);
      */
-    getChannelStateByParticipants(input: ChannelStateByParticipantsRequest, options?: RpcOptions): Promise<FullChannelStateOrUndefined>;
+    getChannelStateByParticipants(input: ChannelStateByParticipantsRequest, options?: RpcOptions): Promise<FullChannelState>;
     /**
-     * @generated from protobuf rpc: TransferState(com.vector.TransfersRequest) returns (com.vector.TransferStateReply);
+     * @generated from protobuf rpc: GetTransferState(com.vector.TransfersRequest) returns (com.vector.FullTransferState);
      */
-    transferState(input: TransfersRequest, options?: RpcOptions): Promise<TransferStateReply>;
+    getTransferState(input: TransfersRequest, options?: RpcOptions): Promise<FullTransferState>;
     /**
-     * @generated from protobuf rpc: GetTransferStateByRoutingId(com.vector.TransferStateByRoutingIdRequest) returns (com.vector.FullTransferStateOrUndefined);
+     * @generated from protobuf rpc: GetTransferStateByRoutingId(com.vector.TransferStateByRoutingIdRequest) returns (com.vector.FullTransferState);
      */
-    getTransferStateByRoutingId(input: TransferStateByRoutingIdRequest, options?: RpcOptions): Promise<FullTransferStateOrUndefined>;
+    getTransferStateByRoutingId(input: TransferStateByRoutingIdRequest, options?: RpcOptions): Promise<FullTransferState>;
     /**
      * @generated from protobuf rpc: GetTransferStatesByRoutingId(com.vector.TransferStatesByRoutingIdRequest) returns (com.vector.FullTransferStates);
      */
@@ -97,15 +97,23 @@ export interface IServerNodeServiceClient {
      */
     getActiveTransfers(input: ActiveTransfersRequest, options?: RpcOptions): Promise<FullTransferStates>;
     /**
-     * rpc GetChannelStates (ChannelStatesRequest) returns (FullTransferStates) {}
-     *
      * @generated from protobuf rpc: GetRegisteredTransfers(com.vector.RegisteredTransfersRequest) returns (com.vector.RegisteredTransfers);
      */
     getRegisteredTransfers(input: RegisteredTransfersRequest, options?: RpcOptions): Promise<RegisteredTransfers>;
     /**
-     * @generated from protobuf rpc: Setup(com.vector.SetupRequest) returns (com.vector.SetupReply);
+     * external interface for server node functionality
+     *
+     * @generated from protobuf rpc: ClearStore(com.vector.ClearStoreRequest) returns (com.vector.Empty);
      */
-    setup(input: SetupRequest, options?: RpcOptions): Promise<SetupReply>;
+    clearStore(input: ClearStoreRequest, options?: RpcOptions): Promise<Empty>;
+    /**
+     * @generated from protobuf rpc: CreateNode(com.vector.CreateNodeRequest) returns (com.vector.CreateNodeReply);
+     */
+    createNode(input: CreateNodeRequest, options?: RpcOptions): Promise<CreateNodeReply>;
+    /**
+     * @generated from protobuf rpc: Setup(com.vector.SetupRequest) returns (com.vector.FullChannelState);
+     */
+    setup(input: SetupRequest, options?: RpcOptions): Promise<FullChannelState>;
     /**
      * @generated from protobuf rpc: InternalSetup(com.vector.SetupRequest) returns (com.vector.FullChannelState);
      */
@@ -119,78 +127,96 @@ export interface IServerNodeServiceClient {
      */
     sendDepositTx(input: DepositTxRequest, options?: RpcOptions): Promise<TxHash>;
     /**
-     * @generated from protobuf rpc: SendDisputeChannelTx(com.vector.ChannelResquest) returns (com.vector.TxHash);
+     * @generated from protobuf rpc: SendRequestCollateral(com.vector.DepositRequest) returns (com.vector.FullChannelState);
      */
-    sendDisputeChannelTx(input: ChannelResquest, options?: RpcOptions): Promise<TxHash>;
+    sendRequestCollateral(input: DepositRequest, options?: RpcOptions): Promise<FullChannelState>;
     /**
-     * @generated from protobuf rpc: SendDefundChannelTx(com.vector.ChannelResquest) returns (com.vector.TxHash);
+     * @generated from protobuf rpc: CreateTransfer(com.vector.ConditionalTransferRequest) returns (com.vector.FullChannelState);
      */
-    sendDefundChannelTx(input: ChannelResquest, options?: RpcOptions): Promise<TxHash>;
+    createTransfer(input: ConditionalTransferRequest, options?: RpcOptions): Promise<FullChannelState>;
     /**
-     * @generated from protobuf rpc: SendDisputeTransfer(com.vector.TransferResquest) returns (com.vector.TxHash);
+     * @generated from protobuf rpc: ResolveTransfer(com.vector.ResolveTransferRequest) returns (com.vector.FullChannelState);
      */
-    sendDisputeTransfer(input: TransferResquest, options?: RpcOptions): Promise<TxHash>;
+    resolveTransfer(input: ResolveTransferRequest, options?: RpcOptions): Promise<FullChannelState>;
     /**
-     * @generated from protobuf rpc: SendDefundTransfer(com.vector.TransferResquest) returns (com.vector.TxHash);
+     * @generated from protobuf rpc: Withdraw(com.vector.WithdrawRequest) returns (com.vector.FullChannelState);
      */
-    sendDefundTransfer(input: TransferResquest, options?: RpcOptions): Promise<TxHash>;
+    withdraw(input: WithdrawRequest, options?: RpcOptions): Promise<FullChannelState>;
     /**
-     * @generated from protobuf rpc: SendRequestCollateral(com.vector.DepositRequest) returns (com.vector.CollateralReply);
+     * @generated from protobuf rpc: RestoreState(com.vector.RestoreStateRequest) returns (com.vector.FullChannelState);
      */
-    sendRequestCollateral(input: DepositRequest, options?: RpcOptions): Promise<CollateralReply>;
+    restoreState(input: RestoreStateRequest, options?: RpcOptions): Promise<FullChannelState>;
     /**
-     * @generated from protobuf rpc: CreateTransfer(com.vector.ConditionalTransferRequest) returns (com.vector.ResolveTransferReply);
-     */
-    createTransfer(input: ConditionalTransferRequest, options?: RpcOptions): Promise<ResolveTransferReply>;
-    /**
-     * @generated from protobuf rpc: ResolveTransfer(com.vector.ResolveTransferRequest) returns (com.vector.ResolveTransferReply);
-     */
-    resolveTransfer(input: ResolveTransferRequest, options?: RpcOptions): Promise<ResolveTransferReply>;
-    /**
-     * @generated from protobuf rpc: Withdraw(com.vector.WithdrawRequest) returns (com.vector.WithdrawReply);
-     */
-    withdraw(input: WithdrawRequest, options?: RpcOptions): Promise<WithdrawReply>;
-    /**
-     * @generated from protobuf rpc: RestoreState(com.vector.RestoreStateRequest) returns (com.vector.RestoreStateReply);
-     */
-    restoreState(input: RestoreStateRequest, options?: RpcOptions): Promise<RestoreStateReply>;
-    /**
-     *   [ChannelRpcMethods.chan_restoreState]: FullChannelState;
-     *   { schema: { body: NodeParams.RestoreStateSchema, response: NodeResponses.RestoreStateSchema } },
-     *   NodeResponses.RestoreState
+     * dispute methods
      *
-     * @generated from protobuf rpc: Subscribe(com.vector.SubscribeRequest) returns (com.vector.SubscribeReply);
+     * @generated from protobuf rpc: SendDisputeChannelTx(com.vector.ChannelStateRequest) returns (com.vector.TxHash);
      */
-    subscribe(input: SubscribeRequest, options?: RpcOptions): Promise<SubscribeReply>;
+    sendDisputeChannelTx(input: ChannelStateRequest, options?: RpcOptions): Promise<TxHash>;
     /**
-     *   [ChannelRpcMethods.chan_subscribe]: { event: string; once: boolean };
-     *   body: NodeParams.RegisterListenerSchema
+     * @generated from protobuf rpc: SendDefundChannelTx(com.vector.ChannelStateRequest) returns (com.vector.TxHash);
+     */
+    sendDefundChannelTx(input: ChannelStateRequest, options?: RpcOptions): Promise<TxHash>;
+    /**
+     * @generated from protobuf rpc: SendDisputeTransfer(com.vector.TransferRequest) returns (com.vector.TxHash);
+     */
+    sendDisputeTransfer(input: TransferRequest, options?: RpcOptions): Promise<TxHash>;
+    /**
+     * @generated from protobuf rpc: SendDefundTransfer(com.vector.TransferRequest) returns (com.vector.TxHash);
+     */
+    sendDefundTransfer(input: TransferRequest, options?: RpcOptions): Promise<TxHash>;
+    /**
+     * subscriptions - server to client stream
      *
-     * rpc GetUrl (GetUrlRequest) returns (ListenerSchemaReply) {}
+     * @generated from protobuf rpc: IsAliveStream(com.vector.Empty) returns (stream com.vector.IsAlivePayload);
+     */
+    isAliveStream(input: Empty, options?: RpcOptions): AsyncIterable<IsAlivePayload>;
+    /**
+     * @generated from protobuf rpc: SetupStream(com.vector.Empty) returns (stream com.vector.SetupPayload);
+     */
+    setupStream(input: Empty, options?: RpcOptions): AsyncIterable<SetupPayload>;
+    /**
+     * @generated from protobuf rpc: ConditionalTransferCreatedStream(com.vector.Empty) returns (stream com.vector.ConditionalTransferCreatedPayload);
+     */
+    conditionalTransferCreatedStream(input: Empty, options?: RpcOptions): AsyncIterable<ConditionalTransferCreatedPayload>;
+    /**
+     * @generated from protobuf rpc: ConditionalTransferResolvedStream(com.vector.Empty) returns (stream com.vector.ConditionalTransferCreatedPayload);
+     */
+    conditionalTransferResolvedStream(input: Empty, options?: RpcOptions): AsyncIterable<ConditionalTransferCreatedPayload>;
+    /**
+     * @generated from protobuf rpc: DepositReconciledStream(com.vector.Empty) returns (stream com.vector.DepositReconciledPayload);
+     */
+    depositReconciledStream(input: Empty, options?: RpcOptions): AsyncIterable<DepositReconciledPayload>;
+    /**
+     * @generated from protobuf rpc: RequestCollateralStream(com.vector.Empty) returns (stream com.vector.RequestCollateralPayload);
+     */
+    requestCollateralStream(input: Empty, options?: RpcOptions): AsyncIterable<RequestCollateralPayload>;
+    /**
+     * @generated from protobuf rpc: WithdrawalCreatedStream(com.vector.Empty) returns (stream com.vector.WithdrawalCreatedPayload);
+     */
+    withdrawalCreatedStream(input: Empty, options?: RpcOptions): AsyncIterable<WithdrawalCreatedPayload>;
+    /**
+     * @generated from protobuf rpc: WithdrawalResolvedStream(com.vector.Empty) returns (stream com.vector.WithdrawalCreatedPayload);
+     */
+    withdrawalResolvedStream(input: Empty, options?: RpcOptions): AsyncIterable<WithdrawalCreatedPayload>;
+    /**
+     * @generated from protobuf rpc: WithdrawalReconciledStream(com.vector.Empty) returns (stream com.vector.WithdrawalReconciledPayload);
+     */
+    withdrawalReconciledStream(input: Empty, options?: RpcOptions): AsyncIterable<WithdrawalReconciledPayload>;
+    /**
+     * @generated from protobuf rpc: RestoreStateStream(com.vector.Empty) returns (stream com.vector.SetupPayload);
+     */
+    restoreStateStream(input: Empty, options?: RpcOptions): AsyncIterable<SetupPayload>;
+    /**
+     * eth provider pass-through
      *
-     * @generated from protobuf rpc: GetSubscription(com.vector.SubscriptionRequest) returns (com.vector.Subscription);
-     */
-    getSubscription(input: SubscriptionRequest, options?: RpcOptions): Promise<Subscription>;
-    /**
-     * @generated from protobuf rpc: GetSubscriptionWithOnlyPublicIdentifier(com.vector.SubscriptionWithPublicIdentifierRequest) returns (com.vector.SubscriptionWithPublicIdentifierReply);
-     */
-    getSubscriptionWithOnlyPublicIdentifier(input: SubscriptionWithPublicIdentifierRequest, options?: RpcOptions): Promise<SubscriptionWithPublicIdentifierReply>;
-    /**
-     *  NodeParams.GetListenerSchema,
-     *
-     * @generated from protobuf rpc: ClearStore(com.vector.ClearStoreRequest) returns (com.vector.ClearStoreReply);
-     */
-    clearStore(input: ClearStoreRequest, options?: RpcOptions): Promise<ClearStoreReply>;
-    /**
-     * @generated from protobuf rpc: CreateNode(com.vector.CreateNodeRequest) returns (com.vector.CreateNodeReply);
-     */
-    createNode(input: CreateNodeRequest, options?: RpcOptions): Promise<CreateNodeReply>;
-    /**
      * @generated from protobuf rpc: EthProvider(com.vector.EthProviderRequest) returns (com.vector.EthProviderReply);
      */
     ethProvider(input: EthProviderRequest, options?: RpcOptions): Promise<EthProviderReply>;
 }
 /**
+ * Server Node Service
+ * Describes the Vector Server Node's interface
+ *
  * @generated from protobuf service com.vector.ServerNodeService
  */
 export class ServerNodeServiceClient implements IServerNodeServiceClient, ServiceInfo {
@@ -200,11 +226,13 @@ export class ServerNodeServiceClient implements IServerNodeServiceClient, Servic
     constructor(private readonly _transport: RpcTransport) {
     }
     /**
-     * @generated from protobuf rpc: GetPing(com.vector.Empty) returns (com.vector.Pong);
+     * general metadata getters
+     *
+     * @generated from protobuf rpc: GetPing(com.vector.Empty) returns (com.vector.GenericMessageResponse);
      */
-    getPing(input: Empty, options?: RpcOptions): Promise<Pong> {
+    getPing(input: Empty, options?: RpcOptions): Promise<GenericMessageResponse> {
         const method = this.methods[0], opt = this._transport.mergeOptions(options);
-        const call = stackIntercept<Empty, Pong>("unary", this._transport, method, opt, input);
+        const call = stackIntercept<Empty, GenericMessageResponse>("unary", this._transport, method, opt, input);
         return Promise.resolve(call.then(finished => finished.response));
     }
     /**
@@ -216,19 +244,21 @@ export class ServerNodeServiceClient implements IServerNodeServiceClient, Servic
         return Promise.resolve(call.then(finished => finished.response));
     }
     /**
-     * @generated from protobuf rpc: GetStatus(com.vector.TPublicIdentifier) returns (com.vector.Status);
+     * @generated from protobuf rpc: GetStatus(com.vector.GetStatusRequest) returns (com.vector.Status);
      */
-    getStatus(input: TPublicIdentifier, options?: RpcOptions): Promise<Status> {
+    getStatus(input: GetStatusRequest, options?: RpcOptions): Promise<Status> {
         const method = this.methods[2], opt = this._transport.mergeOptions(options);
-        const call = stackIntercept<TPublicIdentifier, Status>("unary", this._transport, method, opt, input);
+        const call = stackIntercept<GetStatusRequest, Status>("unary", this._transport, method, opt, input);
         return Promise.resolve(call.then(finished => finished.response));
     }
     /**
-     * @generated from protobuf rpc: GetChannelState(com.vector.ChannelStateRequest) returns (com.vector.FullChannelStateOrUndefined);
+     * channel and transfer state getters
+     *
+     * @generated from protobuf rpc: GetChannelState(com.vector.ChannelStateRequest) returns (com.vector.FullChannelState);
      */
-    getChannelState(input: ChannelStateRequest, options?: RpcOptions): Promise<FullChannelStateOrUndefined> {
+    getChannelState(input: ChannelStateRequest, options?: RpcOptions): Promise<FullChannelState> {
         const method = this.methods[3], opt = this._transport.mergeOptions(options);
-        const call = stackIntercept<ChannelStateRequest, FullChannelStateOrUndefined>("unary", this._transport, method, opt, input);
+        const call = stackIntercept<ChannelStateRequest, FullChannelState>("unary", this._transport, method, opt, input);
         return Promise.resolve(call.then(finished => finished.response));
     }
     /**
@@ -240,27 +270,27 @@ export class ServerNodeServiceClient implements IServerNodeServiceClient, Servic
         return Promise.resolve(call.then(finished => finished.response));
     }
     /**
-     * @generated from protobuf rpc: GetChannelStateByParticipants(com.vector.ChannelStateByParticipantsRequest) returns (com.vector.FullChannelStateOrUndefined);
+     * @generated from protobuf rpc: GetChannelStateByParticipants(com.vector.ChannelStateByParticipantsRequest) returns (com.vector.FullChannelState);
      */
-    getChannelStateByParticipants(input: ChannelStateByParticipantsRequest, options?: RpcOptions): Promise<FullChannelStateOrUndefined> {
+    getChannelStateByParticipants(input: ChannelStateByParticipantsRequest, options?: RpcOptions): Promise<FullChannelState> {
         const method = this.methods[5], opt = this._transport.mergeOptions(options);
-        const call = stackIntercept<ChannelStateByParticipantsRequest, FullChannelStateOrUndefined>("unary", this._transport, method, opt, input);
+        const call = stackIntercept<ChannelStateByParticipantsRequest, FullChannelState>("unary", this._transport, method, opt, input);
         return Promise.resolve(call.then(finished => finished.response));
     }
     /**
-     * @generated from protobuf rpc: TransferState(com.vector.TransfersRequest) returns (com.vector.TransferStateReply);
+     * @generated from protobuf rpc: GetTransferState(com.vector.TransfersRequest) returns (com.vector.FullTransferState);
      */
-    transferState(input: TransfersRequest, options?: RpcOptions): Promise<TransferStateReply> {
+    getTransferState(input: TransfersRequest, options?: RpcOptions): Promise<FullTransferState> {
         const method = this.methods[6], opt = this._transport.mergeOptions(options);
-        const call = stackIntercept<TransfersRequest, TransferStateReply>("unary", this._transport, method, opt, input);
+        const call = stackIntercept<TransfersRequest, FullTransferState>("unary", this._transport, method, opt, input);
         return Promise.resolve(call.then(finished => finished.response));
     }
     /**
-     * @generated from protobuf rpc: GetTransferStateByRoutingId(com.vector.TransferStateByRoutingIdRequest) returns (com.vector.FullTransferStateOrUndefined);
+     * @generated from protobuf rpc: GetTransferStateByRoutingId(com.vector.TransferStateByRoutingIdRequest) returns (com.vector.FullTransferState);
      */
-    getTransferStateByRoutingId(input: TransferStateByRoutingIdRequest, options?: RpcOptions): Promise<FullTransferStateOrUndefined> {
+    getTransferStateByRoutingId(input: TransferStateByRoutingIdRequest, options?: RpcOptions): Promise<FullTransferState> {
         const method = this.methods[7], opt = this._transport.mergeOptions(options);
-        const call = stackIntercept<TransferStateByRoutingIdRequest, FullTransferStateOrUndefined>("unary", this._transport, method, opt, input);
+        const call = stackIntercept<TransferStateByRoutingIdRequest, FullTransferState>("unary", this._transport, method, opt, input);
         return Promise.resolve(call.then(finished => finished.response));
     }
     /**
@@ -280,8 +310,6 @@ export class ServerNodeServiceClient implements IServerNodeServiceClient, Servic
         return Promise.resolve(call.then(finished => finished.response));
     }
     /**
-     * rpc GetChannelStates (ChannelStatesRequest) returns (FullTransferStates) {}
-     *
      * @generated from protobuf rpc: GetRegisteredTransfers(com.vector.RegisteredTransfersRequest) returns (com.vector.RegisteredTransfers);
      */
     getRegisteredTransfers(input: RegisteredTransfersRequest, options?: RpcOptions): Promise<RegisteredTransfers> {
@@ -290,18 +318,36 @@ export class ServerNodeServiceClient implements IServerNodeServiceClient, Servic
         return Promise.resolve(call.then(finished => finished.response));
     }
     /**
-     * @generated from protobuf rpc: Setup(com.vector.SetupRequest) returns (com.vector.SetupReply);
+     * external interface for server node functionality
+     *
+     * @generated from protobuf rpc: ClearStore(com.vector.ClearStoreRequest) returns (com.vector.Empty);
      */
-    setup(input: SetupRequest, options?: RpcOptions): Promise<SetupReply> {
+    clearStore(input: ClearStoreRequest, options?: RpcOptions): Promise<Empty> {
         const method = this.methods[11], opt = this._transport.mergeOptions(options);
-        const call = stackIntercept<SetupRequest, SetupReply>("unary", this._transport, method, opt, input);
+        const call = stackIntercept<ClearStoreRequest, Empty>("unary", this._transport, method, opt, input);
+        return Promise.resolve(call.then(finished => finished.response));
+    }
+    /**
+     * @generated from protobuf rpc: CreateNode(com.vector.CreateNodeRequest) returns (com.vector.CreateNodeReply);
+     */
+    createNode(input: CreateNodeRequest, options?: RpcOptions): Promise<CreateNodeReply> {
+        const method = this.methods[12], opt = this._transport.mergeOptions(options);
+        const call = stackIntercept<CreateNodeRequest, CreateNodeReply>("unary", this._transport, method, opt, input);
+        return Promise.resolve(call.then(finished => finished.response));
+    }
+    /**
+     * @generated from protobuf rpc: Setup(com.vector.SetupRequest) returns (com.vector.FullChannelState);
+     */
+    setup(input: SetupRequest, options?: RpcOptions): Promise<FullChannelState> {
+        const method = this.methods[13], opt = this._transport.mergeOptions(options);
+        const call = stackIntercept<SetupRequest, FullChannelState>("unary", this._transport, method, opt, input);
         return Promise.resolve(call.then(finished => finished.response));
     }
     /**
      * @generated from protobuf rpc: InternalSetup(com.vector.SetupRequest) returns (com.vector.FullChannelState);
      */
     internalSetup(input: SetupRequest, options?: RpcOptions): Promise<FullChannelState> {
-        const method = this.methods[12], opt = this._transport.mergeOptions(options);
+        const method = this.methods[14], opt = this._transport.mergeOptions(options);
         const call = stackIntercept<SetupRequest, FullChannelState>("unary", this._transport, method, opt, input);
         return Promise.resolve(call.then(finished => finished.response));
     }
@@ -309,7 +355,7 @@ export class ServerNodeServiceClient implements IServerNodeServiceClient, Servic
      * @generated from protobuf rpc: Deposit(com.vector.DepositRequest) returns (com.vector.FullChannelState);
      */
     deposit(input: DepositRequest, options?: RpcOptions): Promise<FullChannelState> {
-        const method = this.methods[13], opt = this._transport.mergeOptions(options);
+        const method = this.methods[15], opt = this._transport.mergeOptions(options);
         const call = stackIntercept<DepositRequest, FullChannelState>("unary", this._transport, method, opt, input);
         return Promise.resolve(call.then(finished => finished.response));
     }
@@ -317,138 +363,203 @@ export class ServerNodeServiceClient implements IServerNodeServiceClient, Servic
      * @generated from protobuf rpc: SendDepositTx(com.vector.DepositTxRequest) returns (com.vector.TxHash);
      */
     sendDepositTx(input: DepositTxRequest, options?: RpcOptions): Promise<TxHash> {
-        const method = this.methods[14], opt = this._transport.mergeOptions(options);
+        const method = this.methods[16], opt = this._transport.mergeOptions(options);
         const call = stackIntercept<DepositTxRequest, TxHash>("unary", this._transport, method, opt, input);
         return Promise.resolve(call.then(finished => finished.response));
     }
     /**
-     * @generated from protobuf rpc: SendDisputeChannelTx(com.vector.ChannelResquest) returns (com.vector.TxHash);
+     * @generated from protobuf rpc: SendRequestCollateral(com.vector.DepositRequest) returns (com.vector.FullChannelState);
      */
-    sendDisputeChannelTx(input: ChannelResquest, options?: RpcOptions): Promise<TxHash> {
-        const method = this.methods[15], opt = this._transport.mergeOptions(options);
-        const call = stackIntercept<ChannelResquest, TxHash>("unary", this._transport, method, opt, input);
-        return Promise.resolve(call.then(finished => finished.response));
-    }
-    /**
-     * @generated from protobuf rpc: SendDefundChannelTx(com.vector.ChannelResquest) returns (com.vector.TxHash);
-     */
-    sendDefundChannelTx(input: ChannelResquest, options?: RpcOptions): Promise<TxHash> {
-        const method = this.methods[16], opt = this._transport.mergeOptions(options);
-        const call = stackIntercept<ChannelResquest, TxHash>("unary", this._transport, method, opt, input);
-        return Promise.resolve(call.then(finished => finished.response));
-    }
-    /**
-     * @generated from protobuf rpc: SendDisputeTransfer(com.vector.TransferResquest) returns (com.vector.TxHash);
-     */
-    sendDisputeTransfer(input: TransferResquest, options?: RpcOptions): Promise<TxHash> {
+    sendRequestCollateral(input: DepositRequest, options?: RpcOptions): Promise<FullChannelState> {
         const method = this.methods[17], opt = this._transport.mergeOptions(options);
-        const call = stackIntercept<TransferResquest, TxHash>("unary", this._transport, method, opt, input);
+        const call = stackIntercept<DepositRequest, FullChannelState>("unary", this._transport, method, opt, input);
         return Promise.resolve(call.then(finished => finished.response));
     }
     /**
-     * @generated from protobuf rpc: SendDefundTransfer(com.vector.TransferResquest) returns (com.vector.TxHash);
+     * @generated from protobuf rpc: CreateTransfer(com.vector.ConditionalTransferRequest) returns (com.vector.FullChannelState);
      */
-    sendDefundTransfer(input: TransferResquest, options?: RpcOptions): Promise<TxHash> {
+    createTransfer(input: ConditionalTransferRequest, options?: RpcOptions): Promise<FullChannelState> {
         const method = this.methods[18], opt = this._transport.mergeOptions(options);
-        const call = stackIntercept<TransferResquest, TxHash>("unary", this._transport, method, opt, input);
+        const call = stackIntercept<ConditionalTransferRequest, FullChannelState>("unary", this._transport, method, opt, input);
         return Promise.resolve(call.then(finished => finished.response));
     }
     /**
-     * @generated from protobuf rpc: SendRequestCollateral(com.vector.DepositRequest) returns (com.vector.CollateralReply);
+     * @generated from protobuf rpc: ResolveTransfer(com.vector.ResolveTransferRequest) returns (com.vector.FullChannelState);
      */
-    sendRequestCollateral(input: DepositRequest, options?: RpcOptions): Promise<CollateralReply> {
+    resolveTransfer(input: ResolveTransferRequest, options?: RpcOptions): Promise<FullChannelState> {
         const method = this.methods[19], opt = this._transport.mergeOptions(options);
-        const call = stackIntercept<DepositRequest, CollateralReply>("unary", this._transport, method, opt, input);
+        const call = stackIntercept<ResolveTransferRequest, FullChannelState>("unary", this._transport, method, opt, input);
         return Promise.resolve(call.then(finished => finished.response));
     }
     /**
-     * @generated from protobuf rpc: CreateTransfer(com.vector.ConditionalTransferRequest) returns (com.vector.ResolveTransferReply);
+     * @generated from protobuf rpc: Withdraw(com.vector.WithdrawRequest) returns (com.vector.FullChannelState);
      */
-    createTransfer(input: ConditionalTransferRequest, options?: RpcOptions): Promise<ResolveTransferReply> {
+    withdraw(input: WithdrawRequest, options?: RpcOptions): Promise<FullChannelState> {
         const method = this.methods[20], opt = this._transport.mergeOptions(options);
-        const call = stackIntercept<ConditionalTransferRequest, ResolveTransferReply>("unary", this._transport, method, opt, input);
+        const call = stackIntercept<WithdrawRequest, FullChannelState>("unary", this._transport, method, opt, input);
         return Promise.resolve(call.then(finished => finished.response));
     }
     /**
-     * @generated from protobuf rpc: ResolveTransfer(com.vector.ResolveTransferRequest) returns (com.vector.ResolveTransferReply);
+     * @generated from protobuf rpc: RestoreState(com.vector.RestoreStateRequest) returns (com.vector.FullChannelState);
      */
-    resolveTransfer(input: ResolveTransferRequest, options?: RpcOptions): Promise<ResolveTransferReply> {
+    restoreState(input: RestoreStateRequest, options?: RpcOptions): Promise<FullChannelState> {
         const method = this.methods[21], opt = this._transport.mergeOptions(options);
-        const call = stackIntercept<ResolveTransferRequest, ResolveTransferReply>("unary", this._transport, method, opt, input);
+        const call = stackIntercept<RestoreStateRequest, FullChannelState>("unary", this._transport, method, opt, input);
         return Promise.resolve(call.then(finished => finished.response));
     }
     /**
-     * @generated from protobuf rpc: Withdraw(com.vector.WithdrawRequest) returns (com.vector.WithdrawReply);
+     * dispute methods
+     *
+     * @generated from protobuf rpc: SendDisputeChannelTx(com.vector.ChannelStateRequest) returns (com.vector.TxHash);
      */
-    withdraw(input: WithdrawRequest, options?: RpcOptions): Promise<WithdrawReply> {
+    sendDisputeChannelTx(input: ChannelStateRequest, options?: RpcOptions): Promise<TxHash> {
         const method = this.methods[22], opt = this._transport.mergeOptions(options);
-        const call = stackIntercept<WithdrawRequest, WithdrawReply>("unary", this._transport, method, opt, input);
+        const call = stackIntercept<ChannelStateRequest, TxHash>("unary", this._transport, method, opt, input);
         return Promise.resolve(call.then(finished => finished.response));
     }
     /**
-     * @generated from protobuf rpc: RestoreState(com.vector.RestoreStateRequest) returns (com.vector.RestoreStateReply);
+     * @generated from protobuf rpc: SendDefundChannelTx(com.vector.ChannelStateRequest) returns (com.vector.TxHash);
      */
-    restoreState(input: RestoreStateRequest, options?: RpcOptions): Promise<RestoreStateReply> {
+    sendDefundChannelTx(input: ChannelStateRequest, options?: RpcOptions): Promise<TxHash> {
         const method = this.methods[23], opt = this._transport.mergeOptions(options);
-        const call = stackIntercept<RestoreStateRequest, RestoreStateReply>("unary", this._transport, method, opt, input);
+        const call = stackIntercept<ChannelStateRequest, TxHash>("unary", this._transport, method, opt, input);
         return Promise.resolve(call.then(finished => finished.response));
     }
     /**
-     *   [ChannelRpcMethods.chan_restoreState]: FullChannelState;
-     *   { schema: { body: NodeParams.RestoreStateSchema, response: NodeResponses.RestoreStateSchema } },
-     *   NodeResponses.RestoreState
-     *
-     * @generated from protobuf rpc: Subscribe(com.vector.SubscribeRequest) returns (com.vector.SubscribeReply);
+     * @generated from protobuf rpc: SendDisputeTransfer(com.vector.TransferRequest) returns (com.vector.TxHash);
      */
-    subscribe(input: SubscribeRequest, options?: RpcOptions): Promise<SubscribeReply> {
+    sendDisputeTransfer(input: TransferRequest, options?: RpcOptions): Promise<TxHash> {
         const method = this.methods[24], opt = this._transport.mergeOptions(options);
-        const call = stackIntercept<SubscribeRequest, SubscribeReply>("unary", this._transport, method, opt, input);
+        const call = stackIntercept<TransferRequest, TxHash>("unary", this._transport, method, opt, input);
         return Promise.resolve(call.then(finished => finished.response));
     }
     /**
-     *   [ChannelRpcMethods.chan_subscribe]: { event: string; once: boolean };
-     *   body: NodeParams.RegisterListenerSchema
-     *
-     * rpc GetUrl (GetUrlRequest) returns (ListenerSchemaReply) {}
-     *
-     * @generated from protobuf rpc: GetSubscription(com.vector.SubscriptionRequest) returns (com.vector.Subscription);
+     * @generated from protobuf rpc: SendDefundTransfer(com.vector.TransferRequest) returns (com.vector.TxHash);
      */
-    getSubscription(input: SubscriptionRequest, options?: RpcOptions): Promise<Subscription> {
+    sendDefundTransfer(input: TransferRequest, options?: RpcOptions): Promise<TxHash> {
         const method = this.methods[25], opt = this._transport.mergeOptions(options);
-        const call = stackIntercept<SubscriptionRequest, Subscription>("unary", this._transport, method, opt, input);
+        const call = stackIntercept<TransferRequest, TxHash>("unary", this._transport, method, opt, input);
         return Promise.resolve(call.then(finished => finished.response));
     }
     /**
-     * @generated from protobuf rpc: GetSubscriptionWithOnlyPublicIdentifier(com.vector.SubscriptionWithPublicIdentifierRequest) returns (com.vector.SubscriptionWithPublicIdentifierReply);
-     */
-    getSubscriptionWithOnlyPublicIdentifier(input: SubscriptionWithPublicIdentifierRequest, options?: RpcOptions): Promise<SubscriptionWithPublicIdentifierReply> {
-        const method = this.methods[26], opt = this._transport.mergeOptions(options);
-        const call = stackIntercept<SubscriptionWithPublicIdentifierRequest, SubscriptionWithPublicIdentifierReply>("unary", this._transport, method, opt, input);
-        return Promise.resolve(call.then(finished => finished.response));
-    }
-    /**
-     *  NodeParams.GetListenerSchema,
+     * subscriptions - server to client stream
      *
-     * @generated from protobuf rpc: ClearStore(com.vector.ClearStoreRequest) returns (com.vector.ClearStoreReply);
+     * @generated from protobuf rpc: IsAliveStream(com.vector.Empty) returns (stream com.vector.IsAlivePayload);
      */
-    clearStore(input: ClearStoreRequest, options?: RpcOptions): Promise<ClearStoreReply> {
+    isAliveStream(input: Empty, options?: RpcOptions): AsyncIterable<IsAlivePayload> {
+        const method = this.methods[26], opt = this._transport.mergeOptions(options);
+        const call = stackIntercept<Empty, IsAlivePayload>("serverStreaming", this._transport, method, opt, input);
+        const stream = new RpcOutputStreamController<IsAlivePayload>();
+        call.response.onNext(stream.notifyNext.bind(stream));
+        call.status.catch(e => stream.closed || stream.notifyError(e));
+        return stream;
+    }
+    /**
+     * @generated from protobuf rpc: SetupStream(com.vector.Empty) returns (stream com.vector.SetupPayload);
+     */
+    setupStream(input: Empty, options?: RpcOptions): AsyncIterable<SetupPayload> {
         const method = this.methods[27], opt = this._transport.mergeOptions(options);
-        const call = stackIntercept<ClearStoreRequest, ClearStoreReply>("unary", this._transport, method, opt, input);
-        return Promise.resolve(call.then(finished => finished.response));
+        const call = stackIntercept<Empty, SetupPayload>("serverStreaming", this._transport, method, opt, input);
+        const stream = new RpcOutputStreamController<SetupPayload>();
+        call.response.onNext(stream.notifyNext.bind(stream));
+        call.status.catch(e => stream.closed || stream.notifyError(e));
+        return stream;
     }
     /**
-     * @generated from protobuf rpc: CreateNode(com.vector.CreateNodeRequest) returns (com.vector.CreateNodeReply);
+     * @generated from protobuf rpc: ConditionalTransferCreatedStream(com.vector.Empty) returns (stream com.vector.ConditionalTransferCreatedPayload);
      */
-    createNode(input: CreateNodeRequest, options?: RpcOptions): Promise<CreateNodeReply> {
+    conditionalTransferCreatedStream(input: Empty, options?: RpcOptions): AsyncIterable<ConditionalTransferCreatedPayload> {
         const method = this.methods[28], opt = this._transport.mergeOptions(options);
-        const call = stackIntercept<CreateNodeRequest, CreateNodeReply>("unary", this._transport, method, opt, input);
-        return Promise.resolve(call.then(finished => finished.response));
+        const call = stackIntercept<Empty, ConditionalTransferCreatedPayload>("serverStreaming", this._transport, method, opt, input);
+        const stream = new RpcOutputStreamController<ConditionalTransferCreatedPayload>();
+        call.response.onNext(stream.notifyNext.bind(stream));
+        call.status.catch(e => stream.closed || stream.notifyError(e));
+        return stream;
     }
     /**
+     * @generated from protobuf rpc: ConditionalTransferResolvedStream(com.vector.Empty) returns (stream com.vector.ConditionalTransferCreatedPayload);
+     */
+    conditionalTransferResolvedStream(input: Empty, options?: RpcOptions): AsyncIterable<ConditionalTransferCreatedPayload> {
+        const method = this.methods[29], opt = this._transport.mergeOptions(options);
+        const call = stackIntercept<Empty, ConditionalTransferCreatedPayload>("serverStreaming", this._transport, method, opt, input);
+        const stream = new RpcOutputStreamController<ConditionalTransferCreatedPayload>();
+        call.response.onNext(stream.notifyNext.bind(stream));
+        call.status.catch(e => stream.closed || stream.notifyError(e));
+        return stream;
+    }
+    /**
+     * @generated from protobuf rpc: DepositReconciledStream(com.vector.Empty) returns (stream com.vector.DepositReconciledPayload);
+     */
+    depositReconciledStream(input: Empty, options?: RpcOptions): AsyncIterable<DepositReconciledPayload> {
+        const method = this.methods[30], opt = this._transport.mergeOptions(options);
+        const call = stackIntercept<Empty, DepositReconciledPayload>("serverStreaming", this._transport, method, opt, input);
+        const stream = new RpcOutputStreamController<DepositReconciledPayload>();
+        call.response.onNext(stream.notifyNext.bind(stream));
+        call.status.catch(e => stream.closed || stream.notifyError(e));
+        return stream;
+    }
+    /**
+     * @generated from protobuf rpc: RequestCollateralStream(com.vector.Empty) returns (stream com.vector.RequestCollateralPayload);
+     */
+    requestCollateralStream(input: Empty, options?: RpcOptions): AsyncIterable<RequestCollateralPayload> {
+        const method = this.methods[31], opt = this._transport.mergeOptions(options);
+        const call = stackIntercept<Empty, RequestCollateralPayload>("serverStreaming", this._transport, method, opt, input);
+        const stream = new RpcOutputStreamController<RequestCollateralPayload>();
+        call.response.onNext(stream.notifyNext.bind(stream));
+        call.status.catch(e => stream.closed || stream.notifyError(e));
+        return stream;
+    }
+    /**
+     * @generated from protobuf rpc: WithdrawalCreatedStream(com.vector.Empty) returns (stream com.vector.WithdrawalCreatedPayload);
+     */
+    withdrawalCreatedStream(input: Empty, options?: RpcOptions): AsyncIterable<WithdrawalCreatedPayload> {
+        const method = this.methods[32], opt = this._transport.mergeOptions(options);
+        const call = stackIntercept<Empty, WithdrawalCreatedPayload>("serverStreaming", this._transport, method, opt, input);
+        const stream = new RpcOutputStreamController<WithdrawalCreatedPayload>();
+        call.response.onNext(stream.notifyNext.bind(stream));
+        call.status.catch(e => stream.closed || stream.notifyError(e));
+        return stream;
+    }
+    /**
+     * @generated from protobuf rpc: WithdrawalResolvedStream(com.vector.Empty) returns (stream com.vector.WithdrawalCreatedPayload);
+     */
+    withdrawalResolvedStream(input: Empty, options?: RpcOptions): AsyncIterable<WithdrawalCreatedPayload> {
+        const method = this.methods[33], opt = this._transport.mergeOptions(options);
+        const call = stackIntercept<Empty, WithdrawalCreatedPayload>("serverStreaming", this._transport, method, opt, input);
+        const stream = new RpcOutputStreamController<WithdrawalCreatedPayload>();
+        call.response.onNext(stream.notifyNext.bind(stream));
+        call.status.catch(e => stream.closed || stream.notifyError(e));
+        return stream;
+    }
+    /**
+     * @generated from protobuf rpc: WithdrawalReconciledStream(com.vector.Empty) returns (stream com.vector.WithdrawalReconciledPayload);
+     */
+    withdrawalReconciledStream(input: Empty, options?: RpcOptions): AsyncIterable<WithdrawalReconciledPayload> {
+        const method = this.methods[34], opt = this._transport.mergeOptions(options);
+        const call = stackIntercept<Empty, WithdrawalReconciledPayload>("serverStreaming", this._transport, method, opt, input);
+        const stream = new RpcOutputStreamController<WithdrawalReconciledPayload>();
+        call.response.onNext(stream.notifyNext.bind(stream));
+        call.status.catch(e => stream.closed || stream.notifyError(e));
+        return stream;
+    }
+    /**
+     * @generated from protobuf rpc: RestoreStateStream(com.vector.Empty) returns (stream com.vector.SetupPayload);
+     */
+    restoreStateStream(input: Empty, options?: RpcOptions): AsyncIterable<SetupPayload> {
+        const method = this.methods[35], opt = this._transport.mergeOptions(options);
+        const call = stackIntercept<Empty, SetupPayload>("serverStreaming", this._transport, method, opt, input);
+        const stream = new RpcOutputStreamController<SetupPayload>();
+        call.response.onNext(stream.notifyNext.bind(stream));
+        call.status.catch(e => stream.closed || stream.notifyError(e));
+        return stream;
+    }
+    /**
+     * eth provider pass-through
+     *
      * @generated from protobuf rpc: EthProvider(com.vector.EthProviderRequest) returns (com.vector.EthProviderReply);
      */
     ethProvider(input: EthProviderRequest, options?: RpcOptions): Promise<EthProviderReply> {
-        const method = this.methods[29], opt = this._transport.mergeOptions(options);
+        const method = this.methods[36], opt = this._transport.mergeOptions(options);
         const call = stackIntercept<EthProviderRequest, EthProviderReply>("unary", this._transport, method, opt, input);
         return Promise.resolve(call.then(finished => finished.response));
     }
