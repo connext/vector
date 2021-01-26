@@ -72,7 +72,11 @@ class VectorIndexedDBDatabase extends Dexie {
 export class BrowserStore implements IEngineStore, IChainServiceStore {
   private db: VectorIndexedDBDatabase;
 
-  private constructor(
+  // NOTE: this could be private, but makes it difficult to test because
+  // you can't mock the `Dexie.exists` call used in the static `create`
+  // function. However, the constructor should *not* be used when creating
+  // an instance of the BrowserStore
+  constructor(
     private readonly dbName: string,
     private readonly log: BaseLogger,
     // eslint-disable-next-line @typescript-eslint/ban-types
