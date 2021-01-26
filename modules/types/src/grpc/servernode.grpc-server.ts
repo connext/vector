@@ -34,6 +34,8 @@ import { ChannelStateByParticipantsRequest } from "./servernode";
 import { FullChannelStates } from "./servernode";
 import { FullChannelState } from "./servernode";
 import { ChannelStateRequest } from "./servernode";
+import { RouterConfig } from "./servernode";
+import { GetRouterConfigRequest } from "./servernode";
 import { Status } from "./servernode";
 import { GetStatusRequest } from "./servernode";
 import { Configs } from "./servernode";
@@ -61,6 +63,10 @@ export interface IServerNodeService extends grpc.UntypedServiceImplementation {
      * @generated from protobuf rpc: GetStatus(com.vector.GetStatusRequest) returns (com.vector.Status);
      */
     getStatus: grpc.handleUnaryCall<GetStatusRequest, Status>;
+    /**
+     * @generated from protobuf rpc: GetRouterConfig(com.vector.GetRouterConfigRequest) returns (com.vector.RouterConfig);
+     */
+    getRouterConfig: grpc.handleUnaryCall<GetRouterConfigRequest, RouterConfig>;
     /**
      * channel and transfer state getters
      *
@@ -249,6 +255,16 @@ export const serverNodeServiceDefinition: grpc.ServiceDefinition<IServerNodeServ
         requestDeserialize: bytes => GetStatusRequest.fromBinary(bytes),
         responseSerialize: value => Buffer.from(Status.toBinary(value)),
         requestSerialize: value => Buffer.from(GetStatusRequest.toBinary(value))
+    },
+    getRouterConfig: {
+        path: "/com.vector.ServerNodeService/GetRouterConfig",
+        originalName: "GetRouterConfig",
+        requestStream: false,
+        responseStream: false,
+        responseDeserialize: bytes => RouterConfig.fromBinary(bytes),
+        requestDeserialize: bytes => GetRouterConfigRequest.fromBinary(bytes),
+        responseSerialize: value => Buffer.from(RouterConfig.toBinary(value)),
+        requestSerialize: value => Buffer.from(GetRouterConfigRequest.toBinary(value))
     },
     getChannelState: {
         path: "/com.vector.ServerNodeService/GetChannelState",

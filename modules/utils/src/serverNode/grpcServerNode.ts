@@ -75,7 +75,13 @@ export class GRPCServerNodeService implements INodeService {
   getRouterConfig(
     params: OptionalPublicIdentifier<NodeParams.GetRouterConfig>,
   ): Promise<Result<NodeResponses.GetRouterConfig, ServerNodeServiceError>> {
-    throw new Error("unimplemented");
+    return this.validateAndExecuteGrpcRequest<OptionalPublicIdentifier<GrpcTypes.GetStatusRequest>, GrpcTypes.Status>(
+      "getStatus",
+      {
+        publicIdentifier,
+      },
+      NodeParams.GetConfigSchema,
+    );
   }
 
   async getConfig(): Promise<Result<NodeResponses.GetConfig, ServerNodeServiceError>> {

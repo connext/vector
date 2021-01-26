@@ -429,6 +429,19 @@ export interface GetStatusRequest {
     publicIdentifier: string;
 }
 /**
+ * @generated from protobuf message com.vector.GetRouterConfigRequest
+ */
+export interface GetRouterConfigRequest {
+    /**
+     * @generated from protobuf field: string public_identifier = 1;
+     */
+    publicIdentifier: string;
+    /**
+     * @generated from protobuf field: string router_identifier = 2;
+     */
+    routerIdentifier: string;
+}
+/**
  * @generated from protobuf message com.vector.ConditionalTransferRequest
  */
 export interface ConditionalTransferRequest {
@@ -844,6 +857,44 @@ export interface Config {
      * @generated from protobuf field: string signer_address = 3;
      */
     signerAddress: string;
+}
+/**
+ * @generated from protobuf message com.vector.AllowedSwaps
+ */
+export interface AllowedSwaps {
+    /**
+     * @generated from protobuf field: int32 from_chain_id = 1;
+     */
+    fromChainId: number;
+    /**
+     * @generated from protobuf field: int32 to_chain_id = 2;
+     */
+    toChainId: number;
+    /**
+     * @generated from protobuf field: string from_asset_id = 3;
+     */
+    fromAssetId: string;
+    /**
+     * @generated from protobuf field: string to_asset_id = 4;
+     */
+    toAssetId: string;
+    /**
+     * @generated from protobuf field: com.vector.AllowedSwaps.PriceType price_type = 5;
+     */
+    priceType: AllowedSwaps_PriceType;
+    /**
+     * @generated from protobuf field: string hardcoded_rate = 6;
+     */
+    hardcodedRate: string;
+}
+/**
+ * @generated from protobuf enum com.vector.AllowedSwaps.PriceType
+ */
+export enum AllowedSwaps_PriceType {
+    /**
+     * @generated from protobuf enum value: HARDCODED = 0;
+     */
+    HARDCODED = 0
 }
 /**
  * @generated from protobuf message com.vector.RouterConfig
@@ -2294,6 +2345,53 @@ class GetStatusRequest$Type extends MessageType<GetStatusRequest> {
  */
 export const GetStatusRequest = new GetStatusRequest$Type();
 // @generated message type with reflection information, may provide speed optimized methods
+class GetRouterConfigRequest$Type extends MessageType<GetRouterConfigRequest> {
+    constructor() {
+        super("com.vector.GetRouterConfigRequest", [
+            { no: 1, name: "public_identifier", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 2, name: "router_identifier", kind: "scalar", T: 9 /*ScalarType.STRING*/ }
+        ]);
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: GetRouterConfigRequest): GetRouterConfigRequest {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case /* string public_identifier */ 1:
+                    message.publicIdentifier = reader.string();
+                    break;
+                case /* string router_identifier */ 2:
+                    message.routerIdentifier = reader.string();
+                    break;
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
+    }
+    internalBinaryWrite(message: GetRouterConfigRequest, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* string public_identifier = 1; */
+        if (message.publicIdentifier !== "")
+            writer.tag(1, WireType.LengthDelimited).string(message.publicIdentifier);
+        /* string router_identifier = 2; */
+        if (message.routerIdentifier !== "")
+            writer.tag(2, WireType.LengthDelimited).string(message.routerIdentifier);
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message com.vector.GetRouterConfigRequest
+ */
+export const GetRouterConfigRequest = new GetRouterConfigRequest$Type();
+// @generated message type with reflection information, may provide speed optimized methods
 class ConditionalTransferRequest$Type extends MessageType<ConditionalTransferRequest> {
     constructor() {
         super("com.vector.ConditionalTransferRequest", [
@@ -3578,6 +3676,81 @@ class Config$Type extends MessageType<Config> {
  */
 export const Config = new Config$Type();
 // @generated message type with reflection information, may provide speed optimized methods
+class AllowedSwaps$Type extends MessageType<AllowedSwaps> {
+    constructor() {
+        super("com.vector.AllowedSwaps", [
+            { no: 1, name: "from_chain_id", kind: "scalar", T: 5 /*ScalarType.INT32*/ },
+            { no: 2, name: "to_chain_id", kind: "scalar", T: 5 /*ScalarType.INT32*/ },
+            { no: 3, name: "from_asset_id", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 4, name: "to_asset_id", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 5, name: "price_type", kind: "enum", T: () => ["com.vector.AllowedSwaps.PriceType", AllowedSwaps_PriceType] },
+            { no: 6, name: "hardcoded_rate", kind: "scalar", T: 9 /*ScalarType.STRING*/ }
+        ]);
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: AllowedSwaps): AllowedSwaps {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case /* int32 from_chain_id */ 1:
+                    message.fromChainId = reader.int32();
+                    break;
+                case /* int32 to_chain_id */ 2:
+                    message.toChainId = reader.int32();
+                    break;
+                case /* string from_asset_id */ 3:
+                    message.fromAssetId = reader.string();
+                    break;
+                case /* string to_asset_id */ 4:
+                    message.toAssetId = reader.string();
+                    break;
+                case /* com.vector.AllowedSwaps.PriceType price_type */ 5:
+                    message.priceType = reader.int32();
+                    break;
+                case /* string hardcoded_rate */ 6:
+                    message.hardcodedRate = reader.string();
+                    break;
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
+    }
+    internalBinaryWrite(message: AllowedSwaps, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* int32 from_chain_id = 1; */
+        if (message.fromChainId !== 0)
+            writer.tag(1, WireType.Varint).int32(message.fromChainId);
+        /* int32 to_chain_id = 2; */
+        if (message.toChainId !== 0)
+            writer.tag(2, WireType.Varint).int32(message.toChainId);
+        /* string from_asset_id = 3; */
+        if (message.fromAssetId !== "")
+            writer.tag(3, WireType.LengthDelimited).string(message.fromAssetId);
+        /* string to_asset_id = 4; */
+        if (message.toAssetId !== "")
+            writer.tag(4, WireType.LengthDelimited).string(message.toAssetId);
+        /* com.vector.AllowedSwaps.PriceType price_type = 5; */
+        if (message.priceType !== 0)
+            writer.tag(5, WireType.Varint).int32(message.priceType);
+        /* string hardcoded_rate = 6; */
+        if (message.hardcodedRate !== "")
+            writer.tag(6, WireType.LengthDelimited).string(message.hardcodedRate);
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message com.vector.AllowedSwaps
+ */
+export const AllowedSwaps = new AllowedSwaps$Type();
+// @generated message type with reflection information, may provide speed optimized methods
 class RouterConfig$Type extends MessageType<RouterConfig> {
     constructor() {
         super("com.vector.RouterConfig", [
@@ -4651,6 +4824,7 @@ export const ServerNodeService = new ServiceType("com.vector.ServerNodeService",
     { name: "GetPing", options: {}, I: Empty, O: GenericMessageResponse },
     { name: "GetConfig", options: {}, I: Empty, O: Configs },
     { name: "GetStatus", options: {}, I: GetStatusRequest, O: Status },
+    { name: "GetRouterConfig", options: {}, I: GetRouterConfigRequest, O: RouterConfig },
     { name: "GetChannelState", options: {}, I: ChannelStateRequest, O: FullChannelState },
     { name: "GetChannelStates", options: {}, I: Empty, O: FullChannelStates },
     { name: "GetChannelStateByParticipants", options: {}, I: ChannelStateByParticipantsRequest, O: FullChannelState },

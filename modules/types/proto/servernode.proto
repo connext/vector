@@ -11,6 +11,7 @@ service ServerNodeService {
     rpc GetPing (Empty) returns (GenericMessageResponse) {}
     rpc GetConfig (Empty) returns (Configs) {}
     rpc GetStatus (GetStatusRequest) returns (Status) {}
+    rpc GetRouterConfig (GetRouterConfigRequest) returns (RouterConfig) {}
 
     // channel and transfer state getters
     rpc GetChannelState (ChannelStateRequest) returns (FullChannelState) {}
@@ -199,6 +200,11 @@ message GetStatusRequest {
     string public_identifier = 1;
 }
 
+message GetRouterConfigRequest {
+    string public_identifier = 1;
+    string router_identifier = 2;
+}
+
 message ConditionalTransferRequest {
     string public_identifier = 1;
     string channel_address = 2;
@@ -309,6 +315,7 @@ message ResolveTransferRequest {
     string channel_address = 2;
     bytes transfer_id = 3;
     google.protobuf.Any transfer_resolver = 4;
+
     optional google.protobuf.Any meta = 5;
 }
 
@@ -345,6 +352,17 @@ message Config {
     string signer_address = 3;
 }
 
+message AllowedSwaps {
+    int32 from_chain_id = 1;
+    int32 to_chain_id = 2;
+    string from_asset_id = 3;
+    string to_asset_id = 4;
+    enum PriceType {
+        HARDCODED = 0;
+    }
+    PriceType price_type = 5;
+    string hardcoded_rate = 6;
+}
 message RouterConfig {
     repeated int32 supported_chains = 1;
 }
