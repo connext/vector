@@ -651,26 +651,9 @@ export interface Config {
     signerAddress: string;
 }
 /**
- * @generated from protobuf message com.vector.Status
+ * @generated from protobuf message com.vector.ProviderSyncing
  */
-export interface Status {
-    /**
-     * @generated from protobuf field: string public_identifier = 5;
-     */
-    publicIdentifier: string;
-    /**
-     * @generated from protobuf field: string signer_address = 6;
-     */
-    signerAddress: string;
-    /**
-     * @generated from protobuf field: string version = 7;
-     */
-    version: string;
-}
-/**
- * @generated from protobuf message com.vector.Status.ProviderSyncing
- */
-export interface Status_ProviderSyncing {
+export interface ProviderSyncing {
     /**
      * @generated from protobuf field: bool syncing = 1;
      */
@@ -687,6 +670,29 @@ export interface Status_ProviderSyncing {
      * @generated from protobuf field: string highest_block = 4;
      */
     highestBlock: string;
+}
+/**
+ * @generated from protobuf message com.vector.Status
+ */
+export interface Status {
+    /**
+     * @generated from protobuf field: map<int32, com.vector.ProviderSyncing> provider_syncing = 5;
+     */
+    providerSyncing: {
+        [key: number]: ProviderSyncing;
+    };
+    /**
+     * @generated from protobuf field: string public_identifier = 6;
+     */
+    publicIdentifier: string;
+    /**
+     * @generated from protobuf field: string signer_address = 7;
+     */
+    signerAddress: string;
+    /**
+     * @generated from protobuf field: string version = 8;
+     */
+    version: string;
 }
 /**
  * @generated from protobuf message com.vector.DefundNonces
@@ -2195,23 +2201,9 @@ class Config$Type extends MessageType<Config> {
  */
 export const Config = new Config$Type();
 // @generated message type with reflection information, may provide speed optimized methods
-class Status$Type extends MessageType<Status> {
+class ProviderSyncing$Type extends MessageType<ProviderSyncing> {
     constructor() {
-        super("com.vector.Status", [
-            { no: 5, name: "public_identifier", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
-            { no: 6, name: "signer_address", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
-            { no: 7, name: "version", kind: "scalar", T: 9 /*ScalarType.STRING*/ }
-        ]);
-    }
-}
-/**
- * @generated MessageType for protobuf message com.vector.Status
- */
-export const Status = new Status$Type();
-// @generated message type with reflection information, may provide speed optimized methods
-class Status_ProviderSyncing$Type extends MessageType<Status_ProviderSyncing> {
-    constructor() {
-        super("com.vector.Status.ProviderSyncing", [
+        super("com.vector.ProviderSyncing", [
             { no: 1, name: "syncing", kind: "scalar", T: 8 /*ScalarType.BOOL*/ },
             { no: 2, name: "starting_block", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
             { no: 3, name: "current_block", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
@@ -2220,9 +2212,24 @@ class Status_ProviderSyncing$Type extends MessageType<Status_ProviderSyncing> {
     }
 }
 /**
- * @generated MessageType for protobuf message com.vector.Status.ProviderSyncing
+ * @generated MessageType for protobuf message com.vector.ProviderSyncing
  */
-export const Status_ProviderSyncing = new Status_ProviderSyncing$Type();
+export const ProviderSyncing = new ProviderSyncing$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class Status$Type extends MessageType<Status> {
+    constructor() {
+        super("com.vector.Status", [
+            { no: 5, name: "provider_syncing", kind: "map", K: 5 /*ScalarType.INT32*/, V: { kind: "message", T: () => ProviderSyncing } },
+            { no: 6, name: "public_identifier", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 7, name: "signer_address", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 8, name: "version", kind: "scalar", T: 9 /*ScalarType.STRING*/ }
+        ]);
+    }
+}
+/**
+ * @generated MessageType for protobuf message com.vector.Status
+ */
+export const Status = new Status$Type();
 // @generated message type with reflection information, may provide speed optimized methods
 class DefundNonces$Type extends MessageType<DefundNonces> {
     constructor() {

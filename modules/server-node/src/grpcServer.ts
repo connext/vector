@@ -73,7 +73,7 @@ const vectorService: GrpcTypes.IServerNodeService = {
       const params = constructRpcRequest(ChannelRpcMethods.chan_getStatus, {});
       const res = await engine.request<"chan_getStatus">(params);
 
-      callback(null, { providerSyncing: res.providerSyncing });
+      callback(null, res);
     } catch (e) {
       logger.error({ error: jsonifyError(e) });
       callback({ code: grpc.status.NOT_FOUND, details: JSON.stringify(e) });

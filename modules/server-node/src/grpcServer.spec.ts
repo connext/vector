@@ -38,15 +38,30 @@ describe("GRPC server", () => {
       publicIdentifier: pub,
       signerAddress: getSignerAddressFromPublicIdentifier(pub),
       providerSyncing: {
-        startingBlock: "0x384",
-        currentBlock: "0x386",
-        highestBlock: "0x454",
+        1337: {
+          syncing: false,
+          startingBlock: "0x384",
+          currentBlock: "0x386",
+          highestBlock: "0x454",
+        },
       },
       version: "0.0.0",
     } as NodeResponses.GetStatus);
     const result = await client.getStatus(pub);
     expect(result.getError()).to.be.not.ok;
     console.log("result.getValue(): ", result.getValue());
-    expect(result.getValue()).to.eq("pong");
+    expect(result.getValue()).to.deep.eq({
+      publicIdentifier: pub,
+      signerAddress: getSignerAddressFromPublicIdentifier(pub),
+      providerSyncing: {
+        1337: {
+          syncing: false,
+          startingBlock: "0x384",
+          currentBlock: "0x386",
+          highestBlock: "0x454",
+        },
+      },
+      version: "0.0.0",
+    });
   });
 });

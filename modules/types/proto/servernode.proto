@@ -275,16 +275,18 @@ message Config {
     string signer_address = 3;
 }
 
+message ProviderSyncing {
+    bool syncing = 1;
+    string starting_block = 2;
+    string current_block = 3;
+    string highest_block = 4;
+}
+
 message Status {
-    message ProviderSyncing {
-        bool syncing = 1;
-        string starting_block = 2;
-        string current_block = 3;
-        string highest_block = 4;
-    }
-    string public_identifier = 5;
-    string signer_address = 6;
-    string version = 7;
+    map<int32, ProviderSyncing> provider_syncing = 5;
+    string public_identifier = 6;
+    string signer_address = 7;
+    string version = 8;
 }
 
 message DefundNonces {
