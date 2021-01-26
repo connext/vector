@@ -14,7 +14,7 @@
   ],
   "scripts": {
     "build": "rm -rf dist && tsc && rollup -c",
-    "protobuf:generate": "protoc --experimental_allow_proto3_optional --ts_opt server_grpc,client_promise,generate_dependencies --proto_path proto --ts_out ./src/grpc proto/*.proto"
+    "protobuf:generate": "protoc --experimental_allow_proto3_optional --ts_opt server_grpc1,client_promise,generate_dependencies --proto_path proto --ts_out ./src/grpc proto/*.proto"
   },
   "dependencies": {
     "@ethersproject/abstract-provider": "5.0.7",
@@ -25,8 +25,8 @@
     "evt": "1.9.2"
   },
   "devDependencies": {
-    "@protobuf-ts/plugin": "2.0.0-alpha.11",
-    "@protobuf-ts/protoc": "2.0.0-alpha.11",
+    "@protobuf-ts/plugin": "2.0.0-alpha.12",
+    "@protobuf-ts/protoc": "2.0.0-alpha.12",
     "ethers": "5.0.21",
     "rollup": "2.32.1",
     "rollup-plugin-typescript2": "0.28.0",
