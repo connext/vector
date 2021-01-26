@@ -144,13 +144,10 @@ export class BrowserNode implements INodeService {
     this.logger.debug({ method }, "Method started");
     const iframeSrc = this.iframeSrc ?? "https://wallet.connext.network";
     this.logger.info({ method, iframeSrc }, "Connecting with iframe provider");
-    // Don't reconnect to iframe
-    this.channelProvider =
-      this.channelProvider ??
-      (await IframeChannelProvider.connect({
-        src: iframeSrc,
-        id: "connext-iframe",
-      }));
+    this.channelProvider = await IframeChannelProvider.connect({
+      src: iframeSrc,
+      id: "connext-iframe",
+    });
     const rpc = constructRpcRequest("connext_authenticate", { chainProviders: this.chainProviders });
     const auth = await this.channelProvider.send(rpc);
     this.logger.info({ method, response: auth }, "Received response from auth method");

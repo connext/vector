@@ -49,17 +49,15 @@ export default class ConnextManager {
       console.warn("Public identifier does not match what is in storage, new store will be created");
     }
 
-    this.browserNode =
-      this.browserNode ??
-      (await BrowserNode.connect({
-        signer,
-        chainAddresses: config.chainAddresses,
-        chainProviders,
-        logger: pino(),
-        messagingUrl: config.messagingUrl,
-        authUrl: config.authUrl,
-        natsUrl: config.natsUrl,
-      }));
+    this.browserNode = await BrowserNode.connect({
+      signer,
+      chainAddresses: config.chainAddresses,
+      chainProviders,
+      logger: pino(),
+      messagingUrl: config.messagingUrl,
+      authUrl: config.authUrl,
+      natsUrl: config.natsUrl,
+    });
     localStorage.setItem("publicIdentifier", signer.publicIdentifier);
     return this.browserNode;
   }
