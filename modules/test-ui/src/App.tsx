@@ -61,14 +61,16 @@ function App() {
         return;
       }
       const channelAddresses = channelsRes.getValue();
-      const _channels = await Promise.all(
-        channelAddresses.map(async (c) => {
-          const channelRes = await client.getStateChannel({ channelAddress: c });
-          console.log("Channel found in store:", channelRes.getValue());
-          const channelVal = channelRes.getValue() as FullChannelState;
-          return channelVal;
-        }),
-      );
+      const _channels = (
+        await Promise.all(
+          channelAddresses.map(async (c) => {
+            const channelRes = await client.getStateChannel({ channelAddress: c });
+            console.log("Channel found in store:", channelRes.getValue());
+            const channelVal = channelRes.getValue() as FullChannelState;
+            return channelVal;
+          }),
+        )
+      ).filter((chan) => supportedChains.includes(chan.networkContext.chainId));
       if (_channels.length > 0) {
         setChannels(_channels);
         setSelectedChannel(_channels[0]);
