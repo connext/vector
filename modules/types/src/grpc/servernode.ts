@@ -18,6 +18,15 @@ import { Any } from "./google/protobuf/any";
 export interface Empty {
 }
 /**
+ * @generated from protobuf message com.vector.GenericPublicIdentifierRequest
+ */
+export interface GenericPublicIdentifierRequest {
+    /**
+     * @generated from protobuf field: string public_identifier = 1;
+     */
+    publicIdentifier: string;
+}
+/**
  * @generated from protobuf message com.vector.GenericMessageResponse
  */
 export interface GenericMessageResponse {
@@ -420,15 +429,6 @@ export interface FullTransferStates {
 /**
  * requests
  *
- * @generated from protobuf message com.vector.GetStatusRequest
- */
-export interface GetStatusRequest {
-    /**
-     * @generated from protobuf field: string public_identifier = 1;
-     */
-    publicIdentifier: string;
-}
-/**
  * @generated from protobuf message com.vector.GetRouterConfigRequest
  */
 export interface GetRouterConfigRequest {
@@ -1286,6 +1286,46 @@ class Empty$Type extends MessageType<Empty> {
  * @generated MessageType for protobuf message com.vector.Empty
  */
 export const Empty = new Empty$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class GenericPublicIdentifierRequest$Type extends MessageType<GenericPublicIdentifierRequest> {
+    constructor() {
+        super("com.vector.GenericPublicIdentifierRequest", [
+            { no: 1, name: "public_identifier", kind: "scalar", T: 9 /*ScalarType.STRING*/ }
+        ]);
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: GenericPublicIdentifierRequest): GenericPublicIdentifierRequest {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case /* string public_identifier */ 1:
+                    message.publicIdentifier = reader.string();
+                    break;
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
+    }
+    internalBinaryWrite(message: GenericPublicIdentifierRequest, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* string public_identifier = 1; */
+        if (message.publicIdentifier !== "")
+            writer.tag(1, WireType.LengthDelimited).string(message.publicIdentifier);
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message com.vector.GenericPublicIdentifierRequest
+ */
+export const GenericPublicIdentifierRequest = new GenericPublicIdentifierRequest$Type();
 // @generated message type with reflection information, may provide speed optimized methods
 class GenericMessageResponse$Type extends MessageType<GenericMessageResponse> {
     constructor() {
@@ -2299,46 +2339,6 @@ class FullTransferStates$Type extends MessageType<FullTransferStates> {
  * @generated MessageType for protobuf message com.vector.FullTransferStates
  */
 export const FullTransferStates = new FullTransferStates$Type();
-// @generated message type with reflection information, may provide speed optimized methods
-class GetStatusRequest$Type extends MessageType<GetStatusRequest> {
-    constructor() {
-        super("com.vector.GetStatusRequest", [
-            { no: 1, name: "public_identifier", kind: "scalar", T: 9 /*ScalarType.STRING*/ }
-        ]);
-    }
-    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: GetStatusRequest): GetStatusRequest {
-        let message = target ?? this.create(), end = reader.pos + length;
-        while (reader.pos < end) {
-            let [fieldNo, wireType] = reader.tag();
-            switch (fieldNo) {
-                case /* string public_identifier */ 1:
-                    message.publicIdentifier = reader.string();
-                    break;
-                default:
-                    let u = options.readUnknownField;
-                    if (u === "throw")
-                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
-                    let d = reader.skip(wireType);
-                    if (u !== false)
-                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
-            }
-        }
-        return message;
-    }
-    internalBinaryWrite(message: GetStatusRequest, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
-        /* string public_identifier = 1; */
-        if (message.publicIdentifier !== "")
-            writer.tag(1, WireType.LengthDelimited).string(message.publicIdentifier);
-        let u = options.writeUnknownFields;
-        if (u !== false)
-            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
-        return writer;
-    }
-}
-/**
- * @generated MessageType for protobuf message com.vector.GetStatusRequest
- */
-export const GetStatusRequest = new GetStatusRequest$Type();
 // @generated message type with reflection information, may provide speed optimized methods
 class GetRouterConfigRequest$Type extends MessageType<GetRouterConfigRequest> {
     constructor() {
@@ -4825,7 +4825,7 @@ export const RestoreStateRequest = new RestoreStateRequest$Type();
 export const ServerNodeService = new ServiceType("com.vector.ServerNodeService", [
     { name: "GetPing", options: {}, I: Empty, O: GenericMessageResponse },
     { name: "GetConfig", options: {}, I: Empty, O: Configs },
-    { name: "GetStatus", options: {}, I: GetStatusRequest, O: Status },
+    { name: "GetStatus", options: {}, I: GenericPublicIdentifierRequest, O: Status },
     { name: "GetRouterConfig", options: {}, I: GetRouterConfigRequest, O: RouterConfig },
     { name: "GetChannelState", options: {}, I: ChannelStateRequest, O: FullChannelState },
     { name: "GetChannelStates", options: {}, I: Empty, O: FullChannelStates },
@@ -4850,15 +4850,15 @@ export const ServerNodeService = new ServiceType("com.vector.ServerNodeService",
     { name: "SendDefundChannelTx", options: {}, I: ChannelStateRequest, O: TxHash },
     { name: "SendDisputeTransfer", options: {}, I: TransferRequest, O: TxHash },
     { name: "SendDefundTransfer", options: {}, I: TransferRequest, O: TxHash },
-    { name: "IsAliveStream", serverStreaming: true, options: {}, I: Empty, O: IsAlivePayload },
-    { name: "SetupStream", serverStreaming: true, options: {}, I: Empty, O: SetupPayload },
-    { name: "ConditionalTransferCreatedStream", serverStreaming: true, options: {}, I: Empty, O: ConditionalTransferCreatedPayload },
-    { name: "ConditionalTransferResolvedStream", serverStreaming: true, options: {}, I: Empty, O: ConditionalTransferCreatedPayload },
-    { name: "DepositReconciledStream", serverStreaming: true, options: {}, I: Empty, O: DepositReconciledPayload },
-    { name: "RequestCollateralStream", serverStreaming: true, options: {}, I: Empty, O: RequestCollateralPayload },
-    { name: "WithdrawalCreatedStream", serverStreaming: true, options: {}, I: Empty, O: WithdrawalCreatedPayload },
-    { name: "WithdrawalResolvedStream", serverStreaming: true, options: {}, I: Empty, O: WithdrawalCreatedPayload },
-    { name: "WithdrawalReconciledStream", serverStreaming: true, options: {}, I: Empty, O: WithdrawalReconciledPayload },
-    { name: "RestoreStateStream", serverStreaming: true, options: {}, I: Empty, O: SetupPayload },
+    { name: "IsAliveStream", serverStreaming: true, options: {}, I: GenericPublicIdentifierRequest, O: IsAlivePayload },
+    { name: "SetupStream", serverStreaming: true, options: {}, I: GenericPublicIdentifierRequest, O: SetupPayload },
+    { name: "ConditionalTransferCreatedStream", serverStreaming: true, options: {}, I: GenericPublicIdentifierRequest, O: ConditionalTransferCreatedPayload },
+    { name: "ConditionalTransferResolvedStream", serverStreaming: true, options: {}, I: GenericPublicIdentifierRequest, O: ConditionalTransferCreatedPayload },
+    { name: "DepositReconciledStream", serverStreaming: true, options: {}, I: GenericPublicIdentifierRequest, O: DepositReconciledPayload },
+    { name: "RequestCollateralStream", serverStreaming: true, options: {}, I: GenericPublicIdentifierRequest, O: RequestCollateralPayload },
+    { name: "WithdrawalCreatedStream", serverStreaming: true, options: {}, I: GenericPublicIdentifierRequest, O: WithdrawalCreatedPayload },
+    { name: "WithdrawalResolvedStream", serverStreaming: true, options: {}, I: GenericPublicIdentifierRequest, O: WithdrawalCreatedPayload },
+    { name: "WithdrawalReconciledStream", serverStreaming: true, options: {}, I: GenericPublicIdentifierRequest, O: WithdrawalReconciledPayload },
+    { name: "RestoreStateStream", serverStreaming: true, options: {}, I: GenericPublicIdentifierRequest, O: SetupPayload },
     { name: "EthProvider", options: {}, I: EthProviderRequest, O: EthProviderReply }
 ]);

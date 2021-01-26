@@ -97,10 +97,12 @@ const vectorService: GrpcTypes.IServerNodeService = {
     }
   },
 
-  conditionalTransferCreatedStream: () => undefined,
+  conditionalTransferCreatedStream: (
+    call: grpc.ServerWritableStream<GrpcTypes.Empty, GrpcTypes.ConditionalTransferCreatedPayload>,
+  ) => {},
+
   conditionalTransferResolvedStream: () => undefined,
   depositReconciledStream: () => undefined,
-  getTransferState: () => undefined,
   isAliveStream: () => undefined,
   requestCollateralStream: () => undefined,
   restoreStateStream: () => undefined,
@@ -108,6 +110,7 @@ const vectorService: GrpcTypes.IServerNodeService = {
   withdrawalCreatedStream: () => undefined,
   withdrawalReconciledStream: () => undefined,
   withdrawalResolvedStream: () => undefined,
+  getTransferState: () => undefined,
   clearStore: () => undefined,
   createTransfer: () => undefined,
   deposit: () => undefined,

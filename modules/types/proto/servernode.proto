@@ -10,7 +10,7 @@ service ServerNodeService {
     // general metadata getters
     rpc GetPing (Empty) returns (GenericMessageResponse) {}
     rpc GetConfig (Empty) returns (Configs) {}
-    rpc GetStatus (GetStatusRequest) returns (Status) {}
+    rpc GetStatus (GenericPublicIdentifierRequest) returns (Status) {}
     rpc GetRouterConfig (GetRouterConfigRequest) returns (RouterConfig) {}
 
     // channel and transfer state getters
@@ -43,16 +43,16 @@ service ServerNodeService {
     rpc SendDefundTransfer (TransferRequest) returns (TxHash) {}
 
     // subscriptions - server to client stream
-    rpc IsAliveStream (Empty) returns (stream IsAlivePayload) {}
-    rpc SetupStream (Empty) returns (stream SetupPayload) {}
-    rpc ConditionalTransferCreatedStream (Empty) returns (stream ConditionalTransferCreatedPayload) {}
-    rpc ConditionalTransferResolvedStream (Empty) returns (stream ConditionalTransferCreatedPayload) {}
-    rpc DepositReconciledStream (Empty) returns (stream DepositReconciledPayload) {}
-    rpc RequestCollateralStream (Empty) returns (stream RequestCollateralPayload) {}
-    rpc WithdrawalCreatedStream (Empty) returns (stream WithdrawalCreatedPayload) {}
-    rpc WithdrawalResolvedStream (Empty) returns (stream WithdrawalCreatedPayload) {}
-    rpc WithdrawalReconciledStream (Empty) returns (stream WithdrawalReconciledPayload) {}
-    rpc RestoreStateStream (Empty) returns (stream SetupPayload) {}
+    rpc IsAliveStream (GenericPublicIdentifierRequest) returns (stream IsAlivePayload) {}
+    rpc SetupStream (GenericPublicIdentifierRequest) returns (stream SetupPayload) {}
+    rpc ConditionalTransferCreatedStream (GenericPublicIdentifierRequest) returns (stream ConditionalTransferCreatedPayload) {}
+    rpc ConditionalTransferResolvedStream (GenericPublicIdentifierRequest) returns (stream ConditionalTransferCreatedPayload) {}
+    rpc DepositReconciledStream (GenericPublicIdentifierRequest) returns (stream DepositReconciledPayload) {}
+    rpc RequestCollateralStream (GenericPublicIdentifierRequest) returns (stream RequestCollateralPayload) {}
+    rpc WithdrawalCreatedStream (GenericPublicIdentifierRequest) returns (stream WithdrawalCreatedPayload) {}
+    rpc WithdrawalResolvedStream (GenericPublicIdentifierRequest) returns (stream WithdrawalCreatedPayload) {}
+    rpc WithdrawalReconciledStream (GenericPublicIdentifierRequest) returns (stream WithdrawalReconciledPayload) {}
+    rpc RestoreStateStream (GenericPublicIdentifierRequest) returns (stream SetupPayload) {}
     
     // eth provider pass-through
     rpc EthProvider (EthProviderRequest) returns (EthProviderReply) {}
@@ -60,6 +60,10 @@ service ServerNodeService {
 
 // generic defs
 message Empty {}
+
+message GenericPublicIdentifierRequest {
+    string public_identifier = 1;
+}
 
 message GenericMessageResponse {
     string message = 1;
@@ -196,10 +200,6 @@ message FullTransferStates {
 }
 
 // requests
-message GetStatusRequest {
-    string public_identifier = 1;
-}
-
 message GetRouterConfigRequest {
     string public_identifier = 1;
     string router_identifier = 2;

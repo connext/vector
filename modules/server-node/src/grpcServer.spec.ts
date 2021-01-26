@@ -91,4 +91,6 @@ describe("GRPC server", () => {
     expect(result.getError()).to.be.not.ok;
     expect(result.getValue()).to.deep.eq(expectedResponse);
   });
+
+  it("should on", async () => {});
 });

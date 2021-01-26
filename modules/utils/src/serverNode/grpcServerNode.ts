@@ -17,6 +17,33 @@ import Ajv from "ajv";
 import { ServerNodeServiceError } from "./errors";
 
 const ajv = new Ajv();
+
+const getStreamNameForEvent = <T extends EngineEvent>(eventName: T): string => {
+  switch (eventName) {
+    case "CONDITIONAL_TRANSFER_CREATED":
+      return "conditionalTransferCreatedStream";
+    case "CONDITIONAL_TRANSFER_RESOLVED":
+      return "conditionalTransferResolvedStream";
+    case "DEPOSIT_RECONCILED":
+      return "depositReconciledStream";
+    case "IS_ALIVE":
+      return "isAliveStream";
+    case "REQUEST_COLLATERAL":
+      return "requestCollateralStream";
+    case "RESTORE_STATE_EVENT":
+      return "restoreStateStream";
+    case "SETUP":
+      return "setupStream";
+    case "WITHDRAWAL_CREATED":
+      return "withdrawalCreatedStream";
+    case "WITHDRAWAL_RECONCILED":
+      return "withdrawalReconciledStream";
+    case "WITHDRAWAL_RESOLVED":
+      return "withdrawalResolvedStream";
+    default:
+      throw new Error("Unknown event");
+  }
+};
 export class GRPCServerNodeService implements INodeService {
   public publicIdentifier = "";
   public signerAddress = "";
@@ -63,7 +90,10 @@ export class GRPCServerNodeService implements INodeService {
   }
 
   async getStatus(publicIdentifier?: string): Promise<Result<NodeResponses.GetStatus, ServerNodeServiceError>> {
-    return this.validateAndExecuteGrpcRequest<OptionalPublicIdentifier<GrpcTypes.GetStatusRequest>, GrpcTypes.Status>(
+    return this.validateAndExecuteGrpcRequest<
+      OptionalPublicIdentifier<GrpcTypes.GenericPublicIdentifierRequest>,
+      GrpcTypes.Status
+    >(
       "getStatus",
       {
         publicIdentifier,
@@ -241,7 +271,7 @@ export class GRPCServerNodeService implements INodeService {
     filter: (payload: EngineEventMap[T]) => boolean = () => true,
     publicIdentifier?: string,
   ): void {
-    throw new Error("unimplemented");
+    const streamName = getStreamNameForEvent(event);
   }
 
   public waitFor<T extends EngineEvent>(
@@ -286,13 +316,10 @@ export class GRPCServerNodeService implements INodeService {
 
     // Attempt request
     try {
-      console.log("validateAndExecuteGrpcRequest ===> filled: ", filled);
-      console.log("validateAndExecuteGrpcRequest ===> methodName: ", methodName);
       const res = await this.client[methodName](filled);
-      console.log("validateAndExecuteGrpcRequest ===> res: ", res);
       return Result.ok(res);
     } catch (e) {
-      console.log("e: ", e);
+      this.logger.error({ error: jsonifyError(e), methodName, params: filled }, "Error occurred");
       const toThrow = new ServerNodeServiceError(
         ServerNodeServiceError.reasons.InternalServerError,
         filled.publicIdentifier,
