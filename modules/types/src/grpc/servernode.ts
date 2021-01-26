@@ -655,36 +655,6 @@ export interface Config {
  */
 export interface Status {
     /**
-     * @generated from protobuf oneof: ProviderSyncing
-     */
-    providerSyncing: {
-        oneofKind: "boolStat";
-        /**
-         * @generated from protobuf field: bool bool_stat = 1;
-         */
-        boolStat: boolean;
-    } | {
-        oneofKind: "obj";
-        /**
-         * @generated from protobuf field: com.vector.Status.Obj obj = 2;
-         */
-        obj: Status_Obj;
-    } | {
-        oneofKind: "myStat";
-        /**
-         * @generated from protobuf field: string my_stat = 3;
-         */
-        myStat: string;
-    } | {
-        oneofKind: "undefinedStat";
-        /**
-         * @generated from protobuf field: google.protobuf.Any undefined_stat = 4;
-         */
-        undefinedStat: Any;
-    } | {
-        oneofKind: undefined;
-    };
-    /**
      * @generated from protobuf field: string public_identifier = 5;
      */
     publicIdentifier: string;
@@ -698,19 +668,23 @@ export interface Status {
     version: string;
 }
 /**
- * @generated from protobuf message com.vector.Status.Obj
+ * @generated from protobuf message com.vector.Status.ProviderSyncing
  */
-export interface Status_Obj {
+export interface Status_ProviderSyncing {
     /**
-     * @generated from protobuf field: string starting_block = 1;
+     * @generated from protobuf field: bool syncing = 1;
+     */
+    syncing: boolean;
+    /**
+     * @generated from protobuf field: string starting_block = 2;
      */
     startingBlock: string;
     /**
-     * @generated from protobuf field: string current_block = 2;
+     * @generated from protobuf field: string current_block = 3;
      */
     currentBlock: string;
     /**
-     * @generated from protobuf field: string highest_block = 3;
+     * @generated from protobuf field: string highest_block = 4;
      */
     highestBlock: string;
 }
@@ -2224,10 +2198,6 @@ export const Config = new Config$Type();
 class Status$Type extends MessageType<Status> {
     constructor() {
         super("com.vector.Status", [
-            { no: 1, name: "bool_stat", kind: "scalar", oneof: "providerSyncing", T: 8 /*ScalarType.BOOL*/ },
-            { no: 2, name: "obj", kind: "message", oneof: "providerSyncing", T: () => Status_Obj },
-            { no: 3, name: "my_stat", kind: "scalar", oneof: "providerSyncing", T: 9 /*ScalarType.STRING*/ },
-            { no: 4, name: "undefined_stat", kind: "message", oneof: "providerSyncing", T: () => Any },
             { no: 5, name: "public_identifier", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
             { no: 6, name: "signer_address", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
             { no: 7, name: "version", kind: "scalar", T: 9 /*ScalarType.STRING*/ }
@@ -2239,19 +2209,20 @@ class Status$Type extends MessageType<Status> {
  */
 export const Status = new Status$Type();
 // @generated message type with reflection information, may provide speed optimized methods
-class Status_Obj$Type extends MessageType<Status_Obj> {
+class Status_ProviderSyncing$Type extends MessageType<Status_ProviderSyncing> {
     constructor() {
-        super("com.vector.Status.Obj", [
-            { no: 1, name: "starting_block", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
-            { no: 2, name: "current_block", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
-            { no: 3, name: "highest_block", kind: "scalar", T: 9 /*ScalarType.STRING*/ }
+        super("com.vector.Status.ProviderSyncing", [
+            { no: 1, name: "syncing", kind: "scalar", T: 8 /*ScalarType.BOOL*/ },
+            { no: 2, name: "starting_block", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 3, name: "current_block", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 4, name: "highest_block", kind: "scalar", T: 9 /*ScalarType.STRING*/ }
         ]);
     }
 }
 /**
- * @generated MessageType for protobuf message com.vector.Status.Obj
+ * @generated MessageType for protobuf message com.vector.Status.ProviderSyncing
  */
-export const Status_Obj = new Status_Obj$Type();
+export const Status_ProviderSyncing = new Status_ProviderSyncing$Type();
 // @generated message type with reflection information, may provide speed optimized methods
 class DefundNonces$Type extends MessageType<DefundNonces> {
     constructor() {

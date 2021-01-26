@@ -220,13 +220,21 @@ export class VectorEngine implements IVectorEngine {
     const providerSyncing = Object.fromEntries(
       chainIds.map((chainId, index) => {
         const res = providerResponses[index];
-        let syncing:
-          | string
-          | boolean
-          | { startingBlock: string; currentBlock: string; highestBlock: string }
-          | undefined;
+        let syncing: {
+          syncing: boolean;
+          startingBlock: string;
+          currentBlock: string;
+          highestBlock: string;
+          syncError?: string;
+        };
         if (res.isError) {
-          syncing = res.getError()?.message;
+          syncing = {
+            syncError: res.getError()?.message,
+            currentBlock: "0x",
+            highestBlock: "0x",
+            startingBlock: "0x",
+            syncing: true,
+          };
         } else {
           syncing = res.getValue();
         }

@@ -54,12 +54,12 @@ export class EthereumChainReader implements IVectorChainReader {
     chainId: number,
   ): Promise<
     Result<
-      | boolean
-      | {
-          startingBlock: string;
-          currentBlock: string;
-          highestBlock: string;
-        },
+      {
+        syncing: boolean;
+        startingBlock: string;
+        currentBlock: string;
+        highestBlock: string;
+      },
       ChainError
     >
   > {
@@ -70,6 +70,9 @@ export class EthereumChainReader implements IVectorChainReader {
 
     try {
       const res = await provider.send("eth_syncing", []);
+      if (typeof res === "boolean") {
+        return Result.ok({ syncing: res, startingBlock: "0x", currentBlock: "0x", highestBlock: "0x" });
+      }
       return Result.ok(res);
     } catch (e) {
       return Result.fail(e);

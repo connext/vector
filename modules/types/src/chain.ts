@@ -149,12 +149,12 @@ export interface IVectorChainReader {
     chainId: number,
   ): Promise<
     Result<
-      | boolean
-      | {
-          startingBlock: string;
-          currentBlock: string;
-          highestBlock: string;
-        },
+      {
+        syncing: boolean;
+        startingBlock: string;
+        currentBlock: string;
+        highestBlock: string;
+      },
       ChainError
     >
   >;

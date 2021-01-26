@@ -4,11 +4,13 @@
 // https://github.com/timostamm/protobuf-ts/tree/master/packages/example-node-grpc-server
 
 import * as grpc from "@grpc/grpc-js";
-import { jsonifyError, GrpcTypes } from "@connext/vector-types";
+import { jsonifyError, GrpcTypes, ChannelRpcMethods } from "@connext/vector-types";
 
-import { createNode, deleteNodes } from "./helpers/nodes";
+import { createNode, deleteNodes, getNode } from "./helpers/nodes";
 
 import { logger, store } from ".";
+import { ServerNodeError } from "./helpers/errors";
+import { constructRpcRequest } from "@connext/vector-utils";
 
 const DEFAULT_PORT = 5000;
 
@@ -50,11 +52,33 @@ const vectorService: GrpcTypes.IServerNodeService = {
     call: grpc.ServerUnaryCall<GrpcTypes.Empty, GrpcTypes.Pong>,
     callback: grpc.sendUnaryData<GrpcTypes.Pong>,
   ): Promise<void> {
-    console.log("getPing >>>>> call: ", call);
     callback(null, { message: "pong" });
   },
   getRegisteredTransfers: () => undefined,
-  getStatus: () => undefined,
+  async getStatus(
+    call: grpc.ServerUnaryCall<GrpcTypes.TPublicIdentifier, GrpcTypes.Status>,
+    callback: grpc.sendUnaryData<GrpcTypes.Status>,
+  ): Promise<void> {
+    const engine = getNode(call.request.publicIdentifier);
+    if (!engine) {
+      const error = new ServerNodeError(
+        ServerNodeError.reasons.NodeNotFound,
+        call.request.publicIdentifier,
+        call.request,
+      );
+      logger.error({ error }, "Could not find engine");
+      return callback({ code: grpc.status.NOT_FOUND, details: JSON.stringify(error) });
+    }
+    try {
+      const params = constructRpcRequest(ChannelRpcMethods.chan_getStatus, {});
+      const res = await engine.request<"chan_getStatus">(params);
+
+      callback(null, { providerSyncing: res.providerSyncing });
+    } catch (e) {
+      logger.error({ error: jsonifyError(e) });
+      callback({ code: grpc.status.NOT_FOUND, details: JSON.stringify(e) });
+    }
+  },
   getSubscription: () => undefined,
   getSubscriptionWithOnlyPublicIdentifier: () => undefined,
   getTransferStateByRoutingId: () => undefined,

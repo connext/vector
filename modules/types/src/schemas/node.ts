@@ -143,16 +143,13 @@ const GetStatusResponseSchema = {
     publicIdentifier: TPublicIdentifier,
     signerAddress: TAddress,
     providerSyncing: Type.Dict(
-      Type.Union([
-        Type.Boolean(),
-        Type.Object({
-          startingBlock: Type.String(),
-          currentBlock: Type.String(),
-          highestBlock: Type.String(),
-        }),
-        Type.String(),
-        Type.Undefined(),
-      ]),
+      Type.Object({
+        syncError: Type.Optional(Type.String()),
+        syncing: Type.Boolean(),
+        startingBlock: Type.String(),
+        currentBlock: Type.String(),
+        highestBlock: Type.String(),
+      }),
     ),
     version: Type.String(),
   }),

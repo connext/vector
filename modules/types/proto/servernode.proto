@@ -275,18 +275,12 @@ message Config {
     string signer_address = 3;
 }
 
-
 message Status {
-    message Obj {
-        string starting_block = 1;
-        string current_block = 2;
-        string highest_block = 3;
-    }
-    oneof ProviderSyncing {
-        bool bool_stat = 1;
-        Obj obj = 2;
-        string my_stat = 3;
-        google.protobuf.Any undefined_stat = 4;
+    message ProviderSyncing {
+        bool syncing = 1;
+        string starting_block = 2;
+        string current_block = 3;
+        string highest_block = 4;
     }
     string public_identifier = 5;
     string signer_address = 6;
