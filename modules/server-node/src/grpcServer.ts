@@ -23,7 +23,7 @@ const vectorService: GrpcTypes.IServerNodeService = {
   },
 
   async getStatus(
-    call: grpc.ServerUnaryCall<GrpcTypes.GetStatusRequest, GrpcTypes.Status>,
+    call: grpc.ServerUnaryCall<GrpcTypes.GenericPublicIdentifierRequest, GrpcTypes.Status>,
     callback: grpc.sendUnaryData<GrpcTypes.Status>,
   ): Promise<void> {
     const engine = getNode(call.request.publicIdentifier);
