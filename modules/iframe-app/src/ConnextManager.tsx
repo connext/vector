@@ -26,14 +26,18 @@ export default class ConnextManager {
     }
   }
 
-  private async initNode(chainProviders: { [chainId: number]: string }): Promise<BrowserNode> {
+  private async initNode(chainProviders: { [chainId: number]: string }, signature?: string): Promise<BrowserNode> {
     // store entropy in local storage
     if (!localStorage) {
       throw new Error("localStorage not available in this window, please enable cross-site cookies and try again.");
     }
     let storedEntropy = localStorage.getItem("entropy");
     if (!storedEntropy) {
-      storedEntropy = hexlify(randomBytes(65));
+      if (signature) {
+        storedEntropy = keccak256(signature);
+      } else {
+        storedEntropy = hexlify(randomBytes(65));
+      }
       localStorage.setItem("entropy", storedEntropy);
     }
 
