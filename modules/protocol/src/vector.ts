@@ -275,6 +275,12 @@ export class Vector implements IVectorProtocol {
     // TODO: skipping this, if it works, consider just not awaiting the promise so the rest of startup can continue
     if (!this.skipCheckIn) {
       const channels = await this.storeService.getChannelStates();
+      const providers = this.chainReader.getChainProviders();
+      if (providers.isError) {
+        this.logger.error({ ...providers.getError() }, "Error getting chain providers");
+        return this;
+      }
+      const supportedChains = Object.keys(providers.getValue()).map((chain) => parseInt(chain));
 
       // Handle disputes
       // First check on current dispute status of all channels onchain
@@ -283,6 +289,13 @@ export class Vector implements IVectorProtocol {
       // TODO: is there a better way to do this?
       await Promise.all(
         channels.map(async (channel) => {
+          if (!supportedChains.includes(channel.networkContext.chainId)) {
+            this.logger.debug(
+              { chainId: channel.networkContext.chainId, supportedChains },
+              "Channel chain not supported, skipping",
+            );
+            return;
+          }
           const disputeRes = await this.chainReader.getChannelDispute(
             channel.channelAddress,
             channel.networkContext.chainId,

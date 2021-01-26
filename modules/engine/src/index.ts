@@ -105,7 +105,7 @@ export class VectorEngine implements IVectorEngine {
     await engine.setupListener();
     logger.debug({}, "Setup engine listeners");
     if (!skipCheckIn) {
-      sendIsAlive(engine.signer, engine.messaging, engine.store, engine.logger);
+      sendIsAlive(engine.signer, engine.messaging, engine.store, engine.chainService, engine.logger);
     } else {
       logger.warn("Skipping isAlive broadcast because of skipCheckIn config");
     }

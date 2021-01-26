@@ -374,15 +374,22 @@ export async function resolveExistingWithdrawals(
   const activeTransfers = await vector.getActiveTransfers(channel.channelAddress);
   logger.info({ method, methodId }, "Got active transfers in isAlive channel");
   // active transfer needs to be a withdrawal
-  const withdrawalsToComplete = activeTransfers.filter(async (transfer) => {
-    const isWithdraw = await isWithdrawTransfer(transfer, chainAddresses, chainService);
-    return !isWithdraw.isError && isWithdraw.getValue() && transfer.responderIdentifier === signer.publicIdentifier;
+  // isWithdrawTransfer is async so it needs to be awaited
+  const withdrawalsOnlyPromises = await Promise.all(
+    activeTransfers.map(async (transfer) => {
+      const isWithdraw = await isWithdrawTransfer(transfer, chainAddresses, chainService);
+      return !isWithdraw.isError && isWithdraw.getValue() ? transfer : undefined;
+    }),
+  );
+  const withdrawalsOnly = withdrawalsOnlyPromises.filter((x) => !!x); // filter undefined
+  const withdrawalsToComplete = withdrawalsOnly.filter(async (transfer) => {
+    return transfer!.responderIdentifier === signer.publicIdentifier;
   });
   await Promise.all(
     withdrawalsToComplete.map(async (transfer) => {
-      logger.info({ method, methodId, transfer: transfer.transferId }, "Found withdrawal to handle");
-      await resolveWithdrawal(channel, transfer, vector, evts, store, signer, chainService, logger);
-      logger.info({ method, methodId, transfer: transfer.transferId }, "Resolved withdrawal");
+      logger.info({ method, methodId, transfer: transfer!.transferId }, "Found withdrawal to handle");
+      await resolveWithdrawal(channel, transfer!, vector, evts, store, signer, chainService, logger);
+      logger.info({ method, methodId, transfer: transfer!.transferId }, "Resolved withdrawal");
     }),
   );
 }
