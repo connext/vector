@@ -15,18 +15,63 @@ import { logger, store } from ".";
 const DEFAULT_PORT = 5000;
 
 const vectorService: GrpcTypes.IServerNodeService = {
-  conditionalTransferCreatedStream: () => undefined,
-  conditionalTransferResolvedStream: () => undefined,
-  depositReconciledStream: () => undefined,
-  getTransferState: () => undefined,
-  isAliveStream: () => undefined,
-  requestCollateralStream: () => undefined,
-  restoreStateStream: () => undefined,
-  setupStream: () => undefined,
-  withdrawalCreatedStream: () => undefined,
-  withdrawalReconciledStream: () => undefined,
-  withdrawalResolvedStream: () => undefined,
-  clearStore: () => undefined,
+  async getPing(
+    call: grpc.ServerUnaryCall<GrpcTypes.Empty, GrpcTypes.GenericMessageResponse>,
+    callback: grpc.sendUnaryData<GrpcTypes.GenericMessageResponse>,
+  ): Promise<void> {
+    callback(null, { message: "pong" });
+  },
+
+  async getStatus(
+    call: grpc.ServerUnaryCall<GrpcTypes.GetStatusRequest, GrpcTypes.Status>,
+    callback: grpc.sendUnaryData<GrpcTypes.Status>,
+  ): Promise<void> {
+    const engine = getNode(call.request.publicIdentifier);
+    if (!engine) {
+      const error = new ServerNodeError(
+        ServerNodeError.reasons.NodeNotFound,
+        call.request.publicIdentifier,
+        call.request,
+      );
+      logger.error({ error }, "Could not find engine");
+      return callback({ code: grpc.status.NOT_FOUND, details: JSON.stringify(error) });
+    }
+    try {
+      const params = constructRpcRequest(ChannelRpcMethods.chan_getStatus, {});
+      const res = await engine.request<"chan_getStatus">(params);
+
+      callback(null, res);
+    } catch (e) {
+      logger.error({ error: jsonifyError(e) });
+      callback({ code: grpc.status.UNKNOWN, details: JSON.stringify(e) });
+    }
+  },
+
+  async getRouterConfig(
+    call: grpc.ServerUnaryCall<GrpcTypes.GetRouterConfigRequest, GrpcTypes.RouterConfig>,
+    callback: grpc.sendUnaryData<GrpcTypes.RouterConfig>,
+  ): Promise<void> {
+    const engine = getNode(call.request.publicIdentifier);
+    if (!engine) {
+      const error = new ServerNodeError(
+        ServerNodeError.reasons.NodeNotFound,
+        call.request.publicIdentifier,
+        call.request,
+      );
+      logger.error({ error }, "Could not find engine");
+      return callback({ code: grpc.status.NOT_FOUND, details: JSON.stringify(error) });
+    }
+    try {
+      const params = constructRpcRequest(ChannelRpcMethods.chan_getStatus, {});
+      const res = await engine.request<"chan_getRouterConfig">(params);
+
+      callback(null, res);
+    } catch (e) {
+      logger.error({ error: jsonifyError(e) });
+      callback({ code: grpc.status.UNKNOWN, details: JSON.stringify(e) });
+    }
+  },
+
   async createNode(
     call: grpc.ServerUnaryCall<GrpcTypes.CreateNodeRequest, GrpcTypes.CreateNodeReply>,
     callback: grpc.sendUnaryData<GrpcTypes.CreateNodeReply>,
@@ -51,6 +96,19 @@ const vectorService: GrpcTypes.IServerNodeService = {
       callback({ code: grpc.status.INTERNAL, details: JSON.stringify(jsonifyError(e)) });
     }
   },
+
+  conditionalTransferCreatedStream: () => undefined,
+  conditionalTransferResolvedStream: () => undefined,
+  depositReconciledStream: () => undefined,
+  getTransferState: () => undefined,
+  isAliveStream: () => undefined,
+  requestCollateralStream: () => undefined,
+  restoreStateStream: () => undefined,
+  setupStream: () => undefined,
+  withdrawalCreatedStream: () => undefined,
+  withdrawalReconciledStream: () => undefined,
+  withdrawalResolvedStream: () => undefined,
+  clearStore: () => undefined,
   createTransfer: () => undefined,
   deposit: () => undefined,
   ethProvider: () => undefined,
@@ -59,37 +117,7 @@ const vectorService: GrpcTypes.IServerNodeService = {
   getChannelStateByParticipants: () => undefined,
   getChannelStates: () => undefined,
   getConfig: () => undefined,
-  async getPing(
-    call: grpc.ServerUnaryCall<GrpcTypes.Empty, GrpcTypes.GenericMessageResponse>,
-    callback: grpc.sendUnaryData<GrpcTypes.GenericMessageResponse>,
-  ): Promise<void> {
-    callback(null, { message: "pong" });
-  },
   getRegisteredTransfers: () => undefined,
-  async getStatus(
-    call: grpc.ServerUnaryCall<GrpcTypes.GetStatusRequest, GrpcTypes.Status>,
-    callback: grpc.sendUnaryData<GrpcTypes.Status>,
-  ): Promise<void> {
-    const engine = getNode(call.request.publicIdentifier);
-    if (!engine) {
-      const error = new ServerNodeError(
-        ServerNodeError.reasons.NodeNotFound,
-        call.request.publicIdentifier,
-        call.request,
-      );
-      logger.error({ error }, "Could not find engine");
-      return callback({ code: grpc.status.NOT_FOUND, details: JSON.stringify(error) });
-    }
-    try {
-      const params = constructRpcRequest(ChannelRpcMethods.chan_getStatus, {});
-      const res = await engine.request<"chan_getStatus">(params);
-
-      callback(null, res);
-    } catch (e) {
-      logger.error({ error: jsonifyError(e) });
-      callback({ code: grpc.status.NOT_FOUND, details: JSON.stringify(e) });
-    }
-  },
   getSubscription: () => undefined,
   getSubscriptionWithOnlyPublicIdentifier: () => undefined,
   getTransferStateByRoutingId: () => undefined,

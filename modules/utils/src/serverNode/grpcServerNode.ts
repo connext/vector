@@ -75,13 +75,10 @@ export class GRPCServerNodeService implements INodeService {
   getRouterConfig(
     params: OptionalPublicIdentifier<NodeParams.GetRouterConfig>,
   ): Promise<Result<NodeResponses.GetRouterConfig, ServerNodeServiceError>> {
-    return this.validateAndExecuteGrpcRequest<OptionalPublicIdentifier<GrpcTypes.GetStatusRequest>, GrpcTypes.Status>(
-      "getStatus",
-      {
-        publicIdentifier,
-      },
-      NodeParams.GetConfigSchema,
-    );
+    return this.validateAndExecuteGrpcRequest<
+      OptionalPublicIdentifier<GrpcTypes.GetRouterConfigRequest>,
+      GrpcTypes.RouterConfig
+    >("getRouterConfig", params, NodeParams.GetRouterConfigSchema) as any;
   }
 
   async getConfig(): Promise<Result<NodeResponses.GetConfig, ServerNodeServiceError>> {

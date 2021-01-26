@@ -6,6 +6,8 @@ import {
   getSignerAddressFromPublicIdentifier,
   getTestLoggers,
   GRPCServerNodeService,
+  mkAddress,
+  mkPublicIdentifier,
 } from "@connext/vector-utils";
 import pino from "pino";
 import { createStubInstance, SinonStubbedInstance, stub } from "sinon";
@@ -32,36 +34,61 @@ describe("GRPC server", () => {
     expect(result.getValue()).to.eq("pong");
   });
 
-  it.only("should getStatus", async () => {
+  it("should getStatus", async () => {
     const pub = getRandomIdentifier();
+    const expectedResponse: NodeResponses.GetStatus = {
+      publicIdentifier: pub,
+      signerAddress: getSignerAddressFromPublicIdentifier(pub),
+      providerSyncing: {
+        1337: {
+          syncing: false,
+          startingBlock: "0x384",
+          currentBlock: "0x386",
+          highestBlock: "0x454",
+        },
+      },
+      version: "0.0.0",
+    };
+
     engine.request.resolves({
       publicIdentifier: pub,
       signerAddress: getSignerAddressFromPublicIdentifier(pub),
-      providerSyncing: {
-        1337: {
-          syncing: false,
-          startingBlock: "0x384",
-          currentBlock: "0x386",
-          highestBlock: "0x454",
-        },
-      },
-      version: "0.0.0",
-    } as NodeResponses.GetStatus);
+      providerSyncing: expectedResponse,
+    });
     const result = await client.getStatus(pub);
     expect(result.getError()).to.be.not.ok;
-    console.log("result.getValue(): ", result.getValue());
-    expect(result.getValue()).to.deep.eq({
-      publicIdentifier: pub,
-      signerAddress: getSignerAddressFromPublicIdentifier(pub),
-      providerSyncing: {
-        1337: {
-          syncing: false,
-          startingBlock: "0x384",
-          currentBlock: "0x386",
-          highestBlock: "0x454",
+    expect(result.getValue()).to.deep.eq(expectedResponse);
+  });
+
+  it("should getRouterConfig", async () => {
+    const expectedResponse: NodeResponses.GetRouterConfig = {
+      supportedChains: [1337, 1338],
+      allowedSwaps: [
+        {
+          fromAssetId: mkAddress("0x0"),
+          fromChainId: 1337,
+          toAssetId: mkAddress("0x0"),
+          toChainId: 1338,
+          hardcodedRate: "0.01",
+          priceType: "hardcoded",
         },
-      },
-      version: "0.0.0",
+        {
+          fromAssetId: mkAddress("0x1"),
+          fromChainId: 1338,
+          toAssetId: mkAddress("0x1"),
+          toChainId: 1337,
+          hardcodedRate: "0.01",
+          priceType: "hardcoded",
+        },
+      ],
+    };
+
+    engine.request.resolves(expectedResponse);
+    const result = await client.getRouterConfig({
+      routerIdentifier: mkPublicIdentifier("vectorA"),
+      publicIdentifier: mkPublicIdentifier("vectorB"),
     });
+    expect(result.getError()).to.be.not.ok;
+    expect(result.getValue()).to.deep.eq(expectedResponse);
   });
 });

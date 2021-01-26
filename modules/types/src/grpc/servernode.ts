@@ -158,9 +158,9 @@ export interface ChannelUpdate {
      */
     type: string;
     /**
-     * @generated from protobuf field: int64 nonce = 5;
+     * @generated from protobuf field: int32 nonce = 5;
      */
-    nonce: bigint;
+    nonce: number;
     /**
      * @generated from protobuf field: com.vector.Balance balance = 6;
      */
@@ -300,9 +300,9 @@ export interface FullChannelState {
      */
     defundNounces: string[];
     /**
-     * @generated from protobuf field: int64 nonce = 11;
+     * @generated from protobuf field: int32 nonce = 11;
      */
-    nonce: bigint;
+    nonce: number;
     /**
      * @generated from protobuf field: string merkle_root = 12;
      */
@@ -400,9 +400,9 @@ export interface FullTransferState {
      */
     inDispute: boolean;
     /**
-     * @generated from protobuf field: int64 channel_nonce = 16;
+     * @generated from protobuf field: int32 channel_nonce = 16;
      */
-    channelNonce: bigint;
+    channelNonce: number;
     /**
      * @generated from protobuf field: optional google.protobuf.Any meta = 17;
      */
@@ -879,22 +879,13 @@ export interface AllowedSwaps {
      */
     toAssetId: string;
     /**
-     * @generated from protobuf field: com.vector.AllowedSwaps.PriceType price_type = 5;
+     * @generated from protobuf field: string price_type = 5;
      */
-    priceType: AllowedSwaps_PriceType;
+    priceType: string;
     /**
      * @generated from protobuf field: string hardcoded_rate = 6;
      */
     hardcodedRate: string;
-}
-/**
- * @generated from protobuf enum com.vector.AllowedSwaps.PriceType
- */
-export enum AllowedSwaps_PriceType {
-    /**
-     * @generated from protobuf enum value: HARDCODED = 0;
-     */
-    HARDCODED = 0
 }
 /**
  * @generated from protobuf message com.vector.RouterConfig
@@ -904,6 +895,10 @@ export interface RouterConfig {
      * @generated from protobuf field: repeated int32 supported_chains = 1;
      */
     supportedChains: number[];
+    /**
+     * @generated from protobuf field: repeated com.vector.AllowedSwaps allowed_swaps = 2;
+     */
+    allowedSwaps: AllowedSwaps[];
 }
 /**
  * @generated from protobuf message com.vector.ProviderSyncing
@@ -1651,7 +1646,7 @@ class ChannelUpdate$Type extends MessageType<ChannelUpdate> {
             { no: 2, name: "from_identifier", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
             { no: 3, name: "to_identifier", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
             { no: 4, name: "type", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
-            { no: 5, name: "nonce", kind: "scalar", T: 3 /*ScalarType.INT64*/, L: 0 /*LongType.BIGINT*/ },
+            { no: 5, name: "nonce", kind: "scalar", T: 5 /*ScalarType.INT32*/ },
             { no: 6, name: "balance", kind: "message", T: () => Balance },
             { no: 7, name: "asset_id", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
             { no: 8, name: "setup_update_details", kind: "message", oneof: "details", T: () => SetupUpdateDetails },
@@ -1679,8 +1674,8 @@ class ChannelUpdate$Type extends MessageType<ChannelUpdate> {
                 case /* string type */ 4:
                     message.type = reader.string();
                     break;
-                case /* int64 nonce */ 5:
-                    message.nonce = reader.int64().toBigInt();
+                case /* int32 nonce */ 5:
+                    message.nonce = reader.int32();
                     break;
                 case /* com.vector.Balance balance */ 6:
                     message.balance = Balance.internalBinaryRead(reader, reader.uint32(), options, message.balance);
@@ -1742,9 +1737,9 @@ class ChannelUpdate$Type extends MessageType<ChannelUpdate> {
         /* string type = 4; */
         if (message.type !== "")
             writer.tag(4, WireType.LengthDelimited).string(message.type);
-        /* int64 nonce = 5; */
-        if (message.nonce !== 0n)
-            writer.tag(5, WireType.Varint).int64(message.nonce);
+        /* int32 nonce = 5; */
+        if (message.nonce !== 0)
+            writer.tag(5, WireType.Varint).int32(message.nonce);
         /* com.vector.Balance balance = 6; */
         if (message.balance)
             Balance.internalBinaryWrite(message.balance, writer.tag(6, WireType.LengthDelimited).fork(), options).join();
@@ -1941,7 +1936,7 @@ class FullChannelState$Type extends MessageType<FullChannelState> {
             { no: 8, name: "processed_deposits_a", kind: "scalar", repeat: 2 /*RepeatType.UNPACKED*/, T: 9 /*ScalarType.STRING*/ },
             { no: 9, name: "processed_deposits_b", kind: "scalar", repeat: 2 /*RepeatType.UNPACKED*/, T: 9 /*ScalarType.STRING*/ },
             { no: 10, name: "defund_nounces", kind: "scalar", repeat: 2 /*RepeatType.UNPACKED*/, T: 9 /*ScalarType.STRING*/ },
-            { no: 11, name: "nonce", kind: "scalar", T: 3 /*ScalarType.INT64*/, L: 0 /*LongType.BIGINT*/ },
+            { no: 11, name: "nonce", kind: "scalar", T: 5 /*ScalarType.INT32*/ },
             { no: 12, name: "merkle_root", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
             { no: 13, name: "in_dispute", kind: "scalar", T: 8 /*ScalarType.BOOL*/ },
             { no: 14, name: "latest_update", kind: "message", T: () => ChannelUpdate },
@@ -1984,8 +1979,8 @@ class FullChannelState$Type extends MessageType<FullChannelState> {
                 case /* repeated string defund_nounces */ 10:
                     message.defundNounces.push(reader.string());
                     break;
-                case /* int64 nonce */ 11:
-                    message.nonce = reader.int64().toBigInt();
+                case /* int32 nonce */ 11:
+                    message.nonce = reader.int32();
                     break;
                 case /* string merkle_root */ 12:
                     message.merkleRoot = reader.string();
@@ -2044,9 +2039,9 @@ class FullChannelState$Type extends MessageType<FullChannelState> {
         /* repeated string defund_nounces = 10; */
         for (let i = 0; i < message.defundNounces.length; i++)
             writer.tag(10, WireType.LengthDelimited).string(message.defundNounces[i]);
-        /* int64 nonce = 11; */
-        if (message.nonce !== 0n)
-            writer.tag(11, WireType.Varint).int64(message.nonce);
+        /* int32 nonce = 11; */
+        if (message.nonce !== 0)
+            writer.tag(11, WireType.Varint).int32(message.nonce);
         /* string merkle_root = 12; */
         if (message.merkleRoot !== "")
             writer.tag(12, WireType.LengthDelimited).string(message.merkleRoot);
@@ -2131,7 +2126,7 @@ class FullTransferState$Type extends MessageType<FullTransferState> {
             { no: 13, name: "transfer_state", kind: "message", T: () => Any },
             { no: 14, name: "transfer_resolver", kind: "message", T: () => Any },
             { no: 15, name: "in_dispute", kind: "scalar", T: 8 /*ScalarType.BOOL*/ },
-            { no: 16, name: "channel_nonce", kind: "scalar", T: 3 /*ScalarType.INT64*/, L: 0 /*LongType.BIGINT*/ },
+            { no: 16, name: "channel_nonce", kind: "scalar", T: 5 /*ScalarType.INT32*/ },
             { no: 17, name: "meta", kind: "message", T: () => Any }
         ]);
     }
@@ -2185,8 +2180,8 @@ class FullTransferState$Type extends MessageType<FullTransferState> {
                 case /* bool in_dispute */ 15:
                     message.inDispute = reader.bool();
                     break;
-                case /* int64 channel_nonce */ 16:
-                    message.channelNonce = reader.int64().toBigInt();
+                case /* int32 channel_nonce */ 16:
+                    message.channelNonce = reader.int32();
                     break;
                 case /* optional google.protobuf.Any meta */ 17:
                     message.meta = Any.internalBinaryRead(reader, reader.uint32(), options, message.meta);
@@ -2248,9 +2243,9 @@ class FullTransferState$Type extends MessageType<FullTransferState> {
         /* bool in_dispute = 15; */
         if (message.inDispute !== false)
             writer.tag(15, WireType.Varint).bool(message.inDispute);
-        /* int64 channel_nonce = 16; */
-        if (message.channelNonce !== 0n)
-            writer.tag(16, WireType.Varint).int64(message.channelNonce);
+        /* int32 channel_nonce = 16; */
+        if (message.channelNonce !== 0)
+            writer.tag(16, WireType.Varint).int32(message.channelNonce);
         /* optional google.protobuf.Any meta = 17; */
         if (message.meta)
             Any.internalBinaryWrite(message.meta, writer.tag(17, WireType.LengthDelimited).fork(), options).join();
@@ -3683,7 +3678,7 @@ class AllowedSwaps$Type extends MessageType<AllowedSwaps> {
             { no: 2, name: "to_chain_id", kind: "scalar", T: 5 /*ScalarType.INT32*/ },
             { no: 3, name: "from_asset_id", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
             { no: 4, name: "to_asset_id", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
-            { no: 5, name: "price_type", kind: "enum", T: () => ["com.vector.AllowedSwaps.PriceType", AllowedSwaps_PriceType] },
+            { no: 5, name: "price_type", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
             { no: 6, name: "hardcoded_rate", kind: "scalar", T: 9 /*ScalarType.STRING*/ }
         ]);
     }
@@ -3704,8 +3699,8 @@ class AllowedSwaps$Type extends MessageType<AllowedSwaps> {
                 case /* string to_asset_id */ 4:
                     message.toAssetId = reader.string();
                     break;
-                case /* com.vector.AllowedSwaps.PriceType price_type */ 5:
-                    message.priceType = reader.int32();
+                case /* string price_type */ 5:
+                    message.priceType = reader.string();
                     break;
                 case /* string hardcoded_rate */ 6:
                     message.hardcodedRate = reader.string();
@@ -3734,9 +3729,9 @@ class AllowedSwaps$Type extends MessageType<AllowedSwaps> {
         /* string to_asset_id = 4; */
         if (message.toAssetId !== "")
             writer.tag(4, WireType.LengthDelimited).string(message.toAssetId);
-        /* com.vector.AllowedSwaps.PriceType price_type = 5; */
-        if (message.priceType !== 0)
-            writer.tag(5, WireType.Varint).int32(message.priceType);
+        /* string price_type = 5; */
+        if (message.priceType !== "")
+            writer.tag(5, WireType.LengthDelimited).string(message.priceType);
         /* string hardcoded_rate = 6; */
         if (message.hardcodedRate !== "")
             writer.tag(6, WireType.LengthDelimited).string(message.hardcodedRate);
@@ -3754,7 +3749,8 @@ export const AllowedSwaps = new AllowedSwaps$Type();
 class RouterConfig$Type extends MessageType<RouterConfig> {
     constructor() {
         super("com.vector.RouterConfig", [
-            { no: 1, name: "supported_chains", kind: "scalar", repeat: 1 /*RepeatType.PACKED*/, T: 5 /*ScalarType.INT32*/ }
+            { no: 1, name: "supported_chains", kind: "scalar", repeat: 1 /*RepeatType.PACKED*/, T: 5 /*ScalarType.INT32*/ },
+            { no: 2, name: "allowed_swaps", kind: "message", repeat: 1 /*RepeatType.PACKED*/, T: () => AllowedSwaps }
         ]);
     }
     internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: RouterConfig): RouterConfig {
@@ -3768,6 +3764,9 @@ class RouterConfig$Type extends MessageType<RouterConfig> {
                             message.supportedChains.push(reader.int32());
                     else
                         message.supportedChains.push(reader.int32());
+                    break;
+                case /* repeated com.vector.AllowedSwaps allowed_swaps */ 2:
+                    message.allowedSwaps.push(AllowedSwaps.internalBinaryRead(reader, reader.uint32(), options));
                     break;
                 default:
                     let u = options.readUnknownField;
@@ -3788,6 +3787,9 @@ class RouterConfig$Type extends MessageType<RouterConfig> {
                 writer.int32(message.supportedChains[i]);
             writer.join();
         }
+        /* repeated com.vector.AllowedSwaps allowed_swaps = 2; */
+        for (let i = 0; i < message.allowedSwaps.length; i++)
+            AllowedSwaps.internalBinaryWrite(message.allowedSwaps[i], writer.tag(2, WireType.LengthDelimited).fork(), options).join();
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);

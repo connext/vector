@@ -107,7 +107,7 @@ message ChannelUpdate {
     string from_identifier = 2;
     string to_identifier = 3;
     string type = 4;
-    int64 nonce = 5;
+    int32 nonce = 5;
     Balance balance = 6;
     string asset_id = 7;
     oneof details {
@@ -151,7 +151,7 @@ message FullChannelState {
     repeated string processed_deposits_b = 9;
     repeated string defund_nounces = 10;
     
-    int64 nonce = 11;
+    int32 nonce = 11;
     string merkle_root = 12;
     bool in_dispute = 13;
 
@@ -186,7 +186,7 @@ message FullTransferState {
     google.protobuf.Any transfer_resolver = 14;
 
     bool in_dispute = 15;
-    int64 channel_nonce = 16;
+    int32 channel_nonce = 16;
 
     optional google.protobuf.Any meta = 17;
 }
@@ -357,14 +357,12 @@ message AllowedSwaps {
     int32 to_chain_id = 2;
     string from_asset_id = 3;
     string to_asset_id = 4;
-    enum PriceType {
-        HARDCODED = 0;
-    }
-    PriceType price_type = 5;
+    string price_type = 5;
     string hardcoded_rate = 6;
 }
 message RouterConfig {
     repeated int32 supported_chains = 1;
+    repeated AllowedSwaps allowed_swaps = 2;
 }
 
 message ProviderSyncing {
