@@ -2,6 +2,10 @@
 
 ## Next Release
 
+## 0.1.8-beta.6
+
+- \[protocol\] Fix non-checksummed addresses
+
 ## 0.1.8-beta.5
 
 - \[iframe\] Allows connect on iframe to be called multiple times (i.e. with different chainProviders)
