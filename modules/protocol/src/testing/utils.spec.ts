@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-empty-function */
 import { BigNumber, BigNumberish } from "@ethersproject/bignumber";
 import { AddressZero } from "@ethersproject/constants";
-import { Balance, Result, IVectorChainReader } from "@connext/vector-types";
+import { Balance, Result, IVectorChainReader, UpdateType } from "@connext/vector-types";
 import {
   mkAddress,
   expect,
@@ -13,7 +13,7 @@ import {
 import Sinon from "sinon";
 import { VectorChainReader } from "@connext/vector-contracts";
 
-import { generateSignedChannelCommitment, reconcileDeposit } from "../utils";
+import { generateSignedChannelCommitment, mergeAssetIds, reconcileDeposit } from "../utils";
 
 import { env } from "./env";
 
@@ -34,6 +34,46 @@ type ReconcileDepositTest = {
 };
 
 describe("utils", () => {
+  describe("mergeAssetIds", () => {
+    it("should work", async () => {
+      const alice = mkAddress("0xaaa");
+      const bob = mkAddress("0xbbb");
+      const { channel } = createTestChannelState(UpdateType.deposit, {
+        alice,
+        bob,
+        assetIds: [
+          "0x6818D725D967af69eFfFf23c5B1201a607242269",
+          "0xb9A355a6BFd995642EC64D9186873A8adFC27DAf",
+          "0x6818D725D967af69eFfFf23c5B1201a607242269".toLowerCase(),
+          "0x" + "6818D725D967af69eFfFf23c5B1201a607242269".toUpperCase(),
+        ],
+        processedDepositsA: ["60", "13", "17", "35"],
+        processedDepositsB: ["85", "7", "10", "7"],
+        balances: [
+          { to: [alice, bob], amount: ["15", "3"] },
+          { to: [alice, bob], amount: ["17", "3"] },
+          { to: [alice, bob], amount: ["2", "17"] },
+          { to: [alice, bob], amount: ["9", "8"] },
+        ],
+        defundNonces: ["1", "1", "5", "3"],
+      });
+
+      const updated = mergeAssetIds(channel);
+      console.log("updated", updated);
+      expect(updated).to.containSubset({
+        ...channel,
+        assetIds: ["0x6818D725D967af69eFfFf23c5B1201a607242269", "0xb9A355a6BFd995642EC64D9186873A8adFC27DAf"],
+        processedDepositsA: ["112", "13"],
+        processedDepositsB: ["102", "7"],
+        balances: [
+          { to: [alice, bob], amount: ["26", "28"] },
+          { to: [alice, bob], amount: ["17", "3"] },
+        ],
+        defundNonces: ["5", "1"],
+      });
+    });
+  });
+
   describe("generateSignedChannelCommitment", () => {
     const signer = getRandomChannelSigner();
     const counterpartyAddress = mkAddress();
