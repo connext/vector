@@ -447,7 +447,7 @@ function handleDepositReconciliation(
     bobIdentifier,
     channelAddress,
     assetId,
-    channelBalance: balances[assetIds.findIndex((a) => a === assetId)],
+    channelBalance: balances[assetIds.findIndex((a) => getAddress(a) === getAddress(assetId))],
     meta,
   };
   evts[EngineEvents.DEPOSIT_RECONCILED].post(payload);
@@ -509,7 +509,7 @@ async function handleConditionalTransferCreation(
     conditionType = registryInfo.getValue().name;
   }
 
-  const assetIdx = assetIds.findIndex((a) => a === assetId);
+  const assetIdx = assetIds.findIndex((a) => getAddress(a) === getAddress(assetId));
   const payload: ConditionalTransferCreatedPayload = {
     aliceIdentifier,
     bobIdentifier,
@@ -583,7 +583,7 @@ async function handleConditionalTransferResolution(
     aliceIdentifier,
     bobIdentifier,
     channelAddress,
-    channelBalance: balances[assetIds.findIndex((a) => a === assetId)],
+    channelBalance: balances[assetIds.findIndex((a) => getAddress(a) === getAddress(assetId))],
     transfer: transfer!,
     conditionType,
     activeTransferIds: event.updatedTransfers?.map((t) => t.transferId),
@@ -679,7 +679,7 @@ async function handleWithdrawalTransferResolution(
   );
 
   // Post to evt
-  const assetIdx = assetIds.findIndex((a) => a === assetId);
+  const assetIdx = assetIds.findIndex((a) => getAddress(a) === getAddress(assetId));
   const payload: WithdrawalResolvedPayload = {
     aliceIdentifier,
     bobIdentifier,

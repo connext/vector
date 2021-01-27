@@ -20,6 +20,7 @@ import {
   UpdateType,
   ChainError,
 } from "@connext/vector-types";
+import { getAddress } from "@ethersproject/address";
 import { BigNumber } from "@ethersproject/bignumber";
 import { hashChannelCommitment, validateChannelUpdateSignatures } from "@connext/vector-utils";
 import Ajv from "ajv";
@@ -257,7 +258,7 @@ export const getUpdatedChannelBalance = (
   initiator: string,
 ): Balance => {
   // Get the existing balances to update
-  const assetIdx = state.assetIds.findIndex((a) => a === assetId);
+  const assetIdx = state.assetIds.findIndex((a) => getAddress(a) === getAddress(assetId));
   if (assetIdx === -1) {
     throw new Error(`Asset id not found in channel ${assetId}`);
   }
@@ -292,5 +293,91 @@ export const getUpdatedChannelBalance = (
       updateExistingAmount(existing.amount[0], aliceTransferAmount),
       updateExistingAmount(existing.amount[1], bobTransferAmount),
     ],
+  };
+};
+
+// NOTE: prior to v0.1.8-beta.6 there were inconsistent checks
+// with checksummed and non-checksummed assetIds resulting in
+// some channels having 2 assetId entries (one lowercase and one
+// checksum, for example) for the same asset. calling `mergeAssets`
+// will create the correct balance/processed deposit entries for
+// all duplicated assetIds. This function will merge all assetIds that are
+// duplicates and update all existing channel state arrays
+export const mergeAssetIds = (channel: FullChannelState): FullChannelState => {
+  const assetIds: string[] = [];
+  const processedDepositsA: string[] = [];
+  const processedDepositsB: string[] = [];
+  const balances: Balance[] = [];
+  const defundNonces: string[] = [];
+  // get index of all duplicated assetids
+  channel.assetIds.forEach((asset, idx) => {
+    const duplicates = channel.assetIds.filter((a, i) => a.toLowerCase() === asset.toLowerCase() && i !== idx);
+    const checkSummed = getAddress(asset);
+    if (duplicates.length === 0) {
+      // there are no duplicates for this asset, update
+      // all arrays to have existing value at existing idx
+      assetIds[idx] = checkSummed;
+      processedDepositsA[idx] = channel.processedDepositsA[idx];
+      processedDepositsB[idx] = channel.processedDepositsB[idx];
+      balances[idx] = channel.balances[idx];
+      defundNonces[idx] = channel.defundNonces[idx];
+      return;
+    }
+
+    // there *are* duplicates, reduce the arrays
+    const unprocessedAsset = (a: string) => {
+      // unprocessed iff asset isnt in updated arrays and matches asset
+      // in question
+      return a.toLowerCase() === asset.toLowerCase() && !assetIds.includes(checkSummed);
+    };
+    const processedAForAsset = channel.processedDepositsA.reduce((prev, curr, currIdx) => {
+      return BigNumber.from(prev)
+        .add(unprocessedAsset(channel.assetIds[currIdx]) ? curr : "0")
+        .toString();
+    }, "0");
+    const processedBForAsset = channel.processedDepositsB.reduce((prev, curr, currIdx) => {
+      return BigNumber.from(prev)
+        .add(unprocessedAsset(channel.assetIds[currIdx]) ? curr : "0")
+        .toString();
+    }, "0");
+    const balanceForAsset = channel.balances.reduce(
+      (prev, curr, currIdx) => {
+        if (unprocessedAsset(channel.assetIds[currIdx])) {
+          // make update
+          const amount = [
+            BigNumber.from(prev.amount[0]).add(curr.amount[0]),
+            BigNumber.from(prev.amount[1]).add(curr.amount[1]),
+          ].map((v) => v.toString());
+          return { to: prev.to, amount };
+        }
+        // dont make any updates
+        return prev;
+      },
+      { to: [channel.alice, channel.bob], amount: ["0", "0"] },
+    );
+    const defundNonceForAsset = channel.defundNonces.reduce((prev, curr, currIdx) => {
+      return unprocessedAsset(channel.assetIds[currIdx]) && prev > curr ? prev : curr;
+    }, "0");
+
+    // only update value once
+    if (!unprocessedAsset(asset)) {
+      return;
+    }
+    assetIds[idx] = getAddress(asset);
+    processedDepositsA[idx] = processedAForAsset;
+    processedDepositsB[idx] = processedBForAsset;
+    balances[idx] = balanceForAsset;
+    defundNonces[idx] = defundNonceForAsset;
+
+    return;
+  });
+
+  return {
+    ...channel,
+    assetIds,
+    processedDepositsA,
+    processedDepositsB,
+    balances,
+    defundNonces,
   };
 };
