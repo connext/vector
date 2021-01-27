@@ -21,14 +21,18 @@ export class ServerNodeError extends NodeError {
 
   readonly context: ServerNodeErrorContext;
 
+  readonly code: number | undefined;
+
   constructor(
     public readonly msg: Values<typeof ServerNodeError.reasons>,
     publicIdentifier: string,
     // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
     params: any,
     context: any = {},
+    code?: number,
   ) {
     super(msg, { params, publicIdentifier, ...context }, ServerNodeError.type);
+    this.code = code;
   }
 }
 
