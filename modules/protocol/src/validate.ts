@@ -24,7 +24,7 @@ import {
   jsonifyError,
 } from "@connext/vector-types";
 import { getSignerAddressFromPublicIdentifier, getTransferId } from "@connext/vector-utils";
-import { isAddress } from "@ethersproject/address";
+import { isAddress, getAddress } from "@ethersproject/address";
 import { BigNumber } from "@ethersproject/bignumber";
 import { BaseLogger } from "pino";
 
@@ -166,7 +166,7 @@ export async function validateUpdateParams<T extends UpdateType = any>(
       }
 
       // Verify the assetId is in the channel (and get index)
-      const assetIdx = previousState!.assetIds.findIndex((a) => a === assetId);
+      const assetIdx = previousState!.assetIds.findIndex((a) => getAddress(a) === getAddress(assetId));
       if (assetIdx < 0) {
         return handleError(ValidationError.reasons.AssetNotFound);
       }
