@@ -18,6 +18,7 @@ import {
   mkAddress,
   mkPublicIdentifier,
 } from "@connext/vector-utils";
+import { delay } from "ts-nats/lib/util";
 
 import { config } from "../config";
 
@@ -247,6 +248,93 @@ describe("store", () => {
       const transfersChannel2 = await store.getActiveTransfers(transfer3State.channel.channelAddress);
       const t3 = transfersChannel2.find((t) => t.transferId === transfer3State.transfer.transferId);
       expect(t3).to.deep.eq(transfer3State.transfer);
+    });
+  });
+
+  describe("getTransfers", () => {
+    it("should work with and without filter", async () => {
+      const channel1 = mkAddress("0xaaa");
+      const transfer1State = createTestChannelState(
+        "create",
+        {
+          channelAddress: channel1,
+        },
+        { transferId: mkHash("0x123"), meta: { routingId: mkHash("0x123") } },
+      );
+      await store.saveChannelState(transfer1State.channel, transfer1State.transfer);
+
+      await delay(100);
+      const firstDelay = new Date();
+      await delay(100);
+
+      const transfer2Create = createTestChannelState(
+        "create",
+        {
+          channelAddress: channel1,
+          nonce: transfer1State.channel.nonce + 1,
+        },
+        { transferId: mkHash("0x456"), meta: { routingId: mkHash("0x456") } },
+      );
+      await store.saveChannelState(transfer2Create.channel, transfer2Create.transfer);
+
+      const transfer2Resolve = createTestChannelState(
+        "resolve",
+        {
+          channelAddress: channel1,
+          nonce: transfer2Create.channel.nonce + 1,
+        },
+        { transferId: mkHash("0x456"), meta: { routingId: mkHash("0x456") } },
+      );
+      await store.saveChannelState(transfer2Resolve.channel, transfer2Resolve.transfer);
+
+      await delay(100);
+      const secondDelay = new Date();
+      await delay(100);
+
+      const channel2 = mkAddress("0xbbb");
+      const transfer3State = createTestChannelState(
+        "create",
+        {
+          channelAddress: channel2,
+          bob: mkAddress("0xbaba"),
+          bobIdentifier: mkPublicIdentifier("vectorABCD"),
+        },
+        { transferId: mkHash("0x789"), meta: { routingId: mkHash("0x789") } },
+      );
+      await store.saveChannelState(transfer3State.channel, transfer3State.transfer);
+
+      // no filter, get transfers across all channels
+      const transfers = await store.getTransfers();
+      expect(transfers.length).to.eq(3);
+      expect(transfers).to.deep.contain(transfer1State.transfer);
+      expect(transfers).to.deep.contain({
+        ...transfer2Create.transfer,
+        transferResolver: transfer2Resolve.transfer.transferResolver,
+      });
+      expect(transfers).to.deep.contain(transfer3State.transfer);
+
+      const channelFiltered = await store.getTransfers({ channelAddress: channel1 });
+      expect(channelFiltered.length).to.eq(2);
+      expect(channelFiltered).to.deep.contain(transfer1State.transfer);
+      expect(channelFiltered).to.deep.contain({
+        ...transfer2Create.transfer,
+        transferResolver: transfer2Resolve.transfer.transferResolver,
+      });
+
+      const startDateFiltered = await store.getTransfers({ startDate: secondDelay });
+      expect(startDateFiltered.length).to.eq(1);
+      expect(startDateFiltered).to.deep.contain(transfer3State.transfer);
+
+      const endDateFiltered = await store.getTransfers({ endDate: firstDelay });
+      expect(endDateFiltered.length).to.eq(1);
+      expect(endDateFiltered).to.deep.contain(transfer1State.transfer);
+
+      const startAndEndDateFiltered = await store.getTransfers({ startDate: firstDelay, endDate: secondDelay });
+      expect(startAndEndDateFiltered.length).to.eq(1);
+      expect(startAndEndDateFiltered).to.deep.contain({
+        ...transfer2Create.transfer,
+        transferResolver: transfer2Resolve.transfer.transferResolver,
+      });
     });
   });
 

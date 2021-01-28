@@ -8,6 +8,7 @@ import {
   TransactionReason,
   ChannelDispute,
   TransferDispute,
+  GetTransfersFilterOpts,
 } from "@connext/vector-types";
 import { TransactionReceipt, TransactionResponse } from "@ethersproject/abstract-provider";
 
@@ -153,6 +154,10 @@ export class MemoryStoreService implements IEngineStore {
 
   getTransfersByRoutingId(routingId: string): Promise<FullTransferState[]> {
     throw new Error("getTransfersByRoutingId not implemented.");
+  }
+
+  getTransfers(filterOpts?: GetTransfersFilterOpts): Promise<FullTransferState[]> {
+    throw new Error("Method not implemented.");
   }
 
   getSchemaVersion(): Promise<number | undefined> {

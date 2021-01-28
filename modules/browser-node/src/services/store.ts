@@ -2,6 +2,7 @@ import {
   ChannelDispute,
   FullChannelState,
   FullTransferState,
+  GetTransfersFilterOpts,
   IChainServiceStore,
   IEngineStore,
   ResolveUpdateDetails,
@@ -16,13 +17,19 @@ import { TransactionResponse, TransactionReceipt } from "@ethersproject/provider
 import Dexie, { DexieOptions } from "dexie";
 import { BaseLogger } from "pino";
 
-type StoredTransfer = FullTransferState & { createUpdateNonce: number; resolveUpdateNonce: number; routingId: string };
+type StoredTransfer = FullTransferState & {
+  createUpdateNonce: number;
+  resolveUpdateNonce: number;
+  routingId: string;
+  createdAt: Date;
+};
 
 const storedTransferToTransferState = (stored: StoredTransfer): FullTransferState => {
   const transfer: any = stored;
   delete transfer.createUpdateNonce;
   delete transfer.resolveUpdateNonce;
   delete transfer.routingId;
+  delete transfer.createdAt;
   return transfer as FullTransferState;
 };
 
@@ -55,11 +62,32 @@ class VectorIndexedDBDatabase extends Dexie {
       channels:
         "channelAddress, [aliceIdentifier+bobIdentifier+networkContext.chainId], [alice+bob+networkContext.chainId]",
       transfers:
-        "transferId,[routingId+channelAddress],[createUpdateNonce+channelAddress],[resolveUpdateNonce+channelAddress],[transferResolver+channelAddress]",
+        "transferId, [routingId+channelAddress], [createUpdateNonce+channelAddress], [resolveUpdateNonce+channelAddress], [transferResolver+channelAddress]",
       transactions: "transactionHash",
       withdrawCommitment: "transferId",
       values: "key",
     });
+    this.version(2)
+      .stores({
+        channels:
+          "channelAddress, [aliceIdentifier+bobIdentifier+networkContext.chainId], [alice+bob+networkContext.chainId], createdAt",
+        transfers:
+          "transferId, [routingId+channelAddress], [createUpdateNonce+channelAddress], [resolveUpdateNonce+channelAddress], [transferResolver+channelAddress], createdAt, resolveUpdateNonce, channelAddress",
+      })
+      .upgrade((tx) => {
+        // An upgrade function for version 3 will upgrade data based on version 2.
+        tx.table("channels")
+          .toCollection()
+          .modify((channel) => {
+            channel.createdAt = new Date();
+          });
+        tx.table("transfers")
+          .toCollection()
+          .modify((transfer) => {
+            transfer.createdAt = new Date();
+          });
+      });
+
     this.channels = this.table("channels");
     this.transfers = this.table("transfers");
     this.transactions = this.table("transactions");
@@ -153,6 +181,7 @@ export class BrowserStore implements IEngineStore, IChainServiceStore {
             createUpdateNonce: transfer.channelNonce + 1,
             resolveUpdateNonce: 0,
             routingId: transfer?.meta?.routingId,
+            createdAt: new Date(),
           };
         }),
       );
@@ -168,6 +197,7 @@ export class BrowserStore implements IEngineStore, IChainServiceStore {
           createUpdateNonce: channelState.latestUpdate.nonce,
           resolveUpdateNonce: 0,
           routingId: transfer?.meta?.routingId, // allow indexing on routingId
+          createdAt: new Date(),
         });
       } else if (channelState.latestUpdate.type === UpdateType.resolve) {
         await this.db.transfers.update((channelState.latestUpdate.details as ResolveUpdateDetails).transferId, {
@@ -222,6 +252,47 @@ export class BrowserStore implements IEngineStore, IChainServiceStore {
     const transfers = this.db.transfers.where({ routingId });
     const ret = await transfers.toArray();
     return ret.map(storedTransferToTransferState);
+  }
+
+  async getTransfers(filterOpts?: GetTransfersFilterOpts): Promise<FullTransferState[]> {
+    const filterQuery: any = [];
+    if (filterOpts?.channelAddress) {
+      filterQuery.push({ index: "channelAddress", function: "equals", params: filterOpts.channelAddress });
+    }
+
+    // start and end
+    if (filterOpts?.startDate && filterOpts.endDate) {
+      filterQuery.push({ index: "channelAddress", function: "between", params: filterOpts.channelAddress });
+    } else if (filterOpts?.startDate) {
+      filterQuery.push({ index: "channelAddress", function: "equals", params: filterOpts.channelAddress });
+    } else if (filterOpts?.endDate) {
+      filterQuery.push({ index: "channelAddress", function: "equals", params: filterOpts.channelAddress });
+    }
+
+    let collection = this.db.transfers.toCollection();
+    if (filterOpts?.channelAddress) {
+      collection = collection.filter((transfer) => transfer.channelAddress === filterOpts.channelAddress);
+    }
+    if (filterOpts?.startDate && filterOpts.endDate) {
+      collection = collection.filter(
+        (transfer) => transfer.createdAt >= filterOpts.startDate! && transfer.createdAt <= filterOpts.endDate!,
+      );
+    } else if (filterOpts?.startDate) {
+      collection = collection.filter((transfer) => transfer.createdAt >= filterOpts.startDate!);
+    } else if (filterOpts?.endDate) {
+      collection = collection.filter((transfer) => transfer.createdAt <= filterOpts.endDate!);
+    }
+
+    if (filterOpts?.active) {
+      collection = collection.filter((transfer) => transfer.resolveUpdateNonce === 0);
+    }
+
+    if (filterOpts?.routingId) {
+      collection = collection.filter((transfer) => transfer.routingId === filterOpts.routingId);
+    }
+
+    const transfers = await collection.toArray();
+    return transfers.map(storedTransferToTransferState);
   }
 
   async saveTransactionResponse(
