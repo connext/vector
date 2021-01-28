@@ -971,21 +971,25 @@ export class PrismaStore implements IServerNodeStore {
     if (filterOpts?.channelAddress) {
       filterQuery.push({ channelAddressId: filterOpts.channelAddress });
     }
-    if (filterOpts?.startDate) {
+
+    // start and end
+    if (filterOpts?.startDate && filterOpts.endDate) {
+      filterQuery.push({ createdAt: { gte: filterOpts.startDate, lte: filterOpts.endDate } });
+    } else if (filterOpts?.startDate) {
       filterQuery.push({ createdAt: { gte: filterOpts.startDate } });
-    }
-    if (filterOpts?.endDate) {
+    } else if (filterOpts?.endDate) {
       filterQuery.push({ createdAt: { lte: filterOpts.endDate } });
     }
     if (filterOpts?.active) {
       filterQuery.push({ channelAddress: filterOpts.channelAddress });
     }
+
     if (filterOpts?.routingId) {
       filterQuery.push({ routingId: filterOpts.routingId });
     }
 
     const transfers = await this.prisma.transfer.findMany({
-      where: filterOpts ? { OR: [filterQuery] } : undefined,
+      where: filterOpts ? { OR: filterQuery } : undefined,
       include: {
         channel: true,
         createUpdate: true,
