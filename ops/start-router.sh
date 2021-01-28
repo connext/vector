@@ -254,6 +254,9 @@ bash "$root/ops/pull-images.sh" "$prometheus_image" > /dev/null
 cadvisor_image="gcr.io/google-containers/cadvisor:latest"
 bash "$root/ops/pull-images.sh" "$cadvisor_image" > /dev/null
 
+metrics_collector_image="${project}_metrics_collector:$version";
+bash "$root/ops/pull-images.sh" "$cadvisor_image" > /dev/null
+
 # To save time, only pull logdna image if it will be used
 if [ -n "$logdna_key" ]
 then
@@ -280,7 +283,13 @@ prometheus_services="prometheus:
       - /:/rootfs:ro
       - /var/run:/var/run:rw
       - /sys:/sys:ro
-      - /var/lib/docker/:/var/lib/docker:ro"
+      - /var/lib/docker/:/var/lib/docker:ro
+      
+  metrics:
+    $common
+    image: $metrics_collector_image
+    ports:
+      - 3005:3000"
 
 grafana_service="grafana:
     image: '$grafana_image'

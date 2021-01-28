@@ -70,7 +70,7 @@ logger.info({ config }, "Loaded config from environment");
 const server = fastify({ logger, pluginTimeout: 300_000, disableRequestLogging: config.logLevel !== "debug" });
 
 const register = new Registry();
-server.register(metricsPlugin, { endpoint: "/metrics", prefix: "router_", register });
+server.register(metricsPlugin, { endpoint: "/metrics", prefix: "router_" });
 
 let router: IRouter;
 const store = new PrismaStore();
