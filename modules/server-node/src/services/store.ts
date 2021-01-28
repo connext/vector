@@ -966,8 +966,6 @@ export class PrismaStore implements IServerNodeStore {
 
   async getTransfers(filterOpts?: GetTransfersFilterOpts): Promise<FullTransferState[]> {
     const filterQuery = [];
-    if (!filterOpts) {
-    }
     if (filterOpts?.channelAddress) {
       filterQuery.push({ channelAddressId: filterOpts.channelAddress });
     }
@@ -980,6 +978,7 @@ export class PrismaStore implements IServerNodeStore {
     } else if (filterOpts?.endDate) {
       filterQuery.push({ createdAt: { lte: filterOpts.endDate } });
     }
+
     if (filterOpts?.active) {
       filterQuery.push({ channelAddress: filterOpts.channelAddress });
     }
