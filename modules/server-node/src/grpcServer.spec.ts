@@ -1,6 +1,7 @@
 import { VectorEngine } from "@connext/vector-engine";
-import { IVectorEngine, NodeResponses } from "@connext/vector-types";
+import { ConditionalTransferCreatedPayload, EngineEvents, IVectorEngine, NodeResponses } from "@connext/vector-types";
 import {
+  createTestFullHashlockTransferState,
   expect,
   getRandomIdentifier,
   getSignerAddressFromPublicIdentifier,
@@ -92,5 +93,29 @@ describe("GRPC server", () => {
     expect(result.getValue()).to.deep.eq(expectedResponse);
   });
 
-  it("should on", async () => {});
+  it.only("should conditionalTransferCreatedStream", () => {
+    return new Promise<void>((res) => {
+      const payload: ConditionalTransferCreatedPayload = {
+        aliceIdentifier: mkPublicIdentifier("vectorA"),
+        bobIdentifier: mkPublicIdentifier("vectorB"),
+        channelAddress: mkAddress("0xcc"),
+        channelBalance: { amount: ["1", "2"], to: [mkAddress("0xa"), mkAddress("0xb")] },
+        conditionType: "hello",
+        transfer: createTestFullHashlockTransferState(),
+        activeTransferIds: [],
+      };
+      engine.on.yields(payload);
+
+      client.on(
+        EngineEvents.CONDITIONAL_TRANSFER_CREATED,
+        (data) => {
+          console.log("test =====> data: ", data);
+          expect(data).to.deep.eq(payload);
+          res();
+        },
+        undefined,
+        mkPublicIdentifier("vectorB"),
+      );
+    });
+  });
 });

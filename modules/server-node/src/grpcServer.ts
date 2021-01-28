@@ -103,6 +103,7 @@ const vectorService: GrpcTypes.IServerNodeService = {
       GrpcTypes.ConditionalTransferCreatedPayload
     >,
   ) => {
+    console.log("CALLED conditionalTransferCreatedStream");
     const engine = getNode(call.request.publicIdentifier);
     if (!engine) {
       const error = new ServerNodeError(
@@ -115,6 +116,7 @@ const vectorService: GrpcTypes.IServerNodeService = {
       return call.destroy(error);
     }
     engine.on(EngineEvents.CONDITIONAL_TRANSFER_CREATED, (data) => {
+      console.log("EngineEvents.CONDITIONAL_TRANSFER_CREATED ======> data: ", data);
       call.write({ ...data, activeTransferIds: data.activeTransferIds ?? [] });
     });
   },

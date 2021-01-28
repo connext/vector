@@ -19,7 +19,7 @@
     "@connext/vector-types": "0.1.8-beta.4",
     "@connext/vector-utils": "0.1.8-beta.4",
     "@ethersproject/wallet": "5.0.9",
-    "@grpc/grpc-js": "1.2.4",
+    "@grpc/grpc-js": "1.2.5",
     "@prisma/client": "2.12.1",
     "@protobuf-ts/plugin": "2.0.0-alpha.12",
     "@protobuf-ts/protoc": "2.0.0-alpha.12",

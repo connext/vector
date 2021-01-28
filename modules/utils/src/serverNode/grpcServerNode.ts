@@ -13,6 +13,7 @@ import { ChannelCredentials } from "@grpc/grpc-js";
 import { GrpcTransport } from "@protobuf-ts/grpc-transport";
 import { BaseLogger } from "pino";
 import Ajv from "ajv";
+import * as grpc from "@grpc/grpc-js";
 
 import { ServerNodeServiceError } from "./errors";
 
@@ -51,7 +52,7 @@ export class GRPCServerNodeService implements INodeService {
 
   private constructor(private readonly serverNodeUrl: string, private readonly logger: BaseLogger) {
     const transport = new GrpcTransport({
-      host: serverNodeUrl,
+      host: this.serverNodeUrl,
       channelCredentials: ChannelCredentials.createInsecure(),
     });
     this.client = new GrpcTypes.ServerNodeServiceClient(transport);
@@ -272,6 +273,17 @@ export class GRPCServerNodeService implements INodeService {
     publicIdentifier?: string,
   ): void {
     const streamName = getStreamNameForEvent(event);
+    const stream = this.client[streamName]({
+      publicIdentifier: publicIdentifier ?? this.publicIdentifier,
+    });
+    (async () => {
+      for await (const data of stream.response) {
+        console.log("on ====> data: ", data);
+        if (filter(data as any)) {
+          callback(data as any);
+        }
+      }
+    })();
   }
 
   public waitFor<T extends EngineEvent>(
@@ -316,8 +328,22 @@ export class GRPCServerNodeService implements INodeService {
 
     // Attempt request
     try {
-      const res = await this.client[methodName](filled);
-      return Result.ok(res);
+      const call = await this.client[methodName](filled);
+      console.log("call: ", call);
+      this.logger.debug({ call, methodName, filled }, "gRPC call complete");
+      if (call.status !== grpc.status.OK) {
+        const toThrow = new ServerNodeServiceError(
+          ServerNodeServiceError.reasons.InternalServerError,
+          filled.publicIdentifier,
+          methodName,
+          params,
+          {
+            call,
+          },
+        );
+        return Result.fail(toThrow);
+      }
+      return Result.ok(call.response);
     } catch (e) {
       this.logger.error({ error: jsonifyError(e), methodName, params: filled }, "Error occurred");
       const toThrow = new ServerNodeServiceError(
