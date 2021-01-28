@@ -2,6 +2,17 @@
 
 ## Next Release
 
+## 0.1.8-beta.6
+
+- \[protocol\] Fix non-checksummed addresses
+
+## 0.1.8-beta.5
+
+- \[iframe\] Allows connect on iframe to be called multiple times (i.e. with different chainProviders)
+- \[engine\] Only updates disputes/sends isAlive messages if chain is supported
+- \[browser-node\] Changes store prefix to be signer-specific, doesn't delete stores on start if signer key !== locally stored key
+- \[browser-node\] Removes crossChainTransfer from browser-node
+
 ## 0.1.8-beta.4
 
 - \[contracts\] Add `drip` task to hardhat

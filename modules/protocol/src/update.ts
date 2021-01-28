@@ -20,11 +20,12 @@ import {
   ResolveUpdateDetails,
   jsonifyError,
 } from "@connext/vector-types";
+import { getAddress } from "@ethersproject/address";
 import { HashZero, AddressZero } from "@ethersproject/constants";
 import { BaseLogger } from "pino";
 
 import { ApplyUpdateError, CreateUpdateError } from "./errors";
-import { generateSignedChannelCommitment, getUpdatedChannelBalance, reconcileDeposit } from "./utils";
+import { generateSignedChannelCommitment, getUpdatedChannelBalance, mergeAssetIds, reconcileDeposit } from "./utils";
 
 // Should return a state with the given update applied
 // It is assumed here that the update is validated before
@@ -56,7 +57,7 @@ export function applyUpdate<T extends UpdateType>(
 > {
   const { type, details, channelAddress, fromIdentifier, toIdentifier, balance, assetId, nonce } = update;
 
-  const assetIdx = (previousState?.assetIds ?? []).findIndex((a) => a === assetId);
+  const assetIdx = (previousState?.assetIds ?? []).findIndex((a) => getAddress(a) === getAddress(assetId));
 
   // Sanity check data presence so it is safe to force-unwrap
   if (!previousState && type !== UpdateType.setup) {
@@ -103,18 +104,26 @@ export function applyUpdate<T extends UpdateType>(
         assetId,
         previousState!.assetIds,
       );
+
+      // NOTE: prior to v0.1.8-beta.6 there were inconsistent checks
+      // with checksummed and non-checksummed assetIds resulting in
+      // some channels having 2 assetId entries (one lowercase and one
+      // checksum, for example) for the same asset. calling `mergeAssets`
+      // will create the correct balance/processed deposit entries for
+      // all duplicated assetIds
+      const updatedChannel = {
+        ...previousState!,
+        balances,
+        processedDepositsA,
+        processedDepositsB,
+        assetIds: assetIdx !== -1 ? previousState!.assetIds : [...previousState!.assetIds, assetId],
+        defundNonces: assetIdx !== -1 ? [...previousState!.defundNonces] : [...previousState!.defundNonces, "1"],
+        nonce,
+        latestUpdate: update,
+      };
       return Result.ok({
         updatedActiveTransfers: [...previousActiveTransfers],
-        updatedChannel: {
-          ...previousState!,
-          balances,
-          processedDepositsA,
-          processedDepositsB,
-          assetIds: assetIdx !== -1 ? previousState!.assetIds : [...previousState!.assetIds, assetId],
-          defundNonces: assetIdx !== -1 ? [...previousState!.defundNonces] : [...previousState!.defundNonces, "1"],
-          nonce,
-          latestUpdate: update,
-        },
+        updatedChannel: mergeAssetIds(updatedChannel),
       });
     }
     case UpdateType.create: {
@@ -379,7 +388,7 @@ async function generateDepositUpdate(
   // Determine the locked value and existing balance using the
   // assetIdx
   const { assetId } = params.details;
-  const assetIdx = state.assetIds.findIndex((a) => a === assetId);
+  const assetIdx = state.assetIds.findIndex((a) => getAddress(a) === getAddress(assetId));
   const existingChannelBalance =
     assetIdx === -1 ? { to: [state.alice, state.bob], amount: ["0", "0"] } : state.balances[assetIdx];
   const processedDepositsAOfAssetId = assetIdx === -1 ? "0" : state.processedDepositsA[assetIdx];
@@ -603,7 +612,7 @@ function reconcileBalanceWithExisting(
   assetIds: string[],
 ): Balance[] {
   // Update the balances array at the appropriate index
-  const assetIdx = assetIds.findIndex((a) => a === assetToReconcile);
+  const assetIdx = assetIds.findIndex((a) => getAddress(a) === getAddress(assetToReconcile));
   if (assetIdx === -1) {
     // Add new balance to array (new asset id)
     return [...existing, balanceToReconcile];
@@ -624,7 +633,7 @@ function reconcileProcessedDepositsWithExisting(
   assetIds: string[],
 ): { processedDepositsA: string[]; processedDepositsB: string[] } {
   // Update the arrays at the appropriate index
-  const assetIdx = assetIds.findIndex((a) => a === assetToReconcile);
+  const assetIdx = assetIds.findIndex((a) => getAddress(a) === getAddress(assetToReconcile));
   if (assetIdx === -1) {
     // Add new deposit to array (new asset id)
     return {

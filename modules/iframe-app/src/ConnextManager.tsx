@@ -43,11 +43,10 @@ export default class ConnextManager {
     const privateKey = Wallet.fromMnemonic(mnemonic).privateKey;
     const signer = new ChannelSigner(privateKey);
 
-    // store publicIdentifier in local storage to see if indexedDB needs to be deleted
+    // check stored public identifier, and log a warning
     const storedPublicIdentifier = localStorage.getItem("publicIdentifier");
     if (storedPublicIdentifier && storedPublicIdentifier !== signer.publicIdentifier) {
-      console.warn("Public identifier does not match what is in storage, deleting store...");
-      indexedDB.deleteDatabase("VectorIndexedDBDatabase");
+      console.warn("Public identifier does not match what is in storage, new store will be created");
     }
 
     this.browserNode = await BrowserNode.connect({

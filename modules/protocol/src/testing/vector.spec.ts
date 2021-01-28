@@ -29,6 +29,8 @@ import { OutboundChannelUpdateError } from "../errors";
 import { Vector } from "../vector";
 import * as vectorSync from "../sync";
 
+import { env } from "./env";
+
 describe("Vector", () => {
   let chainReader: Sinon.SinonStubbedInstance<IVectorChainReader>;
   let lockService: Sinon.SinonStubbedInstance<ILockService>;
@@ -39,6 +41,7 @@ describe("Vector", () => {
     chainReader = Sinon.createStubInstance(VectorChainReader);
     chainReader.getChannelFactoryBytecode.resolves(Result.ok(mkHash()));
     chainReader.getChannelMastercopyAddress.resolves(Result.ok(mkAddress()));
+    chainReader.getChainProviders.returns(Result.ok(env.chainProviders));
     lockService = Sinon.createStubInstance(MemoryLockService);
     messagingService = Sinon.createStubInstance(MemoryMessagingService);
     storeService = Sinon.createStubInstance(MemoryStoreService);

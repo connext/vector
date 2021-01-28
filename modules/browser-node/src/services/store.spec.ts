@@ -10,20 +10,21 @@ import {
   createTestTxResponse,
   mkPublicIdentifier,
   mkAddress,
+  getTestLoggers,
 } from "@connext/vector-utils";
 import indexedDB from "fake-indexeddb";
 import IDBKeyRange from "fake-indexeddb/lib/FDBKeyRange";
-import pino from "pino";
 
 import { BrowserStore } from "./store";
-const logger = pino();
+const name = "BrowserStore";
+const { log } = getTestLoggers(name);
 
-describe("store", () => {
+describe(name, () => {
   let store: BrowserStore;
+  const pubId = mkPublicIdentifier();
 
   before(async () => {
-    store = new BrowserStore(logger.child({ module: "BrowserStore" }), indexedDB, IDBKeyRange);
-    await store.connect();
+    store = new BrowserStore(pubId, log, indexedDB, IDBKeyRange);
   });
 
   beforeEach(async () => {

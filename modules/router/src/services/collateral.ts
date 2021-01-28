@@ -7,6 +7,7 @@ import {
   jsonifyError,
 } from "@connext/vector-types";
 import { getBalanceForAssetId, getRandomBytes32 } from "@connext/vector-utils";
+import { getAddress } from "@ethersproject/address";
 import { BigNumber } from "@ethersproject/bignumber";
 import { BaseLogger } from "pino";
 
@@ -223,7 +224,7 @@ export const requestCollateral = async (
 
   const iAmAlice = publicIdentifier === channel.aliceIdentifier;
 
-  const assetIdx = channel.assetIds.findIndex((assetId: string) => assetId === assetId);
+  const assetIdx = channel.assetIds.findIndex((assetId: string) => getAddress(assetId) === getAddress(assetId));
   const myBalance = BigNumber.from(getBalanceForAssetId(channel, assetId, iAmAlice ? "alice" : "bob"));
 
   if (myBalance.gte(target)) {

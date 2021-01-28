@@ -62,6 +62,9 @@ export class IframeChannelProvider extends EventEmitter<string> implements IRpcC
 
   static async connect(opts: IframeOptions): Promise<IframeChannelProvider> {
     const cp = new IframeChannelProvider(opts);
+    if (cp.exists()) {
+      await cp.close();
+    }
     await new Promise<void>(async (res) => {
       if (document.readyState === "loading") {
         window.addEventListener("DOMContentLoaded", async () => {
@@ -88,22 +91,21 @@ export class IframeChannelProvider extends EventEmitter<string> implements IRpcC
   }
 
   public send(rpc: EngineParams.RpcRequest): Promise<any> {
+    if (typeof this.iframe === "undefined") {
+      throw new Error("iframe is not rendered!");
+    }
+    if (this.iframe.contentWindow === null) {
+      throw new Error("iframe inner page not loaded!");
+    }
     return new Promise((resolve, reject) => {
-      if (typeof this.iframe === "undefined") {
-        throw new Error("iframe is not rendered!");
-      }
-      if (this.iframe.contentWindow === null) {
-        throw new Error("iframe inner page not loaded!");
-      }
       this.events.once(`${rpc.id}`, (response) => {
         if (response?.error?.message) {
-          console.error("response.error: ", response.error);
-          reject(new Error(response.error.message));
+          return reject(new Error(response.error.message));
         } else {
-          resolve(response?.result);
+          return resolve(response?.result);
         }
       });
-      this.iframe.contentWindow.postMessage(JSON.stringify(rpc), "*");
+      this.iframe!.contentWindow!.postMessage(JSON.stringify(rpc), "*");
     });
   }
 
@@ -139,12 +141,19 @@ export class IframeChannelProvider extends EventEmitter<string> implements IRpcC
     return this.send(rpc);
   };
 
-  public render(): Promise<void> {
+  public exists(): boolean {
     if (this.iframe) {
-      return Promise.resolve(); // already rendered
+      return true;
     }
     if (window.document.getElementById(this.opts.id)) {
-      return Promise.resolve(); // already exists
+      return true;
+    }
+    return false;
+  }
+
+  public render(): Promise<void> {
+    if (this.exists()) {
+      return Promise.resolve();
     }
     return new Promise((resolve) => {
       this.events.on("iframe-initialized", () => {
@@ -164,11 +173,12 @@ export class IframeChannelProvider extends EventEmitter<string> implements IRpcC
   }
 
   public async unrender(): Promise<void> {
-    if (typeof this.iframe === "undefined") {
+    const child = window.document.getElementById(this.opts.id);
+    if (!child) {
       return Promise.resolve();
     }
     try {
-      window.document.body.removeChild(this.iframe);
+      child.parentNode?.removeChild(child);
     } finally {
       this.iframe = undefined;
     }
