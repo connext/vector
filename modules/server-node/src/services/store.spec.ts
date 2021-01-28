@@ -250,6 +250,64 @@ describe("store", () => {
     });
   });
 
+  describe("getTransfers", () => {
+    it.only("should work with and without filter", async () => {
+      const channel1 = mkAddress("0xaaa");
+      const transfer1State = createTestChannelState(
+        "create",
+        {
+          channelAddress: channel1,
+        },
+        { transferId: mkHash("0x123"), meta: { routingId: mkHash("0x123") } },
+      );
+      await store.saveChannelState(transfer1State.channel, transfer1State.transfer);
+
+      const transfer2Create = createTestChannelState(
+        "create",
+        {
+          channelAddress: channel1,
+          nonce: transfer1State.channel.nonce + 1,
+        },
+        { transferId: mkHash("0x456"), meta: { routingId: mkHash("0x456") } },
+      );
+      await store.saveChannelState(transfer2Create.channel, transfer2Create.transfer);
+
+      const transfer2Resolve = createTestChannelState(
+        "resolve",
+        {
+          channelAddress: channel1,
+          nonce: transfer2Create.channel.nonce + 1,
+        },
+        { transferId: mkHash("0x456"), meta: { routingId: mkHash("0x456") } },
+      );
+      await store.saveChannelState(transfer2Resolve.channel, transfer2Resolve.transfer);
+
+      const channel2 = mkAddress("0xbbb");
+      const transfer3State = createTestChannelState(
+        "create",
+        {
+          channelAddress: channel2,
+          bob: mkAddress("0xbaba"),
+          bobIdentifier: mkPublicIdentifier("vectorABCD"),
+        },
+        { transferId: mkHash("0x789"), meta: { routingId: mkHash("0x789") } },
+      );
+      await store.saveChannelState(transfer3State.channel, transfer3State.transfer);
+
+      // no filter, get transfers across all channels
+      const transfers = await store.getTransfers();
+      console.log("transfers: ", transfers);
+      expect(transfers.length).to.eq(3);
+      console.log("transfer2Resolve.transfer: ", transfer2Resolve.transfer);
+      let transfer = transfers.find((t) => t.transferId === transfer1State.transfer.transferId);
+      expect(transfer).to.deep.eq(transfer1State.transfer);
+      transfer = transfers.find((t) => t.transferId === transfer2Resolve.transfer.transferId);
+      expect(transfer).to.deep.eq(transfer2Resolve.transfer);
+      transfer = transfers.find((t) => t.transferId === transfer3State.transfer.transferId);
+      expect(transfer).to.deep.eq(transfer3State.transfer);
+    });
+  });
+
   describe("getChannelStateByParticipants", () => {
     it("should work (regardless of order)", async () => {
       const channel = createTestChannelState("deposit").channel;
