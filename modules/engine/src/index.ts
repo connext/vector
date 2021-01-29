@@ -1,4 +1,5 @@
 import { Vector } from "@connext/vector-protocol";
+import { EXTRA_GAS_PRICE } from "@connext/vector-contracts";
 import {
   ChainAddresses,
   IChannelSigner,
@@ -48,7 +49,6 @@ import {
 import { setupEngineListeners } from "./listeners";
 import { getEngineEvtContainer } from "./utils";
 import { sendIsAlive } from "./isAlive";
-import { EXTRA_GAS_PRICE } from "@connext/vector-contracts/dist/src.ts/services/ethService";
 
 export const ajv = new Ajv();
 
@@ -105,7 +105,7 @@ export class VectorEngine implements IVectorEngine {
     await engine.setupListener();
     logger.debug({}, "Setup engine listeners");
     if (!skipCheckIn) {
-      sendIsAlive(engine.signer, engine.messaging, engine.store, engine.logger);
+      sendIsAlive(engine.signer, engine.messaging, engine.store, engine.chainService, engine.logger);
     } else {
       logger.warn("Skipping isAlive broadcast because of skipCheckIn config");
     }

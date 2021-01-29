@@ -243,7 +243,9 @@ export function createTestChannelState<T extends UpdateType = typeof UpdateType.
       latestUpdate.toIdentifier === publicIdentifiers[0] ? publicIdentifiers[0] : publicIdentifiers[1];
     transfer.transferDefinition =
       (latestUpdate.details as CreateUpdateDetails).transferDefinition ?? transfer.transferDefinition;
-    transfer.transferEncodings = (latestUpdate.details as CreateUpdateDetails).transferEncodings;
+    transfer.transferEncodings =
+      (latestUpdate.details as CreateUpdateDetails).transferEncodings ?? transfer.transferEncodings;
+    transfer.initialStateHash = transferOverrides.initialStateHash ?? transfer.initialStateHash;
     transfer.transferId = (latestUpdate.details as CreateUpdateDetails).transferId ?? transfer.transferId;
     transfer.transferResolver =
       type === "resolve" ? (latestUpdate.details as ResolveUpdateDetails).transferResolver : undefined;

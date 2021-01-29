@@ -36,10 +36,14 @@ describe("VectorEngine", () => {
   const invalidAddress = "abc";
 
   let storeService: IEngineStore;
+  let chainService: Sinon.SinonStubbedInstance<VectorChainService>;
   beforeEach(() => {
     storeService = Sinon.createStubInstance(MemoryStoreService, {
       getChannelStates: Promise.resolve([]),
     });
+    chainService = Sinon.createStubInstance(VectorChainService);
+
+    chainService.getChainProviders.returns(Result.ok(env.chainProviders));
   });
 
   afterEach(() => Sinon.restore());
@@ -50,7 +54,7 @@ describe("VectorEngine", () => {
       Sinon.createStubInstance(MemoryLockService),
       storeService,
       getRandomChannelSigner(),
-      Sinon.createStubInstance(VectorChainService),
+      chainService,
       chainAddresses,
       log,
       false,
@@ -64,7 +68,7 @@ describe("VectorEngine", () => {
       Sinon.createStubInstance(MemoryLockService),
       storeService,
       getRandomChannelSigner(),
-      Sinon.createStubInstance(VectorChainService),
+      chainService,
       chainAddresses,
       log,
       false,
@@ -153,7 +157,7 @@ describe("VectorEngine", () => {
           Sinon.createStubInstance(MemoryLockService),
           storeService,
           getRandomChannelSigner(),
-          Sinon.createStubInstance(VectorChainService),
+          chainService,
           chainAddresses,
           log,
           false,
@@ -191,7 +195,7 @@ describe("VectorEngine", () => {
             Sinon.createStubInstance(MemoryLockService),
             storeService,
             getRandomChannelSigner(),
-            Sinon.createStubInstance(VectorChainService),
+            chainService,
             chainAddresses,
             log,
             false,
@@ -817,7 +821,7 @@ describe("VectorEngine", () => {
             Sinon.createStubInstance(MemoryLockService),
             storeService,
             getRandomChannelSigner(),
-            Sinon.createStubInstance(VectorChainService),
+            chainService,
             chainAddresses,
             log,
             false,

@@ -2,6 +2,7 @@ import {
   ChannelDispute,
   FullChannelState,
   FullTransferState,
+  GetTransfersFilterOpts,
   IChainServiceStore,
   IEngineStore,
   ResolveUpdateDetails,
@@ -16,16 +17,37 @@ import { TransactionResponse, TransactionReceipt } from "@ethersproject/provider
 import Dexie, { DexieOptions } from "dexie";
 import { BaseLogger } from "pino";
 
-type StoredTransfer = FullTransferState & { createUpdateNonce: number; resolveUpdateNonce: number; routingId: string };
+type StoredTransfer = FullTransferState & {
+  createUpdateNonce: number;
+  resolveUpdateNonce: number;
+  routingId: string;
+  createdAt: Date;
+};
 
+const storedTransferToTransferState = (stored: StoredTransfer): FullTransferState => {
+  const transfer: any = stored;
+  delete transfer.createUpdateNonce;
+  delete transfer.resolveUpdateNonce;
+  delete transfer.routingId;
+  delete transfer.createdAt;
+  return transfer as FullTransferState;
+};
+
+const getStoreName = (publicIdentifier: string) => {
+  return `${publicIdentifier}-store`;
+};
+const NON_NAMESPACED_STORE = "VectorIndexedDBDatabase";
 class VectorIndexedDBDatabase extends Dexie {
   channels: Dexie.Table<FullChannelState, string>;
   transfers: Dexie.Table<StoredTransfer, string>;
   transactions: Dexie.Table<StoredTransaction, string>;
   withdrawCommitment: Dexie.Table<WithdrawCommitmentJson & { transferId: string }, string>;
   values: Dexie.Table<any, string>;
+  // database name
+  name: string;
 
   constructor(
+    name: string,
     // eslint-disable-next-line @typescript-eslint/ban-types
     indexedDB?: { open: Function },
     // eslint-disable-next-line @typescript-eslint/ban-types
@@ -35,43 +57,62 @@ class VectorIndexedDBDatabase extends Dexie {
     if (indexedDB && idbKeyRange) {
       options = { indexedDB, IDBKeyRange: idbKeyRange };
     }
-    super("VectorIndexedDBDatabase", options);
+    super(name, options);
     this.version(1).stores({
       channels:
         "channelAddress, [aliceIdentifier+bobIdentifier+networkContext.chainId], [alice+bob+networkContext.chainId]",
       transfers:
-        "transferId,[routingId+channelAddress],[createUpdateNonce+channelAddress],[resolveUpdateNonce+channelAddress],[transferResolver+channelAddress]",
+        "transferId, [routingId+channelAddress], [createUpdateNonce+channelAddress], [resolveUpdateNonce+channelAddress], [transferResolver+channelAddress]",
       transactions: "transactionHash",
       withdrawCommitment: "transferId",
       values: "key",
     });
+    this.version(2)
+      .stores({
+        channels:
+          "channelAddress, [aliceIdentifier+bobIdentifier+networkContext.chainId], [alice+bob+networkContext.chainId], createdAt",
+        transfers:
+          "transferId, [routingId+channelAddress], [createUpdateNonce+channelAddress], [resolveUpdateNonce+channelAddress], [transferResolver+channelAddress], createdAt, resolveUpdateNonce, channelAddress",
+      })
+      .upgrade((tx) => {
+        // An upgrade function for version 3 will upgrade data based on version 2.
+        tx.table("channels")
+          .toCollection()
+          .modify((channel) => {
+            channel.createdAt = new Date();
+          });
+        tx.table("transfers")
+          .toCollection()
+          .modify((transfer) => {
+            transfer.createdAt = new Date();
+          });
+      });
+
     this.channels = this.table("channels");
     this.transfers = this.table("transfers");
     this.transactions = this.table("transactions");
     this.withdrawCommitment = this.table("withdrawCommitment");
     this.values = this.table("values");
+    this.name = name;
   }
 }
-
-const storedTransferToTransferState = (stored: StoredTransfer): FullTransferState => {
-  const transfer: any = stored;
-  delete transfer.createUpdateNonce;
-  delete transfer.resolveUpdateNonce;
-  delete transfer.routingId;
-  return transfer as FullTransferState;
-};
 
 export class BrowserStore implements IEngineStore, IChainServiceStore {
   private db: VectorIndexedDBDatabase;
 
+  // NOTE: this could be private, but makes it difficult to test because
+  // you can't mock the `Dexie.exists` call used in the static `create`
+  // function. However, the constructor should *not* be used when creating
+  // an instance of the BrowserStore
   constructor(
+    private readonly dbName: string,
     private readonly log: BaseLogger,
     // eslint-disable-next-line @typescript-eslint/ban-types
     indexedDB?: { open: Function },
     // eslint-disable-next-line @typescript-eslint/ban-types
     idbKeyRange?: { bound: Function; lowerBound: Function; upperBound: Function },
   ) {
-    this.db = new VectorIndexedDBDatabase(indexedDB, idbKeyRange);
+    this.db = new VectorIndexedDBDatabase(dbName, indexedDB, idbKeyRange);
   }
 
   async saveChannelDispute(
@@ -85,7 +126,21 @@ export class BrowserStore implements IEngineStore, IChainServiceStore {
     }
   }
 
-  async connect(): Promise<void> {
+  public static async create(
+    publicIdentifer: string,
+    log: BaseLogger,
+    // eslint-disable-next-line @typescript-eslint/ban-types
+    indexedDB?: { open: Function },
+    // eslint-disable-next-line @typescript-eslint/ban-types
+    idbKeyRange?: { bound: Function; lowerBound: Function; upperBound: Function },
+  ): Promise<BrowserStore> {
+    const name = (await Dexie.exists(NON_NAMESPACED_STORE)) ? NON_NAMESPACED_STORE : getStoreName(publicIdentifer);
+    const store = new BrowserStore(name, log, indexedDB, idbKeyRange);
+    await store.connect();
+    return store;
+  }
+
+  public async connect(): Promise<void> {
     await this.db.open();
   }
 
@@ -126,6 +181,7 @@ export class BrowserStore implements IEngineStore, IChainServiceStore {
             createUpdateNonce: transfer.channelNonce + 1,
             resolveUpdateNonce: 0,
             routingId: transfer?.meta?.routingId,
+            createdAt: new Date(),
           };
         }),
       );
@@ -141,6 +197,7 @@ export class BrowserStore implements IEngineStore, IChainServiceStore {
           createUpdateNonce: channelState.latestUpdate.nonce,
           resolveUpdateNonce: 0,
           routingId: transfer?.meta?.routingId, // allow indexing on routingId
+          createdAt: new Date(),
         });
       } else if (channelState.latestUpdate.type === UpdateType.resolve) {
         await this.db.transfers.update((channelState.latestUpdate.details as ResolveUpdateDetails).transferId, {
@@ -195,6 +252,47 @@ export class BrowserStore implements IEngineStore, IChainServiceStore {
     const transfers = this.db.transfers.where({ routingId });
     const ret = await transfers.toArray();
     return ret.map(storedTransferToTransferState);
+  }
+
+  async getTransfers(filterOpts?: GetTransfersFilterOpts): Promise<FullTransferState[]> {
+    const filterQuery: any = [];
+    if (filterOpts?.channelAddress) {
+      filterQuery.push({ index: "channelAddress", function: "equals", params: filterOpts.channelAddress });
+    }
+
+    // start and end
+    if (filterOpts?.startDate && filterOpts.endDate) {
+      filterQuery.push({ index: "channelAddress", function: "between", params: filterOpts.channelAddress });
+    } else if (filterOpts?.startDate) {
+      filterQuery.push({ index: "channelAddress", function: "equals", params: filterOpts.channelAddress });
+    } else if (filterOpts?.endDate) {
+      filterQuery.push({ index: "channelAddress", function: "equals", params: filterOpts.channelAddress });
+    }
+
+    let collection = this.db.transfers.toCollection();
+    if (filterOpts?.channelAddress) {
+      collection = collection.filter((transfer) => transfer.channelAddress === filterOpts.channelAddress);
+    }
+    if (filterOpts?.startDate && filterOpts.endDate) {
+      collection = collection.filter(
+        (transfer) => transfer.createdAt >= filterOpts.startDate! && transfer.createdAt <= filterOpts.endDate!,
+      );
+    } else if (filterOpts?.startDate) {
+      collection = collection.filter((transfer) => transfer.createdAt >= filterOpts.startDate!);
+    } else if (filterOpts?.endDate) {
+      collection = collection.filter((transfer) => transfer.createdAt <= filterOpts.endDate!);
+    }
+
+    if (filterOpts?.active) {
+      collection = collection.filter((transfer) => transfer.resolveUpdateNonce === 0);
+    }
+
+    if (filterOpts?.routingId) {
+      collection = collection.filter((transfer) => transfer.routingId === filterOpts.routingId);
+    }
+
+    const transfers = await collection.toArray();
+    return transfers.map(storedTransferToTransferState);
   }
 
   async saveTransactionResponse(

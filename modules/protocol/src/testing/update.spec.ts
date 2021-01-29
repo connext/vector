@@ -31,11 +31,12 @@ import {
   createTestHashlockTransferState,
   encodeTransferResolver,
 } from "@connext/vector-utils";
+import { getAddress } from "@ethersproject/address";
 import { BigNumber } from "@ethersproject/bignumber";
 import { HashZero } from "@ethersproject/constants";
 import Sinon from "sinon";
 
-import { ApplyUpdateError, CreateUpdateError, OutboundChannelUpdateError } from "../errors";
+import { ApplyUpdateError, CreateUpdateError } from "../errors";
 import * as vectorUpdate from "../update";
 import * as vectorUtils from "../utils";
 
@@ -139,7 +140,7 @@ describe("applyUpdate", () => {
           balances: [{ to: participants, amount: ["0", "17"] }],
           processedDepositsA: ["5"],
           processedDepositsB: ["12"],
-          assetIds: [mkAddress("0xaddee")],
+          assetIds: [getAddress(mkAddress("0xaddee"))],
         },
         activeTransfers: [],
       },
@@ -154,7 +155,7 @@ describe("applyUpdate", () => {
           { to: participants, amount: ["10", "1"] },
           { to: participants, amount: ["4", "7"] },
         ],
-        assetIds: [mkAddress(), mkAddress("0xfed"), mkAddress("0xasdf")],
+        assetIds: [mkAddress(), mkAddress("0xfed"), mkAddress("0xdef")],
         processedDepositsA: ["0", "10", "1"],
         processedDepositsB: ["5", "7", "9"],
       },
@@ -172,7 +173,7 @@ describe("applyUpdate", () => {
             { to: participants, amount: ["16", "17"] },
             { to: participants, amount: ["4", "7"] },
           ],
-          assetIds: [mkAddress(), mkAddress("0xfed"), mkAddress("0xasdf")],
+          assetIds: [mkAddress(), getAddress(mkAddress("0xfed")), getAddress(mkAddress("0xdef"))],
           processedDepositsA: ["0", "12", "1"],
           processedDepositsB: ["5", "7", "9"],
         },
