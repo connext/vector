@@ -129,8 +129,8 @@ Object.entries(hydrated).forEach(async ([chainId, provider]) => {
 });
 
 new Gauge({
-  name: "router_onchain_balance_base_asset",
-  help: "router_onchain_balance_base_asset_help",
+  name: "router_onchain_balance",
+  help: "router_onchain_balance_help",
   labelNames: ["chainId", "assetId", "signerAddress"] as const,
   registers: [register],
   async collect() {
