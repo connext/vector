@@ -1,5 +1,10 @@
 # Vector Changelog
 
+## Next Release
+
+- \[engine\] Fix deposit reconciliation race condition evaluation
+- \[contracts\] Use `gasNow` to get mainnet gas price over ethers
+
 ## 0.1.8
 
 - \[node\] Add `getTransfers` endpoint with filtering capabilities.
