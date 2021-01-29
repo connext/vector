@@ -2,6 +2,8 @@
 
 ## Next Release
 
+- \[node\] Add `getTransfers` endpoint with filtering capabilities.
+
 ## 0.1.8-beta.6
 
 - \[protocol\] Fix non-checksummed addresses
