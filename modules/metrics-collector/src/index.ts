@@ -8,6 +8,7 @@ import {
   hydrateProviders,
 } from "@connext/vector-utils";
 import { HydratedProviders, ERC20Abi } from "@connext/vector-types";
+import { BigNumber } from "@ethersproject/bignumber";
 import { AddressZero } from "@ethersproject/constants";
 import { Contract } from "@ethersproject/contracts";
 import { Wallet } from "@ethersproject/wallet";
@@ -32,8 +33,8 @@ const hydrated: HydratedProviders = hydrateProviders(config.chainProviders);
 Object.entries(hydrated).forEach(([chainId, provider]) => {
   // base asset
   new Gauge({
-    name: `chain-${chainId}-base-asset`,
-    help: "",
+    name: `chain_${chainId}_base_asset`,
+    help: `chain_${chainId}_base_asset_help`,
     async collect() {
       const balance = await provider.getBalance(routerSignerAddress);
       this.set(parseFloat(formatEther(balance)));
@@ -45,15 +46,20 @@ Object.entries(hydrated).forEach(([chainId, provider]) => {
     .filter((prof) => prof.chainId.toString() === chainId && prof.assetId !== AddressZero)
     .map((p) => p.assetId);
 
+  const tokens: { [asset: string]: { contract: Contract; decimals?: BigNumber } } = {};
+  assets.forEach((asset) => {
+    tokens[asset] = {
+      contract: new Contract(asset, ERC20Abi, provider),
+      decimals: undefined,
+    };
+  });
   assets.forEach((assetId) => {
-    const token = new Contract(assetId, ERC20Abi, provider);
     new Gauge({
-      name: `chain-${chainId}-base-asset`,
-      help: "",
+      name: `chain_${chainId}_asset`,
+      help: `chain_${chainId}_asset_help`,
       async collect() {
-        // TODO: probably get decimals outside of this so it doesnt happen on every call
-        const decimals = await token.decimals();
-        const balance = await token.balanceOf(routerSignerAddress);
+        const decimals = tokens[assetId].decimals ?? (await tokens[assetId].contract.decimals());
+        const balance = await tokens[assetId].contract.balanceOf(routerSignerAddress);
         this.set(parseFloat(formatUnits(balance, decimals)));
       },
     });
