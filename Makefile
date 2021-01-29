@@ -309,7 +309,6 @@ browser-node: engine $(shell find modules/browser-node $(find_options))
 	$(docker_run) "cd modules/browser-node && npm run build && touch src/index.ts"
 	$(log_finish) && mv -f $(totalTime) .flags/$@
 
-
 auth: auth-img
 auth-js: utils $(shell find modules/auth $(find_options))
 	$(log_start)
