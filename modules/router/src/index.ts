@@ -19,6 +19,10 @@ import {
   DepositReconciledPayload,
   EngineEvents,
   RequestCollateralPayload,
+  RestoreStatePayload,
+  WithdrawalCreatedPayload,
+  WithdrawalReconciledPayload,
+  WithdrawalResolvedPayload,
 } from "@connext/vector-types";
 import { Registry } from "prom-client";
 import { Wallet } from "ethers";
@@ -35,6 +39,10 @@ const conditionalTransferResolvedPath = "/conditional-transfer-resolved";
 const depositReconciledPath = "/deposit-reconciled";
 const requestCollateralPath = "/request-collateral";
 const checkInPath = "/check-in";
+const restoreStatePath = "/restore-state";
+const withdrawalCreatedPath = "/withdrawal-created";
+const withdrawReconciledPath = "/withdrawal-reconciled";
+const withdrawResolvedPath = "/withdrawal-resolved";
 const evts: EventCallbackConfig = {
   [EngineEvents.IS_ALIVE]: {
     evt: Evt.create<IsAlivePayload>(),
@@ -57,10 +65,22 @@ const evts: EventCallbackConfig = {
     evt: Evt.create<RequestCollateralPayload>(),
     url: `${routerBase}${requestCollateralPath}`,
   },
-  [EngineEvents.RESTORE_STATE_EVENT]: {},
-  [EngineEvents.WITHDRAWAL_CREATED]: {},
-  [EngineEvents.WITHDRAWAL_RECONCILED]: {},
-  [EngineEvents.WITHDRAWAL_RESOLVED]: {},
+  [EngineEvents.RESTORE_STATE_EVENT]: {
+    evt: Evt.create<RestoreStatePayload>(),
+    url: `${routerBase}${restoreStatePath}`,
+  },
+  [EngineEvents.WITHDRAWAL_CREATED]: {
+    evt: Evt.create<WithdrawalCreatedPayload>(),
+    url: `${routerBase}${withdrawalCreatedPath}`,
+  },
+  [EngineEvents.WITHDRAWAL_RECONCILED]: {
+    evt: Evt.create<WithdrawalReconciledPayload>(),
+    url: `${routerBase}${withdrawReconciledPath}`,
+  },
+  [EngineEvents.WITHDRAWAL_RESOLVED]: {
+    evt: Evt.create<WithdrawalResolvedPayload>(),
+    url: `${routerBase}${withdrawResolvedPath}`,
+  },
 };
 
 const configuredIdentifier = getPublicIdentifierFromPublicKey(Wallet.fromMnemonic(config.mnemonic).publicKey);
@@ -109,6 +129,26 @@ server.addHook("onReady", async () => {
 
 server.get("/ping", async () => {
   return "pong\n";
+});
+
+server.post(restoreStatePath, async (request, response) => {
+  evts[EngineEvents.RESTORE_STATE_EVENT].evt!.post(request.body as RestoreStatePayload);
+  return response.status(200).send({ message: "success" });
+});
+
+server.post(withdrawalCreatedPath, async (request, response) => {
+  evts[EngineEvents.WITHDRAWAL_CREATED].evt!.post(request.body as WithdrawalCreatedPayload);
+  return response.status(200).send({ message: "success" });
+});
+
+server.post(withdrawReconciledPath, async (request, response) => {
+  evts[EngineEvents.WITHDRAWAL_RECONCILED].evt!.post(request.body as WithdrawalReconciledPayload);
+  return response.status(200).send({ message: "success" });
+});
+
+server.post(withdrawResolvedPath, async (request, response) => {
+  evts[EngineEvents.WITHDRAWAL_RESOLVED].evt!.post(request.body as WithdrawalResolvedPayload);
+  return response.status(200).send({ message: "success" });
 });
 
 server.post(checkInPath, async (request, response) => {
