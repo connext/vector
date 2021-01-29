@@ -4,14 +4,7 @@ import fastify from "fastify";
 import pino from "pino";
 import { Evt } from "evt";
 import { VectorChainReader } from "@connext/vector-contracts";
-import {
-  EventCallbackConfig,
-  hydrateProviders,
-  RestServerNodeService,
-  ChannelSigner,
-  getPublicIdentifierFromPublicKey,
-  getSignerAddressFromPublicIdentifier,
-} from "@connext/vector-utils";
+import { EventCallbackConfig, hydrateProviders, RestServerNodeService, ChannelSigner } from "@connext/vector-utils";
 import {
   IsAlivePayload,
   ConditionalTransferCreatedPayload,
@@ -25,6 +18,7 @@ import {
   WithdrawalResolvedPayload,
   HydratedProviders,
   ERC20Abi,
+  SetupPayload,
 } from "@connext/vector-types";
 import { collectDefaultMetrics, Gauge, Registry } from "prom-client";
 import { Wallet } from "ethers";
@@ -39,11 +33,12 @@ import { Contract } from "@ethersproject/contracts";
 
 const routerPort = 8000;
 const routerBase = `http://router:${routerPort}`;
+const isAlivePath = "/is-alive";
+const setupPath = "/setup";
 const conditionalTransferCreatedPath = "/conditional-transfer-created";
 const conditionalTransferResolvedPath = "/conditional-transfer-resolved";
 const depositReconciledPath = "/deposit-reconciled";
 const requestCollateralPath = "/request-collateral";
-const checkInPath = "/check-in";
 const restoreStatePath = "/restore-state";
 const withdrawalCreatedPath = "/withdrawal-created";
 const withdrawReconciledPath = "/withdrawal-reconciled";
@@ -51,9 +46,12 @@ const withdrawResolvedPath = "/withdrawal-resolved";
 const evts: EventCallbackConfig = {
   [EngineEvents.IS_ALIVE]: {
     evt: Evt.create<IsAlivePayload>(),
-    url: `${routerBase}${checkInPath}`,
+    url: `${routerBase}${isAlivePath}`,
   },
-  [EngineEvents.SETUP]: {},
+  [EngineEvents.SETUP]: {
+    evt: Evt.create<SetupPayload>(),
+    url: `${routerBase}${setupPath}`,
+  },
   [EngineEvents.CONDITIONAL_TRANSFER_CREATED]: {
     evt: Evt.create<ConditionalTransferCreatedPayload>(),
     url: `${routerBase}${conditionalTransferCreatedPath}`,
@@ -196,6 +194,16 @@ server.get("/metrics", async (request, response) => {
   return response.status(200).send(res);
 });
 
+server.post(isAlivePath, async (request, response) => {
+  evts[EngineEvents.IS_ALIVE].evt!.post(request.body as IsAlivePayload);
+  return response.status(200).send({ message: "success" });
+});
+
+server.post(setupPath, async (request, response) => {
+  evts[EngineEvents.SETUP].evt!.post(request.body as SetupPayload);
+  return response.status(200).send({ message: "success" });
+});
+
 server.post(restoreStatePath, async (request, response) => {
   evts[EngineEvents.RESTORE_STATE_EVENT].evt!.post(request.body as RestoreStatePayload);
   return response.status(200).send({ message: "success" });
@@ -213,11 +221,6 @@ server.post(withdrawReconciledPath, async (request, response) => {
 
 server.post(withdrawResolvedPath, async (request, response) => {
   evts[EngineEvents.WITHDRAWAL_RESOLVED].evt!.post(request.body as WithdrawalResolvedPayload);
-  return response.status(200).send({ message: "success" });
-});
-
-server.post(checkInPath, async (request, response) => {
-  evts[EngineEvents.IS_ALIVE].evt!.post(request.body as IsAlivePayload);
   return response.status(200).send({ message: "success" });
 });
 
