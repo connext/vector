@@ -146,10 +146,7 @@ new Gauge({
             const decimals = config.decimals ?? (await config.contract.functions.decimals());
             rebalancedTokens[chainId][assetId].decimals = decimals;
             const balance = await config.contract.balanceOf(signer.address);
-            this.set(
-              { chainId, assetId: AddressZero, signerAddress: signer.address },
-              parseFloat(formatUnits(balance, decimals)),
-            );
+            this.set({ chainId, assetId, signerAddress: signer.address }, parseFloat(formatUnits(balance, decimals)));
           }),
         );
       }),
