@@ -1,7 +1,6 @@
 import "core-js/stable";
 import "regenerator-runtime/runtime";
 import fastify from "fastify";
-import metricsPlugin from "fastify-metrics";
 import pino from "pino";
 import { Evt } from "evt";
 import { VectorChainReader } from "@connext/vector-contracts";
@@ -27,7 +26,7 @@ import {
   HydratedProviders,
   ERC20Abi,
 } from "@connext/vector-types";
-import { Gauge, Registry } from "prom-client";
+import { collectDefaultMetrics, Gauge, Registry } from "prom-client";
 import { Wallet } from "ethers";
 
 import { config } from "./config";
@@ -37,7 +36,6 @@ import { NatsRouterMessagingService } from "./services/messaging";
 import { AddressZero } from "@ethersproject/constants";
 import { formatEther, formatUnits } from "@ethersproject/units";
 import { Contract } from "@ethersproject/contracts";
-import { BigNumber } from "@ethersproject/bignumber";
 
 const routerPort = 8000;
 const routerBase = `http://router:${routerPort}`;
@@ -90,70 +88,76 @@ const evts: EventCallbackConfig = {
   },
 };
 
-const configuredIdentifier = getPublicIdentifierFromPublicKey(Wallet.fromMnemonic(config.mnemonic).publicKey);
-const configuredSigner = getSignerAddressFromPublicIdentifier(configuredIdentifier);
+const signer = new ChannelSigner(Wallet.fromMnemonic(config.mnemonic).privateKey);
 
-const logger = pino({ name: configuredIdentifier });
+const logger = pino({ name: signer.publicIdentifier });
 logger.info({ config }, "Loaded config from environment");
 const server = fastify({ logger, pluginTimeout: 300_000, disableRequestLogging: config.logLevel !== "debug" });
 
 const register = new Registry();
-server.register(metricsPlugin, { endpoint: "/metrics", prefix: "router_" });
+collectDefaultMetrics({ register, prefix: "router_" });
 
 let router: IRouter;
 const store = new PrismaStore();
 
 const hydrated: HydratedProviders = hydrateProviders(config.chainProviders);
 
-// create gauge for each rebalanced asset and each native asset for the signer address
+// create gauge to store balance for each rebalanced asset and each native asset for the signer address
 // TODO: maybe want to look into an API rather than blowing up our eth providers? although its not that many calls
-const gauges: { [chainId: string]: { [asset: string]: Gauge<string> } } = {};
-Object.entries(hydrated).forEach(([chainId, provider]) => {
-  // base asset
-  gauges[chainId] = {};
-  gauges[chainId][AddressZero] = new Gauge({
-    name: `chain_${chainId}_base_asset`,
-    help: `chain_${chainId}_base_asset_help`,
-    registers: [register],
-    async collect() {
-      const balance = await provider.getBalance(configuredSigner);
-      // NOTE: seems to not be getting scraped at interval
-      console.log("***** calling set on base gauge");
-      this.set(parseFloat(formatEther(balance)));
-    },
-  });
 
-  // get all non-zero addresses
+// get all non-zero addresses
+const rebalancedTokens: {
+  [chainId: string]: {
+    [assetId: string]: {
+      contract: Contract;
+      decimals?: number;
+    };
+  };
+} = {};
+Object.entries(hydrated).forEach(async ([chainId, provider]) => {
+  rebalancedTokens[chainId] = {};
   const assets = config.rebalanceProfiles
     .filter((prof) => prof.chainId.toString() === chainId && prof.assetId !== AddressZero)
     .map((p) => p.assetId);
 
-  const tokens: { [asset: string]: { contract: Contract; decimals?: BigNumber } } = {};
   assets.forEach((asset) => {
-    tokens[asset] = {
+    rebalancedTokens[chainId][asset] = {
       contract: new Contract(asset, ERC20Abi, provider),
       decimals: undefined,
     };
   });
-  assets.forEach((assetId) => {
-    gauges[chainId][assetId] = new Gauge({
-      name: `chain_${chainId}_asset_${assetId}`,
-      help: `chain_${chainId}_asset_${assetId}_help`,
-      registers: [register],
-      async collect() {
-        const decimals = tokens[assetId].decimals ?? (await tokens[assetId].contract.functions.decimals());
-        const balance = await tokens[assetId].contract.balanceOf(configuredSigner);
-        // NOTE: seems to not be getting scraped at interval
-        console.log("***** calling set on asset gauge");
-        this.set(parseFloat(formatUnits(balance, decimals)));
-      },
-    });
-  });
+});
+
+new Gauge({
+  name: "router_onchain_balance_base_asset",
+  help: "router_onchain_balance_base_asset_help",
+  labelNames: ["chainId", "assetId", "signerAddress"] as const,
+  registers: [register],
+  async collect() {
+    await Promise.all(
+      Object.entries(hydrated).map(async ([chainId, provider]) => {
+        // base asset
+        const balance = await provider.getBalance(signer.address);
+        this.set({ chainId, assetId: AddressZero, signerAddress: signer.address }, parseFloat(formatEther(balance)));
+
+        // tokens
+        await Promise.all(
+          Object.entries(rebalancedTokens[chainId] ?? {}).map(async ([assetId, config]) => {
+            const decimals = config.decimals ?? (await config.contract.functions.decimals());
+            rebalancedTokens[chainId][assetId].decimals = decimals;
+            const balance = await config.contract.balanceOf(signer.address);
+            this.set(
+              { chainId, assetId: AddressZero, signerAddress: signer.address },
+              parseFloat(formatUnits(balance, decimals)),
+            );
+          }),
+        );
+      }),
+    );
+  },
 });
 
 server.addHook("onReady", async () => {
-  const signer = new ChannelSigner(Wallet.fromMnemonic(config.mnemonic).privateKey);
-
   const messagingService = new NatsRouterMessagingService({
     signer,
     logger: logger.child({ module: "NatsRouterMessagingService" }),
@@ -185,6 +189,14 @@ server.addHook("onReady", async () => {
 
 server.get("/ping", async () => {
   return "pong\n";
+});
+
+// TODO: the fastify plugin is not updated with the latest prom-client which supports async collect
+// in the meantime, we are implementing this ourselves
+// https://github.com/SkeLLLa/fastify-metrics/issues/21
+server.get("/metrics", async (request, response) => {
+  const res = await register.metrics();
+  return response.status(200).send(res);
 });
 
 server.post(restoreStatePath, async (request, response) => {
