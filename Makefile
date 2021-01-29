@@ -14,7 +14,7 @@ commit=$(shell git rev-parse HEAD | head -c 8)
 id=$(shell if [[ "`uname`" == "Darwin" ]]; then echo 0:0; else echo "`id -u`:`id -g`"; fi)
 
 # Pool of images to pull cached layers from during docker build steps
-image_cache=$(shell if [[ -n "${GITHUB_WORKFLOW}" ]]; then echo "--cache-from=$(project)_builder:latest,$(project)_database:latest,$(project)_ethprovider:latest,$(project)_server-node:latest,$(project)_router:latest,$(project)_messaging_proxy:latest,$(project)_iframe_app,$(project)_metrics_collector"; else echo ""; fi)
+image_cache=$(shell if [[ -n "${GITHUB_WORKFLOW}" ]]; then echo "--cache-from=$(project)_builder:latest,$(project)_database:latest,$(project)_ethprovider:latest,$(project)_server-node:latest,$(project)_router:latest,$(project)_messaging_proxy:latest,$(project)_iframe_app"; else echo ""; fi)
 
 interactive=$(shell if [[ -t 0 && -t 2 ]]; then echo "--interactive"; else echo ""; fi)
 
@@ -44,8 +44,8 @@ messaging-prod: auth-img messaging-proxy nats
 node: messaging server-node-img
 node-prod: messaging-prod database server-node-img
 
-router: node router-img metrics-collector-img
-router-prod: node-prod router-img metrics-collector-img
+router: node router-img
+router-prod: node-prod router-img
 
 duet: messaging server-node-js
 trio: messaging server-node-js router-js
@@ -307,21 +307,6 @@ engine: utils protocol $(shell find modules/engine $(find_options))
 browser-node: engine $(shell find modules/browser-node $(find_options))
 	$(log_start)
 	$(docker_run) "cd modules/browser-node && npm run build && touch src/index.ts"
-	$(log_finish) && mv -f $(totalTime) .flags/$@
-
-metrics-collector: metrics-collector-img
-metrics-collector-js: utils $(shell find modules/metrics-collector $(find_options))
-	$(log_start)
-	$(docker_run) "cd modules/metrics-collector && npm run build"
-	$(log_finish) && mv -f $(totalTime) .flags/$@
-metrics-collector-bundle: metrics-collector-js utils $(shell find modules/metrics-collector $(find_options))
-	$(log_start)
-	$(docker_run) "cd modules/metrics-collector && npm run build-bundle"
-	$(log_finish) && mv -f $(totalTime) .flags/$@
-metrics-collector-img: metrics-collector-bundle $(shell find modules/metrics-collector/ops $(find_options))
-	$(log_start)
-	docker build --file modules/metrics-collector/ops/Dockerfile $(image_cache) --tag $(project)_metrics_collector modules/metrics-collector
-	docker tag $(project)_metrics_collector $(project)_metrics_collector:$(commit)
 	$(log_finish) && mv -f $(totalTime) .flags/$@
 
 auth: auth-img
