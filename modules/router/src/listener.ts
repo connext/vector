@@ -9,7 +9,7 @@ import {
   Result,
 } from "@connext/vector-types";
 import { getRandomBytes32 } from "@connext/vector-utils";
-import { Gauge, Registry } from "prom-client";
+import { Counter, Gauge, Registry } from "prom-client";
 import Ajv from "ajv";
 import { JsonRpcProvider } from "@ethersproject/providers";
 import { BaseLogger } from "pino";
@@ -33,7 +33,7 @@ const configureMetrics = (register: Registry) => {
   const attempts = new Gauge({
     name: "router_forwarded_payment_attempts",
     help: "router_forwarded_payment_attempts_help",
-    labelNames: ["routingId"],
+    labelNames: ["routingId"] as const,
     registers: [register],
   });
 
@@ -41,7 +41,7 @@ const configureMetrics = (register: Registry) => {
   const successful = new Gauge({
     name: "router_successful_forwarded_payments",
     help: "router_successful_forwarded_payments_help",
-    labelNames: ["routingId"],
+    labelNames: ["routingId"] as const,
     registers: [register],
   });
 
@@ -49,26 +49,33 @@ const configureMetrics = (register: Registry) => {
   const failed = new Gauge({
     name: "router_failed_forwarded_payments",
     help: "router_failed_forwarded_payments_help",
-    labelNames: ["routingId"],
+    labelNames: ["routingId"] as const,
     registers: [register],
   });
 
   const activeTransfers = new Gauge({
     name: "router_active_transfers",
     help: "router_active_transfers_help",
-    labelNames: ["channelAddress"],
+    labelNames: ["channelAddress"] as const,
     registers: [register],
   });
 
   const transferSendTime = new Gauge({
     name: "router_sent_payments_time",
     help: "router_sent_payments_time_help",
-    labelNames: ["routingId"],
+    labelNames: ["routingId"] as const,
+    registers: [register],
+  });
+
+  const openChannels = new Counter({
+    name: "router_open_channels",
+    help: "router_open_channels_help",
+    labelNames: ["channelAddress", "chainId", "aliceIdentifier", "bobIdentifier"] as const,
     registers: [register],
   });
 
   // Return the metrics so they can be incremented as needed
-  return { failed, successful, attempts, activeTransfers, transferSendTime };
+  return { failed, successful, attempts, activeTransfers, transferSendTime, openChannels };
 };
 
 export async function setupListeners(
@@ -84,8 +91,16 @@ export async function setupListeners(
   const method = "setupListeners";
   const methodId = getRandomBytes32();
   logger.debug({ method, methodId, routerPublicIdentifier, routerSignerAddress }, "Method started");
-  // TODO, node should be wrapper around grpc
-  const { failed, successful, attempts, activeTransfers, transferSendTime } = configureMetrics(register);
+  const { failed, successful, attempts, activeTransfers, transferSendTime, openChannels } = configureMetrics(register);
+
+  nodeService.on(EngineEvents.SETUP, async (data) => {
+    openChannels.inc({
+      channelAddress: data.channelAddress,
+      chainId: data.chainId,
+      aliceIdentifier: data.aliceIdentifier,
+      bobIdentifier: data.bobIdentifier,
+    });
+  });
 
   // Set up listener to handle transfer creation
   nodeService.on(
