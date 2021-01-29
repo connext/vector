@@ -2,6 +2,10 @@
 
 ## Next Release
 
+## 0.1.10
+
+- \[utils\] Pass in `chainId` when creating providers
+
 ## 0.1.9
 
 - \[engine\] Fix deposit reconciliation race condition evaluation
