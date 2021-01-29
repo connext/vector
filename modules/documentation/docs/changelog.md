@@ -1,8 +1,9 @@
 # Vector Changelog
 
-## Next Release
+## 0.1.8
 
 - \[node\] Add `getTransfers` endpoint with filtering capabilities.
+- \[router\] Add router dashboard with signer address balance monitoring.
 
 ## 0.1.8-beta.6
 
