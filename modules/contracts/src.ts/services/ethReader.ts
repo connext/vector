@@ -454,11 +454,17 @@ export class EthereumChainReader implements IVectorChainReader {
       return Result.fail(new ChainError(ChainError.reasons.ProviderNotFound));
     }
     try {
-      let gasPrice = await provider.getGasPrice();
+      let gasPrice;
       if (chainId === 1) {
-        const gasNowResponse = await axios.get(`https://www.gasnow.org/api/v3/gas/price`);
-        const gasNowData = gasNowResponse.data;
-        gasPrice = gasNowData.fast;
+        try {
+          const gasNowResponse = await axios.get(`https://www.gasnow.org/api/v3/gas/price`);
+          const gasNowData = gasNowResponse.data;
+          gasPrice = gasNowData.fast;
+        } catch (e) {
+          gasPrice = await provider.getGasPrice();
+        }
+      } else {
+        gasPrice = await provider.getGasPrice();
       }
       return Result.ok(gasPrice);
     } catch (e) {
