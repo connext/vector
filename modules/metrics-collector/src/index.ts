@@ -42,7 +42,7 @@ Object.entries(hydrated).forEach(([chainId, provider]) => {
 
   // get all non-zero addresses
   const assets = config.rebalanceProfiles
-    .filter((prof) => prof.chainId === chainId && prof.assetId !== AddressZero)
+    .filter((prof) => prof.chainId.toString() === chainId && prof.assetId !== AddressZero)
     .map((p) => p.assetId);
 
   assets.forEach((assetId) => {
