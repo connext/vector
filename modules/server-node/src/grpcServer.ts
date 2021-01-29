@@ -118,6 +118,7 @@ const vectorService: GrpcTypes.IServerNodeService = {
     engine.on(EngineEvents.CONDITIONAL_TRANSFER_CREATED, (data) => {
       console.log("EngineEvents.CONDITIONAL_TRANSFER_CREATED ======> data: ", data);
       call.write({ ...data, activeTransferIds: data.activeTransferIds ?? [] });
+      console.log("EngineEvents.CONDITIONAL_TRANSFER_CREATED ======> WROTE");
     });
   },
 

@@ -45,7 +45,7 @@ const getStreamNameForEvent = <T extends EngineEvent>(eventName: T): string => {
       throw new Error("Unknown event");
   }
 };
-export class GRPCServerNodeService implements INodeService {
+export class GRPCServerNodeClient implements INodeService {
   public publicIdentifier = "";
   public signerAddress = "";
   private client: GrpcTypes.ServerNodeServiceClient;
@@ -63,8 +63,8 @@ export class GRPCServerNodeService implements INodeService {
     logger: BaseLogger,
     index?: number,
     skipCheckIn?: boolean,
-  ): Promise<GRPCServerNodeService> {
-    const service = new GRPCServerNodeService(serverNodeUrl, logger);
+  ): Promise<GRPCServerNodeClient> {
+    const service = new GRPCServerNodeClient(serverNodeUrl, logger);
     // If an index is provided, the service will only host a single engine
     // and the publicIdentifier will be automatically included in parameters
     if (typeof index === "number") {

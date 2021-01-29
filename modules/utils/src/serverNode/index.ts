@@ -1,3 +1,3 @@
 export * from "./restServerNode";
-export * from "./grpcServerNode";
+export * from "./grpcServerNodeClient";
 export * from "./errors";

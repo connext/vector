@@ -6,7 +6,7 @@ import {
   getRandomIdentifier,
   getSignerAddressFromPublicIdentifier,
   getTestLoggers,
-  GRPCServerNodeService,
+  GRPCServerNodeClient,
   mkAddress,
   mkPublicIdentifier,
 } from "@connext/vector-utils";
@@ -20,12 +20,12 @@ import { setupServer } from "./grpcServer";
 describe("GRPC server", () => {
   const { log: logger } = getTestLoggers("messaging", (config.logLevel ?? "fatal") as pino.Level);
   let engine: SinonStubbedInstance<IVectorEngine>;
-  let client: GRPCServerNodeService;
+  let client: GRPCServerNodeClient;
 
   before(async () => {
     await setupServer(5000);
     engine = createStubInstance(VectorEngine);
-    client = await GRPCServerNodeService.connect("localhost:5000", logger);
+    client = await GRPCServerNodeClient.connect("localhost:5000", logger);
     stub(nodeUtils, "getNode").returns(engine as any);
   });
 
