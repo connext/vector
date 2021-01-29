@@ -2,6 +2,8 @@
 
 ## Next Release
 
+## 0.1.9
+
 - \[engine\] Fix deposit reconciliation race condition evaluation
 - \[contracts\] Use `gasNow` to get mainnet gas price over ethers
 
