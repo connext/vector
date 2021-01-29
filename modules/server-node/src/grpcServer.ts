@@ -11,6 +11,8 @@ import { createNode, deleteNodes, getNode } from "./helpers/nodes";
 import { ServerNodeError } from "./helpers/errors";
 
 import { logger, store } from ".";
+import { Any } from "@connext/vector-types/dist/src/grpc/google/protobuf/any";
+import { FullTransferState } from "@connext/vector-types/dist/src/grpc";
 
 const DEFAULT_PORT = 5000;
 
@@ -116,9 +118,19 @@ const vectorService: GrpcTypes.IServerNodeService = {
       return call.destroy(error);
     }
     engine.on(EngineEvents.CONDITIONAL_TRANSFER_CREATED, (data) => {
+      const safeTransferState: FullTransferState = {
+        ...data.transfer,
+        transferState: JSON.stringify(data.transfer.transferState ?? {}),
+        meta: JSON.stringify(data.transfer.meta ?? {}),
+        transferResolver: data.transfer.transferResolver ? JSON.stringify(data.transfer.transferResolver) : undefined,
+      };
       console.log("EngineEvents.CONDITIONAL_TRANSFER_CREATED ======> data: ", data);
-      call.write({ ...data, activeTransferIds: data.activeTransferIds ?? [] });
-      console.log("EngineEvents.CONDITIONAL_TRANSFER_CREATED ======> WROTE");
+      const wrote = call.write({
+        ...data,
+        transfer: safeTransferState,
+        activeTransferIds: data.activeTransferIds ?? [],
+      });
+      console.log("EngineEvents.CONDITIONAL_TRANSFER_CREATED ======> wrote: ", wrote);
     });
   },
 
