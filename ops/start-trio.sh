@@ -119,16 +119,6 @@ router_image="image: '${project}_builder'
 ####################
 # Observability tools config
 
-metrics_port="3000"
-metrics_public_port="3005"
-metrics_image="image: '${project}_builder'
-    entrypoint: 'bash modules/metrics-collector/ops/entry.sh'
-    volumes:
-      - '$root:/root'
-    ports:
-      - '$metrics_public_port:$metrics_port'"
-echo "$stack.metrics will be exposed on *:$metrics_public_port"
-
 grafana_image="grafana/grafana:latest"
 bash "$root/ops/pull-images.sh" "$grafana_image" > /dev/null
 
@@ -220,14 +210,6 @@ services:
       VECTOR_CONFIG: '$config'
       VECTOR_NODE_URL: 'http://roger:$internal_node_port'
       VECTOR_PORT: '$router_port'
-      VECTOR_MNEMONIC: '$roger_mnemonic'
-
-  metrics:
-    $common
-    $metrics_image
-    environment:
-      VECTOR_CONFIG: '$config'
-      VECTOR_NODE_URL: 'http://roger:$internal_node_port'
       VECTOR_MNEMONIC: '$roger_mnemonic'
 
   $observability_services
