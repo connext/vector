@@ -23,7 +23,7 @@ export const getGasPrice = async (provider: Provider, providedChainId?: number):
 export const hydrateProviders = (chainProviders: ChainProviders): HydratedProviders => {
   const hydratedProviders: { [url: string]: JsonRpcProvider } = {};
   Object.entries(chainProviders).map(([chainId, url]) => {
-    hydratedProviders[chainId] = new JsonRpcProvider(url as string);
+    hydratedProviders[chainId] = new JsonRpcProvider(url as string, parseInt(chainId));
   });
   return hydratedProviders;
 };
