@@ -94,10 +94,10 @@ const config: HardhatUserConfig = {
       chainId: 80001,
       url: urlOverride || "https://rpc-mumbai.matic.today",
     },
-    arbitrum: {
+    arbitrumtest: {
       accounts: { mnemonic },
-      chainId: 152709604825713,
-      url: urlOverride || "https://kovan2.arbitrum.io/rpc",
+      chainId: 79377087078960,
+      url: urlOverride || "https://kovan3.arbitrum.io/rpc",
     },
   },
 };

@@ -2,6 +2,16 @@
 
 ## Next Release
 
+## 0.1.9
+
+- \[engine\] Fix deposit reconciliation race condition evaluation
+- \[contracts\] Use `gasNow` to get mainnet gas price over ethers
+
+## 0.1.8
+
+- \[node\] Add `getTransfers` endpoint with filtering capabilities.
+- \[router\] Add router dashboard with signer address balance monitoring.
+
 ## 0.1.8-beta.6
 
 - \[protocol\] Fix non-checksummed addresses
