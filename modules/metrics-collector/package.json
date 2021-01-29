@@ -17,6 +17,7 @@
     "@ethersproject/providers": "5.0.15",
     "@ethersproject/wallet": "5.0.9",
     "@ethersproject/units": "5.0.8",
+    "@connext/vector-contracts": "0.1.8-beta.6",
     "@connext/vector-types": "0.1.8-beta.6",
     "@connext/vector-utils": "0.1.8-beta.6",
     "@sinclair/typebox": "0.12.7",

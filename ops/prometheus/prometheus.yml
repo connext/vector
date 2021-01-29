@@ -18,4 +18,4 @@ scrape_configs:
     # Override the global default and scrape targets from this job every 5 seconds.
     scrape_interval: 30s
     static_configs:
-      - targets: ["metrics:8000"]
+      - targets: ["metrics:3000"]
