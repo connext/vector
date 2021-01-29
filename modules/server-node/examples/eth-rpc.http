@@ -6,6 +6,8 @@
 @dave = 0x1b1968cAfFB691191CC05164d250a4bEF4aFaA65
 @carol = 0x65b70DfFdAEc7d8818F16f3caD4E86FaDD03993e
 
+@testToken = 0x9FBDa871d559710256a2502A2517b794B482Db40
+
 # 1 ETH
 @amount = 0xDE0B6B3A7640000 
 
@@ -32,6 +34,17 @@ Content-Type: application/json
   "jsonrpc":"2.0",
   "method":"eth_getBalance",
   "params":["{{roger}}",  "latest"],
+  "id":1
+}
+
+### GET DECIMALS
+POST {{ethNode}}
+Content-Type: application/json
+
+{
+  "jsonrpc":"2.0",
+  "method":"eth_call",
+  "params":[{ "to": "{{testToken}}", "data": "0x313ce567" }],
   "id":1
 }
 
