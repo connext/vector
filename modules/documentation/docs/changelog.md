@@ -2,6 +2,10 @@
 
 ## Next Release
 
+## 0.1.13-beta.0
+
+- \[all\] Update packages that were flagged by `npm audit`
+
 ## 0.1.12
 
 - \[all\] Update packages that were flagged by `npm audit`
