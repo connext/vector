@@ -332,6 +332,19 @@ const PostAdminResponseSchema = {
   }),
 };
 
+// RETRY TRANSACTION
+const PostAdminRetryWithdrawTransactionBodySchema = Type.Object({
+  adminToken: Type.String(),
+  transferId: TBytes32,
+});
+
+const PostAdminRetryWithdrawTransactionResponseSchema = {
+  200: Type.Object({
+    transferId: TBytes32,
+    transactionHash: Type.String(),
+  }),
+};
+
 //////////////////
 /// Dispute Methods
 
@@ -487,6 +500,9 @@ export namespace NodeParams {
 
   export const SendIsAliveSchema = PostSendIsAliveBodySchema;
   export type SendIsAlive = Static<typeof SendIsAliveSchema>;
+
+  export const RetryWithdrawTransactionSchema = PostAdminRetryWithdrawTransactionBodySchema;
+  export type RetryWithdrawTransaction = Static<typeof RetryWithdrawTransactionSchema>;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-namespace
@@ -585,4 +601,7 @@ export namespace NodeResponses {
 
   export const SendIsAliveSchema = PostSendIsAliveResponseSchema;
   export type SendIsAlive = Static<typeof PostSendIsAliveResponseSchema["200"]>;
+
+  export const RetryWithdrawTransactionSchema = PostAdminRetryWithdrawTransactionResponseSchema;
+  export type RetryWithdrawTransaction = Static<typeof PostAdminRetryWithdrawTransactionResponseSchema["200"]>;
 }

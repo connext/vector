@@ -16,6 +16,7 @@ import {
   jsonifyError,
 } from "@connext/vector-types";
 import { constructRpcRequest, getPublicIdentifierFromPublicKey, hydrateProviders } from "@connext/vector-utils";
+import { WithdrawCommitment } from "@connext/vector-contracts";
 import { Static, Type } from "@sinclair/typebox";
 import { Wallet } from "@ethersproject/wallet";
 
@@ -925,6 +926,56 @@ server.post<{ Body: NodeParams.Admin }>(
     try {
       await store.clear();
       return reply.status(200).send({ message: "success" });
+    } catch (e) {
+      return reply.status(500).send(
+        new ServerNodeError(ServerNodeError.reasons.ClearStoreFailed, "", request.body, {
+          storeError: e.message,
+        }).toJson(),
+      );
+    }
+  },
+);
+
+server.post<{ Body: NodeParams.RetryWithdrawTransaction }>(
+  "/withdraw/retry",
+  {
+    schema: {
+      body: NodeParams.RetryWithdrawTransactionSchema,
+      response: NodeResponses.RetryWithdrawTransactionSchema,
+    },
+  },
+  async (request, reply) => {
+    if (request.body.adminToken !== config.adminToken) {
+      return reply.status(401).send({ message: "Unauthorized" });
+    }
+    try {
+      const json = await store.getWithdrawalCommitment(request.body.transferId);
+      if (!json) {
+        return reply.status(404).send({ message: "Commitment not found" });
+      }
+      const commitment = await WithdrawCommitment.fromJson(json);
+      const channel = await store.getChannelState(json.channelAddress);
+      if (!channel) {
+        return reply
+          .status(404)
+          .send(new ServerNodeError(ServerNodeError.reasons.ChannelNotFound, "", request.params).toJson());
+      }
+      if (!json.bobSignature || !json.aliceSignature) {
+        return reply.status(500).send({ message: "Commitment not double signed" });
+      }
+      const chainService = getChainService(channel.aliceIdentifier) ?? getChainService(channel.bobIdentifier);
+      if (!chainService) {
+        return reply.status(404).send({ message: "Chain service not found" });
+      }
+      const tx = await chainService.sendWithdrawTx(channel, await commitment.getSignedTransaction());
+      if (tx.isError) {
+        return reply.status(500).send(tx.getError()!.toJson());
+      }
+      return reply.status(200).send({
+        transactionHash: tx.getValue().hash,
+        transferId: request.body.transferId,
+        channelAddress: channel.channelAddress,
+      });
     } catch (e) {
       return reply.status(500).send(
         new ServerNodeError(ServerNodeError.reasons.ClearStoreFailed, "", request.body, {

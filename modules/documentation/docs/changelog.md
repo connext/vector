@@ -2,6 +2,11 @@
 
 ## Next Release
 
+## 0.1.13
+
+- \[router\] Hotfix for gas price query errors
+- \[router\] Admin endpoint to retry withdrawal txs
+
 ## 0.1.13-beta.0
 
 - \[all\] Update packages that were flagged by `npm audit`
