@@ -936,12 +936,12 @@ server.post<{ Body: NodeParams.Admin }>(
   },
 );
 
-server.post<{ Body: NodeParams.AdminRetryWithdrawTransaction }>(
+server.post<{ Body: NodeParams.RetryWithdrawTransaction }>(
   "/withdraw/retry",
   {
     schema: {
-      body: NodeParams.AdminRetryWithdrawTransactionSchema,
-      response: NodeResponses.AdminRetryWithdrawTransactionSchema,
+      body: NodeParams.RetryWithdrawTransactionSchema,
+      response: NodeResponses.RetryWithdrawTransactionSchema,
     },
   },
   async (request, reply) => {
