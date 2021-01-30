@@ -1,5 +1,20 @@
 # Vector Changelog
 
+## Next Release
+
+## 0.1.11
+
+- \[all\] Update packages that were flagged by `npm audit`
+
+## 0.1.10
+
+- \[utils\] Pass in `chainId` when creating providers
+
+## 0.1.9
+
+- \[engine\] Fix deposit reconciliation race condition evaluation
+- \[contracts\] Use `gasNow` to get mainnet gas price over ethers
+
 ## 0.1.8
 
 - \[node\] Add `getTransfers` endpoint with filtering capabilities.

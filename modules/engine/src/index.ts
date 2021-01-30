@@ -605,12 +605,12 @@ export class VectorEngine implements IVectorEngine {
       // This should be the message from *.reasons.BadSignatures in the protocol
       // errors
       const recoveryErr = "Could not recover signers";
-      const recoveryFailed = error.message === recoveryErr || error.context?.counterpartyError === recoveryErr;
+      const recoveryFailed = error.message === recoveryErr || error.context?.counterpartyError.message === recoveryErr;
 
       if (!recoveryFailed) {
         break;
       }
-      this.logger.warn({ attempt: count, error: depositRes.getError()?.message }, "Retrying deposit reconciliation");
+      this.logger.warn({ attempt: count, channelAddress: params.channelAddress }, "Retrying deposit reconciliation");
       depositRes = await this.vector.deposit(params);
       count++;
     }
