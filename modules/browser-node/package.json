@@ -26,7 +26,7 @@
     "@ethersproject/constants": "5.0.7",
     "@sinclair/typebox": "0.12.7",
     "ajv": "6.12.6",
-    "axios": "0.21.0",
+    "axios": "0.21.1",
     "dexie": "3.0.2",
     "merkletreejs": "0.2.9",
     "pino": "6.7.0",
