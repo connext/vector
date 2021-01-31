@@ -505,24 +505,16 @@ export async function handleIsAlive(
     logger,
   );
 
-  if (pending.isError && unverified.isError) {
-    return Result.fail(
-      new CheckInError(CheckInError.reasons.PendingAndUnverifiedFailed, data.channelAddress, {
-        pending: jsonifyError(pending.getError()!),
-        unverified: jsonifyError(unverified.getError()!),
-      }),
-    );
+  const errors = [pending.getError(), unverified.getError()].filter((x) => !!x);
+  if (errors.length === 0) {
+    return Result.ok(undefined);
   }
-
-  if (pending.isError) {
-    return pending;
-  }
-
-  if (unverified.isError) {
-    return unverified;
-  }
-
-  return Result.ok(undefined);
+  return Result.fail(
+    new CheckInError(CheckInError.reasons.TasksFailed, data.channelAddress, {
+      pending: pending.isError ? jsonifyError(pending.getError()!) : undefined,
+      unverified: unverified.isError ? jsonifyError(unverified.getError()!) : undefined,
+    }),
+  );
 }
 
 const handleUnverifiedUpdates = async (
