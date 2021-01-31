@@ -453,23 +453,24 @@ export class EthereumChainReader implements IVectorChainReader {
     if (!provider) {
       return Result.fail(new ChainError(ChainError.reasons.ProviderNotFound));
     }
-    try {
-      let gasPrice;
-      if (chainId === 1) {
-        try {
-          const gasNowResponse = await axios.get(`https://www.gasnow.org/api/v3/gas/price`);
-          const gasNowData = gasNowResponse.data;
-          gasPrice = gasNowData.fast;
-        } catch (e) {
-          gasPrice = await provider.getGasPrice();
-        }
-      } else {
-        gasPrice = await provider.getGasPrice();
+    let gasPrice: BigNumber | undefined = undefined;
+    if (chainId === 1) {
+      try {
+        const gasNowResponse = await axios.get(`https://www.gasnow.org/api/v3/gas/price`);
+        const { fast } = gasNowResponse.data;
+        gasPrice = typeof fast !== "undefined" ? BigNumber.from(fast) : undefined;
+      } catch (e) {
+        this.log.warn({ error: e }, "Gasnow failed, using provider");
       }
-      return Result.ok(gasPrice);
-    } catch (e) {
-      return Result.fail(e);
     }
+    if (!gasPrice) {
+      try {
+        gasPrice = await provider.getGasPrice();
+      } catch (e) {
+        return Result.fail(e);
+      }
+    }
+    return Result.ok(gasPrice);
   }
 
   async estimateGas(chainId: number, transaction: TransactionRequest): Promise<Result<BigNumber, ChainError>> {

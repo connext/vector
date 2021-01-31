@@ -2,6 +2,28 @@
 
 ## Next Release
 
+## 0.1.14
+
+- \[server-node\] Fix withdrawal commitment store bugs
+- \[server-node\] Fix error handling (always use `jsonifyError`)
+
+## 0.1.13
+
+- \[router\] Hotfix for gas price query errors
+- \[router\] Admin endpoint to retry withdrawal txs
+
+## 0.1.13-beta.0
+
+- \[all\] Update packages that were flagged by `npm audit`
+
+## 0.1.12
+
+- \[all\] Update packages that were flagged by `npm audit`
+
+## 0.1.11
+
+- \[all\] Update packages that were flagged by `npm audit`
+
 ## 0.1.10
 
 - \[utils\] Pass in `chainId` when creating providers

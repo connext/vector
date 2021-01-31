@@ -391,12 +391,12 @@ export class PrismaStore implements IServerNodeStore {
       channelAddress: entity.channelAddressId,
       alice: entity.channel!.participantA,
       bob: entity.channel!.participantB,
-      recipient: initialState.balance.to[0],
+      recipient: entity.toA, // balance = [toA, toB]
       assetId: entity.createUpdate!.assetId,
-      amount: BigNumber.from(initialState.balance.amount[0]).sub(initialState.fee).toString(),
+      amount: BigNumber.from(entity.amountA).sub(initialState.fee).toString(),
       nonce: initialState.nonce,
-      callData: initialState.callTo,
-      callTo: initialState.callData,
+      callData: initialState.callData,
+      callTo: initialState.callTo,
     };
   }
 
