@@ -2,6 +2,10 @@
 
 ## Next Release
 
+## 0.1.15-beta.0
+
+- \[utils\] Don't use `instanceof` operator
+
 ## 0.1.14
 
 - \[server-node\] Fix withdrawal commitment store bugs
