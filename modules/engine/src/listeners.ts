@@ -273,7 +273,7 @@ export async function setupEngineListeners(
       const needsResponse = from !== signer.publicIdentifier;
       const method = "onReceiveIsAliveMessage";
       const methodId = getRandomBytes32();
-      if (params.isError && needsResponse) {
+      if (params.isError) {
         logger.warn({ error: params.getError()?.message, method, methodId }, "Error received");
         return;
       }
@@ -741,7 +741,7 @@ async function handleWithdrawalTransferResolution(
   // Submit withdrawal to chain
   const withdrawalResponse = await chainService.sendWithdrawTx(
     event.updatedChannelState,
-    await commitment.getSignedTransaction(),
+    commitment.getSignedTransaction(),
   );
 
   if (withdrawalResponse.isError) {
@@ -889,7 +889,7 @@ export const resolveWithdrawal = async (
       { method, withdrawalAmount: withdrawalAmount.toString(), channelAddress },
       "Submitting withdrawal to chain",
     );
-    const withdrawalResponse = await chainService.sendWithdrawTx(channelState, await commitment.getSignedTransaction());
+    const withdrawalResponse = await chainService.sendWithdrawTx(channelState, commitment.getSignedTransaction());
 
     // IFF the withdrawal was successfully submitted, resolve the transfer
     // with the transactionHash in the meta

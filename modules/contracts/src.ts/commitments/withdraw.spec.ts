@@ -10,7 +10,7 @@ import { getContract, createChannel } from "../utils";
 
 import { WithdrawCommitment } from "./withdraw";
 
-describe("withdrawCommitment", function() {
+describe("withdrawCommitment", function () {
   this.timeout(120_000);
   let channel: Contract;
   let token: Contract;
@@ -63,7 +63,7 @@ describe("withdrawCommitment", function() {
       await signChannelMessage(commitment.hashToSign(), bob.privateKey),
     );
     expect((await token.balanceOf(channel.address)).eq(BigNumber.from(amount).mul(2)));
-    await alice.sendTransaction(await commitment.getSignedTransaction());
+    await alice.sendTransaction(commitment.getSignedTransaction());
     expect((await token.balanceOf(channel.address)).eq(BigNumber.from(amount)));
   });
 });
