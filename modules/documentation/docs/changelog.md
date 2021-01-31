@@ -2,6 +2,9 @@
 
 ## Next Release
 
+- \[server-node\] Fix withdrawal commitment store bugs
+- \[server-node\] Fix error handling (always use `jsonifyError`)
+
 ## 0.1.13
 
 - \[router\] Hotfix for gas price query errors
