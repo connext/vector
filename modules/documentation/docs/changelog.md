@@ -2,6 +2,8 @@
 
 ## Next Release
 
+## 0.1.15-beta.2
+
 - \[utils\] Create util for determining which participant
 - \[all\] Don't use pino-pretty in prod mode
 
