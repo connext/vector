@@ -1,0 +1,11 @@
+@rogerUrl = http://localhost:8007
+
+##############
+### Restore State
+POST {{rogerUrl}}/withdraw/retry
+Content-Type: application/json
+
+{
+  "adminToken": "",
+  "transferId": ""
+}

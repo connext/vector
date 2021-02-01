@@ -13,10 +13,10 @@
     "migration:generate": "prisma migrate save --experimental"
   },
   "dependencies": {
-    "@connext/vector-contracts": "0.1.15-beta.0",
-    "@connext/vector-engine": "0.1.15-beta.0",
-    "@connext/vector-types": "0.1.15-beta.0",
-    "@connext/vector-utils": "0.1.15-beta.0",
+    "@connext/vector-contracts": "0.1.15-beta.2",
+    "@connext/vector-engine": "0.1.15-beta.2",
+    "@connext/vector-types": "0.1.15-beta.2",
+    "@connext/vector-utils": "0.1.15-beta.2",
     "@ethersproject/wallet": "5.0.9",
     "@prisma/client": "2.12.1",
     "@sinclair/typebox": "0.12.7",
