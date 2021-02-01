@@ -373,9 +373,48 @@ export const requestCollateral = async (
     { method, methodId, balance: myBalance.toString(), target: target.toString() },
     "Reconciling onchain funds",
   );
+
+  // check that funds actually made it into the channel
+  // hard error here if not so that the sender can know that the transfer
+  // will not properly get forwarded
+  // TODO: make depositRes include full channel state
   const depositRes = await node.reconcileDeposit(params);
   if (!depositRes.isError) {
-    logger.info({ method, methodId }, "Method complete");
+    const postReconcile = await node.getStateChannel({ channelAddress: channel.channelAddress });
+    if (postReconcile.isError) {
+      return Result.fail(
+        new CollateralError(
+          CollateralError.reasons.UnableToCollateralize,
+          channel.channelAddress,
+          assetId,
+          profile,
+          requestedAmount,
+          {
+            message: "Could not getStateChannel after reconcile",
+            nodeError: jsonifyError(postReconcile.getError()!),
+          },
+        ),
+      );
+    }
+    const myBalance = BigNumber.from(
+      getBalanceForAssetId(postReconcile.getValue() as FullChannelState, assetId, iAmAlice ? "alice" : "bob"),
+    );
+    if (myBalance.lt(target)) {
+      return Result.fail(
+        new CollateralError(
+          CollateralError.reasons.UnableToCollateralize,
+          channel.channelAddress,
+          assetId,
+          profile,
+          requestedAmount,
+          {
+            message: "After reconcile, balance was not present in channel",
+            channel: postReconcile.getValue(),
+          },
+        ),
+      );
+    }
+    logger.info({ method, methodId, myBalance: myBalance.toString() }, "Method complete");
     return depositRes as Result<NodeResponses.Deposit>;
   }
   const error = depositRes.getError()!;

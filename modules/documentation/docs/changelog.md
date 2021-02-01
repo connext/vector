@@ -2,6 +2,10 @@
 
 ## Next Release
 
+## 0.1.15-beta.1
+
+- \[router\] Do not forward if deposit balance is not present in channel
+- \[router\] Fix start script to pass mnemonic secret into router
 ## 0.1.15-beta.0
 
 - \[utils\] Don't use `instanceof` operator
