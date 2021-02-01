@@ -16,6 +16,7 @@ import {
   jsonifyError,
 } from "@connext/vector-types";
 import { constructRpcRequest, getPublicIdentifierFromPublicKey, hydrateProviders } from "@connext/vector-utils";
+import { WithdrawCommitment } from "@connext/vector-contracts";
 import { Static, Type } from "@sinclair/typebox";
 import { Wallet } from "@ethersproject/wallet";
 
@@ -90,7 +91,7 @@ server.get<{ Params: { publicIdentifier: string } }>(
       const res = await engine.request<"chan_getStatus">(params);
       return reply.status(200).send(res);
     } catch (e) {
-      logger.error({ error: e.toJson() });
+      logger.error({ error: jsonifyError(e) });
       return reply.status(500).send(jsonifyError(e));
     }
   },
@@ -115,7 +116,7 @@ server.get<{ Params: NodeParams.GetRouterConfig }>(
       const res = await engine.request<"chan_getRouterConfig">(params);
       return reply.status(200).send(res);
     } catch (e) {
-      logger.error({ error: e.toJson() });
+      logger.error({ error: jsonifyError(e) });
       return reply.status(500).send(jsonifyError(e));
     }
   },
@@ -154,7 +155,7 @@ server.get<{ Params: NodeParams.GetChannelState }>(
       }
       return reply.status(200).send(res);
     } catch (e) {
-      logger.error({ error: e.toJson() });
+      logger.error({ error: jsonifyError(e) });
       return reply.status(500).send(jsonifyError(e));
     }
   },
@@ -196,7 +197,7 @@ server.get<{ Params: NodeParams.GetChannelStateByParticipants }>(
       }
       return reply.status(200).send(res);
     } catch (e) {
-      logger.error({ error: e.toJson() });
+      logger.error({ error: jsonifyError(e) });
       return reply.status(500).send(jsonifyError(e));
     }
   },
@@ -234,7 +235,7 @@ server.get<{ Params: NodeParams.GetTransferState }>(
       }
       return reply.status(200).send(res);
     } catch (e) {
-      logger.error({ error: e.toJson() });
+      logger.error({ error: jsonifyError(e) });
       return reply.status(500).send(jsonifyError(e));
     }
   },
@@ -261,7 +262,7 @@ server.get<{ Params: NodeParams.GetTransferStatesByRoutingId }>(
       const res = await engine.request<"chan_getTransferStatesByRoutingId">(params);
       return reply.status(200).send(res);
     } catch (e) {
-      logger.error({ error: e.toJson() });
+      logger.error({ error: jsonifyError(e) });
       return reply.status(500).send(jsonifyError(e));
     }
   },
@@ -299,7 +300,7 @@ server.get<{ Params: NodeParams.GetTransferStateByRoutingId }>(
       }
       return reply.status(200).send(res);
     } catch (e) {
-      logger.error({ error: e.toJson() });
+      logger.error({ error: jsonifyError(e) });
       return reply.status(500).send(jsonifyError(e));
     }
   },
@@ -324,7 +325,7 @@ server.get<{ Params: NodeParams.GetActiveTransfersByChannelAddress }>(
       const res = await engine.request<"chan_getActiveTransfers">(params);
       return reply.status(200).send(res);
     } catch (e) {
-      logger.error({ error: e.toJson() });
+      logger.error({ error: jsonifyError(e) });
       return reply.status(500).send(jsonifyError(e));
     }
   },
@@ -355,7 +356,7 @@ server.get<{ Params: NodeParams.GetChannelStates }>(
       );
       return reply.status(200).send(filtered.map((chan) => chan.channelAddress));
     } catch (e) {
-      logger.error({ error: e.toJson() });
+      logger.error({ error: jsonifyError(e) });
       return reply.status(500).send(jsonifyError(e));
     }
   },
@@ -384,7 +385,7 @@ server.get<{ Params: NodeParams.GetRegisteredTransfers }>(
       const res = await engine.request<"chan_getRegisteredTransfers">(params);
       return reply.status(200).send(res);
     } catch (e) {
-      logger.error({ error: e.toJson() });
+      logger.error({ error: jsonifyError(e) });
       return reply.status(500).send(jsonifyError(e));
     }
   },
@@ -413,7 +414,7 @@ server.post<{ Body: NodeParams.Setup }>(
       const res = await engine.request<"chan_setup">(rpc);
       return reply.status(200).send(res);
     } catch (e) {
-      logger.error({ error: e.toJson() });
+      logger.error({ error: jsonifyError(e) });
       return reply.status(500).send(jsonifyError(e));
     }
   },
@@ -443,7 +444,7 @@ server.post<{ Body: NodeParams.RequestSetup }>(
       logger.info({ result }, "Request collateral completed");
       return reply.status(200).send({ ...result, channelAddress: result.channelAddress });
     } catch (e) {
-      logger.error({ error: e.toJson() });
+      logger.error({ error: jsonifyError(e) });
       return reply.status(500).send(jsonifyError(e));
     }
   },
@@ -530,7 +531,7 @@ server.post<{ Body: NodeParams.SendDisputeChannelTx }>(
       const res = await engine.request<typeof ChannelRpcMethods.chan_dispute>(rpc);
       return reply.status(200).send(res);
     } catch (e) {
-      logger.error({ error: e.toJson() });
+      logger.error({ error: jsonifyError(e) });
       return reply.status(500).send(jsonifyError(e));
     }
   },
@@ -562,7 +563,7 @@ server.post<{ Body: NodeParams.SendDefundChannelTx }>(
       const res = await engine.request<typeof ChannelRpcMethods.chan_defund>(rpc);
       return reply.status(200).send(res);
     } catch (e) {
-      logger.error({ error: e.toJson() });
+      logger.error({ error: jsonifyError(e) });
       return reply.status(500).send(jsonifyError(e));
     }
   },
@@ -594,7 +595,7 @@ server.post<{ Body: NodeParams.SendDisputeTransferTx }>(
       const res = await engine.request<typeof ChannelRpcMethods.chan_disputeTransfer>(rpc);
       return reply.status(200).send(res);
     } catch (e) {
-      logger.error({ error: e.toJson() });
+      logger.error({ error: jsonifyError(e) });
       return reply.status(500).send(jsonifyError(e));
     }
   },
@@ -626,7 +627,7 @@ server.post<{ Body: NodeParams.SendDefundTransferTx }>(
       const res = await engine.request<typeof ChannelRpcMethods.chan_defundTransfer>(rpc);
       return reply.status(200).send(res);
     } catch (e) {
-      logger.error({ error: e.toJson() });
+      logger.error({ error: jsonifyError(e) });
       return reply.status(500).send(jsonifyError(e));
     }
   },
@@ -655,7 +656,7 @@ server.post<{ Body: NodeParams.Deposit }>(
       const res = await engine.request<"chan_deposit">(rpc);
       return reply.status(200).send(res);
     } catch (e) {
-      logger.error({ error: e.toJson() });
+      logger.error({ error: jsonifyError(e) });
       return reply.status(500).send(jsonifyError(e));
     }
   },
@@ -682,7 +683,7 @@ server.post<{ Body: NodeParams.RequestCollateral }>(
       logger.info({ result }, "Request collateral completed");
       return reply.status(200).send({ ...result, channelAddress: request.body.channelAddress });
     } catch (e) {
-      logger.error({ error: e.toJson() });
+      logger.error({ error: jsonifyError(e) });
       return reply.status(500).send(jsonifyError(e));
     }
   },
@@ -717,7 +718,7 @@ server.post<{ Body: NodeParams.ConditionalTransfer }>(
         routingId: (res.latestUpdate.details as CreateUpdateDetails).meta?.routingId,
       } as NodeResponses.ConditionalTransfer);
     } catch (e) {
-      logger.error({ error: e.toJson() });
+      logger.error({ error: jsonifyError(e) });
       return reply.status(500).send(jsonifyError(e));
     }
   },
@@ -750,7 +751,7 @@ server.post<{ Body: NodeParams.ResolveTransfer }>(
         transferId: (res.latestUpdate.details as ResolveUpdateDetails).transferId,
       } as NodeResponses.ResolveTransfer);
     } catch (e) {
-      logger.error({ error: e.toJson() });
+      logger.error({ error: jsonifyError(e) });
       return reply.status(500).send(jsonifyError(e));
     }
   },
@@ -784,7 +785,7 @@ server.post<{ Body: NodeParams.Withdraw }>(
         transactionHash,
       } as NodeResponses.Withdraw);
     } catch (e) {
-      logger.error({ error: e.toJson() });
+      logger.error({ error: jsonifyError(e) });
       return reply.status(500).send(jsonifyError(e));
     }
   },
@@ -809,7 +810,7 @@ server.post<{ Body: NodeParams.RestoreState }>(
       const { channelAddress } = await engine.request<typeof ChannelRpcMethods.chan_restoreState>(rpc);
       return reply.status(200).send({ channelAddress } as NodeResponses.RestoreState);
     } catch (e) {
-      logger.error({ error: e.toJson() });
+      logger.error({ error: jsonifyError(e) });
       return reply.status(500).send(jsonifyError(e));
     }
   },
@@ -834,7 +835,7 @@ server.post<{ Body: NodeParams.SendIsAlive }>(
       const { channelAddress } = await engine.request<typeof ChannelRpcMethods.chan_sendIsAlive>(rpc);
       return reply.status(200).send({ channelAddress } as NodeResponses.SendIsAlive);
     } catch (e) {
-      logger.error({ error: e.toJson() });
+      logger.error({ error: jsonifyError(e) });
       return reply.status(500).send(jsonifyError(e));
     }
   },
@@ -924,6 +925,7 @@ server.post<{ Body: NodeParams.Admin }>(
     }
     try {
       await store.clear();
+      ("");
       return reply.status(200).send({ message: "success" });
     } catch (e) {
       return reply.status(500).send(
@@ -931,6 +933,60 @@ server.post<{ Body: NodeParams.Admin }>(
           storeError: e.message,
         }).toJson(),
       );
+    }
+  },
+);
+
+server.post<{ Body: NodeParams.RetryWithdrawTransaction }>(
+  "/withdraw/retry",
+  {
+    schema: {
+      body: NodeParams.RetryWithdrawTransactionSchema,
+      response: NodeResponses.RetryWithdrawTransactionSchema,
+    },
+  },
+  async (request, reply) => {
+    if (request.body.adminToken !== config.adminToken) {
+      return reply
+        .status(401)
+        .send(new ServerNodeError(ServerNodeError.reasons.Unauthorized, "", request.body).toJson());
+    }
+    try {
+      const json = await store.getWithdrawalCommitment(request.body.transferId);
+      if (!json) {
+        return reply
+          .status(404)
+          .send(new ServerNodeError(ServerNodeError.reasons.CommitmentNotFound, "", request.body).toJson());
+      }
+      const commitment = await WithdrawCommitment.fromJson(json);
+      const channel = await store.getChannelState(json.channelAddress);
+      if (!channel) {
+        return reply
+          .status(404)
+          .send(new ServerNodeError(ServerNodeError.reasons.ChannelNotFound, "", request.body).toJson());
+      }
+      if (!json.bobSignature || !json.aliceSignature) {
+        return reply
+          .status(400)
+          .send(new ServerNodeError(ServerNodeError.reasons.CommitmentSingleSigned, "", request.body).toJson());
+      }
+      const chainService = getChainService(channel.aliceIdentifier) ?? getChainService(channel.bobIdentifier);
+      if (!chainService) {
+        return reply
+          .status(404)
+          .send(new ServerNodeError(ServerNodeError.reasons.ChainServiceNotFound, "", request.body).toJson());
+      }
+      const tx = await chainService.sendWithdrawTx(channel, commitment.getSignedTransaction());
+      if (tx.isError) {
+        return reply.status(500).send(jsonifyError(tx.getError()!));
+      }
+      return reply.status(200).send({
+        transactionHash: tx.getValue().hash,
+        transferId: request.body.transferId,
+        channelAddress: channel.channelAddress,
+      });
+    } catch (e) {
+      return reply.status(500).send(jsonifyError(e));
     }
   },
 );
@@ -955,7 +1011,7 @@ server.post<{ Body: NodeParams.CreateNode }>(
         signerAddress: newNode.signerAddress,
       } as NodeResponses.CreateNode);
     } catch (e) {
-      logger.error({ error: e.toJson() });
+      logger.error({ error: jsonifyError(e) });
       return reply.status(500).send(
         new ServerNodeError(ServerNodeError.reasons.CreateNodeFailed, "", request.body, {
           createNodeError: e.message,

@@ -8,8 +8,11 @@ export class ServerNodeError extends NodeError {
   static readonly type = "ServerNodeError";
 
   static readonly reasons = {
+    ChainServiceNotFound: "Chain service not found",
     ChannelNotFound: "Channel not found",
     ClearStoreFailed: "Failed to clear store",
+    CommitmentNotFound: "Withdrawal commitment not found",
+    CommitmentSingleSigned: "Withdrawal commitment single-signed",
     CreateNodeFailed: "Could not create node",
     GetChannelFailed: "Failed to get channel from store",
     NodeNotFound: "Node not found",
@@ -17,6 +20,7 @@ export class ServerNodeError extends NodeError {
     RegisterSubscriptionFailed: "Failed to register subscription",
     SubscriptionNotFound: "Subscription URL not found",
     TransferNotFound: "Transfer not found",
+    Unauthorized: "Unauthorized",
   } as const;
 
   readonly context: ServerNodeErrorContext;

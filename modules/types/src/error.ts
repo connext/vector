@@ -1,8 +1,8 @@
 import { UpdateParams, FullChannelState, ChannelUpdate } from "./channel";
 
 export const jsonifyError = (error: VectorError | Error): VectorErrorJson => {
-  if (error instanceof VectorError) {
-    return error.toJson();
+  if (!!(error as any).type) {
+    return (error as VectorError).toJson();
   }
   return {
     message: error.message,

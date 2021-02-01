@@ -75,12 +75,12 @@ export async function convertConditionalTransferParams(
   const registryRes = !type.startsWith(`0x`)
     ? await chainReader.getRegisteredTransferByName(
         type as TransferName,
-        chainAddresses[channel.networkContext.chainId].transferRegistryAddress,
+        channel.networkContext.transferRegistryAddress,
         channel.networkContext.chainId,
       )
     : await chainReader.getRegisteredTransferByDefinition(
         type,
-        chainAddresses[channel.networkContext.chainId].transferRegistryAddress,
+        channel.networkContext.transferRegistryAddress,
         channel.networkContext.chainId,
       );
   if (registryRes.isError) {

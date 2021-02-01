@@ -87,7 +87,7 @@ export class WithdrawCommitment {
     return solidityKeccak256(["bytes"], [encoded]);
   }
 
-  public async getSignedTransaction(): Promise<MinimalTransaction> {
+  public getSignedTransaction(): MinimalTransaction {
     if (!this.signatures || this.signatures.length === 0) {
       throw new Error(`No signatures detected`);
     }

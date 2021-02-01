@@ -14,7 +14,7 @@
 @rogerPublicIdentifier = vector8Uz1BdpA9hV5uTm6QUv5jj1PsUyCH8m8ciA94voCzsxVmrBRor
 @chainId = 1337
 
-@nodeUrl = {{carolUrl}}
+@nodeUrl = {{rogerUrl}}
 @nodePublicIdentifier = {{carolPublicIdentifier}}
 @counterpartyPublicIdentifier = {{rogerPublicIdentifier}}
 @channel = {{carolRogerChannel}}
@@ -51,6 +51,17 @@ Content-Type: application/json
 {
   "adminToken": "{{adminToken}}"
 }
+
+####################
+### RETRY WITHDRAWAL
+POST {{nodeUrl}}/withdraw/retry
+Content-Type: application/json
+
+{
+  "adminToken": "{{adminToken}}",
+  "transferId": "0xe9c2f1f4efb9a9f55fcce0be95f1fe16c0ec9e49a68a706c52c1dec4d92e81d0"
+}
+
 
 ##############
 ### CREATE NODE

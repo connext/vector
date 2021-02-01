@@ -15,6 +15,7 @@ import {
   TransferState,
   HydratedProviders,
 } from "@connext/vector-types";
+import axios from "axios";
 import { encodeBalance, encodeTransferResolver, encodeTransferState } from "@connext/vector-utils";
 import { BigNumber } from "@ethersproject/bignumber";
 import { AddressZero, HashZero } from "@ethersproject/constants";
@@ -455,12 +456,24 @@ export class EthereumChainReader implements IVectorChainReader {
     if (!provider) {
       return Result.fail(new ChainError(ChainError.reasons.ProviderNotFound));
     }
-    try {
-      const gasPrice = await provider.getGasPrice();
-      return Result.ok(gasPrice);
-    } catch (e) {
-      return Result.fail(e);
+    let gasPrice: BigNumber | undefined = undefined;
+    if (chainId === 1) {
+      try {
+        const gasNowResponse = await axios.get(`https://www.gasnow.org/api/v3/gas/price`);
+        const { fast } = gasNowResponse.data;
+        gasPrice = typeof fast !== "undefined" ? BigNumber.from(fast) : undefined;
+      } catch (e) {
+        this.log.warn({ error: e }, "Gasnow failed, using provider");
+      }
     }
+    if (!gasPrice) {
+      try {
+        gasPrice = await provider.getGasPrice();
+      } catch (e) {
+        return Result.fail(e);
+      }
+    }
+    return Result.ok(gasPrice);
   }
 
   async estimateGas(chainId: number, transaction: TransactionRequest): Promise<Result<BigNumber, ChainError>> {
