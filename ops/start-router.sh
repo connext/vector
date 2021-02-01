@@ -235,11 +235,18 @@ fi
 bash "$root/ops/pull-images.sh" "$router_image_name" > /dev/null
 
 # Add whichever secrets we're using to the router's service config
-if [[ -n "$db_secret" ]]
+if [[ -n "$db_secret" || -n "$mnemonic_secret" ]]
 then
   router_image="$router_image
-    secrets:
+    secrets:"
+  if [[ -n "$db_secret" ]]
+  then router_image="$router_image
       - '$db_secret'"
+  fi
+  if [[ -n "$mnemonic_secret" ]]
+  then router_image="$router_image
+      - '$mnemonic_secret'"
+  fi
 fi
 
 ####################
