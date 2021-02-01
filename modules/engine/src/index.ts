@@ -33,6 +33,7 @@ import {
   validateChannelUpdateSignatures,
   getSignerAddressFromPublicIdentifier,
   getRandomBytes32,
+  getParticipant,
 } from "@connext/vector-utils";
 import pino from "pino";
 import Ajv from "ajv";
@@ -650,9 +651,20 @@ export class VectorEngine implements IVectorEngine {
       return Result.fail(new RpcError(RpcError.reasons.ChannelNotFound, params.channelAddress, this.publicIdentifier));
     }
 
+    const participant = getParticipant(channel, this.publicIdentifier);
+    if (!participant) {
+      return Result.fail(
+        new RpcError(RpcError.reasons.SignerNotInChannel, channel.channelAddress, this.publicIdentifier, {
+          alice: channel.aliceIdentifier,
+          bob: channel.bobIdentifier,
+          signer: this.publicIdentifier,
+        }),
+      );
+    }
+
     const request = await this.messaging.sendRequestCollateralMessage(
       Result.ok(params),
-      this.publicIdentifier === channel.aliceIdentifier ? channel.bobIdentifier : channel.aliceIdentifier,
+      participant === "alice" ? channel.bobIdentifier : channel.aliceIdentifier,
       this.publicIdentifier,
     );
     this.logger.info(
