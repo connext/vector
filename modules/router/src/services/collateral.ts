@@ -356,9 +356,13 @@ export const requestCollateral = async (
         assetId,
         channelAddress: channel.channelAddress,
         processed,
+        balance: myBalance.toString(),
+        totalDeposited: totalDeposited.getValue().toString(),
         amountToDeposit: amountToDeposit.toString(),
         reconcilable: reconcilable.toString(),
         target: target.toString(),
+        isAlice: iAmAlice,
+        assetIdx,
       },
       "Owed onchain funds are sufficient",
     );
