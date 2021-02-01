@@ -252,8 +252,8 @@ export class NatsBasicMessagingService implements IBasicMessaging {
   ): Promise<Result<R>> {
     this.assertConnected();
     const subject = `${to}.${from}.${subjectSuffix}`;
+    const msgBody = safeJsonStringify(data.toJson());
     try {
-      const msgBody = safeJsonStringify(data.toJson());
       this.log.debug({ method, msgBody }, "Sending message");
       const msg = await this.request(subject, timeout, msgBody);
       this.log.debug({ method, msg }, "Received response");
@@ -261,7 +261,7 @@ export class NatsBasicMessagingService implements IBasicMessaging {
       return result;
     } catch (e) {
       this.log.error(
-        { error: e.message ?? e, subject: subjectSuffix, data: data.toJson(), method },
+        { error: e.message ?? e, subject: subjectSuffix, data: msgBody, method },
         "Sending message failed",
       );
       const error = e.message ?? e ?? "";
