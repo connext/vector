@@ -1,4 +1,4 @@
-import { delay, expect, getBalanceForAssetId, getRandomBytes32 } from "@connext/vector-utils";
+import { delay, expect, getBalanceForAssetId, getRandomBytes32, getParticipant } from "@connext/vector-utils";
 import {
   DEFAULT_CHANNEL_TIMEOUT,
   EngineEvents,
@@ -57,7 +57,10 @@ export const requestCollateral = async (
   const channelRes = await requester.getStateChannel({ channelAddress });
   const channel = channelRes.getValue()! as FullChannelState;
 
-  const counterpartyAliceOrBob = counterparty.publicIdentifier === channel.aliceIdentifier ? "alice" : "bob";
+  const counterpartyAliceOrBob = getParticipant(channel, counterparty.publicIdentifier);
+  if (!counterpartyAliceOrBob) {
+    throw new Error("Invalid participant");
+  }
   const counterpartyBefore = getBalanceForAssetId(channel, assetId, counterpartyAliceOrBob);
 
   const collateralRes = await requester.requestCollateral({
@@ -109,7 +112,10 @@ export const deposit = async (
   const channelRes = await depositor.getStateChannel({ channelAddress });
   const channel = channelRes.getValue()! as FullChannelState;
 
-  const depositorAliceOrBob = depositor.publicIdentifier === channel.aliceIdentifier ? "alice" : "bob";
+  const depositorAliceOrBob = getParticipant(channel, depositor.publicIdentifier);
+  if (!depositorAliceOrBob) {
+    throw new Error("Invalid participant");
+  }
   const depositorBefore = getBalanceForAssetId(channel, assetId, depositorAliceOrBob);
 
   if (depositorAliceOrBob === "alice") {

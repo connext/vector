@@ -127,6 +127,7 @@ export class RpcError extends EngineError {
     InvalidMethod: "Rpc method is invalid",
     ParamConversionFailed: "Failed to convert engine ",
     ProtocolMethodFailed: "Failed to execute protocol method",
+    SignerNotInChannel: "Signer is not in channel",
     StoreMethodFailed: "Failed to execute store method",
     TransferNotFound: "Transfer not found",
     UtilitySigningFailed: "Failed to sign utility message",
