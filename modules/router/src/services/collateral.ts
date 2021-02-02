@@ -23,6 +23,12 @@ const attemptDepositTransaction = new Gauge({
   labelNames: ["methodId", "amountToDeposit", "channelAddress", "chainId", "assetId"] as const,
 });
 
+const submittedDepositTransaction = new Gauge({
+  name: "router_deposit_transaction_success",
+  help: "router_deposit_transaction_success_help",
+  labelNames: ["methodId", "txHash"] as const,
+});
+
 const successfulDepositTransaction = new Gauge({
   name: "router_deposit_transaction_success",
   help: "router_deposit_transaction_success_help",
@@ -382,6 +388,7 @@ export const requestCollateral = async (
 
     const tx = txRes.getValue();
     logger.info({ method, methodId, txHash: tx.txHash }, "Submitted deposit tx");
+    submittedDepositTransaction.labels(methodId, tx.txHash).inc(1);
     const receipt = await provider.waitForTransaction(tx.txHash);
     if (receipt.status === 0) {
       return Result.fail(
