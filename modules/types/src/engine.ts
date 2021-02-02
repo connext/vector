@@ -84,6 +84,7 @@ export type WithdrawalCreatedPayload = {
   callTo: string;
   callData: string;
   channelBalance: Balance;
+  meta?: any;
 };
 
 // Emitted when a withdrawal transfer is resolved

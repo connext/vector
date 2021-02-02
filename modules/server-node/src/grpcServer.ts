@@ -274,7 +274,19 @@ const vectorService: GrpcTypes.IServerNodeService = {
       return call.destroy(error);
     }
     engine.on(EngineEvents.WITHDRAWAL_CREATED, (data) => {
-      call.write(data);
+      const safeTransferState = {
+        ...data.transfer,
+        transferState: GrpcTypes.Struct.fromJson(data.transfer.transferState),
+        meta: data.transfer.meta ? GrpcTypes.Struct.fromJson(data.transfer.meta) : undefined,
+        transferResolver: data.transfer.transferResolver
+          ? GrpcTypes.Struct.fromJson(data.transfer.transferResolver)
+          : undefined,
+      };
+      call.write({
+        ...data,
+        transfer: safeTransferState,
+        meta: data.meta ? GrpcTypes.Struct.fromJson(data.meta) : undefined,
+      });
     });
   },
 
@@ -312,7 +324,19 @@ const vectorService: GrpcTypes.IServerNodeService = {
       return call.destroy(error);
     }
     engine.on(EngineEvents.WITHDRAWAL_CREATED, (data) => {
-      call.write(data);
+      const safeTransferState = {
+        ...data.transfer,
+        transferState: GrpcTypes.Struct.fromJson(data.transfer.transferState),
+        meta: data.transfer.meta ? GrpcTypes.Struct.fromJson(data.transfer.meta) : undefined,
+        transferResolver: data.transfer.transferResolver
+          ? GrpcTypes.Struct.fromJson(data.transfer.transferResolver)
+          : undefined,
+      };
+      call.write({
+        ...data,
+        transfer: safeTransferState,
+        meta: data.meta ? GrpcTypes.Struct.fromJson(data.meta) : undefined,
+      });
     });
   },
 

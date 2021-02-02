@@ -106,9 +106,41 @@ const convertGrpcDataToDomain = <T extends EngineEvent>(eventName: T, data: any)
         meta: typedData.meta ? GrpcTypes.Struct.toJson(typedData.meta) : undefined,
       } as any;
     }
-    case "WITHDRAWAL_CREATED":
+    case "WITHDRAWAL_CREATED": {
+      const typedData: GrpcTypes.WithdrawalCreatedPayload = data;
+      const transfer = {
+        ...typedData.transfer,
+        transferState: GrpcTypes.Struct.toJson(typedData.transfer.transferState),
+        transferResolver: typedData.transfer.transferResolver
+          ? GrpcTypes.Struct.toJson(typedData.transfer.transferResolver)
+          : undefined,
+        meta: typedData.transfer.meta ? GrpcTypes.Struct.toJson(typedData.transfer.meta) : undefined,
+        balance: typedData.transfer.balance ?? { amount: [], to: [] },
+      };
+      return {
+        ...typedData,
+        transfer,
+        meta: typedData.meta ? GrpcTypes.Struct.toJson(typedData.meta) : undefined,
+      } as any;
+    }
     case "WITHDRAWAL_RECONCILED":
-    case "WITHDRAWAL_RESOLVED":
+    case "WITHDRAWAL_RESOLVED": {
+      const typedData: GrpcTypes.WithdrawalCreatedPayload = data;
+      const transfer = {
+        ...typedData.transfer,
+        transferState: GrpcTypes.Struct.toJson(typedData.transfer.transferState),
+        transferResolver: typedData.transfer.transferResolver
+          ? GrpcTypes.Struct.toJson(typedData.transfer.transferResolver)
+          : undefined,
+        meta: typedData.transfer.meta ? GrpcTypes.Struct.toJson(typedData.transfer.meta) : undefined,
+        balance: typedData.transfer.balance ?? { amount: [], to: [] },
+      };
+      return {
+        ...typedData,
+        transfer,
+        meta: typedData.meta ? GrpcTypes.Struct.toJson(typedData.meta) : undefined,
+      } as any;
+    }
     default:
       throw new Error(`Unknown event: ${eventName}`);
   }

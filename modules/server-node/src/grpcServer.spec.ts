@@ -272,4 +272,64 @@ describe("GRPC server", () => {
       );
     });
   });
+
+  it.only("should withdrawalCreatedStream", () => {
+    return new Promise<void>((res) => {
+      const payload: WithdrawalCreatedPayload = {
+        aliceIdentifier: mkPublicIdentifier("vectorA"),
+        bobIdentifier: mkPublicIdentifier("vectorB"),
+        channelAddress: mkAddress("0xcc"),
+        amount: "1234",
+        assetId: mkAddress("0xaa"),
+        callData: "0x",
+        callTo: mkAddress("0xbb"),
+        channelBalance: { amount: ["1", "2"], to: [mkAddress("0xaaa"), mkAddress("0xbbb")] },
+        fee: "123",
+        recipient: mkAddress("0xccc"),
+        transfer: createTestFullHashlockTransferState(),
+        meta: { hello: "world" },
+      };
+      engine.on.yields(payload);
+
+      client.on(
+        EngineEvents.SETUP,
+        (data) => {
+          expect(data).to.deep.eq(payload);
+          res();
+        },
+        undefined,
+        mkPublicIdentifier("vectorB"),
+      );
+    });
+  });
+
+  it.only("should withdrawalResolvedStream", () => {
+    return new Promise<void>((res) => {
+      const payload: WithdrawalCreatedPayload = {
+        aliceIdentifier: mkPublicIdentifier("vectorA"),
+        bobIdentifier: mkPublicIdentifier("vectorB"),
+        channelAddress: mkAddress("0xcc"),
+        amount: "1234",
+        assetId: mkAddress("0xaa"),
+        callData: "0x",
+        callTo: mkAddress("0xbb"),
+        channelBalance: { amount: ["1", "2"], to: [mkAddress("0xaaa"), mkAddress("0xbbb")] },
+        fee: "123",
+        recipient: mkAddress("0xccc"),
+        transfer: createTestFullHashlockTransferState(),
+        meta: { hello: "world" },
+      };
+      engine.on.yields(payload);
+
+      client.on(
+        EngineEvents.SETUP,
+        (data) => {
+          expect(data).to.deep.eq(payload);
+          res();
+        },
+        undefined,
+        mkPublicIdentifier("vectorB"),
+      );
+    });
+  });
 });
