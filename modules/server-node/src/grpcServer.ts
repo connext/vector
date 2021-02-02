@@ -4,8 +4,16 @@
 // https://github.com/timostamm/protobuf-ts/tree/master/packages/example-node-grpc-server
 
 import * as grpc from "@grpc/grpc-js";
-import { jsonifyError, GrpcTypes, ChannelRpcMethods, EngineEvents } from "@connext/vector-types";
+import {
+  jsonifyError,
+  GrpcTypes,
+  ChannelRpcMethods,
+  EngineEvents,
+  EngineEvent,
+  EngineEventMap,
+} from "@connext/vector-types";
 import { constructRpcRequest } from "@connext/vector-utils";
+import { Evt } from "evt";
 
 import { createNode, deleteNodes, getNode } from "./helpers/nodes";
 import { ServerNodeError } from "./helpers/errors";
@@ -13,6 +21,20 @@ import { ServerNodeError } from "./helpers/errors";
 import { logger, store } from ".";
 
 const DEFAULT_PORT = 5000;
+
+// export so test can control it
+export const evts: { [eventName in EngineEvent]: Evt<EngineEventMap[eventName]> } = {
+  CONDITIONAL_TRANSFER_CREATED: new Evt(),
+  CONDITIONAL_TRANSFER_RESOLVED: new Evt(),
+  DEPOSIT_RECONCILED: new Evt(),
+  IS_ALIVE: new Evt(),
+  REQUEST_COLLATERAL: new Evt(),
+  RESTORE_STATE_EVENT: new Evt(),
+  SETUP: new Evt(),
+  WITHDRAWAL_CREATED: new Evt(),
+  WITHDRAWAL_RESOLVED: new Evt(),
+  WITHDRAWAL_RECONCILED: new Evt(),
+};
 
 const vectorService: GrpcTypes.IServerNodeService = {
   async getPing(
@@ -85,7 +107,40 @@ const vectorService: GrpcTypes.IServerNodeService = {
         store.setMnemonic(call.request.mnemonic);
         storedMnemonic = call.request.mnemonic;
       }
+
+      // every node needs to register to evts so that events get sent over as part of the stream
       const newNode = await createNode(call.request.index, store, storedMnemonic!, call.request.skipCheckIn ?? false);
+      newNode.on(EngineEvents.CONDITIONAL_TRANSFER_CREATED, (data) => {
+        evts.CONDITIONAL_TRANSFER_CREATED.post(data);
+      });
+      newNode.on(EngineEvents.CONDITIONAL_TRANSFER_RESOLVED, (data) => {
+        evts.CONDITIONAL_TRANSFER_RESOLVED.post(data);
+      });
+      newNode.on(EngineEvents.DEPOSIT_RECONCILED, (data) => {
+        evts.DEPOSIT_RECONCILED.post(data);
+      });
+      newNode.on(EngineEvents.IS_ALIVE, (data) => {
+        evts.IS_ALIVE.post(data);
+      });
+      newNode.on(EngineEvents.REQUEST_COLLATERAL, (data) => {
+        evts.REQUEST_COLLATERAL.post(data);
+      });
+      newNode.on(EngineEvents.RESTORE_STATE_EVENT, (data) => {
+        evts.RESTORE_STATE_EVENT.post(data);
+      });
+      newNode.on(EngineEvents.SETUP, (data) => {
+        evts.SETUP.post(data);
+      });
+      newNode.on(EngineEvents.WITHDRAWAL_CREATED, (data) => {
+        evts.WITHDRAWAL_CREATED.post(data);
+      });
+      newNode.on(EngineEvents.WITHDRAWAL_RECONCILED, (data) => {
+        evts.WITHDRAWAL_RECONCILED.post(data);
+      });
+      newNode.on(EngineEvents.WITHDRAWAL_RESOLVED, (data) => {
+        evts.WITHDRAWAL_RESOLVED.post(data);
+      });
+
       callback(null, {
         index: call.request.index,
         publicIdentifier: newNode.publicIdentifier,
@@ -98,24 +153,10 @@ const vectorService: GrpcTypes.IServerNodeService = {
   },
 
   conditionalTransferCreatedStream: (
-    call: grpc.ServerWritableStream<
-      GrpcTypes.GenericPublicIdentifierRequest,
-      GrpcTypes.ConditionalTransferCreatedPayload
-    >,
+    call: grpc.ServerWritableStream<GrpcTypes.Empty, GrpcTypes.ConditionalTransferCreatedPayload>,
   ) => {
-    console.log("CALLED conditionalTransferCreatedStream");
-    const engine = getNode(call.request.publicIdentifier);
-    if (!engine) {
-      const error = new ServerNodeError(
-        ServerNodeError.reasons.NodeNotFound,
-        call.request.publicIdentifier,
-        call.request,
-        grpc.status.NOT_FOUND,
-      );
-      logger.error({ error }, "Could not find engine");
-      return call.destroy(error);
-    }
-    engine.on(EngineEvents.CONDITIONAL_TRANSFER_CREATED, (data) => {
+    evts.CONDITIONAL_TRANSFER_CREATED.attach((data) => {
+      console.log("conditionalTransferCreatedStream ====> data: ", data);
       const safeTransferState = {
         ...data.transfer,
         transferState: GrpcTypes.Struct.fromJson(data.transfer.transferState),
@@ -133,23 +174,9 @@ const vectorService: GrpcTypes.IServerNodeService = {
   },
 
   conditionalTransferResolvedStream: (
-    call: grpc.ServerWritableStream<
-      GrpcTypes.GenericPublicIdentifierRequest,
-      GrpcTypes.ConditionalTransferCreatedPayload
-    >,
+    call: grpc.ServerWritableStream<GrpcTypes.Empty, GrpcTypes.ConditionalTransferCreatedPayload>,
   ) => {
-    const engine = getNode(call.request.publicIdentifier);
-    if (!engine) {
-      const error = new ServerNodeError(
-        ServerNodeError.reasons.NodeNotFound,
-        call.request.publicIdentifier,
-        call.request,
-        grpc.status.NOT_FOUND,
-      );
-      logger.error({ error }, "Could not find engine");
-      return call.destroy(error);
-    }
-    engine.on(EngineEvents.CONDITIONAL_TRANSFER_RESOLVED, (data) => {
+    evts.CONDITIONAL_TRANSFER_RESOLVED.attach((data) => {
       const safeTransferState = {
         ...data.transfer,
         transferState: GrpcTypes.Struct.fromJson(data.transfer.transferState),
@@ -166,114 +193,38 @@ const vectorService: GrpcTypes.IServerNodeService = {
     });
   },
 
-  depositReconciledStream: (
-    call: grpc.ServerWritableStream<GrpcTypes.GenericPublicIdentifierRequest, GrpcTypes.DepositReconciledPayload>,
-  ) => {
-    const engine = getNode(call.request.publicIdentifier);
-    if (!engine) {
-      const error = new ServerNodeError(
-        ServerNodeError.reasons.NodeNotFound,
-        call.request.publicIdentifier,
-        call.request,
-        grpc.status.NOT_FOUND,
-      );
-      logger.error({ error }, "Could not find engine");
-      return call.destroy(error);
-    }
-    engine.on(EngineEvents.DEPOSIT_RECONCILED, (data) => {
+  depositReconciledStream: (call: grpc.ServerWritableStream<GrpcTypes.Empty, GrpcTypes.DepositReconciledPayload>) => {
+    evts.DEPOSIT_RECONCILED.attach((data) => {
       call.write({ ...data, meta: data.meta ? GrpcTypes.Struct.fromJson(data.meta) : undefined });
     });
   },
 
-  isAliveStream: (
-    call: grpc.ServerWritableStream<GrpcTypes.GenericPublicIdentifierRequest, GrpcTypes.IsAlivePayload>,
-  ) => {
-    const engine = getNode(call.request.publicIdentifier);
-    if (!engine) {
-      const error = new ServerNodeError(
-        ServerNodeError.reasons.NodeNotFound,
-        call.request.publicIdentifier,
-        call.request,
-        grpc.status.NOT_FOUND,
-      );
-      logger.error({ error }, "Could not find engine");
-      return call.destroy(error);
-    }
-    engine.on(EngineEvents.IS_ALIVE, (data) => {
+  isAliveStream: (call: grpc.ServerWritableStream<GrpcTypes.Empty, GrpcTypes.IsAlivePayload>) => {
+    evts.IS_ALIVE.attach((data) => {
       call.write(data);
     });
   },
 
-  requestCollateralStream: (
-    call: grpc.ServerWritableStream<GrpcTypes.GenericPublicIdentifierRequest, GrpcTypes.RequestCollateralPayload>,
-  ) => {
-    const engine = getNode(call.request.publicIdentifier);
-    if (!engine) {
-      const error = new ServerNodeError(
-        ServerNodeError.reasons.NodeNotFound,
-        call.request.publicIdentifier,
-        call.request,
-        grpc.status.NOT_FOUND,
-      );
-      logger.error({ error }, "Could not find engine");
-      return call.destroy(error);
-    }
-    engine.on(EngineEvents.REQUEST_COLLATERAL, (data) => {
+  requestCollateralStream: (call: grpc.ServerWritableStream<GrpcTypes.Empty, GrpcTypes.RequestCollateralPayload>) => {
+    evts.REQUEST_COLLATERAL.attach((data) => {
       call.write({ ...data, meta: data.meta ? GrpcTypes.Struct.fromJson(data.meta) : undefined });
     });
   },
 
-  restoreStateStream: (
-    call: grpc.ServerWritableStream<GrpcTypes.GenericPublicIdentifierRequest, GrpcTypes.SetupPayload>,
-  ) => {
-    const engine = getNode(call.request.publicIdentifier);
-    if (!engine) {
-      const error = new ServerNodeError(
-        ServerNodeError.reasons.NodeNotFound,
-        call.request.publicIdentifier,
-        call.request,
-        grpc.status.NOT_FOUND,
-      );
-      logger.error({ error }, "Could not find engine");
-      return call.destroy(error);
-    }
-    engine.on(EngineEvents.RESTORE_STATE_EVENT, (data) => {
+  restoreStateStream: (call: grpc.ServerWritableStream<GrpcTypes.Empty, GrpcTypes.SetupPayload>) => {
+    evts.RESTORE_STATE_EVENT.attach((data) => {
       call.write({ ...data, meta: data.meta ? GrpcTypes.Struct.fromJson(data.meta) : undefined });
     });
   },
 
-  setupStream: (call: grpc.ServerWritableStream<GrpcTypes.GenericPublicIdentifierRequest, GrpcTypes.SetupPayload>) => {
-    const engine = getNode(call.request.publicIdentifier);
-    if (!engine) {
-      const error = new ServerNodeError(
-        ServerNodeError.reasons.NodeNotFound,
-        call.request.publicIdentifier,
-        call.request,
-        grpc.status.NOT_FOUND,
-      );
-      logger.error({ error }, "Could not find engine");
-      return call.destroy(error);
-    }
-    engine.on(EngineEvents.SETUP, (data) => {
+  setupStream: (call: grpc.ServerWritableStream<GrpcTypes.Empty, GrpcTypes.SetupPayload>) => {
+    evts.SETUP.attach((data) => {
       call.write({ ...data, meta: data.meta ? GrpcTypes.Struct.fromJson(data.meta) : undefined });
     });
   },
 
-  withdrawalCreatedStream: (
-    call: grpc.ServerWritableStream<GrpcTypes.GenericPublicIdentifierRequest, GrpcTypes.WithdrawalCreatedPayload>,
-  ) => {
-    const engine = getNode(call.request.publicIdentifier);
-    if (!engine) {
-      const error = new ServerNodeError(
-        ServerNodeError.reasons.NodeNotFound,
-        call.request.publicIdentifier,
-        call.request,
-        grpc.status.NOT_FOUND,
-      );
-      logger.error({ error }, "Could not find engine");
-      return call.destroy(error);
-    }
-    engine.on(EngineEvents.WITHDRAWAL_CREATED, (data) => {
+  withdrawalCreatedStream: (call: grpc.ServerWritableStream<GrpcTypes.Empty, GrpcTypes.WithdrawalCreatedPayload>) => {
+    evts.WITHDRAWAL_CREATED.attach((data) => {
       const safeTransferState = {
         ...data.transfer,
         transferState: GrpcTypes.Struct.fromJson(data.transfer.transferState),
@@ -291,39 +242,15 @@ const vectorService: GrpcTypes.IServerNodeService = {
   },
 
   withdrawalReconciledStream: (
-    call: grpc.ServerWritableStream<GrpcTypes.GenericPublicIdentifierRequest, GrpcTypes.WithdrawalReconciledPayload>,
+    call: grpc.ServerWritableStream<GrpcTypes.Empty, GrpcTypes.WithdrawalReconciledPayload>,
   ) => {
-    const engine = getNode(call.request.publicIdentifier);
-    if (!engine) {
-      const error = new ServerNodeError(
-        ServerNodeError.reasons.NodeNotFound,
-        call.request.publicIdentifier,
-        call.request,
-        grpc.status.NOT_FOUND,
-      );
-      logger.error({ error }, "Could not find engine");
-      return call.destroy(error);
-    }
-    engine.on(EngineEvents.WITHDRAWAL_RECONCILED, (data) => {
+    evts.WITHDRAWAL_RECONCILED.attach((data) => {
       call.write({ ...data, meta: data.meta ? GrpcTypes.Struct.fromJson(data.meta) : undefined });
     });
   },
 
-  withdrawalResolvedStream: (
-    call: grpc.ServerWritableStream<GrpcTypes.GenericPublicIdentifierRequest, GrpcTypes.WithdrawalCreatedPayload>,
-  ) => {
-    const engine = getNode(call.request.publicIdentifier);
-    if (!engine) {
-      const error = new ServerNodeError(
-        ServerNodeError.reasons.NodeNotFound,
-        call.request.publicIdentifier,
-        call.request,
-        grpc.status.NOT_FOUND,
-      );
-      logger.error({ error }, "Could not find engine");
-      return call.destroy(error);
-    }
-    engine.on(EngineEvents.WITHDRAWAL_CREATED, (data) => {
+  withdrawalResolvedStream: (call: grpc.ServerWritableStream<GrpcTypes.Empty, GrpcTypes.WithdrawalCreatedPayload>) => {
+    evts.WITHDRAWAL_RESOLVED.attach((data) => {
       const safeTransferState = {
         ...data.transfer,
         transferState: GrpcTypes.Struct.fromJson(data.transfer.transferState),
@@ -365,7 +292,6 @@ const vectorService: GrpcTypes.IServerNodeService = {
   sendDisputeTransfer: () => undefined,
   sendRequestCollateral: () => undefined,
   setup: () => undefined,
-  subscribe: () => undefined,
   transferState: () => undefined,
   withdraw: () => undefined,
 };

@@ -12,149 +12,16 @@ import {
 import { ChannelCredentials } from "@grpc/grpc-js";
 import { GrpcTransport } from "@protobuf-ts/grpc-transport";
 import { BaseLogger } from "pino";
-import Ajv from "ajv";
 import * as grpc from "@grpc/grpc-js";
+import { Evt } from "evt";
 
 import { ServerNodeServiceError } from "./errors";
 
-const ajv = new Ajv();
-
-const getGrpcStreamNameForEvent = <T extends EngineEvent>(eventName: T): string => {
-  switch (eventName) {
-    case "CONDITIONAL_TRANSFER_CREATED":
-      return "conditionalTransferCreatedStream";
-    case "CONDITIONAL_TRANSFER_RESOLVED":
-      return "conditionalTransferResolvedStream";
-    case "DEPOSIT_RECONCILED":
-      return "depositReconciledStream";
-    case "IS_ALIVE":
-      return "isAliveStream";
-    case "REQUEST_COLLATERAL":
-      return "requestCollateralStream";
-    case "RESTORE_STATE_EVENT":
-      return "restoreStateStream";
-    case "SETUP":
-      return "setupStream";
-    case "WITHDRAWAL_CREATED":
-      return "withdrawalCreatedStream";
-    case "WITHDRAWAL_RECONCILED":
-      return "withdrawalReconciledStream";
-    case "WITHDRAWAL_RESOLVED":
-      return "withdrawalResolvedStream";
-    default:
-      throw new Error("Unknown event");
-  }
-};
-
-const convertGrpcDataToDomain = <T extends EngineEvent>(eventName: T, data: any): EngineEventMap[T] => {
-  switch (eventName) {
-    case "CONDITIONAL_TRANSFER_CREATED": {
-      const typedData: GrpcTypes.ConditionalTransferCreatedPayload = data;
-      const transfer = {
-        ...typedData.transfer,
-        transferState: GrpcTypes.Struct.toJson(typedData.transfer.transferState),
-        transferResolver: typedData.transfer.transferResolver
-          ? GrpcTypes.Struct.toJson(typedData.transfer.transferResolver)
-          : undefined,
-        meta: typedData.transfer.meta ? GrpcTypes.Struct.toJson(typedData.transfer.meta) : undefined,
-        balance: typedData.transfer.balance ?? { amount: [], to: [] },
-      };
-      return { ...typedData, transfer } as any;
-    }
-    case "CONDITIONAL_TRANSFER_RESOLVED": {
-      const typedData: GrpcTypes.ConditionalTransferCreatedPayload = data;
-      const transfer = {
-        ...typedData.transfer,
-        transferState: GrpcTypes.Struct.toJson(typedData.transfer.transferState),
-        transferResolver: typedData.transfer.transferResolver
-          ? GrpcTypes.Struct.toJson(typedData.transfer.transferResolver)
-          : undefined,
-        meta: typedData.transfer.meta ? GrpcTypes.Struct.toJson(typedData.transfer.meta) : undefined,
-        balance: typedData.transfer.balance ?? { amount: [], to: [] },
-      };
-      return { ...typedData, transfer } as any;
-    }
-    case "DEPOSIT_RECONCILED": {
-      const typedData: GrpcTypes.DepositReconciledPayload = data;
-      return {
-        ...typedData,
-        meta: typedData.meta ? GrpcTypes.Struct.toJson(typedData.meta) : undefined,
-      } as any;
-    }
-    case "IS_ALIVE": {
-      const typedData: GrpcTypes.IsAlivePayload = data;
-      return typedData as any;
-    }
-    case "REQUEST_COLLATERAL": {
-      const typedData: GrpcTypes.RequestCollateralPayload = data;
-      return {
-        ...typedData,
-        meta: typedData.meta ? GrpcTypes.Struct.toJson(typedData.meta) : undefined,
-      } as any;
-    }
-    case "RESTORE_STATE_EVENT": {
-      const typedData: GrpcTypes.SetupPayload = data;
-      return {
-        ...typedData,
-        meta: typedData.meta ? GrpcTypes.Struct.toJson(typedData.meta) : undefined,
-      } as any;
-    }
-    case "SETUP": {
-      const typedData: GrpcTypes.SetupPayload = data;
-      return {
-        ...typedData,
-        meta: typedData.meta ? GrpcTypes.Struct.toJson(typedData.meta) : undefined,
-      } as any;
-    }
-    case "WITHDRAWAL_CREATED": {
-      const typedData: GrpcTypes.WithdrawalCreatedPayload = data;
-      const transfer = {
-        ...typedData.transfer,
-        transferState: GrpcTypes.Struct.toJson(typedData.transfer.transferState),
-        transferResolver: typedData.transfer.transferResolver
-          ? GrpcTypes.Struct.toJson(typedData.transfer.transferResolver)
-          : undefined,
-        meta: typedData.transfer.meta ? GrpcTypes.Struct.toJson(typedData.transfer.meta) : undefined,
-        balance: typedData.transfer.balance ?? { amount: [], to: [] },
-      };
-      return {
-        ...typedData,
-        transfer,
-        meta: typedData.meta ? GrpcTypes.Struct.toJson(typedData.meta) : undefined,
-      } as any;
-    }
-    case "WITHDRAWAL_RECONCILED": {
-      const typedData: GrpcTypes.WithdrawalReconciledPayload = data;
-      return {
-        ...typedData,
-        meta: typedData.meta ? GrpcTypes.Struct.toJson(typedData.meta) : undefined,
-      } as any;
-    }
-    case "WITHDRAWAL_RESOLVED": {
-      const typedData: GrpcTypes.WithdrawalCreatedPayload = data;
-      const transfer = {
-        ...typedData.transfer,
-        transferState: GrpcTypes.Struct.toJson(typedData.transfer.transferState),
-        transferResolver: typedData.transfer.transferResolver
-          ? GrpcTypes.Struct.toJson(typedData.transfer.transferResolver)
-          : undefined,
-        meta: typedData.transfer.meta ? GrpcTypes.Struct.toJson(typedData.transfer.meta) : undefined,
-        balance: typedData.transfer.balance ?? { amount: [], to: [] },
-      };
-      return {
-        ...typedData,
-        transfer,
-        meta: typedData.meta ? GrpcTypes.Struct.toJson(typedData.meta) : undefined,
-      } as any;
-    }
-    default:
-      throw new Error(`Unknown event: ${eventName}`);
-  }
-};
 export class GRPCServerNodeClient implements INodeClient {
   public publicIdentifier = "";
   public signerAddress = "";
-  private client: GrpcTypes.ServerNodeServiceClient;
+  public client: GrpcTypes.ServerNodeServiceClient;
+  public evts: { [eventName in EngineEvent]: Evt<EngineEventMap[eventName]> };
 
   private constructor(private readonly serverNodeUrl: string, private readonly logger: BaseLogger) {
     const transport = new GrpcTransport({
@@ -162,6 +29,18 @@ export class GRPCServerNodeClient implements INodeClient {
       channelCredentials: ChannelCredentials.createInsecure(),
     });
     this.client = new GrpcTypes.ServerNodeServiceClient(transport);
+    this.evts = {
+      CONDITIONAL_TRANSFER_CREATED: new Evt(),
+      CONDITIONAL_TRANSFER_RESOLVED: new Evt(),
+      DEPOSIT_RECONCILED: new Evt(),
+      IS_ALIVE: new Evt(),
+      REQUEST_COLLATERAL: new Evt(),
+      RESTORE_STATE_EVENT: new Evt(),
+      SETUP: new Evt(),
+      WITHDRAWAL_CREATED: new Evt(),
+      WITHDRAWAL_RESOLVED: new Evt(),
+      WITHDRAWAL_RECONCILED: new Evt(),
+    };
   }
 
   static async connect(
@@ -173,7 +52,7 @@ export class GRPCServerNodeClient implements INodeClient {
     const service = new GRPCServerNodeClient(serverNodeUrl, logger);
     // If an index is provided, the service will only host a single engine
     // and the publicIdentifier will be automatically included in parameters
-    if (typeof index === "number") {
+    if (index) {
       // Create the public identifier and signer address
       const node = await service.createNode({ index, skipCheckIn });
       if (node.isError) {
@@ -184,6 +63,147 @@ export class GRPCServerNodeClient implements INodeClient {
       service.publicIdentifier = publicIdentifier;
       service.signerAddress = signerAddress;
     }
+
+    // each event stream needs to be consumed by the client and posted into EVTs to preserve the API
+    (async () => {
+      for await (const data of service.client.conditionalTransferCreatedStream({}).response) {
+        const transfer = {
+          ...data.transfer,
+          transferState: GrpcTypes.Struct.toJson(data.transfer.transferState),
+          transferResolver: data.transfer.transferResolver
+            ? GrpcTypes.Struct.toJson(data.transfer.transferResolver)
+            : undefined,
+          meta: data.transfer.meta ? GrpcTypes.Struct.toJson(data.transfer.meta) : undefined,
+          balance: data.transfer.balance ?? { amount: [], to: [] },
+        };
+        service.evts.CONDITIONAL_TRANSFER_CREATED.post({
+          ...data,
+          transfer,
+          channelBalance: data.channelBalance ?? { amount: [], to: [] },
+        });
+      }
+    })();
+
+    (async () => {
+      for await (const data of service.client.conditionalTransferResolvedStream({}).response) {
+        const transfer = {
+          ...data.transfer,
+          transferState: GrpcTypes.Struct.toJson(data.transfer.transferState),
+          transferResolver: data.transfer.transferResolver
+            ? GrpcTypes.Struct.toJson(data.transfer.transferResolver)
+            : undefined,
+          meta: data.transfer.meta ? GrpcTypes.Struct.toJson(data.transfer.meta) : undefined,
+          balance: data.transfer.balance ?? { amount: [], to: [] },
+        };
+        service.evts.CONDITIONAL_TRANSFER_RESOLVED.post({
+          ...data,
+          transfer,
+          channelBalance: data.channelBalance ?? { amount: [], to: [] },
+        });
+      }
+    })();
+
+    (async () => {
+      for await (const data of service.client.depositReconciledStream({}).response) {
+        service.evts.DEPOSIT_RECONCILED.post({
+          ...data,
+          meta: data.meta ? GrpcTypes.Struct.toJson(data.meta) : undefined,
+          channelBalance: data.channelBalance ?? { amount: [], to: [] },
+        });
+      }
+    })();
+
+    (async () => {
+      for await (const data of service.client.depositReconciledStream({}).response) {
+        service.evts.DEPOSIT_RECONCILED.post({
+          ...data,
+          meta: data.meta ? GrpcTypes.Struct.toJson(data.meta) : undefined,
+          channelBalance: data.channelBalance ?? { amount: [], to: [] },
+        });
+      }
+    })();
+
+    (async () => {
+      for await (const data of service.client.isAliveStream({}).response) {
+        service.evts.IS_ALIVE.post(data);
+      }
+    })();
+
+    (async () => {
+      for await (const data of service.client.requestCollateralStream({}).response) {
+        service.evts.REQUEST_COLLATERAL.post({
+          ...data,
+          meta: data.meta ? GrpcTypes.Struct.toJson(data.meta) : undefined,
+        });
+      }
+    })();
+
+    (async () => {
+      for await (const data of service.client.restoreStateStream({}).response) {
+        service.evts.RESTORE_STATE_EVENT.post({
+          ...data,
+          meta: data.meta ? GrpcTypes.Struct.toJson(data.meta) : undefined,
+        });
+      }
+    })();
+
+    (async () => {
+      for await (const data of service.client.setupStream({}).response) {
+        service.evts.SETUP.post({
+          ...data,
+          meta: data.meta ? GrpcTypes.Struct.toJson(data.meta) : undefined,
+        });
+      }
+    })();
+
+    (async () => {
+      for await (const data of service.client.withdrawalCreatedStream({}).response) {
+        const transfer = {
+          ...data.transfer,
+          transferState: GrpcTypes.Struct.toJson(data.transfer.transferState),
+          transferResolver: data.transfer.transferResolver
+            ? GrpcTypes.Struct.toJson(data.transfer.transferResolver)
+            : undefined,
+          meta: data.transfer.meta ? GrpcTypes.Struct.toJson(data.transfer.meta) : undefined,
+          balance: data.transfer.balance ?? { amount: [], to: [] },
+        };
+        service.evts.WITHDRAWAL_CREATED.post({
+          ...data,
+          transfer,
+          meta: data.meta ? GrpcTypes.Struct.toJson(data.meta) : undefined,
+          channelBalance: data.channelBalance ?? { amount: [], to: [] },
+        });
+      }
+    })();
+
+    (async () => {
+      for await (const data of service.client.withdrawalResolvedStream({}).response) {
+        const transfer = {
+          ...data.transfer,
+          transferState: GrpcTypes.Struct.toJson(data.transfer.transferState),
+          transferResolver: data.transfer.transferResolver
+            ? GrpcTypes.Struct.toJson(data.transfer.transferResolver)
+            : undefined,
+          meta: data.transfer.meta ? GrpcTypes.Struct.toJson(data.transfer.meta) : undefined,
+          balance: data.transfer.balance ?? { amount: [], to: [] },
+        };
+        service.evts.WITHDRAWAL_RESOLVED.post({
+          ...data,
+          transfer,
+          meta: data.meta ? GrpcTypes.Struct.toJson(data.meta) : undefined,
+          channelBalance: data.channelBalance ?? { amount: [], to: [] },
+        });
+      }
+    })();
+
+    (async () => {
+      for await (const data of service.client.withdrawalReconciledStream({}).response) {
+        service.evts.WITHDRAWAL_RECONCILED.post({
+          ...data,
+          meta: data.meta ? GrpcTypes.Struct.toJson(data.meta) : undefined,
+        });
+      }
+    })();
 
     return service;
   }
@@ -200,13 +220,9 @@ export class GRPCServerNodeClient implements INodeClient {
     return this.validateAndExecuteGrpcRequest<
       OptionalPublicIdentifier<GrpcTypes.GenericPublicIdentifierRequest>,
       GrpcTypes.Status
-    >(
-      "getStatus",
-      {
-        publicIdentifier,
-      },
-      NodeParams.GetConfigSchema,
-    );
+    >("getStatus", {
+      publicIdentifier,
+    });
   }
 
   getRouterConfig(
@@ -215,7 +231,7 @@ export class GRPCServerNodeClient implements INodeClient {
     return this.validateAndExecuteGrpcRequest<
       OptionalPublicIdentifier<GrpcTypes.GetRouterConfigRequest>,
       GrpcTypes.RouterConfig
-    >("getRouterConfig", params, NodeParams.GetRouterConfigSchema) as any;
+    >("getRouterConfig", params) as any;
   }
 
   async getConfig(): Promise<Result<NodeResponses.GetConfig, ServerNodeServiceError>> {
@@ -369,7 +385,11 @@ export class GRPCServerNodeClient implements INodeClient {
     filter: (payload: EngineEventMap[T]) => boolean = () => true,
     publicIdentifier?: string,
   ): void {
-    throw new Error("unimplemented");
+    (this.evts[event].pipe((data) => {
+      const mine = [data.aliceIdentifier, data.bobIdentifier].includes(publicIdentifier ?? this.publicIdentifier);
+      const allowed = filter(data as any);
+      return mine && allowed;
+    }) as any).attachOnce(callback);
   }
 
   public on<T extends EngineEvent>(
@@ -378,18 +398,11 @@ export class GRPCServerNodeClient implements INodeClient {
     filter: (payload: EngineEventMap[T]) => boolean = () => true,
     publicIdentifier?: string,
   ): void {
-    const streamName = getGrpcStreamNameForEvent(event);
-    const stream = this.client[streamName]({
-      publicIdentifier: publicIdentifier ?? this.publicIdentifier,
-    });
-    (async () => {
-      for await (const data of stream.response) {
-        const converted = convertGrpcDataToDomain(event, data);
-        if (filter(converted)) {
-          callback(converted);
-        }
-      }
-    })();
+    (this.evts[event].pipe((data) => {
+      const mine = [data.aliceIdentifier, data.bobIdentifier].includes(publicIdentifier ?? this.publicIdentifier);
+      const allowed = filter(data as any);
+      return mine && allowed;
+    }) as any).attach(callback);
   }
 
   public waitFor<T extends EngineEvent>(
@@ -398,44 +411,27 @@ export class GRPCServerNodeClient implements INodeClient {
     filter: (payload: EngineEventMap[T]) => boolean = () => true,
     publicIdentifier?: string,
   ): Promise<EngineEventMap[T] | undefined> {
-    throw new Error("unimplemented");
+    return (this.evts[event].pipe((data) => {
+      const mine = [data.aliceIdentifier, data.bobIdentifier].includes(publicIdentifier ?? this.publicIdentifier);
+      const allowed = filter(data as any);
+      return mine && allowed;
+    }) as any).waitFor(timeout);
   }
 
   public off<T extends EngineEvent>(event: T, publicIdentifier?: string): void {
-    throw new Error("unimplemented");
+    this.evts[event].detach();
   }
 
   // Helper methods
   private async validateAndExecuteGrpcRequest<T, U>(
     methodName: string,
     params: T,
-    paramSchema?: any,
   ): Promise<Result<U, ServerNodeServiceError>> {
     const filled = { publicIdentifier: this.publicIdentifier, ...params };
-    if (paramSchema) {
-      // Validate parameters are in line with schema
-      const validate = ajv.compile(paramSchema);
-      // IFF the public identifier is undefined, it should be overridden by
-      // the pubId defined in the parameters.
-      if (!validate(filled)) {
-        return Result.fail(
-          new ServerNodeServiceError(
-            ServerNodeServiceError.reasons.InvalidParams,
-            (filled as any).publicIdentifer,
-            methodName,
-            params,
-            {
-              paramsError: validate.errors?.map((err) => err.message).join(","),
-            },
-          ),
-        );
-      }
-    }
 
     // Attempt request
     try {
       const call = await this.client[methodName](filled);
-      console.log("call: ", call);
       this.logger.debug({ call, methodName, filled }, "gRPC call complete");
       if (call.status !== grpc.status.OK) {
         const toThrow = new ServerNodeServiceError(

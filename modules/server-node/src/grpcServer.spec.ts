@@ -13,6 +13,7 @@ import {
   WithdrawalReconciledPayload,
   WithdrawalResolvedPayload,
   RestoreStatePayload,
+  EngineEvent,
 } from "@connext/vector-types";
 import {
   createTestFullHashlockTransferState,
@@ -30,7 +31,7 @@ import { createStubInstance, SinonStubbedInstance, stub } from "sinon";
 
 import * as nodeUtils from "./helpers/nodes";
 import { config } from "./config";
-import { setupServer } from "./grpcServer";
+import { evts, setupServer } from "./grpcServer";
 
 describe("GRPC server", () => {
   const { log: logger } = getTestLoggers("messaging", (config.logLevel ?? "fatal") as pino.Level);
@@ -108,253 +109,193 @@ describe("GRPC server", () => {
     expect(result.getValue()).to.deep.eq(expectedResponse);
   });
 
-  it("should conditionalTransferCreatedStream", () => {
-    return new Promise<void>((res) => {
-      const payload: ConditionalTransferCreatedPayload = {
-        aliceIdentifier: mkPublicIdentifier("vectorA"),
-        bobIdentifier: mkPublicIdentifier("vectorB"),
-        channelAddress: mkAddress("0xcc"),
-        channelBalance: { amount: ["1", "2"], to: [mkAddress("0xa"), mkAddress("0xb")] },
-        conditionType: "hello",
-        transfer: createTestFullHashlockTransferState(),
-        activeTransferIds: [],
-      };
-      engine.on.yields(payload);
-
-      client.on(
-        EngineEvents.CONDITIONAL_TRANSFER_CREATED,
-        (data) => {
-          expect(data).to.deep.eq(payload);
-          res();
+  describe("event handlers", () => {
+    const testParams = [
+      {
+        payload: {
+          aliceIdentifier: mkPublicIdentifier("vectorA"),
+          bobIdentifier: mkPublicIdentifier("vectorB"),
+          channelAddress: mkAddress("0xcc"),
+          channelBalance: { amount: ["1", "2"], to: [mkAddress("0xa"), mkAddress("0xb")] },
+          conditionType: "hello",
+          transfer: createTestFullHashlockTransferState(),
+          activeTransferIds: [],
         },
-        undefined,
-        mkPublicIdentifier("vectorB"),
-      );
+        eventName: EngineEvents.CONDITIONAL_TRANSFER_CREATED,
+      },
+      {
+        payload: {
+          aliceIdentifier: mkPublicIdentifier("vectorA"),
+          bobIdentifier: mkPublicIdentifier("vectorB"),
+          channelAddress: mkAddress("0xcc"),
+          channelBalance: { amount: ["1", "2"], to: [mkAddress("0xa"), mkAddress("0xb")] },
+          conditionType: "hello",
+          transfer: createTestFullHashlockTransferState(),
+          activeTransferIds: [],
+        },
+        eventName: EngineEvents.CONDITIONAL_TRANSFER_RESOLVED,
+      },
+      {
+        payload: {
+          aliceIdentifier: mkPublicIdentifier("vectorA"),
+          bobIdentifier: mkPublicIdentifier("vectorB"),
+          channelAddress: mkAddress("0xcc"),
+          channelBalance: { amount: ["1", "2"], to: [mkAddress("0xa"), mkAddress("0xb")] },
+          assetId: mkAddress("0xaaa"),
+          meta: { hello: "world" },
+        },
+        eventName: EngineEvents.DEPOSIT_RECONCILED,
+      },
+      {
+        payload: {
+          aliceIdentifier: mkPublicIdentifier("vectorA"),
+          bobIdentifier: mkPublicIdentifier("vectorB"),
+          channelAddress: mkAddress("0xcc"),
+          chainId: 1337,
+        },
+        eventName: EngineEvents.IS_ALIVE,
+      },
+      {
+        payload: {
+          aliceIdentifier: mkPublicIdentifier("vectorA"),
+          bobIdentifier: mkPublicIdentifier("vectorB"),
+          channelAddress: mkAddress("0xcc"),
+          assetId: mkAddress("0xaaa"),
+          amount: "1234",
+          meta: { hello: "world" },
+        },
+        eventName: EngineEvents.REQUEST_COLLATERAL,
+      },
+      {
+        payload: {
+          aliceIdentifier: mkPublicIdentifier("vectorA"),
+          bobIdentifier: mkPublicIdentifier("vectorB"),
+          channelAddress: mkAddress("0xcc"),
+          chainId: 1337,
+          meta: { hello: "world" },
+        },
+        eventName: EngineEvents.RESTORE_STATE_EVENT,
+      },
+      {
+        payload: {
+          aliceIdentifier: mkPublicIdentifier("vectorA"),
+          bobIdentifier: mkPublicIdentifier("vectorB"),
+          channelAddress: mkAddress("0xcc"),
+          chainId: 1337,
+          meta: { hello: "world" },
+        },
+        eventName: EngineEvents.SETUP,
+      },
+      {
+        payload: {
+          aliceIdentifier: mkPublicIdentifier("vectorA"),
+          bobIdentifier: mkPublicIdentifier("vectorB"),
+          channelAddress: mkAddress("0xcc"),
+          amount: "1234",
+          assetId: mkAddress("0xaa"),
+          callData: "0x",
+          callTo: mkAddress("0xbb"),
+          channelBalance: { amount: ["1", "2"], to: [mkAddress("0xaaa"), mkAddress("0xbbb")] },
+          fee: "123",
+          recipient: mkAddress("0xccc"),
+          transfer: createTestFullHashlockTransferState(),
+          meta: { hello: "world" },
+        },
+        eventName: EngineEvents.WITHDRAWAL_CREATED,
+      },
+      {
+        payload: {
+          aliceIdentifier: mkPublicIdentifier("vectorA"),
+          bobIdentifier: mkPublicIdentifier("vectorB"),
+          channelAddress: mkAddress("0xcc"),
+          amount: "1234",
+          assetId: mkAddress("0xaa"),
+          callData: "0x",
+          callTo: mkAddress("0xbb"),
+          channelBalance: { amount: ["1", "2"], to: [mkAddress("0xaaa"), mkAddress("0xbbb")] },
+          fee: "123",
+          recipient: mkAddress("0xccc"),
+          transfer: createTestFullHashlockTransferState(),
+          meta: { hello: "world" },
+        },
+        eventName: EngineEvents.WITHDRAWAL_RESOLVED,
+      },
+      {
+        payload: {
+          aliceIdentifier: mkPublicIdentifier("vectorA"),
+          bobIdentifier: mkPublicIdentifier("vectorB"),
+          channelAddress: mkAddress("0xcc"),
+          transactionHash: mkHash("0xabc"),
+          transferId: mkHash("0xabcde"),
+          meta: { hello: "world" },
+        },
+        eventName: EngineEvents.WITHDRAWAL_RECONCILED,
+      },
+    ];
+
+    describe("on", () => {
+      const onTestTemplate = ({ eventName, payload }: { eventName: EngineEvent; payload: any }) => {
+        return new Promise<void>((res) => {
+          client.on(
+            eventName,
+            (data) => {
+              expect(data).to.deep.eq(payload);
+              res();
+            },
+            undefined,
+            mkPublicIdentifier("vectorB"),
+          );
+
+          evts[eventName].post(payload);
+        });
+      };
+
+      for (const param of testParams) {
+        it(`should work for on with ${param.eventName}`, async () => {
+          await onTestTemplate(param);
+        });
+      }
     });
-  });
 
-  it("should conditionalTransferResolvedStream", () => {
-    return new Promise<void>((res) => {
-      const payload: ConditionalTransferResolvedPayload = {
-        aliceIdentifier: mkPublicIdentifier("vectorA"),
-        bobIdentifier: mkPublicIdentifier("vectorB"),
-        channelAddress: mkAddress("0xcc"),
-        channelBalance: { amount: ["1", "2"], to: [mkAddress("0xa"), mkAddress("0xb")] },
-        conditionType: "hello",
-        transfer: createTestFullHashlockTransferState(),
-        activeTransferIds: [],
+    describe("once", () => {
+      const onceTestTemplate = ({ eventName, payload }: { eventName: EngineEvent; payload: any }) => {
+        return new Promise<void>((res) => {
+          client.once(
+            eventName,
+            (data) => {
+              expect(data).to.deep.eq(payload);
+              res();
+            },
+            undefined,
+            mkPublicIdentifier("vectorB"),
+          );
+
+          evts[eventName].post(payload);
+        });
       };
-      engine.on.yields(payload);
 
-      client.on(
-        EngineEvents.CONDITIONAL_TRANSFER_RESOLVED,
-        (data) => {
-          expect(data).to.deep.eq(payload);
-          res();
-        },
-        undefined,
-        mkPublicIdentifier("vectorB"),
-      );
+      for (const param of testParams) {
+        it(`should work for once with ${param.eventName}`, async () => {
+          await onceTestTemplate(param);
+        });
+      }
     });
-  });
 
-  it("should depositReconciledStream", () => {
-    return new Promise<void>((res) => {
-      const payload: DepositReconciledPayload = {
-        aliceIdentifier: mkPublicIdentifier("vectorA"),
-        bobIdentifier: mkPublicIdentifier("vectorB"),
-        channelAddress: mkAddress("0xcc"),
-        channelBalance: { amount: ["1", "2"], to: [mkAddress("0xa"), mkAddress("0xb")] },
-        assetId: mkAddress("0xaaa"),
-        meta: { hello: "world" },
+    describe("waitFor", () => {
+      const waitForTestTemplate = async ({ eventName, payload }: { eventName: EngineEvent; payload: any }) => {
+        engine.waitFor.yields(payload);
+
+        const dataProm = client.waitFor(eventName, 1000, undefined, mkPublicIdentifier("vectorB"));
+        evts[eventName].post(payload);
+        const data = await dataProm;
+        expect(data).to.deep.eq(payload);
       };
-      engine.on.yields(payload);
 
-      client.on(
-        EngineEvents.DEPOSIT_RECONCILED,
-        (data) => {
-          expect(data).to.deep.eq(payload);
-          res();
-        },
-        undefined,
-        mkPublicIdentifier("vectorB"),
-      );
-    });
-  });
-
-  it("should isAliveStream", () => {
-    return new Promise<void>((res) => {
-      const payload: IsAlivePayload = {
-        aliceIdentifier: mkPublicIdentifier("vectorA"),
-        bobIdentifier: mkPublicIdentifier("vectorB"),
-        channelAddress: mkAddress("0xcc"),
-        chainId: 1337,
-      };
-      engine.on.yields(payload);
-
-      client.on(
-        EngineEvents.IS_ALIVE,
-        (data) => {
-          expect(data).to.deep.eq(payload);
-          res();
-        },
-        undefined,
-        mkPublicIdentifier("vectorB"),
-      );
-    });
-  });
-
-  it("should requestCollateralStream", () => {
-    return new Promise<void>((res) => {
-      const payload: RequestCollateralPayload = {
-        aliceIdentifier: mkPublicIdentifier("vectorA"),
-        bobIdentifier: mkPublicIdentifier("vectorB"),
-        channelAddress: mkAddress("0xcc"),
-        assetId: mkAddress("0xaaa"),
-        amount: "1234",
-        meta: { hello: "world" },
-      };
-      engine.on.yields(payload);
-
-      client.on(
-        EngineEvents.REQUEST_COLLATERAL,
-        (data) => {
-          expect(data).to.deep.eq(payload);
-          res();
-        },
-        undefined,
-        mkPublicIdentifier("vectorB"),
-      );
-    });
-  });
-
-  it("should restoreStateStream", () => {
-    return new Promise<void>((res) => {
-      const payload: RestoreStatePayload = {
-        aliceIdentifier: mkPublicIdentifier("vectorA"),
-        bobIdentifier: mkPublicIdentifier("vectorB"),
-        channelAddress: mkAddress("0xcc"),
-        chainId: 1337,
-        meta: { hello: "world" },
-      };
-      engine.on.yields(payload);
-
-      client.on(
-        EngineEvents.RESTORE_STATE_EVENT,
-        (data) => {
-          expect(data).to.deep.eq(payload);
-          res();
-        },
-        undefined,
-        mkPublicIdentifier("vectorB"),
-      );
-    });
-  });
-
-  it("should setupStream", () => {
-    return new Promise<void>((res) => {
-      const payload: SetupPayload = {
-        aliceIdentifier: mkPublicIdentifier("vectorA"),
-        bobIdentifier: mkPublicIdentifier("vectorB"),
-        channelAddress: mkAddress("0xcc"),
-        chainId: 1337,
-        meta: { hello: "world" },
-      };
-      engine.on.yields(payload);
-
-      client.on(
-        EngineEvents.SETUP,
-        (data) => {
-          expect(data).to.deep.eq(payload);
-          res();
-        },
-        undefined,
-        mkPublicIdentifier("vectorB"),
-      );
-    });
-  });
-
-  it("should withdrawalCreatedStream", () => {
-    return new Promise<void>((res) => {
-      const payload: WithdrawalCreatedPayload = {
-        aliceIdentifier: mkPublicIdentifier("vectorA"),
-        bobIdentifier: mkPublicIdentifier("vectorB"),
-        channelAddress: mkAddress("0xcc"),
-        amount: "1234",
-        assetId: mkAddress("0xaa"),
-        callData: "0x",
-        callTo: mkAddress("0xbb"),
-        channelBalance: { amount: ["1", "2"], to: [mkAddress("0xaaa"), mkAddress("0xbbb")] },
-        fee: "123",
-        recipient: mkAddress("0xccc"),
-        transfer: createTestFullHashlockTransferState(),
-        meta: { hello: "world" },
-      };
-      engine.on.yields(payload);
-
-      client.on(
-        EngineEvents.WITHDRAWAL_CREATED,
-        (data) => {
-          expect(data).to.deep.eq(payload);
-          res();
-        },
-        undefined,
-        mkPublicIdentifier("vectorB"),
-      );
-    });
-  });
-
-  it("should withdrawalResolvedStream", () => {
-    return new Promise<void>((res) => {
-      const payload: WithdrawalCreatedPayload = {
-        aliceIdentifier: mkPublicIdentifier("vectorA"),
-        bobIdentifier: mkPublicIdentifier("vectorB"),
-        channelAddress: mkAddress("0xcc"),
-        amount: "1234",
-        assetId: mkAddress("0xaa"),
-        callData: "0x",
-        callTo: mkAddress("0xbb"),
-        channelBalance: { amount: ["1", "2"], to: [mkAddress("0xaaa"), mkAddress("0xbbb")] },
-        fee: "123",
-        recipient: mkAddress("0xccc"),
-        transfer: createTestFullHashlockTransferState(),
-        meta: { hello: "world" },
-      };
-      engine.on.yields(payload);
-
-      client.on(
-        EngineEvents.WITHDRAWAL_RESOLVED,
-        (data) => {
-          expect(data).to.deep.eq(payload);
-          res();
-        },
-        undefined,
-        mkPublicIdentifier("vectorB"),
-      );
-    });
-  });
-
-  it.only("should withdrawalReconciledStream", () => {
-    return new Promise<void>((res) => {
-      const payload: WithdrawalReconciledPayload = {
-        aliceIdentifier: mkPublicIdentifier("vectorA"),
-        bobIdentifier: mkPublicIdentifier("vectorB"),
-        channelAddress: mkAddress("0xcc"),
-        transactionHash: mkHash("0xabc"),
-        transferId: mkHash("0xabcde"),
-        meta: { hello: "world" },
-      };
-      engine.on.yields(payload);
-
-      client.on(
-        EngineEvents.WITHDRAWAL_RECONCILED,
-        (data) => {
-          expect(data).to.deep.eq(payload);
-          res();
-        },
-        undefined,
-        mkPublicIdentifier("vectorB"),
-      );
+      for (const param of testParams) {
+        it(`should work for once with ${param.eventName}`, async () => {
+          await waitForTestTemplate(param);
+        });
+      }
     });
   });
 });

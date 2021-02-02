@@ -168,45 +168,45 @@ export interface IServerNodeService extends grpc.UntypedServiceImplementation {
     /**
      * subscriptions - server to client stream
      *
-     * @generated from protobuf rpc: IsAliveStream(com.vector.GenericPublicIdentifierRequest) returns (stream com.vector.IsAlivePayload);
+     * @generated from protobuf rpc: IsAliveStream(com.vector.Empty) returns (stream com.vector.IsAlivePayload);
      */
-    isAliveStream: grpc.handleServerStreamingCall<GenericPublicIdentifierRequest, IsAlivePayload>;
+    isAliveStream: grpc.handleServerStreamingCall<Empty, IsAlivePayload>;
     /**
-     * @generated from protobuf rpc: SetupStream(com.vector.GenericPublicIdentifierRequest) returns (stream com.vector.SetupPayload);
+     * @generated from protobuf rpc: SetupStream(com.vector.Empty) returns (stream com.vector.SetupPayload);
      */
-    setupStream: grpc.handleServerStreamingCall<GenericPublicIdentifierRequest, SetupPayload>;
+    setupStream: grpc.handleServerStreamingCall<Empty, SetupPayload>;
     /**
-     * @generated from protobuf rpc: ConditionalTransferCreatedStream(com.vector.GenericPublicIdentifierRequest) returns (stream com.vector.ConditionalTransferCreatedPayload);
+     * @generated from protobuf rpc: ConditionalTransferCreatedStream(com.vector.Empty) returns (stream com.vector.ConditionalTransferCreatedPayload);
      */
-    conditionalTransferCreatedStream: grpc.handleServerStreamingCall<GenericPublicIdentifierRequest, ConditionalTransferCreatedPayload>;
+    conditionalTransferCreatedStream: grpc.handleServerStreamingCall<Empty, ConditionalTransferCreatedPayload>;
     /**
-     * @generated from protobuf rpc: ConditionalTransferResolvedStream(com.vector.GenericPublicIdentifierRequest) returns (stream com.vector.ConditionalTransferCreatedPayload);
+     * @generated from protobuf rpc: ConditionalTransferResolvedStream(com.vector.Empty) returns (stream com.vector.ConditionalTransferCreatedPayload);
      */
-    conditionalTransferResolvedStream: grpc.handleServerStreamingCall<GenericPublicIdentifierRequest, ConditionalTransferCreatedPayload>;
+    conditionalTransferResolvedStream: grpc.handleServerStreamingCall<Empty, ConditionalTransferCreatedPayload>;
     /**
-     * @generated from protobuf rpc: DepositReconciledStream(com.vector.GenericPublicIdentifierRequest) returns (stream com.vector.DepositReconciledPayload);
+     * @generated from protobuf rpc: DepositReconciledStream(com.vector.Empty) returns (stream com.vector.DepositReconciledPayload);
      */
-    depositReconciledStream: grpc.handleServerStreamingCall<GenericPublicIdentifierRequest, DepositReconciledPayload>;
+    depositReconciledStream: grpc.handleServerStreamingCall<Empty, DepositReconciledPayload>;
     /**
-     * @generated from protobuf rpc: RequestCollateralStream(com.vector.GenericPublicIdentifierRequest) returns (stream com.vector.RequestCollateralPayload);
+     * @generated from protobuf rpc: RequestCollateralStream(com.vector.Empty) returns (stream com.vector.RequestCollateralPayload);
      */
-    requestCollateralStream: grpc.handleServerStreamingCall<GenericPublicIdentifierRequest, RequestCollateralPayload>;
+    requestCollateralStream: grpc.handleServerStreamingCall<Empty, RequestCollateralPayload>;
     /**
-     * @generated from protobuf rpc: WithdrawalCreatedStream(com.vector.GenericPublicIdentifierRequest) returns (stream com.vector.WithdrawalCreatedPayload);
+     * @generated from protobuf rpc: WithdrawalCreatedStream(com.vector.Empty) returns (stream com.vector.WithdrawalCreatedPayload);
      */
-    withdrawalCreatedStream: grpc.handleServerStreamingCall<GenericPublicIdentifierRequest, WithdrawalCreatedPayload>;
+    withdrawalCreatedStream: grpc.handleServerStreamingCall<Empty, WithdrawalCreatedPayload>;
     /**
-     * @generated from protobuf rpc: WithdrawalResolvedStream(com.vector.GenericPublicIdentifierRequest) returns (stream com.vector.WithdrawalCreatedPayload);
+     * @generated from protobuf rpc: WithdrawalResolvedStream(com.vector.Empty) returns (stream com.vector.WithdrawalCreatedPayload);
      */
-    withdrawalResolvedStream: grpc.handleServerStreamingCall<GenericPublicIdentifierRequest, WithdrawalCreatedPayload>;
+    withdrawalResolvedStream: grpc.handleServerStreamingCall<Empty, WithdrawalCreatedPayload>;
     /**
-     * @generated from protobuf rpc: WithdrawalReconciledStream(com.vector.GenericPublicIdentifierRequest) returns (stream com.vector.WithdrawalReconciledPayload);
+     * @generated from protobuf rpc: WithdrawalReconciledStream(com.vector.Empty) returns (stream com.vector.WithdrawalReconciledPayload);
      */
-    withdrawalReconciledStream: grpc.handleServerStreamingCall<GenericPublicIdentifierRequest, WithdrawalReconciledPayload>;
+    withdrawalReconciledStream: grpc.handleServerStreamingCall<Empty, WithdrawalReconciledPayload>;
     /**
-     * @generated from protobuf rpc: RestoreStateStream(com.vector.GenericPublicIdentifierRequest) returns (stream com.vector.SetupPayload);
+     * @generated from protobuf rpc: RestoreStateStream(com.vector.Empty) returns (stream com.vector.SetupPayload);
      */
-    restoreStateStream: grpc.handleServerStreamingCall<GenericPublicIdentifierRequest, SetupPayload>;
+    restoreStateStream: grpc.handleServerStreamingCall<Empty, SetupPayload>;
     /**
      * eth provider pass-through
      *
@@ -502,9 +502,9 @@ export const serverNodeServiceDefinition: grpc.ServiceDefinition<IServerNodeServ
         requestStream: false,
         responseStream: true,
         responseDeserialize: bytes => IsAlivePayload.fromBinary(bytes),
-        requestDeserialize: bytes => GenericPublicIdentifierRequest.fromBinary(bytes),
+        requestDeserialize: bytes => Empty.fromBinary(bytes),
         responseSerialize: value => Buffer.from(IsAlivePayload.toBinary(value)),
-        requestSerialize: value => Buffer.from(GenericPublicIdentifierRequest.toBinary(value))
+        requestSerialize: value => Buffer.from(Empty.toBinary(value))
     },
     setupStream: {
         path: "/com.vector.ServerNodeService/SetupStream",
@@ -512,9 +512,9 @@ export const serverNodeServiceDefinition: grpc.ServiceDefinition<IServerNodeServ
         requestStream: false,
         responseStream: true,
         responseDeserialize: bytes => SetupPayload.fromBinary(bytes),
-        requestDeserialize: bytes => GenericPublicIdentifierRequest.fromBinary(bytes),
+        requestDeserialize: bytes => Empty.fromBinary(bytes),
         responseSerialize: value => Buffer.from(SetupPayload.toBinary(value)),
-        requestSerialize: value => Buffer.from(GenericPublicIdentifierRequest.toBinary(value))
+        requestSerialize: value => Buffer.from(Empty.toBinary(value))
     },
     conditionalTransferCreatedStream: {
         path: "/com.vector.ServerNodeService/ConditionalTransferCreatedStream",
@@ -522,9 +522,9 @@ export const serverNodeServiceDefinition: grpc.ServiceDefinition<IServerNodeServ
         requestStream: false,
         responseStream: true,
         responseDeserialize: bytes => ConditionalTransferCreatedPayload.fromBinary(bytes),
-        requestDeserialize: bytes => GenericPublicIdentifierRequest.fromBinary(bytes),
+        requestDeserialize: bytes => Empty.fromBinary(bytes),
         responseSerialize: value => Buffer.from(ConditionalTransferCreatedPayload.toBinary(value)),
-        requestSerialize: value => Buffer.from(GenericPublicIdentifierRequest.toBinary(value))
+        requestSerialize: value => Buffer.from(Empty.toBinary(value))
     },
     conditionalTransferResolvedStream: {
         path: "/com.vector.ServerNodeService/ConditionalTransferResolvedStream",
@@ -532,9 +532,9 @@ export const serverNodeServiceDefinition: grpc.ServiceDefinition<IServerNodeServ
         requestStream: false,
         responseStream: true,
         responseDeserialize: bytes => ConditionalTransferCreatedPayload.fromBinary(bytes),
-        requestDeserialize: bytes => GenericPublicIdentifierRequest.fromBinary(bytes),
+        requestDeserialize: bytes => Empty.fromBinary(bytes),
         responseSerialize: value => Buffer.from(ConditionalTransferCreatedPayload.toBinary(value)),
-        requestSerialize: value => Buffer.from(GenericPublicIdentifierRequest.toBinary(value))
+        requestSerialize: value => Buffer.from(Empty.toBinary(value))
     },
     depositReconciledStream: {
         path: "/com.vector.ServerNodeService/DepositReconciledStream",
@@ -542,9 +542,9 @@ export const serverNodeServiceDefinition: grpc.ServiceDefinition<IServerNodeServ
         requestStream: false,
         responseStream: true,
         responseDeserialize: bytes => DepositReconciledPayload.fromBinary(bytes),
-        requestDeserialize: bytes => GenericPublicIdentifierRequest.fromBinary(bytes),
+        requestDeserialize: bytes => Empty.fromBinary(bytes),
         responseSerialize: value => Buffer.from(DepositReconciledPayload.toBinary(value)),
-        requestSerialize: value => Buffer.from(GenericPublicIdentifierRequest.toBinary(value))
+        requestSerialize: value => Buffer.from(Empty.toBinary(value))
     },
     requestCollateralStream: {
         path: "/com.vector.ServerNodeService/RequestCollateralStream",
@@ -552,9 +552,9 @@ export const serverNodeServiceDefinition: grpc.ServiceDefinition<IServerNodeServ
         requestStream: false,
         responseStream: true,
         responseDeserialize: bytes => RequestCollateralPayload.fromBinary(bytes),
-        requestDeserialize: bytes => GenericPublicIdentifierRequest.fromBinary(bytes),
+        requestDeserialize: bytes => Empty.fromBinary(bytes),
         responseSerialize: value => Buffer.from(RequestCollateralPayload.toBinary(value)),
-        requestSerialize: value => Buffer.from(GenericPublicIdentifierRequest.toBinary(value))
+        requestSerialize: value => Buffer.from(Empty.toBinary(value))
     },
     withdrawalCreatedStream: {
         path: "/com.vector.ServerNodeService/WithdrawalCreatedStream",
@@ -562,9 +562,9 @@ export const serverNodeServiceDefinition: grpc.ServiceDefinition<IServerNodeServ
         requestStream: false,
         responseStream: true,
         responseDeserialize: bytes => WithdrawalCreatedPayload.fromBinary(bytes),
-        requestDeserialize: bytes => GenericPublicIdentifierRequest.fromBinary(bytes),
+        requestDeserialize: bytes => Empty.fromBinary(bytes),
         responseSerialize: value => Buffer.from(WithdrawalCreatedPayload.toBinary(value)),
-        requestSerialize: value => Buffer.from(GenericPublicIdentifierRequest.toBinary(value))
+        requestSerialize: value => Buffer.from(Empty.toBinary(value))
     },
     withdrawalResolvedStream: {
         path: "/com.vector.ServerNodeService/WithdrawalResolvedStream",
@@ -572,9 +572,9 @@ export const serverNodeServiceDefinition: grpc.ServiceDefinition<IServerNodeServ
         requestStream: false,
         responseStream: true,
         responseDeserialize: bytes => WithdrawalCreatedPayload.fromBinary(bytes),
-        requestDeserialize: bytes => GenericPublicIdentifierRequest.fromBinary(bytes),
+        requestDeserialize: bytes => Empty.fromBinary(bytes),
         responseSerialize: value => Buffer.from(WithdrawalCreatedPayload.toBinary(value)),
-        requestSerialize: value => Buffer.from(GenericPublicIdentifierRequest.toBinary(value))
+        requestSerialize: value => Buffer.from(Empty.toBinary(value))
     },
     withdrawalReconciledStream: {
         path: "/com.vector.ServerNodeService/WithdrawalReconciledStream",
@@ -582,9 +582,9 @@ export const serverNodeServiceDefinition: grpc.ServiceDefinition<IServerNodeServ
         requestStream: false,
         responseStream: true,
         responseDeserialize: bytes => WithdrawalReconciledPayload.fromBinary(bytes),
-        requestDeserialize: bytes => GenericPublicIdentifierRequest.fromBinary(bytes),
+        requestDeserialize: bytes => Empty.fromBinary(bytes),
         responseSerialize: value => Buffer.from(WithdrawalReconciledPayload.toBinary(value)),
-        requestSerialize: value => Buffer.from(GenericPublicIdentifierRequest.toBinary(value))
+        requestSerialize: value => Buffer.from(Empty.toBinary(value))
     },
     restoreStateStream: {
         path: "/com.vector.ServerNodeService/RestoreStateStream",
@@ -592,9 +592,9 @@ export const serverNodeServiceDefinition: grpc.ServiceDefinition<IServerNodeServ
         requestStream: false,
         responseStream: true,
         responseDeserialize: bytes => SetupPayload.fromBinary(bytes),
-        requestDeserialize: bytes => GenericPublicIdentifierRequest.fromBinary(bytes),
+        requestDeserialize: bytes => Empty.fromBinary(bytes),
         responseSerialize: value => Buffer.from(SetupPayload.toBinary(value)),
-        requestSerialize: value => Buffer.from(GenericPublicIdentifierRequest.toBinary(value))
+        requestSerialize: value => Buffer.from(Empty.toBinary(value))
     },
     ethProvider: {
         path: "/com.vector.ServerNodeService/EthProvider",

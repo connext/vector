@@ -174,45 +174,45 @@ export interface IServerNodeServiceClient {
     /**
      * subscriptions - server to client stream
      *
-     * @generated from protobuf rpc: IsAliveStream(com.vector.GenericPublicIdentifierRequest) returns (stream com.vector.IsAlivePayload);
+     * @generated from protobuf rpc: IsAliveStream(com.vector.Empty) returns (stream com.vector.IsAlivePayload);
      */
-    isAliveStream(input: GenericPublicIdentifierRequest, options?: RpcOptions): ServerStreamingCall<GenericPublicIdentifierRequest, IsAlivePayload>;
+    isAliveStream(input: Empty, options?: RpcOptions): ServerStreamingCall<Empty, IsAlivePayload>;
     /**
-     * @generated from protobuf rpc: SetupStream(com.vector.GenericPublicIdentifierRequest) returns (stream com.vector.SetupPayload);
+     * @generated from protobuf rpc: SetupStream(com.vector.Empty) returns (stream com.vector.SetupPayload);
      */
-    setupStream(input: GenericPublicIdentifierRequest, options?: RpcOptions): ServerStreamingCall<GenericPublicIdentifierRequest, SetupPayload>;
+    setupStream(input: Empty, options?: RpcOptions): ServerStreamingCall<Empty, SetupPayload>;
     /**
-     * @generated from protobuf rpc: ConditionalTransferCreatedStream(com.vector.GenericPublicIdentifierRequest) returns (stream com.vector.ConditionalTransferCreatedPayload);
+     * @generated from protobuf rpc: ConditionalTransferCreatedStream(com.vector.Empty) returns (stream com.vector.ConditionalTransferCreatedPayload);
      */
-    conditionalTransferCreatedStream(input: GenericPublicIdentifierRequest, options?: RpcOptions): ServerStreamingCall<GenericPublicIdentifierRequest, ConditionalTransferCreatedPayload>;
+    conditionalTransferCreatedStream(input: Empty, options?: RpcOptions): ServerStreamingCall<Empty, ConditionalTransferCreatedPayload>;
     /**
-     * @generated from protobuf rpc: ConditionalTransferResolvedStream(com.vector.GenericPublicIdentifierRequest) returns (stream com.vector.ConditionalTransferCreatedPayload);
+     * @generated from protobuf rpc: ConditionalTransferResolvedStream(com.vector.Empty) returns (stream com.vector.ConditionalTransferCreatedPayload);
      */
-    conditionalTransferResolvedStream(input: GenericPublicIdentifierRequest, options?: RpcOptions): ServerStreamingCall<GenericPublicIdentifierRequest, ConditionalTransferCreatedPayload>;
+    conditionalTransferResolvedStream(input: Empty, options?: RpcOptions): ServerStreamingCall<Empty, ConditionalTransferCreatedPayload>;
     /**
-     * @generated from protobuf rpc: DepositReconciledStream(com.vector.GenericPublicIdentifierRequest) returns (stream com.vector.DepositReconciledPayload);
+     * @generated from protobuf rpc: DepositReconciledStream(com.vector.Empty) returns (stream com.vector.DepositReconciledPayload);
      */
-    depositReconciledStream(input: GenericPublicIdentifierRequest, options?: RpcOptions): ServerStreamingCall<GenericPublicIdentifierRequest, DepositReconciledPayload>;
+    depositReconciledStream(input: Empty, options?: RpcOptions): ServerStreamingCall<Empty, DepositReconciledPayload>;
     /**
-     * @generated from protobuf rpc: RequestCollateralStream(com.vector.GenericPublicIdentifierRequest) returns (stream com.vector.RequestCollateralPayload);
+     * @generated from protobuf rpc: RequestCollateralStream(com.vector.Empty) returns (stream com.vector.RequestCollateralPayload);
      */
-    requestCollateralStream(input: GenericPublicIdentifierRequest, options?: RpcOptions): ServerStreamingCall<GenericPublicIdentifierRequest, RequestCollateralPayload>;
+    requestCollateralStream(input: Empty, options?: RpcOptions): ServerStreamingCall<Empty, RequestCollateralPayload>;
     /**
-     * @generated from protobuf rpc: WithdrawalCreatedStream(com.vector.GenericPublicIdentifierRequest) returns (stream com.vector.WithdrawalCreatedPayload);
+     * @generated from protobuf rpc: WithdrawalCreatedStream(com.vector.Empty) returns (stream com.vector.WithdrawalCreatedPayload);
      */
-    withdrawalCreatedStream(input: GenericPublicIdentifierRequest, options?: RpcOptions): ServerStreamingCall<GenericPublicIdentifierRequest, WithdrawalCreatedPayload>;
+    withdrawalCreatedStream(input: Empty, options?: RpcOptions): ServerStreamingCall<Empty, WithdrawalCreatedPayload>;
     /**
-     * @generated from protobuf rpc: WithdrawalResolvedStream(com.vector.GenericPublicIdentifierRequest) returns (stream com.vector.WithdrawalCreatedPayload);
+     * @generated from protobuf rpc: WithdrawalResolvedStream(com.vector.Empty) returns (stream com.vector.WithdrawalCreatedPayload);
      */
-    withdrawalResolvedStream(input: GenericPublicIdentifierRequest, options?: RpcOptions): ServerStreamingCall<GenericPublicIdentifierRequest, WithdrawalCreatedPayload>;
+    withdrawalResolvedStream(input: Empty, options?: RpcOptions): ServerStreamingCall<Empty, WithdrawalCreatedPayload>;
     /**
-     * @generated from protobuf rpc: WithdrawalReconciledStream(com.vector.GenericPublicIdentifierRequest) returns (stream com.vector.WithdrawalReconciledPayload);
+     * @generated from protobuf rpc: WithdrawalReconciledStream(com.vector.Empty) returns (stream com.vector.WithdrawalReconciledPayload);
      */
-    withdrawalReconciledStream(input: GenericPublicIdentifierRequest, options?: RpcOptions): ServerStreamingCall<GenericPublicIdentifierRequest, WithdrawalReconciledPayload>;
+    withdrawalReconciledStream(input: Empty, options?: RpcOptions): ServerStreamingCall<Empty, WithdrawalReconciledPayload>;
     /**
-     * @generated from protobuf rpc: RestoreStateStream(com.vector.GenericPublicIdentifierRequest) returns (stream com.vector.SetupPayload);
+     * @generated from protobuf rpc: RestoreStateStream(com.vector.Empty) returns (stream com.vector.SetupPayload);
      */
-    restoreStateStream(input: GenericPublicIdentifierRequest, options?: RpcOptions): ServerStreamingCall<GenericPublicIdentifierRequest, SetupPayload>;
+    restoreStateStream(input: Empty, options?: RpcOptions): ServerStreamingCall<Empty, SetupPayload>;
     /**
      * eth provider pass-through
      *
@@ -432,74 +432,74 @@ export class ServerNodeServiceClient implements IServerNodeServiceClient, Servic
     /**
      * subscriptions - server to client stream
      *
-     * @generated from protobuf rpc: IsAliveStream(com.vector.GenericPublicIdentifierRequest) returns (stream com.vector.IsAlivePayload);
+     * @generated from protobuf rpc: IsAliveStream(com.vector.Empty) returns (stream com.vector.IsAlivePayload);
      */
-    isAliveStream(input: GenericPublicIdentifierRequest, options?: RpcOptions): ServerStreamingCall<GenericPublicIdentifierRequest, IsAlivePayload> {
+    isAliveStream(input: Empty, options?: RpcOptions): ServerStreamingCall<Empty, IsAlivePayload> {
         const method = this.methods[27], opt = this._transport.mergeOptions(options);
-        return stackIntercept<GenericPublicIdentifierRequest, IsAlivePayload>("serverStreaming", this._transport, method, opt, input);
+        return stackIntercept<Empty, IsAlivePayload>("serverStreaming", this._transport, method, opt, input);
     }
     /**
-     * @generated from protobuf rpc: SetupStream(com.vector.GenericPublicIdentifierRequest) returns (stream com.vector.SetupPayload);
+     * @generated from protobuf rpc: SetupStream(com.vector.Empty) returns (stream com.vector.SetupPayload);
      */
-    setupStream(input: GenericPublicIdentifierRequest, options?: RpcOptions): ServerStreamingCall<GenericPublicIdentifierRequest, SetupPayload> {
+    setupStream(input: Empty, options?: RpcOptions): ServerStreamingCall<Empty, SetupPayload> {
         const method = this.methods[28], opt = this._transport.mergeOptions(options);
-        return stackIntercept<GenericPublicIdentifierRequest, SetupPayload>("serverStreaming", this._transport, method, opt, input);
+        return stackIntercept<Empty, SetupPayload>("serverStreaming", this._transport, method, opt, input);
     }
     /**
-     * @generated from protobuf rpc: ConditionalTransferCreatedStream(com.vector.GenericPublicIdentifierRequest) returns (stream com.vector.ConditionalTransferCreatedPayload);
+     * @generated from protobuf rpc: ConditionalTransferCreatedStream(com.vector.Empty) returns (stream com.vector.ConditionalTransferCreatedPayload);
      */
-    conditionalTransferCreatedStream(input: GenericPublicIdentifierRequest, options?: RpcOptions): ServerStreamingCall<GenericPublicIdentifierRequest, ConditionalTransferCreatedPayload> {
+    conditionalTransferCreatedStream(input: Empty, options?: RpcOptions): ServerStreamingCall<Empty, ConditionalTransferCreatedPayload> {
         const method = this.methods[29], opt = this._transport.mergeOptions(options);
-        return stackIntercept<GenericPublicIdentifierRequest, ConditionalTransferCreatedPayload>("serverStreaming", this._transport, method, opt, input);
+        return stackIntercept<Empty, ConditionalTransferCreatedPayload>("serverStreaming", this._transport, method, opt, input);
     }
     /**
-     * @generated from protobuf rpc: ConditionalTransferResolvedStream(com.vector.GenericPublicIdentifierRequest) returns (stream com.vector.ConditionalTransferCreatedPayload);
+     * @generated from protobuf rpc: ConditionalTransferResolvedStream(com.vector.Empty) returns (stream com.vector.ConditionalTransferCreatedPayload);
      */
-    conditionalTransferResolvedStream(input: GenericPublicIdentifierRequest, options?: RpcOptions): ServerStreamingCall<GenericPublicIdentifierRequest, ConditionalTransferCreatedPayload> {
+    conditionalTransferResolvedStream(input: Empty, options?: RpcOptions): ServerStreamingCall<Empty, ConditionalTransferCreatedPayload> {
         const method = this.methods[30], opt = this._transport.mergeOptions(options);
-        return stackIntercept<GenericPublicIdentifierRequest, ConditionalTransferCreatedPayload>("serverStreaming", this._transport, method, opt, input);
+        return stackIntercept<Empty, ConditionalTransferCreatedPayload>("serverStreaming", this._transport, method, opt, input);
     }
     /**
-     * @generated from protobuf rpc: DepositReconciledStream(com.vector.GenericPublicIdentifierRequest) returns (stream com.vector.DepositReconciledPayload);
+     * @generated from protobuf rpc: DepositReconciledStream(com.vector.Empty) returns (stream com.vector.DepositReconciledPayload);
      */
-    depositReconciledStream(input: GenericPublicIdentifierRequest, options?: RpcOptions): ServerStreamingCall<GenericPublicIdentifierRequest, DepositReconciledPayload> {
+    depositReconciledStream(input: Empty, options?: RpcOptions): ServerStreamingCall<Empty, DepositReconciledPayload> {
         const method = this.methods[31], opt = this._transport.mergeOptions(options);
-        return stackIntercept<GenericPublicIdentifierRequest, DepositReconciledPayload>("serverStreaming", this._transport, method, opt, input);
+        return stackIntercept<Empty, DepositReconciledPayload>("serverStreaming", this._transport, method, opt, input);
     }
     /**
-     * @generated from protobuf rpc: RequestCollateralStream(com.vector.GenericPublicIdentifierRequest) returns (stream com.vector.RequestCollateralPayload);
+     * @generated from protobuf rpc: RequestCollateralStream(com.vector.Empty) returns (stream com.vector.RequestCollateralPayload);
      */
-    requestCollateralStream(input: GenericPublicIdentifierRequest, options?: RpcOptions): ServerStreamingCall<GenericPublicIdentifierRequest, RequestCollateralPayload> {
+    requestCollateralStream(input: Empty, options?: RpcOptions): ServerStreamingCall<Empty, RequestCollateralPayload> {
         const method = this.methods[32], opt = this._transport.mergeOptions(options);
-        return stackIntercept<GenericPublicIdentifierRequest, RequestCollateralPayload>("serverStreaming", this._transport, method, opt, input);
+        return stackIntercept<Empty, RequestCollateralPayload>("serverStreaming", this._transport, method, opt, input);
     }
     /**
-     * @generated from protobuf rpc: WithdrawalCreatedStream(com.vector.GenericPublicIdentifierRequest) returns (stream com.vector.WithdrawalCreatedPayload);
+     * @generated from protobuf rpc: WithdrawalCreatedStream(com.vector.Empty) returns (stream com.vector.WithdrawalCreatedPayload);
      */
-    withdrawalCreatedStream(input: GenericPublicIdentifierRequest, options?: RpcOptions): ServerStreamingCall<GenericPublicIdentifierRequest, WithdrawalCreatedPayload> {
+    withdrawalCreatedStream(input: Empty, options?: RpcOptions): ServerStreamingCall<Empty, WithdrawalCreatedPayload> {
         const method = this.methods[33], opt = this._transport.mergeOptions(options);
-        return stackIntercept<GenericPublicIdentifierRequest, WithdrawalCreatedPayload>("serverStreaming", this._transport, method, opt, input);
+        return stackIntercept<Empty, WithdrawalCreatedPayload>("serverStreaming", this._transport, method, opt, input);
     }
     /**
-     * @generated from protobuf rpc: WithdrawalResolvedStream(com.vector.GenericPublicIdentifierRequest) returns (stream com.vector.WithdrawalCreatedPayload);
+     * @generated from protobuf rpc: WithdrawalResolvedStream(com.vector.Empty) returns (stream com.vector.WithdrawalCreatedPayload);
      */
-    withdrawalResolvedStream(input: GenericPublicIdentifierRequest, options?: RpcOptions): ServerStreamingCall<GenericPublicIdentifierRequest, WithdrawalCreatedPayload> {
+    withdrawalResolvedStream(input: Empty, options?: RpcOptions): ServerStreamingCall<Empty, WithdrawalCreatedPayload> {
         const method = this.methods[34], opt = this._transport.mergeOptions(options);
-        return stackIntercept<GenericPublicIdentifierRequest, WithdrawalCreatedPayload>("serverStreaming", this._transport, method, opt, input);
+        return stackIntercept<Empty, WithdrawalCreatedPayload>("serverStreaming", this._transport, method, opt, input);
     }
     /**
-     * @generated from protobuf rpc: WithdrawalReconciledStream(com.vector.GenericPublicIdentifierRequest) returns (stream com.vector.WithdrawalReconciledPayload);
+     * @generated from protobuf rpc: WithdrawalReconciledStream(com.vector.Empty) returns (stream com.vector.WithdrawalReconciledPayload);
      */
-    withdrawalReconciledStream(input: GenericPublicIdentifierRequest, options?: RpcOptions): ServerStreamingCall<GenericPublicIdentifierRequest, WithdrawalReconciledPayload> {
+    withdrawalReconciledStream(input: Empty, options?: RpcOptions): ServerStreamingCall<Empty, WithdrawalReconciledPayload> {
         const method = this.methods[35], opt = this._transport.mergeOptions(options);
-        return stackIntercept<GenericPublicIdentifierRequest, WithdrawalReconciledPayload>("serverStreaming", this._transport, method, opt, input);
+        return stackIntercept<Empty, WithdrawalReconciledPayload>("serverStreaming", this._transport, method, opt, input);
     }
     /**
-     * @generated from protobuf rpc: RestoreStateStream(com.vector.GenericPublicIdentifierRequest) returns (stream com.vector.SetupPayload);
+     * @generated from protobuf rpc: RestoreStateStream(com.vector.Empty) returns (stream com.vector.SetupPayload);
      */
-    restoreStateStream(input: GenericPublicIdentifierRequest, options?: RpcOptions): ServerStreamingCall<GenericPublicIdentifierRequest, SetupPayload> {
+    restoreStateStream(input: Empty, options?: RpcOptions): ServerStreamingCall<Empty, SetupPayload> {
         const method = this.methods[36], opt = this._transport.mergeOptions(options);
-        return stackIntercept<GenericPublicIdentifierRequest, SetupPayload>("serverStreaming", this._transport, method, opt, input);
+        return stackIntercept<Empty, SetupPayload>("serverStreaming", this._transport, method, opt, input);
     }
     /**
      * eth provider pass-through

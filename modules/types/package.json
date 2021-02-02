@@ -22,7 +22,7 @@
     "@ethersproject/bignumber": "5.0.12",
     "@ethersproject/providers": "5.0.15",
     "@sinclair/typebox": "0.12.7",
-    "evt": "1.9.2"
+    "evt": "1.9.12"
   },
   "devDependencies": {
     "@protobuf-ts/plugin": "2.0.0-alpha.12",
