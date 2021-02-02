@@ -7,6 +7,7 @@ import {
   jsonifyError,
 } from "@connext/vector-types";
 import { getBalanceForAssetId, getRandomBytes32, getParticipant } from "@connext/vector-utils";
+import { Counter, Gauge, Registry } from "prom-client";
 import { getAddress } from "@ethersproject/address";
 import { BigNumber } from "@ethersproject/bignumber";
 import { BaseLogger } from "pino";
@@ -14,6 +15,26 @@ import { BaseLogger } from "pino";
 import { CollateralError } from "../errors";
 
 import { getRebalanceProfile } from "./config";
+
+const configureMetrics = (register: Registry) => {
+  // router_deposit_transaction
+  const attemptDepositTransaction = new Gauge({
+    name: "router_deposit_transaction_attempt",
+    help: "router_deposit_transaction_attempt_help",
+    labelNames: ["methodId", "amountToDeposit", "channelAddress", "chainId", "assetId"] as const,
+    registers: [register],
+  });
+
+  const successfulDepositTransaction = new Gauge({
+    name: "router_deposit_transaction_success",
+    help: "router_deposit_transaction_success_help",
+    labelNames: ["methodId", "txHash"] as const,
+    registers: [register],
+  });
+
+  // Return the metrics so they can be incremented as needed
+  return { attemptDepositTransaction, successfulDepositTransaction };
+};
 
 /**
  * This function should be called before a transfer is created/forwarded.
@@ -211,12 +232,14 @@ export const requestCollateral = async (
   node: INodeService,
   chainReader: IVectorChainReader,
   logger: BaseLogger,
+  register: Registry,
   requestedAmount?: string,
 ): Promise<Result<undefined | NodeResponses.Deposit, CollateralError>> => {
   const method = "requestCollateral";
   const methodId = getRandomBytes32();
   logger.debug({ method, methodId, assetId, publicIdentifier, channel }, "Method started");
   const profileRes = getRebalanceProfile(channel.networkContext.chainId, assetId);
+  const { attemptDepositTransaction, successfulDepositTransaction } = configureMetrics(register);
   if (profileRes.isError) {
     return Result.fail(
       new CollateralError(
@@ -334,6 +357,15 @@ export const requestCollateral = async (
       },
       "Deposit calculated, submitting tx",
     );
+    attemptDepositTransaction
+      .labels(
+        methodId,
+        amountToDeposit.toString(),
+        channel.channelAddress,
+        channel.networkContext.chainId.toString(),
+        assetId,
+      )
+      .inc(1);
     const txRes = await node.sendDepositTx({
       amount: amountToDeposit.toString(),
       assetId: assetId,
@@ -377,6 +409,7 @@ export const requestCollateral = async (
     }
     logger.info({ method, methodId, txHash: tx.txHash }, "Tx mined");
     logger.debug({ method, methodId, txHash: tx.txHash, logs: receipt.logs }, "Tx mined");
+    successfulDepositTransaction.labels(methodId, tx.txHash).inc(1);
   } else {
     logger.info(
       {
