@@ -186,13 +186,13 @@ message FullTransferState {
 
     string initial_state_hash = 11;
     repeated string transfer_encodings = 12;
-    string transfer_state = 13;
-    optional string transfer_resolver = 14;
+    google.protobuf.Any transfer_state = 13;
+    optional google.protobuf.Any transfer_resolver = 14;
 
     bool in_dispute = 15;
     int32 channel_nonce = 16;
 
-    optional string meta = 17;
+    optional google.protobuf.Any meta = 17;
 }
 
 message FullTransferStates {

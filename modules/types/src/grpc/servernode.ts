@@ -397,13 +397,13 @@ export interface FullTransferState {
      */
     transferEncodings: string[];
     /**
-     * @generated from protobuf field: string transfer_state = 13;
+     * @generated from protobuf field: google.protobuf.Any transfer_state = 13;
      */
-    transferState: string;
+    transferState?: Any;
     /**
-     * @generated from protobuf field: optional string transfer_resolver = 14;
+     * @generated from protobuf field: optional google.protobuf.Any transfer_resolver = 14;
      */
-    transferResolver?: string;
+    transferResolver?: Any;
     /**
      * @generated from protobuf field: bool in_dispute = 15;
      */
@@ -413,9 +413,9 @@ export interface FullTransferState {
      */
     channelNonce: number;
     /**
-     * @generated from protobuf field: optional string meta = 17;
+     * @generated from protobuf field: optional google.protobuf.Any meta = 17;
      */
-    meta?: string;
+    meta?: Any;
 }
 /**
  * @generated from protobuf message com.vector.FullTransferStates
@@ -2163,11 +2163,11 @@ class FullTransferState$Type extends MessageType<FullTransferState> {
             { no: 10, name: "transfer_timeout", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
             { no: 11, name: "initial_state_hash", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
             { no: 12, name: "transfer_encodings", kind: "scalar", repeat: 2 /*RepeatType.UNPACKED*/, T: 9 /*ScalarType.STRING*/ },
-            { no: 13, name: "transfer_state", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
-            { no: 14, name: "transfer_resolver", kind: "scalar", opt: true, T: 9 /*ScalarType.STRING*/ },
+            { no: 13, name: "transfer_state", kind: "message", T: () => Any },
+            { no: 14, name: "transfer_resolver", kind: "message", T: () => Any },
             { no: 15, name: "in_dispute", kind: "scalar", T: 8 /*ScalarType.BOOL*/ },
             { no: 16, name: "channel_nonce", kind: "scalar", T: 5 /*ScalarType.INT32*/ },
-            { no: 17, name: "meta", kind: "scalar", opt: true, T: 9 /*ScalarType.STRING*/ }
+            { no: 17, name: "meta", kind: "message", T: () => Any }
         ]);
     }
     internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: FullTransferState): FullTransferState {
@@ -2211,11 +2211,11 @@ class FullTransferState$Type extends MessageType<FullTransferState> {
                 case /* repeated string transfer_encodings */ 12:
                     message.transferEncodings.push(reader.string());
                     break;
-                case /* string transfer_state */ 13:
-                    message.transferState = reader.string();
+                case /* google.protobuf.Any transfer_state */ 13:
+                    message.transferState = Any.internalBinaryRead(reader, reader.uint32(), options, message.transferState);
                     break;
-                case /* optional string transfer_resolver */ 14:
-                    message.transferResolver = reader.string();
+                case /* optional google.protobuf.Any transfer_resolver */ 14:
+                    message.transferResolver = Any.internalBinaryRead(reader, reader.uint32(), options, message.transferResolver);
                     break;
                 case /* bool in_dispute */ 15:
                     message.inDispute = reader.bool();
@@ -2223,8 +2223,8 @@ class FullTransferState$Type extends MessageType<FullTransferState> {
                 case /* int32 channel_nonce */ 16:
                     message.channelNonce = reader.int32();
                     break;
-                case /* optional string meta */ 17:
-                    message.meta = reader.string();
+                case /* optional google.protobuf.Any meta */ 17:
+                    message.meta = Any.internalBinaryRead(reader, reader.uint32(), options, message.meta);
                     break;
                 default:
                     let u = options.readUnknownField;
@@ -2274,21 +2274,21 @@ class FullTransferState$Type extends MessageType<FullTransferState> {
         /* repeated string transfer_encodings = 12; */
         for (let i = 0; i < message.transferEncodings.length; i++)
             writer.tag(12, WireType.LengthDelimited).string(message.transferEncodings[i]);
-        /* string transfer_state = 13; */
-        if (message.transferState !== "")
-            writer.tag(13, WireType.LengthDelimited).string(message.transferState);
-        /* optional string transfer_resolver = 14; */
-        if (message.transferResolver !== undefined)
-            writer.tag(14, WireType.LengthDelimited).string(message.transferResolver);
+        /* google.protobuf.Any transfer_state = 13; */
+        if (message.transferState)
+            Any.internalBinaryWrite(message.transferState, writer.tag(13, WireType.LengthDelimited).fork(), options).join();
+        /* optional google.protobuf.Any transfer_resolver = 14; */
+        if (message.transferResolver)
+            Any.internalBinaryWrite(message.transferResolver, writer.tag(14, WireType.LengthDelimited).fork(), options).join();
         /* bool in_dispute = 15; */
         if (message.inDispute !== false)
             writer.tag(15, WireType.Varint).bool(message.inDispute);
         /* int32 channel_nonce = 16; */
         if (message.channelNonce !== 0)
             writer.tag(16, WireType.Varint).int32(message.channelNonce);
-        /* optional string meta = 17; */
-        if (message.meta !== undefined)
-            writer.tag(17, WireType.LengthDelimited).string(message.meta);
+        /* optional google.protobuf.Any meta = 17; */
+        if (message.meta)
+            Any.internalBinaryWrite(message.meta, writer.tag(17, WireType.LengthDelimited).fork(), options).join();
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
