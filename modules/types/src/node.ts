@@ -11,7 +11,7 @@ import { NodeParams, NodeResponses } from "./schemas";
 
 export type OptionalPublicIdentifier<T> = Omit<T, "publicIdentifier"> & { publicIdentifier?: string };
 
-export interface INodeService {
+export interface INodeClient {
   publicIdentifier: string;
   signerAddress: string;
 

@@ -1,5 +1,5 @@
 import {
-  INodeService,
+  INodeClient,
   NodeParams,
   NodeResponses,
   OptionalPublicIdentifier,
@@ -19,7 +19,7 @@ import { ServerNodeServiceError } from "./errors";
 
 const ajv = new Ajv();
 
-const getStreamNameForEvent = <T extends EngineEvent>(eventName: T): string => {
+const getGrpcStreamNameForEvent = <T extends EngineEvent>(eventName: T): string => {
   switch (eventName) {
     case "CONDITIONAL_TRANSFER_CREATED":
       return "conditionalTransferCreatedStream";
@@ -45,7 +45,75 @@ const getStreamNameForEvent = <T extends EngineEvent>(eventName: T): string => {
       throw new Error("Unknown event");
   }
 };
-export class GRPCServerNodeClient implements INodeService {
+
+const convertGrpcDataToDomain = <T extends EngineEvent>(eventName: T, data: any): EngineEventMap[T] => {
+  switch (eventName) {
+    case "CONDITIONAL_TRANSFER_CREATED": {
+      const typedData: GrpcTypes.ConditionalTransferCreatedPayload = data;
+      const transfer = {
+        ...typedData.transfer,
+        transferState: GrpcTypes.Struct.toJson(typedData.transfer.transferState),
+        transferResolver: typedData.transfer.transferResolver
+          ? GrpcTypes.Struct.toJson(typedData.transfer.transferResolver)
+          : undefined,
+        meta: typedData.transfer.meta ? GrpcTypes.Struct.toJson(typedData.transfer.meta) : undefined,
+        balance: typedData.transfer.balance ?? { amount: [], to: [] },
+      };
+      return { ...typedData, transfer } as any;
+    }
+    case "CONDITIONAL_TRANSFER_RESOLVED": {
+      const typedData: GrpcTypes.ConditionalTransferCreatedPayload = data;
+      const transfer = {
+        ...typedData.transfer,
+        transferState: GrpcTypes.Struct.toJson(typedData.transfer.transferState),
+        transferResolver: typedData.transfer.transferResolver
+          ? GrpcTypes.Struct.toJson(typedData.transfer.transferResolver)
+          : undefined,
+        meta: typedData.transfer.meta ? GrpcTypes.Struct.toJson(typedData.transfer.meta) : undefined,
+        balance: typedData.transfer.balance ?? { amount: [], to: [] },
+      };
+      return { ...typedData, transfer } as any;
+    }
+    case "DEPOSIT_RECONCILED": {
+      const typedData: GrpcTypes.DepositReconciledPayload = data;
+      return {
+        ...typedData,
+        meta: typedData.meta ? GrpcTypes.Struct.toJson(typedData.meta) : undefined,
+      } as any;
+    }
+    case "IS_ALIVE": {
+      const typedData: GrpcTypes.IsAlivePayload = data;
+      return typedData as any;
+    }
+    case "REQUEST_COLLATERAL": {
+      const typedData: GrpcTypes.RequestCollateralPayload = data;
+      return {
+        ...typedData,
+        meta: typedData.meta ? GrpcTypes.Struct.toJson(typedData.meta) : undefined,
+      } as any;
+    }
+    case "RESTORE_STATE_EVENT": {
+      const typedData: GrpcTypes.SetupPayload = data;
+      return {
+        ...typedData,
+        meta: typedData.meta ? GrpcTypes.Struct.toJson(typedData.meta) : undefined,
+      } as any;
+    }
+    case "SETUP": {
+      const typedData: GrpcTypes.SetupPayload = data;
+      return {
+        ...typedData,
+        meta: typedData.meta ? GrpcTypes.Struct.toJson(typedData.meta) : undefined,
+      } as any;
+    }
+    case "WITHDRAWAL_CREATED":
+    case "WITHDRAWAL_RECONCILED":
+    case "WITHDRAWAL_RESOLVED":
+    default:
+      throw new Error(`Unknown event: ${eventName}`);
+  }
+};
+export class GRPCServerNodeClient implements INodeClient {
   public publicIdentifier = "";
   public signerAddress = "";
   private client: GrpcTypes.ServerNodeServiceClient;
@@ -272,15 +340,18 @@ export class GRPCServerNodeClient implements INodeService {
     filter: (payload: EngineEventMap[T]) => boolean = () => true,
     publicIdentifier?: string,
   ): void {
-    const streamName = getStreamNameForEvent(event);
+    const streamName = getGrpcStreamNameForEvent(event);
+    console.log("streamName: ", streamName);
     const stream = this.client[streamName]({
       publicIdentifier: publicIdentifier ?? this.publicIdentifier,
     });
     (async () => {
       for await (const data of stream.response) {
         console.log("on ====> data: ", data);
-        if (filter(data as any)) {
-          callback(data as any);
+        const converted = convertGrpcDataToDomain(event, data);
+        console.log("on ====> converted: ", converted);
+        if (filter(converted)) {
+          callback(converted);
         }
       }
     })();

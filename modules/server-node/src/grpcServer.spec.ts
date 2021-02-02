@@ -1,5 +1,19 @@
 import { VectorEngine } from "@connext/vector-engine";
-import { ConditionalTransferCreatedPayload, EngineEvents, IVectorEngine, NodeResponses } from "@connext/vector-types";
+import {
+  ConditionalTransferCreatedPayload,
+  ConditionalTransferResolvedPayload,
+  EngineEvents,
+  IVectorEngine,
+  NodeResponses,
+  DepositReconciledPayload,
+  IsAlivePayload,
+  RequestCollateralPayload,
+  SetupPayload,
+  WithdrawalCreatedPayload,
+  WithdrawalReconciledPayload,
+  WithdrawalResolvedPayload,
+  RestoreStatePayload,
+} from "@connext/vector-types";
 import {
   createTestFullHashlockTransferState,
   expect,
@@ -93,7 +107,7 @@ describe("GRPC server", () => {
     expect(result.getValue()).to.deep.eq(expectedResponse);
   });
 
-  it.only("should conditionalTransferCreatedStream", () => {
+  it("should conditionalTransferCreatedStream", () => {
     return new Promise<void>((res) => {
       const payload: ConditionalTransferCreatedPayload = {
         aliceIdentifier: mkPublicIdentifier("vectorA"),
@@ -109,7 +123,147 @@ describe("GRPC server", () => {
       client.on(
         EngineEvents.CONDITIONAL_TRANSFER_CREATED,
         (data) => {
-          console.log("test =====> data: ", data);
+          expect(data).to.deep.eq(payload);
+          res();
+        },
+        undefined,
+        mkPublicIdentifier("vectorB"),
+      );
+    });
+  });
+
+  it("should conditionalTransferResolvedStream", () => {
+    return new Promise<void>((res) => {
+      const payload: ConditionalTransferResolvedPayload = {
+        aliceIdentifier: mkPublicIdentifier("vectorA"),
+        bobIdentifier: mkPublicIdentifier("vectorB"),
+        channelAddress: mkAddress("0xcc"),
+        channelBalance: { amount: ["1", "2"], to: [mkAddress("0xa"), mkAddress("0xb")] },
+        conditionType: "hello",
+        transfer: createTestFullHashlockTransferState(),
+        activeTransferIds: [],
+      };
+      engine.on.yields(payload);
+
+      client.on(
+        EngineEvents.CONDITIONAL_TRANSFER_RESOLVED,
+        (data) => {
+          expect(data).to.deep.eq(payload);
+          res();
+        },
+        undefined,
+        mkPublicIdentifier("vectorB"),
+      );
+    });
+  });
+
+  it("should depositReconciledStream", () => {
+    return new Promise<void>((res) => {
+      const payload: DepositReconciledPayload = {
+        aliceIdentifier: mkPublicIdentifier("vectorA"),
+        bobIdentifier: mkPublicIdentifier("vectorB"),
+        channelAddress: mkAddress("0xcc"),
+        channelBalance: { amount: ["1", "2"], to: [mkAddress("0xa"), mkAddress("0xb")] },
+        assetId: mkAddress("0xaaa"),
+        meta: { hello: "world" },
+      };
+      engine.on.yields(payload);
+
+      client.on(
+        EngineEvents.DEPOSIT_RECONCILED,
+        (data) => {
+          expect(data).to.deep.eq(payload);
+          res();
+        },
+        undefined,
+        mkPublicIdentifier("vectorB"),
+      );
+    });
+  });
+
+  it("should isAliveStream", () => {
+    return new Promise<void>((res) => {
+      const payload: IsAlivePayload = {
+        aliceIdentifier: mkPublicIdentifier("vectorA"),
+        bobIdentifier: mkPublicIdentifier("vectorB"),
+        channelAddress: mkAddress("0xcc"),
+        chainId: 1337,
+      };
+      engine.on.yields(payload);
+
+      client.on(
+        EngineEvents.IS_ALIVE,
+        (data) => {
+          expect(data).to.deep.eq(payload);
+          res();
+        },
+        undefined,
+        mkPublicIdentifier("vectorB"),
+      );
+    });
+  });
+
+  it("should requestCollateralStream", () => {
+    return new Promise<void>((res) => {
+      const payload: RequestCollateralPayload = {
+        aliceIdentifier: mkPublicIdentifier("vectorA"),
+        bobIdentifier: mkPublicIdentifier("vectorB"),
+        channelAddress: mkAddress("0xcc"),
+        assetId: mkAddress("0xaaa"),
+        amount: "1234",
+        meta: { hello: "world" },
+      };
+      engine.on.yields(payload);
+
+      client.on(
+        EngineEvents.REQUEST_COLLATERAL,
+        (data) => {
+          expect(data).to.deep.eq(payload);
+          res();
+        },
+        undefined,
+        mkPublicIdentifier("vectorB"),
+      );
+    });
+  });
+
+  it("should restoreStateStream", () => {
+    return new Promise<void>((res) => {
+      const payload: RestoreStatePayload = {
+        aliceIdentifier: mkPublicIdentifier("vectorA"),
+        bobIdentifier: mkPublicIdentifier("vectorB"),
+        channelAddress: mkAddress("0xcc"),
+        chainId: 1337,
+        meta: { hello: "world" },
+      };
+      engine.on.yields(payload);
+
+      client.on(
+        EngineEvents.RESTORE_STATE_EVENT,
+        (data) => {
+          expect(data).to.deep.eq(payload);
+          res();
+        },
+        undefined,
+        mkPublicIdentifier("vectorB"),
+      );
+    });
+  });
+
+  it("should setupStream", () => {
+    return new Promise<void>((res) => {
+      const payload: SetupPayload = {
+        aliceIdentifier: mkPublicIdentifier("vectorA"),
+        bobIdentifier: mkPublicIdentifier("vectorB"),
+        channelAddress: mkAddress("0xcc"),
+        chainId: 1337,
+        meta: { hello: "world" },
+      };
+      engine.on.yields(payload);
+
+      client.on(
+        EngineEvents.SETUP,
+        (data) => {
           expect(data).to.deep.eq(payload);
           res();
         },

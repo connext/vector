@@ -1,7 +1,7 @@
 import {
   EngineEvent,
   EngineEventMap,
-  INodeService,
+  INodeClient,
   Result,
   NodeParams,
   NodeResponses,
@@ -28,7 +28,7 @@ type ContextContainer = {
   [publicIdentifier: string]: VoidCtx;
 };
 
-export class RestServerNodeService implements INodeService {
+export class RestServerNodeClient implements INodeClient {
   public publicIdentifier = "";
   public signerAddress = "";
 
@@ -46,8 +46,8 @@ export class RestServerNodeService implements INodeService {
     evts?: EventCallbackConfig,
     index?: number,
     skipCheckIn?: boolean,
-  ): Promise<RestServerNodeService> {
-    const service = new RestServerNodeService(serverNodeUrl, logger, evts);
+  ): Promise<RestServerNodeClient> {
+    const service = new RestServerNodeClient(serverNodeUrl, logger, evts);
     // If an index is provided, the service will only host a single engine
     // and the publicIdentifier will be automatically included in parameters
     if (typeof index === "number") {

@@ -118,17 +118,17 @@ const vectorService: GrpcTypes.IServerNodeService = {
     engine.on(EngineEvents.CONDITIONAL_TRANSFER_CREATED, (data) => {
       const safeTransferState = {
         ...data.transfer,
-        transferState: data.transfer.transferState,
-        meta: JSON.stringify(data.transfer.meta ?? {}),
-        transferResolver: data.transfer.transferResolver ? JSON.stringify(data.transfer.transferResolver) : undefined,
+        transferState: GrpcTypes.Struct.fromJson(data.transfer.transferState),
+        meta: data.transfer.meta ? GrpcTypes.Struct.fromJson(data.transfer.meta) : undefined,
+        transferResolver: data.transfer.transferResolver
+          ? GrpcTypes.Struct.fromJson(data.transfer.transferResolver)
+          : undefined,
       };
-      console.log("EngineEvents.CONDITIONAL_TRANSFER_CREATED ======> data: ", data);
-      const wrote = call.write({
+      call.write({
         ...data,
         transfer: safeTransferState,
         activeTransferIds: data.activeTransferIds ?? [],
       });
-      console.log("EngineEvents.CONDITIONAL_TRANSFER_CREATED ======> wrote: ", wrote);
     });
   },
 
@@ -150,7 +150,19 @@ const vectorService: GrpcTypes.IServerNodeService = {
       return call.destroy(error);
     }
     engine.on(EngineEvents.CONDITIONAL_TRANSFER_RESOLVED, (data) => {
-      call.write({ ...data, activeTransferIds: data.activeTransferIds ?? [] });
+      const safeTransferState = {
+        ...data.transfer,
+        transferState: GrpcTypes.Struct.fromJson(data.transfer.transferState),
+        meta: data.transfer.meta ? GrpcTypes.Struct.fromJson(data.transfer.meta) : undefined,
+        transferResolver: data.transfer.transferResolver
+          ? GrpcTypes.Struct.fromJson(data.transfer.transferResolver)
+          : undefined,
+      };
+      call.write({
+        ...data,
+        transfer: safeTransferState,
+        activeTransferIds: data.activeTransferIds ?? [],
+      });
     });
   },
 
@@ -169,7 +181,7 @@ const vectorService: GrpcTypes.IServerNodeService = {
       return call.destroy(error);
     }
     engine.on(EngineEvents.DEPOSIT_RECONCILED, (data) => {
-      call.write(data);
+      call.write({ ...data, meta: data.meta ? GrpcTypes.Struct.fromJson(data.meta) : undefined });
     });
   },
 
@@ -207,7 +219,7 @@ const vectorService: GrpcTypes.IServerNodeService = {
       return call.destroy(error);
     }
     engine.on(EngineEvents.REQUEST_COLLATERAL, (data) => {
-      call.write(data);
+      call.write({ ...data, meta: data.meta ? GrpcTypes.Struct.fromJson(data.meta) : undefined });
     });
   },
 
@@ -226,7 +238,7 @@ const vectorService: GrpcTypes.IServerNodeService = {
       return call.destroy(error);
     }
     engine.on(EngineEvents.RESTORE_STATE_EVENT, (data) => {
-      call.write(data);
+      call.write({ ...data, meta: data.meta ? GrpcTypes.Struct.fromJson(data.meta) : undefined });
     });
   },
 
@@ -243,7 +255,7 @@ const vectorService: GrpcTypes.IServerNodeService = {
       return call.destroy(error);
     }
     engine.on(EngineEvents.SETUP, (data) => {
-      call.write(data);
+      call.write({ ...data, meta: data.meta ? GrpcTypes.Struct.fromJson(data.meta) : undefined });
     });
   },
 

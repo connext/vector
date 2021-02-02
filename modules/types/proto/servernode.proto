@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-import "google/protobuf/any.proto";
+import "google/protobuf/struct.proto";
 
 package com.vector;
 
@@ -79,31 +79,31 @@ message CreateUpdateDetails {
     Balance balance = 2;
     string transfer_definition = 3;
     string transfer_timeout = 4;
-    google.protobuf.Any transfer_initial_state = 5;
+    google.protobuf.Struct transfer_initial_state = 5;
     repeated string transfer_encodings = 6;
     repeated string merkle_proof_data = 7;
     string merkle_root = 8;
-    optional google.protobuf.Any meta = 9;
+    optional google.protobuf.Struct meta = 9;
 }
 
 message ResolveUpdateDetails {
     string transfer_id = 1;
     string transfer_definition = 2;
-    google.protobuf.Any transfer_resolver = 3;
+    google.protobuf.Struct transfer_resolver = 3;
     string merkle_root = 4;
-    optional google.protobuf.Any meta = 5;
+    optional google.protobuf.Struct meta = 5;
 }
 
 message DepositUpdateDetails {
     string total_deposits_alice = 1;
     string total_deposits_bob = 2;
-    optional google.protobuf.Any meta = 3;
+    optional google.protobuf.Struct meta = 3;
 }
 
 message SetupUpdateDetails {
     string timeout = 1;
     NetworkContext network_context = 2;
-    optional google.protobuf.Any meta = 3;
+    optional google.protobuf.Struct meta = 3;
 }
 
 message ChannelUpdate {
@@ -186,13 +186,16 @@ message FullTransferState {
 
     string initial_state_hash = 11;
     repeated string transfer_encodings = 12;
-    google.protobuf.Any transfer_state = 13;
-    optional google.protobuf.Any transfer_resolver = 14;
+    google.protobuf.Struct transfer_state = 13;
+    optional google.protobuf.Struct transfer_resolver = 14;
 
     bool in_dispute = 15;
     int32 channel_nonce = 16;
 
-    optional google.protobuf.Any meta = 17;
+    string channel_factory_address = 17;
+    int32 chain_id = 18;
+
+    optional google.protobuf.Struct meta = 19;
 }
 
 message FullTransferStates {
@@ -215,9 +218,9 @@ message ConditionalTransferRequest {
     string recipient_assetId = 7;
     string timeout = 8;
     string type = 9;
-    google.protobuf.Any details = 10;
+    google.protobuf.Struct details = 10;
     
-    optional google.protobuf.Any meta = 11;
+    optional google.protobuf.Struct meta = 11;
 }
 
 message CollateralRequest {
@@ -232,7 +235,7 @@ message DepositRequest {
     string channel_address = 2;
     string asset_id = 3;
     
-    optional google.protobuf.Any meta = 4;
+    optional google.protobuf.Struct meta = 4;
 }
 
 message TransferRequest {
@@ -258,7 +261,7 @@ message SetupRequest {
     string counterparty_identifier = 2;
     int32 chain_id = 3;
     string timeout = 4;
-    optional google.protobuf.Any meta = 5;
+    optional google.protobuf.Struct meta = 5;
 }
 
 message RegisteredTransfersRequest {
@@ -307,21 +310,21 @@ message WithdrawRequest {
     string call_to = 7;
     string call_data = 8;
 
-    optional google.protobuf.Any meta = 9;
+    optional google.protobuf.Struct meta = 9;
 }
 
 message ResolveTransferRequest {
     string public_identifier = 1;
     string channel_address = 2;
     bytes transfer_id = 3;
-    google.protobuf.Any transfer_resolver = 4;
+    google.protobuf.Struct transfer_resolver = 4;
 
-    optional google.protobuf.Any meta = 5;
+    optional google.protobuf.Struct meta = 5;
 }
 
 message Body {
     string method = 1;
-    google.protobuf.Any params = 2;
+    google.protobuf.Struct params = 2;
 }
 message EthProviderRequest {
     int32 chain_id = 1;
@@ -340,7 +343,7 @@ message  WithdrawReply {
 }
 
 message EthProviderReply {
-    google.protobuf.Any response = 1;
+    google.protobuf.Struct response = 1;
 }
 
 message Configs {
@@ -403,7 +406,7 @@ message SetupPayload {
     string alice_identifier = 2;
     string bob_identifier = 3;
     int32 chain_id = 4;
-    optional google.protobuf.Any meta = 5;
+    optional google.protobuf.Struct meta = 5;
 }
 
 message ConditionalTransferCreatedPayload {
@@ -414,7 +417,7 @@ message ConditionalTransferCreatedPayload {
     Balance channel_balance = 5;
     string condition_type = 6;
     repeated string active_transfer_ids = 7;
-    optional google.protobuf.Any meta = 8;
+    optional google.protobuf.Struct meta = 8;
 }
 
 message DepositReconciledPayload {
@@ -423,7 +426,7 @@ message DepositReconciledPayload {
     string bob_identifier = 3;
     string asset_id = 4;
     Balance channel_balance = 5;
-    optional google.protobuf.Any meta = 6;
+    optional google.protobuf.Struct meta = 6;
 }
 
 message RequestCollateralPayload {
@@ -432,7 +435,7 @@ message RequestCollateralPayload {
     string bob_identifier = 3;
     string asset_id = 4;
     optional string amount = 5;
-    optional google.protobuf.Any meta = 6;
+    optional google.protobuf.Struct meta = 6;
 }
 
 message WithdrawalCreatedPayload {
@@ -447,7 +450,7 @@ message WithdrawalCreatedPayload {
     string call_to = 9;
     string call_data = 10;
     Balance channel_balance = 11;
-    optional google.protobuf.Any meta = 12;
+    optional google.protobuf.Struct meta = 12;
 }
 
 message WithdrawalReconciledPayload {
@@ -456,7 +459,7 @@ message WithdrawalReconciledPayload {
     string bob_identifier = 3;
     string transaction_hash = 4;
     string transfer_id = 5;
-    optional google.protobuf.Any meta = 6;
+    optional google.protobuf.Struct meta = 6;
 }
 
 message CreateNodeRequest {

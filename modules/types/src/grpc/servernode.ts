@@ -9,7 +9,7 @@ import { UnknownFieldHandler } from "@protobuf-ts/runtime";
 import { BinaryReadOptions } from "@protobuf-ts/runtime";
 import { IBinaryReader } from "@protobuf-ts/runtime";
 import { MessageType } from "@protobuf-ts/runtime";
-import { Any } from "./google/protobuf/any";
+import { Struct } from "./google/protobuf/struct";
 /**
  * generic defs
  *
@@ -67,9 +67,9 @@ export interface CreateUpdateDetails {
      */
     transferTimeout: string;
     /**
-     * @generated from protobuf field: google.protobuf.Any transfer_initial_state = 5;
+     * @generated from protobuf field: google.protobuf.Struct transfer_initial_state = 5;
      */
-    transferInitialState?: Any;
+    transferInitialState?: Struct;
     /**
      * @generated from protobuf field: repeated string transfer_encodings = 6;
      */
@@ -83,9 +83,9 @@ export interface CreateUpdateDetails {
      */
     merkleRoot: string;
     /**
-     * @generated from protobuf field: optional google.protobuf.Any meta = 9;
+     * @generated from protobuf field: optional google.protobuf.Struct meta = 9;
      */
-    meta?: Any;
+    meta?: Struct;
 }
 /**
  * @generated from protobuf message com.vector.ResolveUpdateDetails
@@ -100,17 +100,17 @@ export interface ResolveUpdateDetails {
      */
     transferDefinition: string;
     /**
-     * @generated from protobuf field: google.protobuf.Any transfer_resolver = 3;
+     * @generated from protobuf field: google.protobuf.Struct transfer_resolver = 3;
      */
-    transferResolver?: Any;
+    transferResolver?: Struct;
     /**
      * @generated from protobuf field: string merkle_root = 4;
      */
     merkleRoot: string;
     /**
-     * @generated from protobuf field: optional google.protobuf.Any meta = 5;
+     * @generated from protobuf field: optional google.protobuf.Struct meta = 5;
      */
-    meta?: Any;
+    meta?: Struct;
 }
 /**
  * @generated from protobuf message com.vector.DepositUpdateDetails
@@ -125,9 +125,9 @@ export interface DepositUpdateDetails {
      */
     totalDepositsBob: string;
     /**
-     * @generated from protobuf field: optional google.protobuf.Any meta = 3;
+     * @generated from protobuf field: optional google.protobuf.Struct meta = 3;
      */
-    meta?: Any;
+    meta?: Struct;
 }
 /**
  * @generated from protobuf message com.vector.SetupUpdateDetails
@@ -142,9 +142,9 @@ export interface SetupUpdateDetails {
      */
     networkContext?: NetworkContext;
     /**
-     * @generated from protobuf field: optional google.protobuf.Any meta = 3;
+     * @generated from protobuf field: optional google.protobuf.Struct meta = 3;
      */
-    meta?: Any;
+    meta?: Struct;
 }
 /**
  * @generated from protobuf message com.vector.ChannelUpdate
@@ -397,13 +397,13 @@ export interface FullTransferState {
      */
     transferEncodings: string[];
     /**
-     * @generated from protobuf field: google.protobuf.Any transfer_state = 13;
+     * @generated from protobuf field: google.protobuf.Struct transfer_state = 13;
      */
-    transferState?: Any;
+    transferState?: Struct;
     /**
-     * @generated from protobuf field: optional google.protobuf.Any transfer_resolver = 14;
+     * @generated from protobuf field: optional google.protobuf.Struct transfer_resolver = 14;
      */
-    transferResolver?: Any;
+    transferResolver?: Struct;
     /**
      * @generated from protobuf field: bool in_dispute = 15;
      */
@@ -413,9 +413,17 @@ export interface FullTransferState {
      */
     channelNonce: number;
     /**
-     * @generated from protobuf field: optional google.protobuf.Any meta = 17;
+     * @generated from protobuf field: string channel_factory_address = 17;
      */
-    meta?: Any;
+    channelFactoryAddress: string;
+    /**
+     * @generated from protobuf field: int32 chain_id = 18;
+     */
+    chainId: number;
+    /**
+     * @generated from protobuf field: optional google.protobuf.Struct meta = 19;
+     */
+    meta?: Struct;
 }
 /**
  * @generated from protobuf message com.vector.FullTransferStates
@@ -482,13 +490,13 @@ export interface ConditionalTransferRequest {
      */
     type: string;
     /**
-     * @generated from protobuf field: google.protobuf.Any details = 10;
+     * @generated from protobuf field: google.protobuf.Struct details = 10;
      */
-    details?: Any;
+    details?: Struct;
     /**
-     * @generated from protobuf field: optional google.protobuf.Any meta = 11;
+     * @generated from protobuf field: optional google.protobuf.Struct meta = 11;
      */
-    meta?: Any;
+    meta?: Struct;
 }
 /**
  * @generated from protobuf message com.vector.CollateralRequest
@@ -528,9 +536,9 @@ export interface DepositRequest {
      */
     assetId: string;
     /**
-     * @generated from protobuf field: optional google.protobuf.Any meta = 4;
+     * @generated from protobuf field: optional google.protobuf.Struct meta = 4;
      */
-    meta?: Any;
+    meta?: Struct;
 }
 /**
  * @generated from protobuf message com.vector.TransferRequest
@@ -604,9 +612,9 @@ export interface SetupRequest {
      */
     timeout: string;
     /**
-     * @generated from protobuf field: optional google.protobuf.Any meta = 5;
+     * @generated from protobuf field: optional google.protobuf.Struct meta = 5;
      */
-    meta?: Any;
+    meta?: Struct;
 }
 /**
  * @generated from protobuf message com.vector.RegisteredTransfersRequest
@@ -740,9 +748,9 @@ export interface WithdrawRequest {
      */
     callData: string;
     /**
-     * @generated from protobuf field: optional google.protobuf.Any meta = 9;
+     * @generated from protobuf field: optional google.protobuf.Struct meta = 9;
      */
-    meta?: Any;
+    meta?: Struct;
 }
 /**
  * @generated from protobuf message com.vector.ResolveTransferRequest
@@ -761,13 +769,13 @@ export interface ResolveTransferRequest {
      */
     transferId: Uint8Array;
     /**
-     * @generated from protobuf field: google.protobuf.Any transfer_resolver = 4;
+     * @generated from protobuf field: google.protobuf.Struct transfer_resolver = 4;
      */
-    transferResolver?: Any;
+    transferResolver?: Struct;
     /**
-     * @generated from protobuf field: optional google.protobuf.Any meta = 5;
+     * @generated from protobuf field: optional google.protobuf.Struct meta = 5;
      */
-    meta?: Any;
+    meta?: Struct;
 }
 /**
  * @generated from protobuf message com.vector.Body
@@ -778,9 +786,9 @@ export interface Body {
      */
     method: string;
     /**
-     * @generated from protobuf field: google.protobuf.Any params = 2;
+     * @generated from protobuf field: google.protobuf.Struct params = 2;
      */
-    params?: Any;
+    params?: Struct;
 }
 /**
  * @generated from protobuf message com.vector.EthProviderRequest
@@ -828,9 +836,9 @@ export interface WithdrawReply {
  */
 export interface EthProviderReply {
     /**
-     * @generated from protobuf field: google.protobuf.Any response = 1;
+     * @generated from protobuf field: google.protobuf.Struct response = 1;
      */
-    response?: Any;
+    response?: Struct;
 }
 /**
  * @generated from protobuf message com.vector.Configs
@@ -1026,9 +1034,9 @@ export interface SetupPayload {
      */
     chainId: number;
     /**
-     * @generated from protobuf field: optional google.protobuf.Any meta = 5;
+     * @generated from protobuf field: optional google.protobuf.Struct meta = 5;
      */
-    meta?: Any;
+    meta?: Struct;
 }
 /**
  * @generated from protobuf message com.vector.ConditionalTransferCreatedPayload
@@ -1063,9 +1071,9 @@ export interface ConditionalTransferCreatedPayload {
      */
     activeTransferIds: string[];
     /**
-     * @generated from protobuf field: optional google.protobuf.Any meta = 8;
+     * @generated from protobuf field: optional google.protobuf.Struct meta = 8;
      */
-    meta?: Any;
+    meta?: Struct;
 }
 /**
  * @generated from protobuf message com.vector.DepositReconciledPayload
@@ -1092,9 +1100,9 @@ export interface DepositReconciledPayload {
      */
     channelBalance?: Balance;
     /**
-     * @generated from protobuf field: optional google.protobuf.Any meta = 6;
+     * @generated from protobuf field: optional google.protobuf.Struct meta = 6;
      */
-    meta?: Any;
+    meta?: Struct;
 }
 /**
  * @generated from protobuf message com.vector.RequestCollateralPayload
@@ -1121,9 +1129,9 @@ export interface RequestCollateralPayload {
      */
     amount?: string;
     /**
-     * @generated from protobuf field: optional google.protobuf.Any meta = 6;
+     * @generated from protobuf field: optional google.protobuf.Struct meta = 6;
      */
-    meta?: Any;
+    meta?: Struct;
 }
 /**
  * @generated from protobuf message com.vector.WithdrawalCreatedPayload
@@ -1174,9 +1182,9 @@ export interface WithdrawalCreatedPayload {
      */
     channelBalance?: Balance;
     /**
-     * @generated from protobuf field: optional google.protobuf.Any meta = 12;
+     * @generated from protobuf field: optional google.protobuf.Struct meta = 12;
      */
-    meta?: Any;
+    meta?: Struct;
 }
 /**
  * @generated from protobuf message com.vector.WithdrawalReconciledPayload
@@ -1203,9 +1211,9 @@ export interface WithdrawalReconciledPayload {
      */
     transferId: string;
     /**
-     * @generated from protobuf field: optional google.protobuf.Any meta = 6;
+     * @generated from protobuf field: optional google.protobuf.Struct meta = 6;
      */
-    meta?: Any;
+    meta?: Struct;
 }
 /**
  * @generated from protobuf message com.vector.CreateNodeRequest
@@ -1414,11 +1422,11 @@ class CreateUpdateDetails$Type extends MessageType<CreateUpdateDetails> {
             { no: 2, name: "balance", kind: "message", T: () => Balance },
             { no: 3, name: "transfer_definition", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
             { no: 4, name: "transfer_timeout", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
-            { no: 5, name: "transfer_initial_state", kind: "message", T: () => Any },
+            { no: 5, name: "transfer_initial_state", kind: "message", T: () => Struct },
             { no: 6, name: "transfer_encodings", kind: "scalar", repeat: 2 /*RepeatType.UNPACKED*/, T: 9 /*ScalarType.STRING*/ },
             { no: 7, name: "merkle_proof_data", kind: "scalar", repeat: 2 /*RepeatType.UNPACKED*/, T: 9 /*ScalarType.STRING*/ },
             { no: 8, name: "merkle_root", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
-            { no: 9, name: "meta", kind: "message", T: () => Any }
+            { no: 9, name: "meta", kind: "message", T: () => Struct }
         ]);
     }
     internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: CreateUpdateDetails): CreateUpdateDetails {
@@ -1438,8 +1446,8 @@ class CreateUpdateDetails$Type extends MessageType<CreateUpdateDetails> {
                 case /* string transfer_timeout */ 4:
                     message.transferTimeout = reader.string();
                     break;
-                case /* google.protobuf.Any transfer_initial_state */ 5:
-                    message.transferInitialState = Any.internalBinaryRead(reader, reader.uint32(), options, message.transferInitialState);
+                case /* google.protobuf.Struct transfer_initial_state */ 5:
+                    message.transferInitialState = Struct.internalBinaryRead(reader, reader.uint32(), options, message.transferInitialState);
                     break;
                 case /* repeated string transfer_encodings */ 6:
                     message.transferEncodings.push(reader.string());
@@ -1450,8 +1458,8 @@ class CreateUpdateDetails$Type extends MessageType<CreateUpdateDetails> {
                 case /* string merkle_root */ 8:
                     message.merkleRoot = reader.string();
                     break;
-                case /* optional google.protobuf.Any meta */ 9:
-                    message.meta = Any.internalBinaryRead(reader, reader.uint32(), options, message.meta);
+                case /* optional google.protobuf.Struct meta */ 9:
+                    message.meta = Struct.internalBinaryRead(reader, reader.uint32(), options, message.meta);
                     break;
                 default:
                     let u = options.readUnknownField;
@@ -1477,9 +1485,9 @@ class CreateUpdateDetails$Type extends MessageType<CreateUpdateDetails> {
         /* string transfer_timeout = 4; */
         if (message.transferTimeout !== "")
             writer.tag(4, WireType.LengthDelimited).string(message.transferTimeout);
-        /* google.protobuf.Any transfer_initial_state = 5; */
+        /* google.protobuf.Struct transfer_initial_state = 5; */
         if (message.transferInitialState)
-            Any.internalBinaryWrite(message.transferInitialState, writer.tag(5, WireType.LengthDelimited).fork(), options).join();
+            Struct.internalBinaryWrite(message.transferInitialState, writer.tag(5, WireType.LengthDelimited).fork(), options).join();
         /* repeated string transfer_encodings = 6; */
         for (let i = 0; i < message.transferEncodings.length; i++)
             writer.tag(6, WireType.LengthDelimited).string(message.transferEncodings[i]);
@@ -1489,9 +1497,9 @@ class CreateUpdateDetails$Type extends MessageType<CreateUpdateDetails> {
         /* string merkle_root = 8; */
         if (message.merkleRoot !== "")
             writer.tag(8, WireType.LengthDelimited).string(message.merkleRoot);
-        /* optional google.protobuf.Any meta = 9; */
+        /* optional google.protobuf.Struct meta = 9; */
         if (message.meta)
-            Any.internalBinaryWrite(message.meta, writer.tag(9, WireType.LengthDelimited).fork(), options).join();
+            Struct.internalBinaryWrite(message.meta, writer.tag(9, WireType.LengthDelimited).fork(), options).join();
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
@@ -1508,9 +1516,9 @@ class ResolveUpdateDetails$Type extends MessageType<ResolveUpdateDetails> {
         super("com.vector.ResolveUpdateDetails", [
             { no: 1, name: "transfer_id", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
             { no: 2, name: "transfer_definition", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
-            { no: 3, name: "transfer_resolver", kind: "message", T: () => Any },
+            { no: 3, name: "transfer_resolver", kind: "message", T: () => Struct },
             { no: 4, name: "merkle_root", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
-            { no: 5, name: "meta", kind: "message", T: () => Any }
+            { no: 5, name: "meta", kind: "message", T: () => Struct }
         ]);
     }
     internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: ResolveUpdateDetails): ResolveUpdateDetails {
@@ -1524,14 +1532,14 @@ class ResolveUpdateDetails$Type extends MessageType<ResolveUpdateDetails> {
                 case /* string transfer_definition */ 2:
                     message.transferDefinition = reader.string();
                     break;
-                case /* google.protobuf.Any transfer_resolver */ 3:
-                    message.transferResolver = Any.internalBinaryRead(reader, reader.uint32(), options, message.transferResolver);
+                case /* google.protobuf.Struct transfer_resolver */ 3:
+                    message.transferResolver = Struct.internalBinaryRead(reader, reader.uint32(), options, message.transferResolver);
                     break;
                 case /* string merkle_root */ 4:
                     message.merkleRoot = reader.string();
                     break;
-                case /* optional google.protobuf.Any meta */ 5:
-                    message.meta = Any.internalBinaryRead(reader, reader.uint32(), options, message.meta);
+                case /* optional google.protobuf.Struct meta */ 5:
+                    message.meta = Struct.internalBinaryRead(reader, reader.uint32(), options, message.meta);
                     break;
                 default:
                     let u = options.readUnknownField;
@@ -1551,15 +1559,15 @@ class ResolveUpdateDetails$Type extends MessageType<ResolveUpdateDetails> {
         /* string transfer_definition = 2; */
         if (message.transferDefinition !== "")
             writer.tag(2, WireType.LengthDelimited).string(message.transferDefinition);
-        /* google.protobuf.Any transfer_resolver = 3; */
+        /* google.protobuf.Struct transfer_resolver = 3; */
         if (message.transferResolver)
-            Any.internalBinaryWrite(message.transferResolver, writer.tag(3, WireType.LengthDelimited).fork(), options).join();
+            Struct.internalBinaryWrite(message.transferResolver, writer.tag(3, WireType.LengthDelimited).fork(), options).join();
         /* string merkle_root = 4; */
         if (message.merkleRoot !== "")
             writer.tag(4, WireType.LengthDelimited).string(message.merkleRoot);
-        /* optional google.protobuf.Any meta = 5; */
+        /* optional google.protobuf.Struct meta = 5; */
         if (message.meta)
-            Any.internalBinaryWrite(message.meta, writer.tag(5, WireType.LengthDelimited).fork(), options).join();
+            Struct.internalBinaryWrite(message.meta, writer.tag(5, WireType.LengthDelimited).fork(), options).join();
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
@@ -1576,7 +1584,7 @@ class DepositUpdateDetails$Type extends MessageType<DepositUpdateDetails> {
         super("com.vector.DepositUpdateDetails", [
             { no: 1, name: "total_deposits_alice", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
             { no: 2, name: "total_deposits_bob", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
-            { no: 3, name: "meta", kind: "message", T: () => Any }
+            { no: 3, name: "meta", kind: "message", T: () => Struct }
         ]);
     }
     internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: DepositUpdateDetails): DepositUpdateDetails {
@@ -1590,8 +1598,8 @@ class DepositUpdateDetails$Type extends MessageType<DepositUpdateDetails> {
                 case /* string total_deposits_bob */ 2:
                     message.totalDepositsBob = reader.string();
                     break;
-                case /* optional google.protobuf.Any meta */ 3:
-                    message.meta = Any.internalBinaryRead(reader, reader.uint32(), options, message.meta);
+                case /* optional google.protobuf.Struct meta */ 3:
+                    message.meta = Struct.internalBinaryRead(reader, reader.uint32(), options, message.meta);
                     break;
                 default:
                     let u = options.readUnknownField;
@@ -1611,9 +1619,9 @@ class DepositUpdateDetails$Type extends MessageType<DepositUpdateDetails> {
         /* string total_deposits_bob = 2; */
         if (message.totalDepositsBob !== "")
             writer.tag(2, WireType.LengthDelimited).string(message.totalDepositsBob);
-        /* optional google.protobuf.Any meta = 3; */
+        /* optional google.protobuf.Struct meta = 3; */
         if (message.meta)
-            Any.internalBinaryWrite(message.meta, writer.tag(3, WireType.LengthDelimited).fork(), options).join();
+            Struct.internalBinaryWrite(message.meta, writer.tag(3, WireType.LengthDelimited).fork(), options).join();
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
@@ -1630,7 +1638,7 @@ class SetupUpdateDetails$Type extends MessageType<SetupUpdateDetails> {
         super("com.vector.SetupUpdateDetails", [
             { no: 1, name: "timeout", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
             { no: 2, name: "network_context", kind: "message", T: () => NetworkContext },
-            { no: 3, name: "meta", kind: "message", T: () => Any }
+            { no: 3, name: "meta", kind: "message", T: () => Struct }
         ]);
     }
     internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: SetupUpdateDetails): SetupUpdateDetails {
@@ -1644,8 +1652,8 @@ class SetupUpdateDetails$Type extends MessageType<SetupUpdateDetails> {
                 case /* com.vector.NetworkContext network_context */ 2:
                     message.networkContext = NetworkContext.internalBinaryRead(reader, reader.uint32(), options, message.networkContext);
                     break;
-                case /* optional google.protobuf.Any meta */ 3:
-                    message.meta = Any.internalBinaryRead(reader, reader.uint32(), options, message.meta);
+                case /* optional google.protobuf.Struct meta */ 3:
+                    message.meta = Struct.internalBinaryRead(reader, reader.uint32(), options, message.meta);
                     break;
                 default:
                     let u = options.readUnknownField;
@@ -1665,9 +1673,9 @@ class SetupUpdateDetails$Type extends MessageType<SetupUpdateDetails> {
         /* com.vector.NetworkContext network_context = 2; */
         if (message.networkContext)
             NetworkContext.internalBinaryWrite(message.networkContext, writer.tag(2, WireType.LengthDelimited).fork(), options).join();
-        /* optional google.protobuf.Any meta = 3; */
+        /* optional google.protobuf.Struct meta = 3; */
         if (message.meta)
-            Any.internalBinaryWrite(message.meta, writer.tag(3, WireType.LengthDelimited).fork(), options).join();
+            Struct.internalBinaryWrite(message.meta, writer.tag(3, WireType.LengthDelimited).fork(), options).join();
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
@@ -2163,11 +2171,13 @@ class FullTransferState$Type extends MessageType<FullTransferState> {
             { no: 10, name: "transfer_timeout", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
             { no: 11, name: "initial_state_hash", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
             { no: 12, name: "transfer_encodings", kind: "scalar", repeat: 2 /*RepeatType.UNPACKED*/, T: 9 /*ScalarType.STRING*/ },
-            { no: 13, name: "transfer_state", kind: "message", T: () => Any },
-            { no: 14, name: "transfer_resolver", kind: "message", T: () => Any },
+            { no: 13, name: "transfer_state", kind: "message", T: () => Struct },
+            { no: 14, name: "transfer_resolver", kind: "message", T: () => Struct },
             { no: 15, name: "in_dispute", kind: "scalar", T: 8 /*ScalarType.BOOL*/ },
             { no: 16, name: "channel_nonce", kind: "scalar", T: 5 /*ScalarType.INT32*/ },
-            { no: 17, name: "meta", kind: "message", T: () => Any }
+            { no: 17, name: "channel_factory_address", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 18, name: "chain_id", kind: "scalar", T: 5 /*ScalarType.INT32*/ },
+            { no: 19, name: "meta", kind: "message", T: () => Struct }
         ]);
     }
     internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: FullTransferState): FullTransferState {
@@ -2211,11 +2221,11 @@ class FullTransferState$Type extends MessageType<FullTransferState> {
                 case /* repeated string transfer_encodings */ 12:
                     message.transferEncodings.push(reader.string());
                     break;
-                case /* google.protobuf.Any transfer_state */ 13:
-                    message.transferState = Any.internalBinaryRead(reader, reader.uint32(), options, message.transferState);
+                case /* google.protobuf.Struct transfer_state */ 13:
+                    message.transferState = Struct.internalBinaryRead(reader, reader.uint32(), options, message.transferState);
                     break;
-                case /* optional google.protobuf.Any transfer_resolver */ 14:
-                    message.transferResolver = Any.internalBinaryRead(reader, reader.uint32(), options, message.transferResolver);
+                case /* optional google.protobuf.Struct transfer_resolver */ 14:
+                    message.transferResolver = Struct.internalBinaryRead(reader, reader.uint32(), options, message.transferResolver);
                     break;
                 case /* bool in_dispute */ 15:
                     message.inDispute = reader.bool();
@@ -2223,8 +2233,14 @@ class FullTransferState$Type extends MessageType<FullTransferState> {
                 case /* int32 channel_nonce */ 16:
                     message.channelNonce = reader.int32();
                     break;
-                case /* optional google.protobuf.Any meta */ 17:
-                    message.meta = Any.internalBinaryRead(reader, reader.uint32(), options, message.meta);
+                case /* string channel_factory_address */ 17:
+                    message.channelFactoryAddress = reader.string();
+                    break;
+                case /* int32 chain_id */ 18:
+                    message.chainId = reader.int32();
+                    break;
+                case /* optional google.protobuf.Struct meta */ 19:
+                    message.meta = Struct.internalBinaryRead(reader, reader.uint32(), options, message.meta);
                     break;
                 default:
                     let u = options.readUnknownField;
@@ -2274,21 +2290,27 @@ class FullTransferState$Type extends MessageType<FullTransferState> {
         /* repeated string transfer_encodings = 12; */
         for (let i = 0; i < message.transferEncodings.length; i++)
             writer.tag(12, WireType.LengthDelimited).string(message.transferEncodings[i]);
-        /* google.protobuf.Any transfer_state = 13; */
+        /* google.protobuf.Struct transfer_state = 13; */
         if (message.transferState)
-            Any.internalBinaryWrite(message.transferState, writer.tag(13, WireType.LengthDelimited).fork(), options).join();
-        /* optional google.protobuf.Any transfer_resolver = 14; */
+            Struct.internalBinaryWrite(message.transferState, writer.tag(13, WireType.LengthDelimited).fork(), options).join();
+        /* optional google.protobuf.Struct transfer_resolver = 14; */
         if (message.transferResolver)
-            Any.internalBinaryWrite(message.transferResolver, writer.tag(14, WireType.LengthDelimited).fork(), options).join();
+            Struct.internalBinaryWrite(message.transferResolver, writer.tag(14, WireType.LengthDelimited).fork(), options).join();
         /* bool in_dispute = 15; */
         if (message.inDispute !== false)
             writer.tag(15, WireType.Varint).bool(message.inDispute);
         /* int32 channel_nonce = 16; */
         if (message.channelNonce !== 0)
             writer.tag(16, WireType.Varint).int32(message.channelNonce);
-        /* optional google.protobuf.Any meta = 17; */
+        /* string channel_factory_address = 17; */
+        if (message.channelFactoryAddress !== "")
+            writer.tag(17, WireType.LengthDelimited).string(message.channelFactoryAddress);
+        /* int32 chain_id = 18; */
+        if (message.chainId !== 0)
+            writer.tag(18, WireType.Varint).int32(message.chainId);
+        /* optional google.protobuf.Struct meta = 19; */
         if (message.meta)
-            Any.internalBinaryWrite(message.meta, writer.tag(17, WireType.LengthDelimited).fork(), options).join();
+            Struct.internalBinaryWrite(message.meta, writer.tag(19, WireType.LengthDelimited).fork(), options).join();
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
@@ -2399,8 +2421,8 @@ class ConditionalTransferRequest$Type extends MessageType<ConditionalTransferReq
             { no: 7, name: "recipient_assetId", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
             { no: 8, name: "timeout", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
             { no: 9, name: "type", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
-            { no: 10, name: "details", kind: "message", T: () => Any },
-            { no: 11, name: "meta", kind: "message", T: () => Any }
+            { no: 10, name: "details", kind: "message", T: () => Struct },
+            { no: 11, name: "meta", kind: "message", T: () => Struct }
         ]);
     }
     internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: ConditionalTransferRequest): ConditionalTransferRequest {
@@ -2435,11 +2457,11 @@ class ConditionalTransferRequest$Type extends MessageType<ConditionalTransferReq
                 case /* string type */ 9:
                     message.type = reader.string();
                     break;
-                case /* google.protobuf.Any details */ 10:
-                    message.details = Any.internalBinaryRead(reader, reader.uint32(), options, message.details);
+                case /* google.protobuf.Struct details */ 10:
+                    message.details = Struct.internalBinaryRead(reader, reader.uint32(), options, message.details);
                     break;
-                case /* optional google.protobuf.Any meta */ 11:
-                    message.meta = Any.internalBinaryRead(reader, reader.uint32(), options, message.meta);
+                case /* optional google.protobuf.Struct meta */ 11:
+                    message.meta = Struct.internalBinaryRead(reader, reader.uint32(), options, message.meta);
                     break;
                 default:
                     let u = options.readUnknownField;
@@ -2480,12 +2502,12 @@ class ConditionalTransferRequest$Type extends MessageType<ConditionalTransferReq
         /* string type = 9; */
         if (message.type !== "")
             writer.tag(9, WireType.LengthDelimited).string(message.type);
-        /* google.protobuf.Any details = 10; */
+        /* google.protobuf.Struct details = 10; */
         if (message.details)
-            Any.internalBinaryWrite(message.details, writer.tag(10, WireType.LengthDelimited).fork(), options).join();
-        /* optional google.protobuf.Any meta = 11; */
+            Struct.internalBinaryWrite(message.details, writer.tag(10, WireType.LengthDelimited).fork(), options).join();
+        /* optional google.protobuf.Struct meta = 11; */
         if (message.meta)
-            Any.internalBinaryWrite(message.meta, writer.tag(11, WireType.LengthDelimited).fork(), options).join();
+            Struct.internalBinaryWrite(message.meta, writer.tag(11, WireType.LengthDelimited).fork(), options).join();
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
@@ -2564,7 +2586,7 @@ class DepositRequest$Type extends MessageType<DepositRequest> {
             { no: 1, name: "public_identifier", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
             { no: 2, name: "channel_address", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
             { no: 3, name: "asset_id", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
-            { no: 4, name: "meta", kind: "message", T: () => Any }
+            { no: 4, name: "meta", kind: "message", T: () => Struct }
         ]);
     }
     internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: DepositRequest): DepositRequest {
@@ -2581,8 +2603,8 @@ class DepositRequest$Type extends MessageType<DepositRequest> {
                 case /* string asset_id */ 3:
                     message.assetId = reader.string();
                     break;
-                case /* optional google.protobuf.Any meta */ 4:
-                    message.meta = Any.internalBinaryRead(reader, reader.uint32(), options, message.meta);
+                case /* optional google.protobuf.Struct meta */ 4:
+                    message.meta = Struct.internalBinaryRead(reader, reader.uint32(), options, message.meta);
                     break;
                 default:
                     let u = options.readUnknownField;
@@ -2605,9 +2627,9 @@ class DepositRequest$Type extends MessageType<DepositRequest> {
         /* string asset_id = 3; */
         if (message.assetId !== "")
             writer.tag(3, WireType.LengthDelimited).string(message.assetId);
-        /* optional google.protobuf.Any meta = 4; */
+        /* optional google.protobuf.Struct meta = 4; */
         if (message.meta)
-            Any.internalBinaryWrite(message.meta, writer.tag(4, WireType.LengthDelimited).fork(), options).join();
+            Struct.internalBinaryWrite(message.meta, writer.tag(4, WireType.LengthDelimited).fork(), options).join();
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
@@ -2788,7 +2810,7 @@ class SetupRequest$Type extends MessageType<SetupRequest> {
             { no: 2, name: "counterparty_identifier", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
             { no: 3, name: "chain_id", kind: "scalar", T: 5 /*ScalarType.INT32*/ },
             { no: 4, name: "timeout", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
-            { no: 5, name: "meta", kind: "message", T: () => Any }
+            { no: 5, name: "meta", kind: "message", T: () => Struct }
         ]);
     }
     internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: SetupRequest): SetupRequest {
@@ -2808,8 +2830,8 @@ class SetupRequest$Type extends MessageType<SetupRequest> {
                 case /* string timeout */ 4:
                     message.timeout = reader.string();
                     break;
-                case /* optional google.protobuf.Any meta */ 5:
-                    message.meta = Any.internalBinaryRead(reader, reader.uint32(), options, message.meta);
+                case /* optional google.protobuf.Struct meta */ 5:
+                    message.meta = Struct.internalBinaryRead(reader, reader.uint32(), options, message.meta);
                     break;
                 default:
                     let u = options.readUnknownField;
@@ -2835,9 +2857,9 @@ class SetupRequest$Type extends MessageType<SetupRequest> {
         /* string timeout = 4; */
         if (message.timeout !== "")
             writer.tag(4, WireType.LengthDelimited).string(message.timeout);
-        /* optional google.protobuf.Any meta = 5; */
+        /* optional google.protobuf.Struct meta = 5; */
         if (message.meta)
-            Any.internalBinaryWrite(message.meta, writer.tag(5, WireType.LengthDelimited).fork(), options).join();
+            Struct.internalBinaryWrite(message.meta, writer.tag(5, WireType.LengthDelimited).fork(), options).join();
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
@@ -3196,7 +3218,7 @@ class WithdrawRequest$Type extends MessageType<WithdrawRequest> {
             { no: 6, name: "fee", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
             { no: 7, name: "call_to", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
             { no: 8, name: "call_data", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
-            { no: 9, name: "meta", kind: "message", T: () => Any }
+            { no: 9, name: "meta", kind: "message", T: () => Struct }
         ]);
     }
     internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: WithdrawRequest): WithdrawRequest {
@@ -3228,8 +3250,8 @@ class WithdrawRequest$Type extends MessageType<WithdrawRequest> {
                 case /* string call_data */ 8:
                     message.callData = reader.string();
                     break;
-                case /* optional google.protobuf.Any meta */ 9:
-                    message.meta = Any.internalBinaryRead(reader, reader.uint32(), options, message.meta);
+                case /* optional google.protobuf.Struct meta */ 9:
+                    message.meta = Struct.internalBinaryRead(reader, reader.uint32(), options, message.meta);
                     break;
                 default:
                     let u = options.readUnknownField;
@@ -3267,9 +3289,9 @@ class WithdrawRequest$Type extends MessageType<WithdrawRequest> {
         /* string call_data = 8; */
         if (message.callData !== "")
             writer.tag(8, WireType.LengthDelimited).string(message.callData);
-        /* optional google.protobuf.Any meta = 9; */
+        /* optional google.protobuf.Struct meta = 9; */
         if (message.meta)
-            Any.internalBinaryWrite(message.meta, writer.tag(9, WireType.LengthDelimited).fork(), options).join();
+            Struct.internalBinaryWrite(message.meta, writer.tag(9, WireType.LengthDelimited).fork(), options).join();
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
@@ -3287,8 +3309,8 @@ class ResolveTransferRequest$Type extends MessageType<ResolveTransferRequest> {
             { no: 1, name: "public_identifier", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
             { no: 2, name: "channel_address", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
             { no: 3, name: "transfer_id", kind: "scalar", T: 12 /*ScalarType.BYTES*/ },
-            { no: 4, name: "transfer_resolver", kind: "message", T: () => Any },
-            { no: 5, name: "meta", kind: "message", T: () => Any }
+            { no: 4, name: "transfer_resolver", kind: "message", T: () => Struct },
+            { no: 5, name: "meta", kind: "message", T: () => Struct }
         ]);
     }
     internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: ResolveTransferRequest): ResolveTransferRequest {
@@ -3305,11 +3327,11 @@ class ResolveTransferRequest$Type extends MessageType<ResolveTransferRequest> {
                 case /* bytes transfer_id */ 3:
                     message.transferId = reader.bytes();
                     break;
-                case /* google.protobuf.Any transfer_resolver */ 4:
-                    message.transferResolver = Any.internalBinaryRead(reader, reader.uint32(), options, message.transferResolver);
+                case /* google.protobuf.Struct transfer_resolver */ 4:
+                    message.transferResolver = Struct.internalBinaryRead(reader, reader.uint32(), options, message.transferResolver);
                     break;
-                case /* optional google.protobuf.Any meta */ 5:
-                    message.meta = Any.internalBinaryRead(reader, reader.uint32(), options, message.meta);
+                case /* optional google.protobuf.Struct meta */ 5:
+                    message.meta = Struct.internalBinaryRead(reader, reader.uint32(), options, message.meta);
                     break;
                 default:
                     let u = options.readUnknownField;
@@ -3332,12 +3354,12 @@ class ResolveTransferRequest$Type extends MessageType<ResolveTransferRequest> {
         /* bytes transfer_id = 3; */
         if (message.transferId.length)
             writer.tag(3, WireType.LengthDelimited).bytes(message.transferId);
-        /* google.protobuf.Any transfer_resolver = 4; */
+        /* google.protobuf.Struct transfer_resolver = 4; */
         if (message.transferResolver)
-            Any.internalBinaryWrite(message.transferResolver, writer.tag(4, WireType.LengthDelimited).fork(), options).join();
-        /* optional google.protobuf.Any meta = 5; */
+            Struct.internalBinaryWrite(message.transferResolver, writer.tag(4, WireType.LengthDelimited).fork(), options).join();
+        /* optional google.protobuf.Struct meta = 5; */
         if (message.meta)
-            Any.internalBinaryWrite(message.meta, writer.tag(5, WireType.LengthDelimited).fork(), options).join();
+            Struct.internalBinaryWrite(message.meta, writer.tag(5, WireType.LengthDelimited).fork(), options).join();
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
@@ -3353,7 +3375,7 @@ class Body$Type extends MessageType<Body> {
     constructor() {
         super("com.vector.Body", [
             { no: 1, name: "method", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
-            { no: 2, name: "params", kind: "message", T: () => Any }
+            { no: 2, name: "params", kind: "message", T: () => Struct }
         ]);
     }
     internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: Body): Body {
@@ -3364,8 +3386,8 @@ class Body$Type extends MessageType<Body> {
                 case /* string method */ 1:
                     message.method = reader.string();
                     break;
-                case /* google.protobuf.Any params */ 2:
-                    message.params = Any.internalBinaryRead(reader, reader.uint32(), options, message.params);
+                case /* google.protobuf.Struct params */ 2:
+                    message.params = Struct.internalBinaryRead(reader, reader.uint32(), options, message.params);
                     break;
                 default:
                     let u = options.readUnknownField;
@@ -3382,9 +3404,9 @@ class Body$Type extends MessageType<Body> {
         /* string method = 1; */
         if (message.method !== "")
             writer.tag(1, WireType.LengthDelimited).string(message.method);
-        /* google.protobuf.Any params = 2; */
+        /* google.protobuf.Struct params = 2; */
         if (message.params)
-            Any.internalBinaryWrite(message.params, writer.tag(2, WireType.LengthDelimited).fork(), options).join();
+            Struct.internalBinaryWrite(message.params, writer.tag(2, WireType.LengthDelimited).fork(), options).join();
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
@@ -3540,7 +3562,7 @@ export const WithdrawReply = new WithdrawReply$Type();
 class EthProviderReply$Type extends MessageType<EthProviderReply> {
     constructor() {
         super("com.vector.EthProviderReply", [
-            { no: 1, name: "response", kind: "message", T: () => Any }
+            { no: 1, name: "response", kind: "message", T: () => Struct }
         ]);
     }
     internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: EthProviderReply): EthProviderReply {
@@ -3548,8 +3570,8 @@ class EthProviderReply$Type extends MessageType<EthProviderReply> {
         while (reader.pos < end) {
             let [fieldNo, wireType] = reader.tag();
             switch (fieldNo) {
-                case /* google.protobuf.Any response */ 1:
-                    message.response = Any.internalBinaryRead(reader, reader.uint32(), options, message.response);
+                case /* google.protobuf.Struct response */ 1:
+                    message.response = Struct.internalBinaryRead(reader, reader.uint32(), options, message.response);
                     break;
                 default:
                     let u = options.readUnknownField;
@@ -3563,9 +3585,9 @@ class EthProviderReply$Type extends MessageType<EthProviderReply> {
         return message;
     }
     internalBinaryWrite(message: EthProviderReply, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
-        /* google.protobuf.Any response = 1; */
+        /* google.protobuf.Struct response = 1; */
         if (message.response)
-            Any.internalBinaryWrite(message.response, writer.tag(1, WireType.LengthDelimited).fork(), options).join();
+            Struct.internalBinaryWrite(message.response, writer.tag(1, WireType.LengthDelimited).fork(), options).join();
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
@@ -4126,7 +4148,7 @@ class SetupPayload$Type extends MessageType<SetupPayload> {
             { no: 2, name: "alice_identifier", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
             { no: 3, name: "bob_identifier", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
             { no: 4, name: "chain_id", kind: "scalar", T: 5 /*ScalarType.INT32*/ },
-            { no: 5, name: "meta", kind: "message", T: () => Any }
+            { no: 5, name: "meta", kind: "message", T: () => Struct }
         ]);
     }
     internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: SetupPayload): SetupPayload {
@@ -4146,8 +4168,8 @@ class SetupPayload$Type extends MessageType<SetupPayload> {
                 case /* int32 chain_id */ 4:
                     message.chainId = reader.int32();
                     break;
-                case /* optional google.protobuf.Any meta */ 5:
-                    message.meta = Any.internalBinaryRead(reader, reader.uint32(), options, message.meta);
+                case /* optional google.protobuf.Struct meta */ 5:
+                    message.meta = Struct.internalBinaryRead(reader, reader.uint32(), options, message.meta);
                     break;
                 default:
                     let u = options.readUnknownField;
@@ -4173,9 +4195,9 @@ class SetupPayload$Type extends MessageType<SetupPayload> {
         /* int32 chain_id = 4; */
         if (message.chainId !== 0)
             writer.tag(4, WireType.Varint).int32(message.chainId);
-        /* optional google.protobuf.Any meta = 5; */
+        /* optional google.protobuf.Struct meta = 5; */
         if (message.meta)
-            Any.internalBinaryWrite(message.meta, writer.tag(5, WireType.LengthDelimited).fork(), options).join();
+            Struct.internalBinaryWrite(message.meta, writer.tag(5, WireType.LengthDelimited).fork(), options).join();
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
@@ -4197,7 +4219,7 @@ class ConditionalTransferCreatedPayload$Type extends MessageType<ConditionalTran
             { no: 5, name: "channel_balance", kind: "message", T: () => Balance },
             { no: 6, name: "condition_type", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
             { no: 7, name: "active_transfer_ids", kind: "scalar", repeat: 2 /*RepeatType.UNPACKED*/, T: 9 /*ScalarType.STRING*/ },
-            { no: 8, name: "meta", kind: "message", T: () => Any }
+            { no: 8, name: "meta", kind: "message", T: () => Struct }
         ]);
     }
     internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: ConditionalTransferCreatedPayload): ConditionalTransferCreatedPayload {
@@ -4226,8 +4248,8 @@ class ConditionalTransferCreatedPayload$Type extends MessageType<ConditionalTran
                 case /* repeated string active_transfer_ids */ 7:
                     message.activeTransferIds.push(reader.string());
                     break;
-                case /* optional google.protobuf.Any meta */ 8:
-                    message.meta = Any.internalBinaryRead(reader, reader.uint32(), options, message.meta);
+                case /* optional google.protobuf.Struct meta */ 8:
+                    message.meta = Struct.internalBinaryRead(reader, reader.uint32(), options, message.meta);
                     break;
                 default:
                     let u = options.readUnknownField;
@@ -4262,9 +4284,9 @@ class ConditionalTransferCreatedPayload$Type extends MessageType<ConditionalTran
         /* repeated string active_transfer_ids = 7; */
         for (let i = 0; i < message.activeTransferIds.length; i++)
             writer.tag(7, WireType.LengthDelimited).string(message.activeTransferIds[i]);
-        /* optional google.protobuf.Any meta = 8; */
+        /* optional google.protobuf.Struct meta = 8; */
         if (message.meta)
-            Any.internalBinaryWrite(message.meta, writer.tag(8, WireType.LengthDelimited).fork(), options).join();
+            Struct.internalBinaryWrite(message.meta, writer.tag(8, WireType.LengthDelimited).fork(), options).join();
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
@@ -4284,7 +4306,7 @@ class DepositReconciledPayload$Type extends MessageType<DepositReconciledPayload
             { no: 3, name: "bob_identifier", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
             { no: 4, name: "asset_id", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
             { no: 5, name: "channel_balance", kind: "message", T: () => Balance },
-            { no: 6, name: "meta", kind: "message", T: () => Any }
+            { no: 6, name: "meta", kind: "message", T: () => Struct }
         ]);
     }
     internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: DepositReconciledPayload): DepositReconciledPayload {
@@ -4307,8 +4329,8 @@ class DepositReconciledPayload$Type extends MessageType<DepositReconciledPayload
                 case /* com.vector.Balance channel_balance */ 5:
                     message.channelBalance = Balance.internalBinaryRead(reader, reader.uint32(), options, message.channelBalance);
                     break;
-                case /* optional google.protobuf.Any meta */ 6:
-                    message.meta = Any.internalBinaryRead(reader, reader.uint32(), options, message.meta);
+                case /* optional google.protobuf.Struct meta */ 6:
+                    message.meta = Struct.internalBinaryRead(reader, reader.uint32(), options, message.meta);
                     break;
                 default:
                     let u = options.readUnknownField;
@@ -4337,9 +4359,9 @@ class DepositReconciledPayload$Type extends MessageType<DepositReconciledPayload
         /* com.vector.Balance channel_balance = 5; */
         if (message.channelBalance)
             Balance.internalBinaryWrite(message.channelBalance, writer.tag(5, WireType.LengthDelimited).fork(), options).join();
-        /* optional google.protobuf.Any meta = 6; */
+        /* optional google.protobuf.Struct meta = 6; */
         if (message.meta)
-            Any.internalBinaryWrite(message.meta, writer.tag(6, WireType.LengthDelimited).fork(), options).join();
+            Struct.internalBinaryWrite(message.meta, writer.tag(6, WireType.LengthDelimited).fork(), options).join();
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
@@ -4359,7 +4381,7 @@ class RequestCollateralPayload$Type extends MessageType<RequestCollateralPayload
             { no: 3, name: "bob_identifier", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
             { no: 4, name: "asset_id", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
             { no: 5, name: "amount", kind: "scalar", opt: true, T: 9 /*ScalarType.STRING*/ },
-            { no: 6, name: "meta", kind: "message", T: () => Any }
+            { no: 6, name: "meta", kind: "message", T: () => Struct }
         ]);
     }
     internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: RequestCollateralPayload): RequestCollateralPayload {
@@ -4382,8 +4404,8 @@ class RequestCollateralPayload$Type extends MessageType<RequestCollateralPayload
                 case /* optional string amount */ 5:
                     message.amount = reader.string();
                     break;
-                case /* optional google.protobuf.Any meta */ 6:
-                    message.meta = Any.internalBinaryRead(reader, reader.uint32(), options, message.meta);
+                case /* optional google.protobuf.Struct meta */ 6:
+                    message.meta = Struct.internalBinaryRead(reader, reader.uint32(), options, message.meta);
                     break;
                 default:
                     let u = options.readUnknownField;
@@ -4412,9 +4434,9 @@ class RequestCollateralPayload$Type extends MessageType<RequestCollateralPayload
         /* optional string amount = 5; */
         if (message.amount !== undefined)
             writer.tag(5, WireType.LengthDelimited).string(message.amount);
-        /* optional google.protobuf.Any meta = 6; */
+        /* optional google.protobuf.Struct meta = 6; */
         if (message.meta)
-            Any.internalBinaryWrite(message.meta, writer.tag(6, WireType.LengthDelimited).fork(), options).join();
+            Struct.internalBinaryWrite(message.meta, writer.tag(6, WireType.LengthDelimited).fork(), options).join();
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
@@ -4440,7 +4462,7 @@ class WithdrawalCreatedPayload$Type extends MessageType<WithdrawalCreatedPayload
             { no: 9, name: "call_to", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
             { no: 10, name: "call_data", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
             { no: 11, name: "channel_balance", kind: "message", T: () => Balance },
-            { no: 12, name: "meta", kind: "message", T: () => Any }
+            { no: 12, name: "meta", kind: "message", T: () => Struct }
         ]);
     }
     internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: WithdrawalCreatedPayload): WithdrawalCreatedPayload {
@@ -4481,8 +4503,8 @@ class WithdrawalCreatedPayload$Type extends MessageType<WithdrawalCreatedPayload
                 case /* com.vector.Balance channel_balance */ 11:
                     message.channelBalance = Balance.internalBinaryRead(reader, reader.uint32(), options, message.channelBalance);
                     break;
-                case /* optional google.protobuf.Any meta */ 12:
-                    message.meta = Any.internalBinaryRead(reader, reader.uint32(), options, message.meta);
+                case /* optional google.protobuf.Struct meta */ 12:
+                    message.meta = Struct.internalBinaryRead(reader, reader.uint32(), options, message.meta);
                     break;
                 default:
                     let u = options.readUnknownField;
@@ -4529,9 +4551,9 @@ class WithdrawalCreatedPayload$Type extends MessageType<WithdrawalCreatedPayload
         /* com.vector.Balance channel_balance = 11; */
         if (message.channelBalance)
             Balance.internalBinaryWrite(message.channelBalance, writer.tag(11, WireType.LengthDelimited).fork(), options).join();
-        /* optional google.protobuf.Any meta = 12; */
+        /* optional google.protobuf.Struct meta = 12; */
         if (message.meta)
-            Any.internalBinaryWrite(message.meta, writer.tag(12, WireType.LengthDelimited).fork(), options).join();
+            Struct.internalBinaryWrite(message.meta, writer.tag(12, WireType.LengthDelimited).fork(), options).join();
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
@@ -4551,7 +4573,7 @@ class WithdrawalReconciledPayload$Type extends MessageType<WithdrawalReconciledP
             { no: 3, name: "bob_identifier", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
             { no: 4, name: "transaction_hash", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
             { no: 5, name: "transfer_id", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
-            { no: 6, name: "meta", kind: "message", T: () => Any }
+            { no: 6, name: "meta", kind: "message", T: () => Struct }
         ]);
     }
     internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: WithdrawalReconciledPayload): WithdrawalReconciledPayload {
@@ -4574,8 +4596,8 @@ class WithdrawalReconciledPayload$Type extends MessageType<WithdrawalReconciledP
                 case /* string transfer_id */ 5:
                     message.transferId = reader.string();
                     break;
-                case /* optional google.protobuf.Any meta */ 6:
-                    message.meta = Any.internalBinaryRead(reader, reader.uint32(), options, message.meta);
+                case /* optional google.protobuf.Struct meta */ 6:
+                    message.meta = Struct.internalBinaryRead(reader, reader.uint32(), options, message.meta);
                     break;
                 default:
                     let u = options.readUnknownField;
@@ -4604,9 +4626,9 @@ class WithdrawalReconciledPayload$Type extends MessageType<WithdrawalReconciledP
         /* string transfer_id = 5; */
         if (message.transferId !== "")
             writer.tag(5, WireType.LengthDelimited).string(message.transferId);
-        /* optional google.protobuf.Any meta = 6; */
+        /* optional google.protobuf.Struct meta = 6; */
         if (message.meta)
-            Any.internalBinaryWrite(message.meta, writer.tag(6, WireType.LengthDelimited).fork(), options).join();
+            Struct.internalBinaryWrite(message.meta, writer.tag(6, WireType.LengthDelimited).fork(), options).join();
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
