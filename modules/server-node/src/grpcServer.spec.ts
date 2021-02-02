@@ -1,20 +1,5 @@
 import { VectorEngine } from "@connext/vector-engine";
-import {
-  ConditionalTransferCreatedPayload,
-  ConditionalTransferResolvedPayload,
-  EngineEvents,
-  IVectorEngine,
-  NodeResponses,
-  DepositReconciledPayload,
-  IsAlivePayload,
-  RequestCollateralPayload,
-  SetupPayload,
-  WithdrawalCreatedPayload,
-  WithdrawalReconciledPayload,
-  WithdrawalResolvedPayload,
-  RestoreStatePayload,
-  EngineEvent,
-} from "@connext/vector-types";
+import { EngineEvents, IVectorEngine, NodeResponses, EngineEvent } from "@connext/vector-types";
 import {
   createTestFullHashlockTransferState,
   expect,
@@ -32,6 +17,7 @@ import { createStubInstance, SinonStubbedInstance, stub } from "sinon";
 import * as nodeUtils from "./helpers/nodes";
 import { config } from "./config";
 import { evts, setupServer } from "./grpcServer";
+import { FullTransferState } from "@connext/vector-types/dist/src/grpc";
 
 describe("GRPC server", () => {
   const { log: logger } = getTestLoggers("messaging", (config.logLevel ?? "fatal") as pino.Level);
@@ -104,6 +90,18 @@ describe("GRPC server", () => {
     const result = await client.getRouterConfig({
       routerIdentifier: mkPublicIdentifier("vectorA"),
       publicIdentifier: mkPublicIdentifier("vectorB"),
+    });
+    expect(result.getError()).to.be.not.ok;
+    expect(result.getValue()).to.deep.eq(expectedResponse);
+  });
+
+  it.only("should getTransfer", async () => {
+    const expectedResponse: FullTransferState = createTestFullHashlockTransferState();
+
+    engine.request.resolves(expectedResponse);
+    const result = await client.getTransfer({
+      publicIdentifier: mkPublicIdentifier("vectorB"),
+      transferId: mkHash("0xa"),
     });
     expect(result.getError()).to.be.not.ok;
     expect(result.getValue()).to.deep.eq(expectedResponse);

@@ -8,6 +8,7 @@ import {
   EngineEventMap,
   GrpcTypes,
   jsonifyError,
+  FullTransferState,
 } from "@connext/vector-types";
 import { ChannelCredentials } from "@grpc/grpc-js";
 import { GrpcTransport } from "@protobuf-ts/grpc-transport";
@@ -16,6 +17,16 @@ import * as grpc from "@grpc/grpc-js";
 import { Evt } from "evt";
 
 import { ServerNodeServiceError } from "./errors";
+
+const convertTransfer = (transfer: GrpcTypes.FullTransferState): FullTransferState => {
+  return {
+    ...transfer,
+    transferState: GrpcTypes.Struct.toJson(transfer.transferState),
+    transferResolver: transfer.transferResolver ? GrpcTypes.Struct.toJson(transfer.transferResolver) : undefined,
+    meta: transfer.meta ? GrpcTypes.Struct.toJson(transfer.meta) : undefined,
+    balance: transfer.balance ?? { amount: [], to: [] },
+  };
+};
 
 export class GRPCServerNodeClient implements INodeClient {
   public publicIdentifier = "";
@@ -67,15 +78,7 @@ export class GRPCServerNodeClient implements INodeClient {
     // each event stream needs to be consumed by the client and posted into EVTs to preserve the API
     (async () => {
       for await (const data of service.client.conditionalTransferCreatedStream({}).response) {
-        const transfer = {
-          ...data.transfer,
-          transferState: GrpcTypes.Struct.toJson(data.transfer.transferState),
-          transferResolver: data.transfer.transferResolver
-            ? GrpcTypes.Struct.toJson(data.transfer.transferResolver)
-            : undefined,
-          meta: data.transfer.meta ? GrpcTypes.Struct.toJson(data.transfer.meta) : undefined,
-          balance: data.transfer.balance ?? { amount: [], to: [] },
-        };
+        const transfer = convertTransfer(data.transfer);
         service.evts.CONDITIONAL_TRANSFER_CREATED.post({
           ...data,
           transfer,
@@ -86,15 +89,7 @@ export class GRPCServerNodeClient implements INodeClient {
 
     (async () => {
       for await (const data of service.client.conditionalTransferResolvedStream({}).response) {
-        const transfer = {
-          ...data.transfer,
-          transferState: GrpcTypes.Struct.toJson(data.transfer.transferState),
-          transferResolver: data.transfer.transferResolver
-            ? GrpcTypes.Struct.toJson(data.transfer.transferResolver)
-            : undefined,
-          meta: data.transfer.meta ? GrpcTypes.Struct.toJson(data.transfer.meta) : undefined,
-          balance: data.transfer.balance ?? { amount: [], to: [] },
-        };
+        const transfer = convertTransfer(data.transfer);
         service.evts.CONDITIONAL_TRANSFER_RESOLVED.post({
           ...data,
           transfer,
@@ -158,15 +153,7 @@ export class GRPCServerNodeClient implements INodeClient {
 
     (async () => {
       for await (const data of service.client.withdrawalCreatedStream({}).response) {
-        const transfer = {
-          ...data.transfer,
-          transferState: GrpcTypes.Struct.toJson(data.transfer.transferState),
-          transferResolver: data.transfer.transferResolver
-            ? GrpcTypes.Struct.toJson(data.transfer.transferResolver)
-            : undefined,
-          meta: data.transfer.meta ? GrpcTypes.Struct.toJson(data.transfer.meta) : undefined,
-          balance: data.transfer.balance ?? { amount: [], to: [] },
-        };
+        const transfer = convertTransfer(data.transfer);
         service.evts.WITHDRAWAL_CREATED.post({
           ...data,
           transfer,
@@ -209,33 +196,66 @@ export class GRPCServerNodeClient implements INodeClient {
   }
 
   async getPing(): Promise<Result<string, ServerNodeServiceError>> {
-    const res = await this.validateAndExecuteGrpcRequest<GrpcTypes.Empty, GrpcTypes.GenericMessageResponse>(
-      "getPing",
-      {},
-    );
-    return res.isError ? Result.fail(res.getError()) : Result.ok(res.getValue().message);
+    try {
+      const res = await this.validateAndExecuteGrpcRequest<GrpcTypes.Empty, GrpcTypes.GenericMessageResponse>(
+        "getPing",
+        {},
+      );
+      return Result.ok(res.message);
+    } catch (e) {
+      return Result.fail(e);
+    }
   }
 
   async getStatus(publicIdentifier?: string): Promise<Result<NodeResponses.GetStatus, ServerNodeServiceError>> {
-    return this.validateAndExecuteGrpcRequest<
-      OptionalPublicIdentifier<GrpcTypes.GenericPublicIdentifierRequest>,
-      GrpcTypes.Status
-    >("getStatus", {
-      publicIdentifier,
-    });
+    try {
+      const res = await this.validateAndExecuteGrpcRequest<
+        OptionalPublicIdentifier<GrpcTypes.GenericPublicIdentifierRequest>,
+        GrpcTypes.Status
+      >("getStatus", {
+        publicIdentifier,
+      });
+      return Result.ok(res);
+    } catch (e) {
+      return Result.fail(e);
+    }
   }
 
-  getRouterConfig(
+  async getRouterConfig(
     params: OptionalPublicIdentifier<NodeParams.GetRouterConfig>,
   ): Promise<Result<NodeResponses.GetRouterConfig, ServerNodeServiceError>> {
-    return this.validateAndExecuteGrpcRequest<
-      OptionalPublicIdentifier<GrpcTypes.GetRouterConfigRequest>,
-      GrpcTypes.RouterConfig
-    >("getRouterConfig", params) as any;
+    try {
+      const res = await this.validateAndExecuteGrpcRequest<
+        OptionalPublicIdentifier<GrpcTypes.GetRouterConfigRequest>,
+        GrpcTypes.RouterConfig
+      >("getRouterConfig", params);
+      return Result.ok(res as any);
+    } catch (e) {
+      return Result.fail(e);
+    }
   }
 
   async getConfig(): Promise<Result<NodeResponses.GetConfig, ServerNodeServiceError>> {
-    throw new Error("unimplemented");
+    try {
+      const res = await this.validateAndExecuteGrpcRequest<GrpcTypes.Empty, GrpcTypes.Configs>("getConfig", undefined);
+      return Result.ok(res.config);
+    } catch (e) {
+      return Result.fail(e);
+    }
+  }
+
+  async getTransfer(
+    params: OptionalPublicIdentifier<NodeParams.GetTransferState>,
+  ): Promise<Result<NodeResponses.GetTransferState, ServerNodeServiceError>> {
+    try {
+      const res = await this.validateAndExecuteGrpcRequest<
+        OptionalPublicIdentifier<GrpcTypes.TransferRequest>,
+        GrpcTypes.FullTransferState
+      >("getTransfer", params);
+      return Result.ok(convertTransfer(res));
+    } catch (e) {
+      return Result.fail(e);
+    }
   }
 
   sendDisputeChannelTx(
@@ -290,11 +310,6 @@ export class GRPCServerNodeClient implements INodeClient {
     throw new Error("unimplemented");
   }
 
-  async getTransfer(
-    params: OptionalPublicIdentifier<NodeParams.GetTransferState>,
-  ): Promise<Result<NodeResponses.GetTransferState, ServerNodeServiceError>> {
-    throw new Error("unimplemented");
-  }
   async getActiveTransfers(
     params: OptionalPublicIdentifier<NodeParams.GetActiveTransfersByChannelAddress>,
   ): Promise<Result<NodeResponses.GetActiveTransfersByChannelAddress, ServerNodeServiceError>> {
@@ -423,10 +438,7 @@ export class GRPCServerNodeClient implements INodeClient {
   }
 
   // Helper methods
-  private async validateAndExecuteGrpcRequest<T, U>(
-    methodName: string,
-    params: T,
-  ): Promise<Result<U, ServerNodeServiceError>> {
+  private async validateAndExecuteGrpcRequest<T, U>(methodName: string, params: T): Promise<U> {
     const filled = { publicIdentifier: this.publicIdentifier, ...params };
 
     // Attempt request
@@ -434,7 +446,7 @@ export class GRPCServerNodeClient implements INodeClient {
       const call = await this.client[methodName](filled);
       this.logger.debug({ call, methodName, filled }, "gRPC call complete");
       if (call.status !== grpc.status.OK) {
-        const toThrow = new ServerNodeServiceError(
+        throw new ServerNodeServiceError(
           ServerNodeServiceError.reasons.InternalServerError,
           filled.publicIdentifier,
           methodName,
@@ -443,12 +455,11 @@ export class GRPCServerNodeClient implements INodeClient {
             call,
           },
         );
-        return Result.fail(toThrow);
       }
-      return Result.ok(call.response);
+      return call.response;
     } catch (e) {
       this.logger.error({ error: jsonifyError(e), methodName, params: filled }, "Error occurred");
-      const toThrow = new ServerNodeServiceError(
+      throw new ServerNodeServiceError(
         ServerNodeServiceError.reasons.InternalServerError,
         filled.publicIdentifier,
         methodName,
@@ -457,7 +468,6 @@ export class GRPCServerNodeClient implements INodeClient {
           error: jsonifyError(e),
         },
       );
-      return Result.fail(toThrow);
     }
   }
 }
