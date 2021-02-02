@@ -84,8 +84,37 @@ const vectorService: GrpcTypes.IServerNodeService = {
       return callback({ code: grpc.status.NOT_FOUND, details: JSON.stringify(error) });
     }
     try {
-      const params = constructRpcRequest(ChannelRpcMethods.chan_getStatus, {});
+      const params = constructRpcRequest(ChannelRpcMethods.chan_getRouterConfig, {
+        routerIdentifier: call.request.routerIdentifier,
+      });
       const res = await engine.request<"chan_getRouterConfig">(params);
+
+      callback(null, res);
+    } catch (e) {
+      logger.error({ error: jsonifyError(e) });
+      callback({ code: grpc.status.UNKNOWN, details: JSON.stringify(e) });
+    }
+  },
+
+  async getTransferState(
+    call: grpc.ServerUnaryCall<GrpcTypes.TransfersRequest, GrpcTypes.FullTransferState | undefined>,
+    callback: grpc.sendUnaryData<GrpcTypes.FullTransferState | undefined>,
+  ): Promise<void> {
+    const engine = getNode(call.request.publicIdentifier);
+    if (!engine) {
+      const error = new ServerNodeError(
+        ServerNodeError.reasons.NodeNotFound,
+        call.request.publicIdentifier,
+        call.request,
+      );
+      logger.error({ error }, "Could not find engine");
+      return callback({ code: grpc.status.NOT_FOUND, details: JSON.stringify(error) });
+    }
+    try {
+      const params = constructRpcRequest(ChannelRpcMethods.chan_getTransferState, {
+        transferId: call.request.transferId,
+      });
+      const res = await engine.request<"chan_getTransferState">(params);
 
       callback(null, res);
     } catch (e) {
@@ -267,7 +296,6 @@ const vectorService: GrpcTypes.IServerNodeService = {
     });
   },
 
-  getTransferState: () => undefined,
   clearStore: () => undefined,
   createTransfer: () => undefined,
   deposit: () => undefined,

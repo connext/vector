@@ -664,9 +664,9 @@ export interface TransferStatesByRoutingIdRequest {
      */
     channelAddress: string;
     /**
-     * @generated from protobuf field: bytes routing_id = 3;
+     * @generated from protobuf field: string routing_id = 3;
      */
-    routingId: Uint8Array;
+    routingId: string;
 }
 /**
  * @generated from protobuf message com.vector.TransferStateByRoutingIdRequest
@@ -677,9 +677,9 @@ export interface TransferStateByRoutingIdRequest {
      */
     publicIdentifier: string;
     /**
-     * @generated from protobuf field: bytes routing_id = 2;
+     * @generated from protobuf field: string routing_id = 2;
      */
-    routingId: Uint8Array;
+    routingId: string;
 }
 /**
  * @generated from protobuf message com.vector.TransfersRequest
@@ -690,9 +690,9 @@ export interface TransfersRequest {
      */
     publicIdentifier: string;
     /**
-     * @generated from protobuf field: bytes transfer_id = 2;
+     * @generated from protobuf field: string transfer_id = 2;
      */
-    transferId: Uint8Array;
+    transferId: string;
 }
 /**
  * @generated from protobuf message com.vector.ChannelStateByParticipantsRequest
@@ -765,9 +765,9 @@ export interface ResolveTransferRequest {
      */
     channelAddress: string;
     /**
-     * @generated from protobuf field: bytes transfer_id = 3;
+     * @generated from protobuf field: string transfer_id = 3;
      */
-    transferId: Uint8Array;
+    transferId: string;
     /**
      * @generated from protobuf field: google.protobuf.Struct transfer_resolver = 4;
      */
@@ -823,13 +823,13 @@ export interface WithdrawReply {
      */
     channelAddress: string;
     /**
-     * @generated from protobuf field: bytes transfer_id = 2;
+     * @generated from protobuf field: string transfer_id = 2;
      */
-    transferId: Uint8Array;
+    transferId: string;
     /**
-     * @generated from protobuf field: bytes transaction_hash = 3;
+     * @generated from protobuf field: string transaction_hash = 3;
      */
-    transactionHash: Uint8Array;
+    transactionHash: string;
 }
 /**
  * @generated from protobuf message com.vector.EthProviderReply
@@ -3010,7 +3010,7 @@ class TransferStatesByRoutingIdRequest$Type extends MessageType<TransferStatesBy
         super("com.vector.TransferStatesByRoutingIdRequest", [
             { no: 1, name: "public_identifier", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
             { no: 2, name: "channel_address", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
-            { no: 3, name: "routing_id", kind: "scalar", T: 12 /*ScalarType.BYTES*/ }
+            { no: 3, name: "routing_id", kind: "scalar", T: 9 /*ScalarType.STRING*/ }
         ]);
     }
     internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: TransferStatesByRoutingIdRequest): TransferStatesByRoutingIdRequest {
@@ -3024,8 +3024,8 @@ class TransferStatesByRoutingIdRequest$Type extends MessageType<TransferStatesBy
                 case /* string channel_address */ 2:
                     message.channelAddress = reader.string();
                     break;
-                case /* bytes routing_id */ 3:
-                    message.routingId = reader.bytes();
+                case /* string routing_id */ 3:
+                    message.routingId = reader.string();
                     break;
                 default:
                     let u = options.readUnknownField;
@@ -3045,9 +3045,9 @@ class TransferStatesByRoutingIdRequest$Type extends MessageType<TransferStatesBy
         /* string channel_address = 2; */
         if (message.channelAddress !== "")
             writer.tag(2, WireType.LengthDelimited).string(message.channelAddress);
-        /* bytes routing_id = 3; */
-        if (message.routingId.length)
-            writer.tag(3, WireType.LengthDelimited).bytes(message.routingId);
+        /* string routing_id = 3; */
+        if (message.routingId !== "")
+            writer.tag(3, WireType.LengthDelimited).string(message.routingId);
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
@@ -3063,7 +3063,7 @@ class TransferStateByRoutingIdRequest$Type extends MessageType<TransferStateByRo
     constructor() {
         super("com.vector.TransferStateByRoutingIdRequest", [
             { no: 1, name: "public_identifier", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
-            { no: 2, name: "routing_id", kind: "scalar", T: 12 /*ScalarType.BYTES*/ }
+            { no: 2, name: "routing_id", kind: "scalar", T: 9 /*ScalarType.STRING*/ }
         ]);
     }
     internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: TransferStateByRoutingIdRequest): TransferStateByRoutingIdRequest {
@@ -3074,8 +3074,8 @@ class TransferStateByRoutingIdRequest$Type extends MessageType<TransferStateByRo
                 case /* string public_identifier */ 1:
                     message.publicIdentifier = reader.string();
                     break;
-                case /* bytes routing_id */ 2:
-                    message.routingId = reader.bytes();
+                case /* string routing_id */ 2:
+                    message.routingId = reader.string();
                     break;
                 default:
                     let u = options.readUnknownField;
@@ -3092,9 +3092,9 @@ class TransferStateByRoutingIdRequest$Type extends MessageType<TransferStateByRo
         /* string public_identifier = 1; */
         if (message.publicIdentifier !== "")
             writer.tag(1, WireType.LengthDelimited).string(message.publicIdentifier);
-        /* bytes routing_id = 2; */
-        if (message.routingId.length)
-            writer.tag(2, WireType.LengthDelimited).bytes(message.routingId);
+        /* string routing_id = 2; */
+        if (message.routingId !== "")
+            writer.tag(2, WireType.LengthDelimited).string(message.routingId);
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
@@ -3110,7 +3110,7 @@ class TransfersRequest$Type extends MessageType<TransfersRequest> {
     constructor() {
         super("com.vector.TransfersRequest", [
             { no: 1, name: "public_identifier", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
-            { no: 2, name: "transfer_id", kind: "scalar", T: 12 /*ScalarType.BYTES*/ }
+            { no: 2, name: "transfer_id", kind: "scalar", T: 9 /*ScalarType.STRING*/ }
         ]);
     }
     internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: TransfersRequest): TransfersRequest {
@@ -3121,8 +3121,8 @@ class TransfersRequest$Type extends MessageType<TransfersRequest> {
                 case /* string public_identifier */ 1:
                     message.publicIdentifier = reader.string();
                     break;
-                case /* bytes transfer_id */ 2:
-                    message.transferId = reader.bytes();
+                case /* string transfer_id */ 2:
+                    message.transferId = reader.string();
                     break;
                 default:
                     let u = options.readUnknownField;
@@ -3139,9 +3139,9 @@ class TransfersRequest$Type extends MessageType<TransfersRequest> {
         /* string public_identifier = 1; */
         if (message.publicIdentifier !== "")
             writer.tag(1, WireType.LengthDelimited).string(message.publicIdentifier);
-        /* bytes transfer_id = 2; */
-        if (message.transferId.length)
-            writer.tag(2, WireType.LengthDelimited).bytes(message.transferId);
+        /* string transfer_id = 2; */
+        if (message.transferId !== "")
+            writer.tag(2, WireType.LengthDelimited).string(message.transferId);
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
@@ -3308,7 +3308,7 @@ class ResolveTransferRequest$Type extends MessageType<ResolveTransferRequest> {
         super("com.vector.ResolveTransferRequest", [
             { no: 1, name: "public_identifier", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
             { no: 2, name: "channel_address", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
-            { no: 3, name: "transfer_id", kind: "scalar", T: 12 /*ScalarType.BYTES*/ },
+            { no: 3, name: "transfer_id", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
             { no: 4, name: "transfer_resolver", kind: "message", T: () => Struct },
             { no: 5, name: "meta", kind: "message", T: () => Struct }
         ]);
@@ -3324,8 +3324,8 @@ class ResolveTransferRequest$Type extends MessageType<ResolveTransferRequest> {
                 case /* string channel_address */ 2:
                     message.channelAddress = reader.string();
                     break;
-                case /* bytes transfer_id */ 3:
-                    message.transferId = reader.bytes();
+                case /* string transfer_id */ 3:
+                    message.transferId = reader.string();
                     break;
                 case /* google.protobuf.Struct transfer_resolver */ 4:
                     message.transferResolver = Struct.internalBinaryRead(reader, reader.uint32(), options, message.transferResolver);
@@ -3351,9 +3351,9 @@ class ResolveTransferRequest$Type extends MessageType<ResolveTransferRequest> {
         /* string channel_address = 2; */
         if (message.channelAddress !== "")
             writer.tag(2, WireType.LengthDelimited).string(message.channelAddress);
-        /* bytes transfer_id = 3; */
-        if (message.transferId.length)
-            writer.tag(3, WireType.LengthDelimited).bytes(message.transferId);
+        /* string transfer_id = 3; */
+        if (message.transferId !== "")
+            writer.tag(3, WireType.LengthDelimited).string(message.transferId);
         /* google.protobuf.Struct transfer_resolver = 4; */
         if (message.transferResolver)
             Struct.internalBinaryWrite(message.transferResolver, writer.tag(4, WireType.LengthDelimited).fork(), options).join();
@@ -3509,8 +3509,8 @@ class WithdrawReply$Type extends MessageType<WithdrawReply> {
     constructor() {
         super("com.vector.WithdrawReply", [
             { no: 1, name: "channel_address", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
-            { no: 2, name: "transfer_id", kind: "scalar", T: 12 /*ScalarType.BYTES*/ },
-            { no: 3, name: "transaction_hash", kind: "scalar", T: 12 /*ScalarType.BYTES*/ }
+            { no: 2, name: "transfer_id", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 3, name: "transaction_hash", kind: "scalar", T: 9 /*ScalarType.STRING*/ }
         ]);
     }
     internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: WithdrawReply): WithdrawReply {
@@ -3521,11 +3521,11 @@ class WithdrawReply$Type extends MessageType<WithdrawReply> {
                 case /* string channel_address */ 1:
                     message.channelAddress = reader.string();
                     break;
-                case /* bytes transfer_id */ 2:
-                    message.transferId = reader.bytes();
+                case /* string transfer_id */ 2:
+                    message.transferId = reader.string();
                     break;
-                case /* bytes transaction_hash */ 3:
-                    message.transactionHash = reader.bytes();
+                case /* string transaction_hash */ 3:
+                    message.transactionHash = reader.string();
                     break;
                 default:
                     let u = options.readUnknownField;
@@ -3542,12 +3542,12 @@ class WithdrawReply$Type extends MessageType<WithdrawReply> {
         /* string channel_address = 1; */
         if (message.channelAddress !== "")
             writer.tag(1, WireType.LengthDelimited).string(message.channelAddress);
-        /* bytes transfer_id = 2; */
-        if (message.transferId.length)
-            writer.tag(2, WireType.LengthDelimited).bytes(message.transferId);
-        /* bytes transaction_hash = 3; */
-        if (message.transactionHash.length)
-            writer.tag(3, WireType.LengthDelimited).bytes(message.transactionHash);
+        /* string transfer_id = 2; */
+        if (message.transferId !== "")
+            writer.tag(2, WireType.LengthDelimited).string(message.transferId);
+        /* string transaction_hash = 3; */
+        if (message.transactionHash !== "")
+            writer.tag(3, WireType.LengthDelimited).string(message.transactionHash);
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);

@@ -281,17 +281,17 @@ message ActiveTransfersRequest {
 message  TransferStatesByRoutingIdRequest {
    string public_identifier = 1;
    string channel_address = 2;
-   bytes routing_id = 3;
+   string routing_id = 3;
 }
 
 message  TransferStateByRoutingIdRequest {
     string public_identifier = 1;
-    bytes routing_id = 2;
+    string routing_id = 2;
 }
 
 message  TransfersRequest {
     string public_identifier = 1;
-    bytes transfer_id = 2;
+    string transfer_id = 2;
 }
 
 message ChannelStateByParticipantsRequest {
@@ -316,7 +316,7 @@ message WithdrawRequest {
 message ResolveTransferRequest {
     string public_identifier = 1;
     string channel_address = 2;
-    bytes transfer_id = 3;
+    string transfer_id = 3;
     google.protobuf.Struct transfer_resolver = 4;
 
     optional google.protobuf.Struct meta = 5;
@@ -338,8 +338,8 @@ message RestoreStateReply {
 
 message  WithdrawReply {
     string channel_address = 1;
-    bytes transfer_id = 2;
-    bytes transaction_hash = 3;
+    string transfer_id = 2;
+    string transaction_hash = 3;
 }
 
 message EthProviderReply {
