@@ -7,7 +7,7 @@ import {
   jsonifyError,
 } from "@connext/vector-types";
 import { getBalanceForAssetId, getRandomBytes32, getParticipant } from "@connext/vector-utils";
-import { Counter, Gauge, Registry } from "prom-client";
+import { Gauge } from "prom-client";
 import { getAddress } from "@ethersproject/address";
 import { BigNumber } from "@ethersproject/bignumber";
 import { BaseLogger } from "pino";
@@ -16,25 +16,18 @@ import { CollateralError } from "../errors";
 
 import { getRebalanceProfile } from "./config";
 
-const configureMetrics = (register: Registry) => {
-  // router_deposit_transaction
-  const attemptDepositTransaction = new Gauge({
-    name: "router_deposit_transaction_attempt",
-    help: "router_deposit_transaction_attempt_help",
-    labelNames: ["methodId", "amountToDeposit", "channelAddress", "chainId", "assetId"] as const,
-    registers: [register],
-  });
+// router_deposit_transaction
+const attemptDepositTransaction = new Gauge({
+  name: "router_deposit_transaction_attempt",
+  help: "router_deposit_transaction_attempt_help",
+  labelNames: ["methodId", "amountToDeposit", "channelAddress", "chainId", "assetId"] as const,
+});
 
-  const successfulDepositTransaction = new Gauge({
-    name: "router_deposit_transaction_success",
-    help: "router_deposit_transaction_success_help",
-    labelNames: ["methodId", "txHash"] as const,
-    registers: [register],
-  });
-
-  // Return the metrics so they can be incremented as needed
-  return { attemptDepositTransaction, successfulDepositTransaction };
-};
+const successfulDepositTransaction = new Gauge({
+  name: "router_deposit_transaction_success",
+  help: "router_deposit_transaction_success_help",
+  labelNames: ["methodId", "txHash"] as const,
+});
 
 /**
  * This function should be called before a transfer is created/forwarded.
@@ -236,10 +229,8 @@ export const requestCollateral = async (
 ): Promise<Result<undefined | NodeResponses.Deposit, CollateralError>> => {
   const method = "requestCollateral";
   const methodId = getRandomBytes32();
-  const register = new Registry();
   logger.debug({ method, methodId, assetId, publicIdentifier, channel }, "Method started");
   const profileRes = getRebalanceProfile(channel.networkContext.chainId, assetId);
-  const { attemptDepositTransaction, successfulDepositTransaction } = configureMetrics(register);
   if (profileRes.isError) {
     return Result.fail(
       new CollateralError(

@@ -20,7 +20,7 @@ import {
   ERC20Abi,
   SetupPayload,
 } from "@connext/vector-types";
-import { collectDefaultMetrics, Gauge, Registry } from "prom-client";
+import { collectDefaultMetrics, Gauge, register } from "prom-client";
 import { Wallet } from "ethers";
 
 import { config } from "./config";
@@ -92,8 +92,7 @@ const logger = pino({ name: signer.publicIdentifier });
 logger.info({ config }, "Loaded config from environment");
 const server = fastify({ logger, pluginTimeout: 300_000, disableRequestLogging: config.logLevel !== "debug" });
 
-const register = new Registry();
-collectDefaultMetrics({ register, prefix: "router_" });
+collectDefaultMetrics({ prefix: "router_" });
 
 let router: IRouter;
 const store = new PrismaStore();
@@ -130,7 +129,6 @@ new Gauge({
   name: "router_onchain_balance",
   help: "router_onchain_balance_help",
   labelNames: ["chainId", "assetId", "signerAddress"] as const,
-  registers: [register],
   async collect() {
     await Promise.all(
       Object.entries(hydrated).map(async ([chainId, provider]) => {
@@ -178,7 +176,6 @@ server.addHook("onReady", async () => {
     store,
     messagingService,
     logger,
-    register,
   );
 });
 

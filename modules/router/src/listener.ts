@@ -9,7 +9,7 @@ import {
   Result,
 } from "@connext/vector-types";
 import { getRandomBytes32 } from "@connext/vector-utils";
-import { Counter, Gauge, Registry } from "prom-client";
+import { Counter, Gauge } from "prom-client";
 import Ajv from "ajv";
 import { JsonRpcProvider } from "@ethersproject/providers";
 import { BaseLogger } from "pino";
@@ -28,55 +28,44 @@ export type ChainJsonProviders = {
   [k: string]: JsonRpcProvider;
 };
 
-const configureMetrics = (register: Registry) => {
-  // Track number of times a payment was forwarded
-  const attempts = new Gauge({
-    name: "router_forwarded_payment_attempts",
-    help: "router_forwarded_payment_attempts_help",
-    labelNames: ["routingId"] as const,
-    registers: [register],
-  });
+// Track number of times a payment was forwarded
+const attempts = new Gauge({
+  name: "router_forwarded_payment_attempts",
+  help: "router_forwarded_payment_attempts_help",
+  labelNames: ["routingId"] as const,
+});
 
-  // Track successful forwards
-  const successful = new Gauge({
-    name: "router_successful_forwarded_payments",
-    help: "router_successful_forwarded_payments_help",
-    labelNames: ["routingId"] as const,
-    registers: [register],
-  });
+// Track successful forwards
+const successful = new Gauge({
+  name: "router_successful_forwarded_payments",
+  help: "router_successful_forwarded_payments_help",
+  labelNames: ["routingId"] as const,
+});
 
-  // Track failing forwards
-  const failed = new Gauge({
-    name: "router_failed_forwarded_payments",
-    help: "router_failed_forwarded_payments_help",
-    labelNames: ["routingId"] as const,
-    registers: [register],
-  });
+// Track failing forwards
+const failed = new Gauge({
+  name: "router_failed_forwarded_payments",
+  help: "router_failed_forwarded_payments_help",
+  labelNames: ["routingId"] as const,
+});
 
-  const activeTransfers = new Gauge({
-    name: "router_active_transfers",
-    help: "router_active_transfers_help",
-    labelNames: ["channelAddress"] as const,
-    registers: [register],
-  });
+const activeTransfers = new Gauge({
+  name: "router_active_transfers",
+  help: "router_active_transfers_help",
+  labelNames: ["channelAddress"] as const,
+});
 
-  const transferSendTime = new Gauge({
-    name: "router_sent_payments_time",
-    help: "router_sent_payments_time_help",
-    labelNames: ["routingId"] as const,
-    registers: [register],
-  });
+const transferSendTime = new Gauge({
+  name: "router_sent_payments_time",
+  help: "router_sent_payments_time_help",
+  labelNames: ["routingId"] as const,
+});
 
-  const openChannels = new Counter({
-    name: "router_open_channels",
-    help: "router_open_channels_help",
-    labelNames: ["channelAddress", "chainId", "aliceIdentifier", "bobIdentifier"] as const,
-    registers: [register],
-  });
-
-  // Return the metrics so they can be incremented as needed
-  return { failed, successful, attempts, activeTransfers, transferSendTime, openChannels };
-};
+const openChannels = new Counter({
+  name: "router_open_channels",
+  help: "router_open_channels_help",
+  labelNames: ["channelAddress", "chainId", "aliceIdentifier", "bobIdentifier"] as const,
+});
 
 export async function setupListeners(
   routerPublicIdentifier: string,
@@ -86,12 +75,10 @@ export async function setupListeners(
   chainReader: IVectorChainReader,
   messagingService: IRouterMessagingService,
   logger: BaseLogger,
-  register: Registry,
 ): Promise<void> {
   const method = "setupListeners";
   const methodId = getRandomBytes32();
   logger.debug({ method, methodId, routerPublicIdentifier, routerSignerAddress }, "Method started");
-  const { failed, successful, attempts, activeTransfers, transferSendTime, openChannels } = configureMetrics(register);
 
   nodeService.on(EngineEvents.SETUP, async (data) => {
     openChannels.inc({
