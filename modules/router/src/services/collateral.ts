@@ -232,11 +232,11 @@ export const requestCollateral = async (
   node: INodeService,
   chainReader: IVectorChainReader,
   logger: BaseLogger,
-  register: Registry,
   requestedAmount?: string,
 ): Promise<Result<undefined | NodeResponses.Deposit, CollateralError>> => {
   const method = "requestCollateral";
   const methodId = getRandomBytes32();
+  const register = new Registry();
   logger.debug({ method, methodId, assetId, publicIdentifier, channel }, "Method started");
   const profileRes = getRebalanceProfile(channel.networkContext.chainId, assetId);
   const { attemptDepositTransaction, successfulDepositTransaction } = configureMetrics(register);
