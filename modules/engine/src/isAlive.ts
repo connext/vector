@@ -1,4 +1,5 @@
 import { IChannelSigner, IEngineStore, IMessagingService, IVectorChainService, Result } from "@connext/vector-types";
+import { getParticipant } from "@connext/vector-utils";
 import { BaseLogger } from "pino";
 
 export async function sendIsAlive(
@@ -26,8 +27,15 @@ export async function sendIsAlive(
         );
         return;
       }
-      const counterpartyIdentifier =
-        mySigner.publicIdentifier === channel.aliceIdentifier ? channel.bobIdentifier : channel.aliceIdentifier;
+      const participant = getParticipant(channel, mySigner.publicIdentifier);
+      if (!participant) {
+        logger.error(
+          { participant, alice: channel.aliceIdentifier, bob: channel.bobIdentifier, channel: channel.channelAddress },
+          "Signer not in channel",
+        );
+        return;
+      }
+      const counterpartyIdentifier = participant === "alice" ? channel.bobIdentifier : channel.aliceIdentifier;
       const res = await messaging.sendIsAliveMessage(
         Result.ok({ channelAddress: channel.channelAddress }),
         counterpartyIdentifier,
