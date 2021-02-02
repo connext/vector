@@ -305,7 +305,7 @@ const vectorService: GrpcTypes.IServerNodeService = {
       return call.destroy(error);
     }
     engine.on(EngineEvents.WITHDRAWAL_RECONCILED, (data) => {
-      call.write(data);
+      call.write({ ...data, meta: data.meta ? GrpcTypes.Struct.fromJson(data.meta) : undefined });
     });
   },
 

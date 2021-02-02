@@ -22,6 +22,7 @@ import {
   getTestLoggers,
   GRPCServerNodeClient,
   mkAddress,
+  mkHash,
   mkPublicIdentifier,
 } from "@connext/vector-utils";
 import pino from "pino";
@@ -273,7 +274,7 @@ describe("GRPC server", () => {
     });
   });
 
-  it.only("should withdrawalCreatedStream", () => {
+  it("should withdrawalCreatedStream", () => {
     return new Promise<void>((res) => {
       const payload: WithdrawalCreatedPayload = {
         aliceIdentifier: mkPublicIdentifier("vectorA"),
@@ -292,7 +293,7 @@ describe("GRPC server", () => {
       engine.on.yields(payload);
 
       client.on(
-        EngineEvents.SETUP,
+        EngineEvents.WITHDRAWAL_CREATED,
         (data) => {
           expect(data).to.deep.eq(payload);
           res();
@@ -303,7 +304,7 @@ describe("GRPC server", () => {
     });
   });
 
-  it.only("should withdrawalResolvedStream", () => {
+  it("should withdrawalResolvedStream", () => {
     return new Promise<void>((res) => {
       const payload: WithdrawalCreatedPayload = {
         aliceIdentifier: mkPublicIdentifier("vectorA"),
@@ -322,7 +323,31 @@ describe("GRPC server", () => {
       engine.on.yields(payload);
 
       client.on(
-        EngineEvents.SETUP,
+        EngineEvents.WITHDRAWAL_RESOLVED,
+        (data) => {
+          expect(data).to.deep.eq(payload);
+          res();
+        },
+        undefined,
+        mkPublicIdentifier("vectorB"),
+      );
+    });
+  });
+
+  it.only("should withdrawalReconciledStream", () => {
+    return new Promise<void>((res) => {
+      const payload: WithdrawalReconciledPayload = {
+        aliceIdentifier: mkPublicIdentifier("vectorA"),
+        bobIdentifier: mkPublicIdentifier("vectorB"),
+        channelAddress: mkAddress("0xcc"),
+        transactionHash: mkHash("0xabc"),
+        transferId: mkHash("0xabcde"),
+        meta: { hello: "world" },
+      };
+      engine.on.yields(payload);
+
+      client.on(
+        EngineEvents.WITHDRAWAL_RECONCILED,
         (data) => {
           expect(data).to.deep.eq(payload);
           res();

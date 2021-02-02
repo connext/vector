@@ -123,7 +123,13 @@ const convertGrpcDataToDomain = <T extends EngineEvent>(eventName: T, data: any)
         meta: typedData.meta ? GrpcTypes.Struct.toJson(typedData.meta) : undefined,
       } as any;
     }
-    case "WITHDRAWAL_RECONCILED":
+    case "WITHDRAWAL_RECONCILED": {
+      const typedData: GrpcTypes.WithdrawalReconciledPayload = data;
+      return {
+        ...typedData,
+        meta: typedData.meta ? GrpcTypes.Struct.toJson(typedData.meta) : undefined,
+      } as any;
+    }
     case "WITHDRAWAL_RESOLVED": {
       const typedData: GrpcTypes.WithdrawalCreatedPayload = data;
       const transfer = {
@@ -373,15 +379,12 @@ export class GRPCServerNodeClient implements INodeClient {
     publicIdentifier?: string,
   ): void {
     const streamName = getGrpcStreamNameForEvent(event);
-    console.log("streamName: ", streamName);
     const stream = this.client[streamName]({
       publicIdentifier: publicIdentifier ?? this.publicIdentifier,
     });
     (async () => {
       for await (const data of stream.response) {
-        console.log("on ====> data: ", data);
         const converted = convertGrpcDataToDomain(event, data);
-        console.log("on ====> converted: ", converted);
         if (filter(converted)) {
           callback(converted);
         }
