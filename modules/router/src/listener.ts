@@ -77,19 +77,19 @@ const openChannels = new Counter({
 const transactionSubmitted = new Counter({
   name: "router_transaction_submitted",
   help: "router_transaction_submitted_help",
-  labelNames: ["response", "reason", "channelAddress"] as const,
+  labelNames: ["hash", "reason", "channelAddress"] as const,
 });
 
 const transactionMined = new Counter({
   name: "router_transaction_mined",
   help: "router_transaction_mined_help",
-  labelNames: ["response", "reason", "channelAddress"] as const,
+  labelNames: ["hash", "reason", "channelAddress"] as const,
 });
 
 const transactionFailed = new Counter({
   name: "router_transaction_failed",
   help: "router_transaction_failed_help",
-  labelNames: ["receipt", "reason", "channelAddress", "error"] as const,
+  labelNames: ["hash", "reason", "channelAddress", "error"] as const,
 });
 
 export async function setupListeners(
@@ -116,7 +116,7 @@ export async function setupListeners(
 
   nodeService.on(EngineEvents.TRANSACTION_SUBMITTED, async (data) => {
     transactionSubmitted.inc({
-      response: data.response,
+      hash: data.response.hash,
       reason: data.reason,
       channelAddress: data.channelAddress,
     });
@@ -124,7 +124,7 @@ export async function setupListeners(
 
   nodeService.on(EngineEvents.TRANSACTION_MINED, async (data) => {
     transactionMined.inc({
-      response: data.response,
+      hash: data.receipt?.transactionHash,
       reason: data.reason,
       channelAddress: data.channelAddress,
     });
@@ -132,10 +132,10 @@ export async function setupListeners(
 
   nodeService.on(EngineEvents.TRANSACTION_FAILED, async (data) => {
     transactionFailed.inc({
-      receipt: data.receipt,
+      hash: data.receipt?.transactionHash,
       reason: data.reason,
       channelAddress: data.channelAddress,
-      error: data.error,
+      error: data.error?.message,
     });
   });
 
