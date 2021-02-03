@@ -53,7 +53,7 @@ prometheus_services="prometheus:
     image: $prometheus_image
     $common
     ports:
-      - 9090:9090
+      - 9081:9090
     command:
       - --config.file=/etc/prometheus/prometheus.yml
     volumes:
@@ -103,6 +103,7 @@ services:
   metrics:
     $common
     $metrics_image
+    environment:
 
   $observability_services
 
