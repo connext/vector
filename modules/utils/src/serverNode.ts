@@ -268,14 +268,17 @@ export class RestServerNodeService implements INodeService {
   }
 
   async getTransfers(
-    params: OptionalPublicIdentifier<NodeParams.GetTransfers & GetTransfersFilterOpts>,
+    params: OptionalPublicIdentifier<
+      NodeParams.GetTransfers &
+        Omit<GetTransfersFilterOpts, "startDate" | "endDate"> & { startDate: Date; endDate: Date } // in the client, use Date type
+    >,
   ): Promise<Result<NodeResponses.GetTransfers, ServerNodeServiceError>> {
     const queryString = [
       params.active ? `active=${params.active}` : undefined,
       params.channelAddress ? `channelAddress=${params.channelAddress}` : undefined,
       params.routingId ? `routingId=${params.routingId}` : undefined,
-      params.startDate ? `startDate=${Date.parse(params.startDate)}` : undefined,
-      params.endDate ? `endDate=${Date.parse(params.endDate)}` : undefined,
+      params.startDate ? `startDate=${Date.parse(params.startDate.toString())}` : undefined,
+      params.endDate ? `endDate=${Date.parse(params.endDate.toString())}` : undefined,
     ]
       .filter((x) => !!x)
       .join("&");
