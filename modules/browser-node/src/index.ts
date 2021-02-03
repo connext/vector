@@ -16,6 +16,7 @@ import {
   EngineParams,
   FullChannelState,
   DEFAULT_CHANNEL_TIMEOUT,
+  GetTransfersFilterOpts,
 } from "@connext/vector-types";
 import { constructRpcRequest, hydrateProviders, NatsMessagingService } from "@connext/vector-utils";
 import pino, { BaseLogger } from "pino";
@@ -308,6 +309,29 @@ export class BrowserNode implements INodeService {
   ): Promise<Result<NodeResponses.GetActiveTransfersByChannelAddress, BrowserNodeError>> {
     try {
       const rpc = constructRpcRequest<"chan_getActiveTransfers">(ChannelRpcMethods.chan_getActiveTransfers, params);
+      const res = await this.channelProvider!.send(rpc);
+      return Result.ok(res);
+    } catch (e) {
+      return Result.fail(e);
+    }
+  }
+
+  async getTransfers(
+    params: OptionalPublicIdentifier<
+      NodeParams.GetTransfers &
+        Omit<GetTransfersFilterOpts, "startDate" | "endDate"> & { startDate: Date; endDate: Date } // in the client, use Date type
+    >,
+  ): Promise<Result<NodeResponses.GetActiveTransfersByChannelAddress, BrowserNodeError>> {
+    try {
+      const rpc = constructRpcRequest<"chan_getTransfers">(ChannelRpcMethods.chan_getTransfers, {
+        filterOpts: {
+          active: params.active,
+          channelAddress: params.channelAddress,
+          endDate: params.endDate,
+          routingId: params.routingId,
+          startDate: params.startDate,
+        },
+      });
       const res = await this.channelProvider!.send(rpc);
       return Result.ok(res);
     } catch (e) {

@@ -324,6 +324,33 @@ export class VectorEngine implements IVectorEngine {
     }
   }
 
+  private async getTransfers(
+    params: EngineParams.GetTransfers,
+  ): Promise<Result<ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_getTransfers], EngineError>> {
+    const validate = ajv.compile(EngineParams.GetTransfersSchema);
+    const valid = validate(params);
+    if (!valid) {
+      return Result.fail(
+        new RpcError(RpcError.reasons.InvalidParams, "", this.publicIdentifier, {
+          invalidParamsError: validate.errors?.map((e) => e.message).join(","),
+          invalidParams: params,
+        }),
+      );
+    }
+
+    try {
+      const transfers = await this.store.getTransfers(params);
+      return Result.ok(transfers);
+    } catch (e) {
+      return Result.fail(
+        new RpcError(RpcError.reasons.StoreMethodFailed, "", this.publicIdentifier, {
+          storeMethod: "getTransfers",
+          storeError: e.message,
+        }),
+      );
+    }
+  }
+
   private async getTransferStateByRoutingId(
     params: EngineParams.GetTransferStateByRoutingId,
   ): Promise<
