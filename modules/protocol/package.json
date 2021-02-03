@@ -28,7 +28,7 @@
     "@sinclair/typebox": "0.12.7",
     "ajv": "6.12.6",
     "ethers": "5.0.21",
-    "evt": "1.9.2",
+    "evt": "1.9.12",
     "merkletreejs": "0.2.9",
     "pino": "6.7.0",
     "tty": "1.0.1"
