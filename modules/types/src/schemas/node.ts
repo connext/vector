@@ -97,6 +97,13 @@ const GetTransferStateResponseSchema = {
   200: Type.Union([Type.Undefined(), TFullTransferState]),
 };
 
+// GET TRANSFERS
+const GetTransfersParamsSchema = Type.Object({ publicIdentifier: TPublicIdentifier });
+
+const GetTransfersResponseSchema = {
+  200: Type.Array(TFullTransferState),
+};
+
 // GET CHANNEL STATE
 const GetChannelStateParamsSchema = Type.Intersect([
   EngineParams.GetChannelStateSchema,
@@ -423,6 +430,9 @@ export namespace NodeParams {
   export const GetTransferStateSchema = GetTransferStateParamsSchema;
   export type GetTransferState = Static<typeof GetTransferStateParamsSchema>;
 
+  export const GetTransfersSchema = GetTransfersParamsSchema;
+  export type GetTransfers = Static<typeof GetTransfersParamsSchema>;
+
   export const GetActiveTransfersByChannelAddressSchema = GetActiveTransfersByChannelAddressParamsSchema;
   export type GetActiveTransfersByChannelAddress = Static<typeof GetActiveTransfersByChannelAddressParamsSchema>;
 
@@ -518,6 +528,9 @@ export namespace NodeResponses {
 
   export const GetTransferStateSchema = GetTransferStateResponseSchema;
   export type GetTransferState = Static<typeof GetTransferStateResponseSchema>;
+
+  export const GetTransfersSchema = GetTransfersResponseSchema;
+  export type GetTransfers = Static<typeof GetTransfersResponseSchema>;
 
   export const GetActiveTransfersByChannelAddressSchema = GetActiveTransfersByChannelAddressResponseSchema;
   export type GetActiveTransfersByChannelAddress = Static<

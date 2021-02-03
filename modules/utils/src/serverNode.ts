@@ -8,6 +8,7 @@ import {
   OptionalPublicIdentifier,
   Values,
   NodeError,
+  GetTransfersFilterOpts,
 } from "@connext/vector-types";
 import Ajv from "ajv";
 import Axios from "axios";
@@ -260,6 +261,27 @@ export class RestServerNodeService implements INodeService {
   ): Promise<Result<NodeResponses.GetActiveTransfersByChannelAddress, ServerNodeServiceError>> {
     return this.executeHttpRequest(
       `${params.publicIdentifier ?? this.publicIdentifier}/channels/${params.channelAddress}/active-transfers`,
+      "get",
+      params,
+      NodeParams.GetActiveTransfersByChannelAddressSchema,
+    );
+  }
+
+  async getTransfers(
+    params: OptionalPublicIdentifier<NodeParams.GetTransfers & GetTransfersFilterOpts>,
+  ): Promise<Result<NodeResponses.GetTransfers, ServerNodeServiceError>> {
+    const queryString = [
+      params.active ? `active=${params.active}` : undefined,
+      params.channelAddress ? `channelAddress=${params.channelAddress}` : undefined,
+      params.routingId ? `routingId=${params.routingId}` : undefined,
+      params.startDate ? `startDate=${Date.parse(params.startDate)}` : undefined,
+      params.endDate ? `endDate=${Date.parse(params.endDate)}` : undefined,
+    ]
+      .filter((x) => !!x)
+      .join("&");
+
+    return this.executeHttpRequest(
+      `${params.publicIdentifier ?? this.publicIdentifier}/transfers?${queryString}`,
       "get",
       params,
       NodeParams.GetActiveTransfersByChannelAddressSchema,
