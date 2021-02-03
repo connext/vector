@@ -10,6 +10,9 @@ import {
   FullTransferState,
   UINT_MAX,
   jsonifyError,
+  TransactionEvents,
+  TransactionEvent,
+  TransactionEventsMap,
 } from "@connext/vector-types";
 import {
   bufferify,
@@ -31,6 +34,7 @@ import PriorityQueue from "p-queue";
 import { AddressZero, HashZero } from "@ethersproject/constants";
 import { parseUnits } from "@ethersproject/units";
 import { MerkleTree } from "merkletreejs";
+import { Evt } from "evt";
 
 import { ChannelFactory, VectorChannel } from "../artifacts";
 
@@ -42,6 +46,11 @@ export const EXTRA_GAS = 50_000;
 export class EthereumChainService extends EthereumChainReader implements IVectorChainService {
   private signers: Map<number, Signer> = new Map();
   private queue: PriorityQueue = new PriorityQueue({ concurrency: 1 });
+  private evts: { [eventName in TransactionEvent]: Evt<TransactionEventsMap[eventName]> } = {
+    [TransactionEvents.TRANSACTION_SUBMITTED]: new Evt(),
+    [TransactionEvents.TRANSACTION_MINED]: new Evt(),
+    [TransactionEvents.TRANSACTION_FAILED]: new Evt(),
+  };
   constructor(
     private readonly store: IChainServiceStore,
     chainProviders: { [chainId: string]: JsonRpcProvider },
@@ -586,11 +595,13 @@ export class EthereumChainService extends EthereumChainReader implements IVector
     try {
       const response = await this.queue.add(async () => {
         const response = await txFn();
+
         if (!response) {
           this.log.warn({ channelAddress, reason }, "Did not attempt tx");
           return response;
         }
         await this.store.saveTransactionResponse(channelAddress, reason, response);
+        this.evts[TransactionEvents.TRANSACTION_SUBMITTED].post({ response, channelAddress, reason });
         // Register callbacks for saving tx, then return
         response
           .wait() // TODO: confirmation blocks?
@@ -598,13 +609,16 @@ export class EthereumChainService extends EthereumChainReader implements IVector
             if (receipt.status === 0) {
               this.log.error({ method: "sendTxAndParseResponse", receipt }, "Transaction reverted");
               this.store.saveTransactionFailure(channelAddress, response.hash, "Tx reverted");
+              this.evts[TransactionEvents.TRANSACTION_FAILED].post({ receipt, channelAddress, reason });
             } else {
               this.store.saveTransactionReceipt(channelAddress, receipt);
+              this.evts[TransactionEvents.TRANSACTION_MINED].post({ receipt, channelAddress, reason });
             }
           })
           .catch((e) => {
             this.log.error({ method: "sendTxAndParseResponse", error: jsonifyError(e) }, "Transaction reverted");
             this.store.saveTransactionFailure(channelAddress, response.hash, e.message);
+            this.evts[TransactionEvents.TRANSACTION_FAILED].post({ error: e, channelAddress, reason });
           });
         return response;
       });
