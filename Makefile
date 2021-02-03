@@ -105,7 +105,15 @@ start-test-ui: browser-node
 start-iframe-app: browser-node
 	@bash ops/start-iframe-app.sh
 
+start-metrics: metrics
+	@bash ops/start-duet.sh
+restart-metrics: stop-metrics
+	@bash ops/start-duet.sh
+stop-metrics:
+	@bash ops/stop.sh metrics
+
 stop-all:
+	@bash ops/stop.sh metrics
 	@bash ops/stop.sh trio
 	@bash ops/stop.sh router
 	@bash ops/stop.sh duet
