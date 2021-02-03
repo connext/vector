@@ -16,6 +16,9 @@ import {
   WithdrawalCreatedPayload,
   WithdrawalReconciledPayload,
   WithdrawalResolvedPayload,
+  TransactionSubmittedPayload,
+  TransactionMinedPayload,
+  TransactionFailedPayload,
   HydratedProviders,
   ERC20Abi,
   SetupPayload,
@@ -43,6 +46,9 @@ const restoreStatePath = "/restore-state";
 const withdrawalCreatedPath = "/withdrawal-created";
 const withdrawReconciledPath = "/withdrawal-reconciled";
 const withdrawResolvedPath = "/withdrawal-resolved";
+const transactionSubmittedPath = "/transaction-submitted";
+const transactionMinedPath = "/transaction-mined";
+const transactionFailedPath = "/transaction-failed";
 const evts: EventCallbackConfig = {
   [EngineEvents.IS_ALIVE]: {
     evt: Evt.create<IsAlivePayload>(),
@@ -83,6 +89,18 @@ const evts: EventCallbackConfig = {
   [EngineEvents.WITHDRAWAL_RESOLVED]: {
     evt: Evt.create<WithdrawalResolvedPayload>(),
     url: `${routerBase}${withdrawResolvedPath}`,
+  },
+  [EngineEvents.TRANSACTION_SUBMITTED]: {
+    evt: Evt.create<TransactionSubmittedPayload>(),
+    url: `${routerBase}${transactionSubmittedPath}`,
+  },
+  [EngineEvents.TRANSACTION_MINED]: {
+    evt: Evt.create<TransactionMinedPayload>(),
+    url: `${routerBase}${transactionMinedPath}`,
+  },
+  [EngineEvents.TRANSACTION_FAILED]: {
+    evt: Evt.create<TransactionFailedPayload>(),
+    url: `${routerBase}${transactionFailedPath}`,
   },
 };
 
@@ -238,6 +256,21 @@ server.post(depositReconciledPath, async (request, response) => {
 
 server.post(requestCollateralPath, async (request, response) => {
   evts[EngineEvents.REQUEST_COLLATERAL].evt!.post(request.body as RequestCollateralPayload);
+  return response.status(200).send({ message: "success" });
+});
+
+server.post(transactionSubmittedPath, async (request, response) => {
+  evts[EngineEvents.TRANSACTION_SUBMITTED].evt!.post(request.body as TransactionSubmittedPayload);
+  return response.status(200).send({ message: "success" });
+});
+
+server.post(transactionMinedPath, async (request, response) => {
+  evts[EngineEvents.TRANSACTION_MINED].evt!.post(request.body as TransactionMinedPayload);
+  return response.status(200).send({ message: "success" });
+});
+
+server.post(transactionFailedPath, async (request, response) => {
+  evts[EngineEvents.TRANSACTION_FAILED].evt!.post(request.body as TransactionFailedPayload);
   return response.status(200).send({ message: "success" });
 });
 
