@@ -78,3 +78,7 @@ Content-Type: application/json
     "preImage": "0x0000000000000000000000000000000000000000000000000000000000000000"
   }
 }
+
+##############
+### Get Transfers
+GET {{nodeUrl}}/{{nodePublicIdentifier}}/transfers?
