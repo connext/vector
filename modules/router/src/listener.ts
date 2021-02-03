@@ -30,22 +30,28 @@ export type ChainJsonProviders = {
 
 // Track number of times a payment was forwarded
 const attempts = new Gauge({
-  name: "router_forwarded_payment_attempts",
-  help: "router_forwarded_payment_attempts_help",
+  name: "router_forwarded_attempts",
+  help: "router_forwarded_attempts_help",
   labelNames: ["routingId"] as const,
 });
 
 // Track successful forwards
-const successful = new Gauge({
-  name: "router_successful_forwarded_payments",
-  help: "router_successful_forwarded_payments_help",
+const successfulCreation = new Gauge({
+  name: "router_successful_forwarded_creation",
+  help: "router_successful_forwarded_creation_help",
+  labelNames: ["routingId"] as const,
+});
+
+const successfulResolution = new Gauge({
+  name: "router_successful_forwarded_resolution",
+  help: "router_successful_forwarded_resolution_help",
   labelNames: ["routingId"] as const,
 });
 
 // Track failing forwards
 const failed = new Gauge({
-  name: "router_failed_forwarded_payments",
-  help: "router_failed_forwarded_payments_help",
+  name: "router_failed_forwardeds",
+  help: "router_failed_forwardeds_help",
   labelNames: ["routingId"] as const,
 });
 
@@ -56,8 +62,8 @@ const activeTransfers = new Gauge({
 });
 
 const transferSendTime = new Gauge({
-  name: "router_sent_payments_time",
-  help: "router_sent_payments_time_help",
+  name: "router_sent_time",
+  help: "router_sent_time_help",
   labelNames: ["routingId"] as const,
 });
 
@@ -94,8 +100,8 @@ export async function setupListeners(
     EngineEvents.CONDITIONAL_TRANSFER_CREATED,
     async (data: ConditionalTransferCreatedPayload) => {
       const meta = data.transfer.meta as RouterSchemas.RouterMeta;
-      attempts.labels(meta.routingId).inc(1);
-      const end = transferSendTime.labels(meta.routingId).startTimer();
+      attempts.inc({ routingId: meta.routingId }, 1);
+      const end = transferSendTime.startTimer({ routingId: meta.routingId });
       const res = await forwardTransferCreation(
         data,
         routerPublicIdentifier,
@@ -106,15 +112,15 @@ export async function setupListeners(
         chainReader,
       );
       if (res.isError) {
-        failed.labels(meta.routingId).inc(1);
+        failed.inc({ routingId: meta.routingId }, 1);
         return logger.error(
           { method: "forwardTransferCreation", error: jsonifyError(res.getError()!) },
           "Error forwarding transfer",
         );
       }
       end();
-      successful.labels(meta.routingId).inc(1);
-      activeTransfers.labels(data.channelAddress).set(data.activeTransferIds?.length ?? 0);
+      successfulCreation.inc({ routingId: meta.routingId }, 1);
+      activeTransfers.set({ channelAddress: data.channelAddress }, data.activeTransferIds?.length ?? 0);
       logger.info({ method: "forwardTransferCreation", result: res.getValue() }, "Successfully forwarded transfer");
     },
     (data: ConditionalTransferCreatedPayload) => {
@@ -167,18 +173,21 @@ export async function setupListeners(
         logger,
       );
       if (res.isError) {
+        failed.inc({ routingId: res.getError()?.context?.routingId }, 1);
         return logger.error(
           { method: "forwardTransferResolution", error: jsonifyError(res.getError()!) },
           "Error forwarding resolution",
         );
       }
+      const resolved = res.getValue();
+      successfulResolution.inc({ routingId: resolved?.routingId }, 1);
       logger.info(
-        { event: EngineEvents.CONDITIONAL_TRANSFER_RESOLVED, result: res.getValue() },
+        { event: EngineEvents.CONDITIONAL_TRANSFER_RESOLVED, result: resolved },
         "Successfully forwarded resolution",
       );
 
-      const transferSenderResolutionChannelAddress = res.getValue()?.channelAddress;
-      const transferSenderResolutionAssetId = res.getValue()?.assetId;
+      const transferSenderResolutionChannelAddress = resolved?.channelAddress;
+      const transferSenderResolutionAssetId = resolved?.assetId;
       if (!transferSenderResolutionChannelAddress || !transferSenderResolutionAssetId) {
         logger.warn(
           {
@@ -242,7 +251,7 @@ export async function setupListeners(
         logger.info({ routingId: data.transfer.meta.routingId }, "Nothing to reclaim");
         return false;
       }
-      activeTransfers.labels(data.channelAddress).set(data.activeTransferIds?.length ?? 0);
+      activeTransfers.set({ channelAddress: data.channelAddress }, data.activeTransferIds?.length ?? 0);
 
       return true;
     },
