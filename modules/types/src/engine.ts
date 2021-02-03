@@ -119,7 +119,7 @@ export const EngineEvents = {
   [WITHDRAWAL_CREATED_EVENT]: WITHDRAWAL_CREATED_EVENT,
   [WITHDRAWAL_RESOLVED_EVENT]: WITHDRAWAL_RESOLVED_EVENT,
   [WITHDRAWAL_RECONCILED_EVENT]: WITHDRAWAL_RECONCILED_EVENT,
-  ...TransactionEvents
+  ...TransactionEvents,
 } as const;
 export type EngineEvent = typeof EngineEvents[keyof typeof EngineEvents];
 export interface EngineEventMap extends TransactionEventMap {

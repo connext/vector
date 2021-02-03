@@ -24,15 +24,21 @@ export type ProtocolEventPayloadsMap = {
 ////////////////////////////
 ///// CHAIN SERVICE EVENTS
 export type TransactionSubmittedPayload = {
+  aliceIdentifier: string;
+  bobIdentifier: string;
   response: TransactionResponse;
   reason: TransactionReason;
   channelAddress: string;
 };
 
-export type TransactionMinedPayload = TransactionSubmittedPayload;
+export type TransactionMinedPayload = Omit<TransactionSubmittedPayload, "response"> & {
+  receipt?: TransactionReceipt;
+};
 
 export type TransactionFailedPayload = {
-  receipt?: TransactionReceipt; // successfully mined, failure
+  aliceIdentifier: string;
+  bobIdentifier: string;
+  receipt?: TransactionReceipt;
   reason: TransactionReason;
   channelAddress: string;
   error?: Error; // thrown
@@ -43,6 +49,7 @@ export const TransactionEvents = {
   TRANSACTION_MINED: "TRANSACTION_MINED",
   TRANSACTION_FAILED: "TRANSACTION_FAILED",
 } as const;
+export type TransactionEvent = typeof TransactionEvents[keyof typeof TransactionEvents];
 
 export interface TransactionEventMap {
   [TransactionEvents.TRANSACTION_SUBMITTED]: TransactionSubmittedPayload;

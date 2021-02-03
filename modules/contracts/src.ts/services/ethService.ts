@@ -11,8 +11,8 @@ import {
   UINT_MAX,
   jsonifyError,
   EngineEvents,
-  EngineEvent,
-  EngineEventMap,
+  TransactionEvent,
+  TransactionEventMap,
 } from "@connext/vector-types";
 import {
   bufferify,
@@ -46,7 +46,7 @@ export const EXTRA_GAS = 50_000;
 export class EthereumChainService extends EthereumChainReader implements IVectorChainService {
   private signers: Map<number, Signer> = new Map();
   private queue: PriorityQueue = new PriorityQueue({ concurrency: 1 });
-  private evts: { [eventName in EngineEvent]: Evt<EngineEventMap[eventName]> } = {
+  private evts: { [eventName in TransactionEvent]: Evt<TransactionEventMap[eventName]> } = {
     [EngineEvents.TRANSACTION_SUBMITTED]: new Evt(),
     [EngineEvents.TRANSACTION_MINED]: new Evt(),
     [EngineEvents.TRANSACTION_FAILED]: new Evt(),
@@ -601,7 +601,13 @@ export class EthereumChainService extends EthereumChainReader implements IVector
           return response;
         }
         await this.store.saveTransactionResponse(channelAddress, reason, response);
-        this.evts[EngineEvents.TRANSACTION_SUBMITTED].post({ response, channelAddress, reason });
+        this.evts[EngineEvents.TRANSACTION_SUBMITTED].post({
+          response,
+          channelAddress,
+          reason,
+          aliceIdentifier: "",
+          bobIdentifier: "",
+        });
         // Register callbacks for saving tx, then return
         response
           .wait() // TODO: confirmation blocks?
@@ -609,16 +615,34 @@ export class EthereumChainService extends EthereumChainReader implements IVector
             if (receipt.status === 0) {
               this.log.error({ method: "sendTxAndParseResponse", receipt }, "Transaction reverted");
               this.store.saveTransactionFailure(channelAddress, response.hash, "Tx reverted");
-              this.evts[EngineEvents.TRANSACTION_FAILED].post({ receipt, channelAddress, reason });
+              this.evts[EngineEvents.TRANSACTION_FAILED].post({
+                receipt,
+                channelAddress,
+                reason,
+                aliceIdentifier: "",
+                bobIdentifier: "",
+              });
             } else {
               this.store.saveTransactionReceipt(channelAddress, receipt);
-              this.evts[EngineEvents.TRANSACTION_MINED].post({ receipt, channelAddress, reason });
+              this.evts[EngineEvents.TRANSACTION_MINED].post({
+                receipt,
+                channelAddress,
+                reason,
+                aliceIdentifier: "",
+                bobIdentifier: "",
+              });
             }
           })
           .catch((e) => {
             this.log.error({ method: "sendTxAndParseResponse", error: jsonifyError(e) }, "Transaction reverted");
             this.store.saveTransactionFailure(channelAddress, response.hash, e.message);
-            this.evts[EngineEvents.TRANSACTION_FAILED].post({ error: e, channelAddress, reason });
+            this.evts[EngineEvents.TRANSACTION_FAILED].post({
+              error: e,
+              channelAddress,
+              reason,
+              bobIdentifier: "",
+              aliceIdentifier: "",
+            });
           });
         return response;
       });
