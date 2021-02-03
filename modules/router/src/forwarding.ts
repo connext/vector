@@ -37,7 +37,12 @@ export async function forwardTransferCreation(
   store: IRouterStore,
   logger: BaseLogger,
   chainReader: IVectorChainReader,
-): Promise<Result<any, ForwardTransferCreationError>> {
+): Promise<
+  Result<
+    (NodeResponses.ConditionalTransfer & { recipientAmount: string; recipientAssetId: string }) | undefined,
+    ForwardTransferCreationError
+  >
+> {
   const method = "forwardTransferCreation";
   const methodId = getRandomBytes32();
   logger.info(
@@ -303,7 +308,7 @@ export async function forwardTransferCreation(
     // transfer was either queued or executed
     const value = transferRes.getValue();
     return !!value
-      ? Result.ok(value)
+      ? Result.ok({ ...value, recipientAmount, recipientAssetId })
       : Result.fail(
           new ForwardTransferCreationError(
             ForwardTransferCreationError.reasons.ReceiverOffline,

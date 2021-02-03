@@ -39,7 +39,7 @@ const attempts = new Gauge({
 const successfulCreation = new Gauge({
   name: "router_successful_forwarded_creation",
   help: "router_successful_forwarded_creation_help",
-  labelNames: ["routingId"] as const,
+  labelNames: ["routingId", "recipientAmount", "recipientAssetId"] as const,
 });
 
 const successfulResolution = new Gauge({
@@ -163,9 +163,17 @@ export async function setupListeners(
         );
       }
       end();
-      successfulCreation.inc({ routingId: meta.routingId }, 1);
+      const created = res.getValue();
+      successfulCreation.inc(
+        {
+          routingId: meta.routingId,
+          recipientAmount: created?.recipientAmount,
+          recipientAssetId: created?.recipientAssetId,
+        },
+        1,
+      );
       activeTransfers.set({ channelAddress: data.channelAddress }, data.activeTransferIds?.length ?? 0);
-      logger.info({ method: "forwardTransferCreation", result: res.getValue() }, "Successfully forwarded transfer");
+      logger.info({ method: "forwardTransferCreation", result: created }, "Successfully forwarded transfer");
     },
     (data: ConditionalTransferCreatedPayload) => {
       // Only forward transfers with valid routing metas
