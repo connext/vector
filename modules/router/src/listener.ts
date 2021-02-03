@@ -77,19 +77,19 @@ const openChannels = new Counter({
 const transactionSubmitted = new Counter({
   name: "router_transaction_submitted",
   help: "router_transaction_submitted_help",
-  labelNames: ["hash", "reason", "channelAddress"] as const,
+  labelNames: ["hash", "gasLimit", "gasPrice", "reason", "channelAddress"] as const,
 });
 
 const transactionMined = new Counter({
   name: "router_transaction_mined",
   help: "router_transaction_mined_help",
-  labelNames: ["hash", "reason", "channelAddress"] as const,
+  labelNames: ["hash", "gasUsed", "gasPrice", "reason", "channelAddress"] as const,
 });
 
 const transactionFailed = new Counter({
   name: "router_transaction_failed",
   help: "router_transaction_failed_help",
-  labelNames: ["hash", "reason", "channelAddress", "error"] as const,
+  labelNames: ["hash", "gasUsed", "gasPrice", "reason", "channelAddress", "error"] as const,
 });
 
 export async function setupListeners(
@@ -115,28 +115,41 @@ export async function setupListeners(
   });
 
   nodeService.on(EngineEvents.TRANSACTION_SUBMITTED, async (data) => {
-    transactionSubmitted.inc({
-      hash: data.response.hash,
-      reason: data.reason,
-      channelAddress: data.channelAddress,
-    });
+    transactionSubmitted.inc(
+      {
+        hash: data.response.hash,
+        gasLimit: data.response?.gasLimit.toString(),
+        gasPrice: data.response?.gasPrice.toString(),
+        reason: data.reason,
+        channelAddress: data.channelAddress,
+      },
+      1,
+    );
   });
 
   nodeService.on(EngineEvents.TRANSACTION_MINED, async (data) => {
-    transactionMined.inc({
-      hash: data.receipt?.transactionHash,
-      reason: data.reason,
-      channelAddress: data.channelAddress,
-    });
+    transactionMined.inc(
+      {
+        hash: data.receipt?.transactionHash,
+        gasUsed: data.receipt?.gasUsed.toString(),
+        reason: data.reason,
+        channelAddress: data.channelAddress,
+      },
+      1,
+    );
   });
 
   nodeService.on(EngineEvents.TRANSACTION_FAILED, async (data) => {
-    transactionFailed.inc({
-      hash: data.receipt?.transactionHash,
-      reason: data.reason,
-      channelAddress: data.channelAddress,
-      error: data.error?.message,
-    });
+    transactionFailed.inc(
+      {
+        hash: data.receipt?.transactionHash,
+        gasUsed: data.receipt?.cumulativeGasUsed.toString(),
+        reason: data.reason,
+        channelAddress: data.channelAddress,
+        error: data.error?.message,
+      },
+      1,
+    );
   });
 
   // Set up listener to handle transfer creation
