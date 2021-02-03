@@ -5,6 +5,7 @@ import {
   ConditionalTransferResolvedPayload,
   DepositReconciledPayload,
   EngineEvents,
+  TransactionEvents,
   WithdrawalCreatedPayload,
   WithdrawalReconciledPayload,
   WithdrawalResolvedPayload,
@@ -48,6 +49,9 @@ export const carolEvts = {
     evt: Evt.create<DepositReconciledPayload>(),
     url: `${serverBase}${depositReconciledPath}-carol`,
   },
+  [TransactionEvents.TRANSACTION_SUBMITTED]: {},
+  [TransactionEvents.TRANSACTION_MINED]: {},
+  [TransactionEvents.TRANSACTION_FAILED]: {},
 };
 
 export const daveEvts = {
@@ -79,6 +83,9 @@ export const daveEvts = {
     evt: Evt.create<DepositReconciledPayload>(),
     url: `${serverBase}${depositReconciledPath}-dave`,
   },
+  [TransactionEvents.TRANSACTION_SUBMITTED]: {},
+  [TransactionEvents.TRANSACTION_MINED]: {},
+  [TransactionEvents.TRANSACTION_FAILED]: {},
 };
 
 const server = fastify();
