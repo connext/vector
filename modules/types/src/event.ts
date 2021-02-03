@@ -31,12 +31,12 @@ export const TransactionEvents = {
 export type TransactionEvent = typeof TransactionEvents[keyof typeof TransactionEvents];
 
 export interface TransactionEventsMap {
-  [TransactionEvents.TRANSACTION_MINED]: {
+  [TransactionEvents.TRANSACTION_SUBMITTED]: {
     response: TransactionResponse;
     reason: TransactionReason;
     channelAddress: string;
   };
-  [TransactionEvents.TRANSACTION_SUBMITTED]: {
+  [TransactionEvents.TRANSACTION_MINED]: {
     receipt: TransactionReceipt;
     reason: TransactionReason;
     channelAddress: string;
