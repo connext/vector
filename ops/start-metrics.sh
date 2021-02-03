@@ -23,6 +23,66 @@ common="networks:
 echo
 echo "Preparing to launch $stack stack"
 
+########################################
+## Metrics config
+
+metrics_port="9000"
+metrics_public_port="9009"
+echo "$stack.metrics will be exposed on *:$metrics_public_port"
+
+metrics_image="image: '${project}_builder'
+    entrypoint: 'bash modules/metrics-collector/ops/entry.sh'
+    volumes:
+      - '$root:/root'
+    ports:
+      - '$metrics_public_port:$metrics_port'"
+
+####################
+# Observability tools config
+
+grafana_image="grafana/grafana:latest"
+bash "$root/ops/pull-images.sh" "$grafana_image" > /dev/null
+
+prometheus_image="prom/prometheus:latest"
+bash "$root/ops/pull-images.sh" "$prometheus_image" > /dev/null
+
+cadvisor_image="gcr.io/google-containers/cadvisor:latest"
+bash "$root/ops/pull-images.sh" "$cadvisor_image" > /dev/null
+
+prometheus_services="prometheus:
+    image: $prometheus_image
+    $common
+    ports:
+      - 9090:9090
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+    volumes:
+      - $root/ops/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+  cadvisor:
+    $common
+    image: $cadvisor_image
+    ports:
+      - 9081:9080
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:rw
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro"
+
+grafana_service="grafana:
+    image: '$grafana_image'
+    $common
+    networks:
+      - '$project'
+    ports:
+      - '3010:3000'
+    volumes:
+      - '$root/ops/grafana/grafana:/etc/grafana'
+      - '$root/ops/grafana/dashboards:/etc/dashboards'"
+
+observability_services="$prometheus_services
+  $grafana_service"
+
 ####################
 # Launch stack
 
@@ -42,38 +102,25 @@ services:
 
   metrics:
     $common
-    image: '$proxy_image'
-    $proxy_ports
-    environment:
-      VECTOR_DOMAINNAME: '$domain_name'
-      VECTOR_AUTH_URL: 'auth:$auth_port'
-      VECTOR_NATS_HOST: 'nats'
-    volumes:
-      - 'certs:/etc/letsencrypt'
+    $metrics_image
+
+  $observability_services
 
 EOF
 
 docker stack deploy -c "$docker_compose" "$stack"
-echo "The $stack stack has been deployed, waiting for $public_url to wake up.."
-
-timeout=$(( $(date +%s) + 300 ))
-while [[ "$(curl -k -m 5 -s "$public_url" || true)" != "pong"* ]]
+echo "The $stack stack has been deployed, waiting for $public_url to start responding.."
+timeout=$(( $(date +%s) + 60 ))
+while true
 do
-  if [[ "$(date +%s)" -gt "$timeout" ]]
+  res=$(curl -k -m 5 -s "$public_url" || true)
+  if [[ -z "$res" || "$res" == "Waiting for router to wake up" ]]
   then
-    echo "====="
-    docker service ls
-    echo "====="
-    docker container ls -a
-    echo "====="
-    docker service ps messaging_auth || true
-    docker service logs --tail 50 --raw messaging_auth || true
-    echo "====="
-    curl "$public_url" || true
-    echo "====="
-    echo "Timed out waiting for $stack stack to wake up."
-    exit 1
-  else sleep 1
+    if [[ "$(date +%s)" -gt "$timeout" ]]
+    then echo "Timed out waiting for $public_url to respond.." && exit
+    else sleep 2
+    fi
+  else echo "Good Morning!" && exit;
   fi
 done
-echo "Good Morning!"
+
