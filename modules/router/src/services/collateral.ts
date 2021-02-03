@@ -24,8 +24,8 @@ const attemptDepositTransaction = new Gauge({
 });
 
 const submittedDepositTransaction = new Gauge({
-  name: "router_deposit_transaction_success",
-  help: "router_deposit_transaction_success_help",
+  name: "router_deposit_transaction_submit",
+  help: "router_deposit_transaction_submit_help",
   labelNames: ["methodId", "txHash"] as const,
 });
 
