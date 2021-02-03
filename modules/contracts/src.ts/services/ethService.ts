@@ -533,6 +533,45 @@ export class EthereumChainService extends EthereumChainReader implements IVector
     }
   }
 
+  ////////////////////////////
+  /// CHAIN SERVICE EVENTS
+  public on<T extends TransactionEvent>(
+    event: T,
+    callback: (payload: TransactionEventMap[T]) => void | Promise<void>,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    filter: (payload: TransactionEventMap[T]) => boolean = (_payload) => true,
+  ): void {
+    (this.evts[event].pipe(filter) as Evt<TransactionEventMap[T]>).attach(callback);
+  }
+
+  public once<T extends TransactionEvent>(
+    event: T,
+    callback: (payload: TransactionEventMap[T]) => void | Promise<void>,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    filter: (payload: TransactionEventMap[T]) => boolean = (_payload) => true,
+  ): void {
+    (this.evts[event].pipe(filter) as Evt<TransactionEventMap[T]>).attachOnce(callback);
+  }
+
+  public off<T extends TransactionEvent>(event?: T): void {
+    if (event) {
+      this.evts[event].detach();
+      return;
+    }
+    Object.values(this.evts).forEach((evt) => evt.detach());
+  }
+
+  public waitFor<T extends TransactionEvent>(
+    event: T,
+    timeout: number,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    filter: (payload: TransactionEventMap[T]) => boolean = (_payload) => true,
+  ): Promise<TransactionEventMap[T]> {
+    return this.evts[event].pipe(filter).waitFor(timeout) as Promise<TransactionEventMap[T]>;
+  }
+
+  ////////////////////////////
+  /// PRIVATE METHODS
   private async sendTxWithRetries(
     channelAddress: string,
     reason: TransactionReason,

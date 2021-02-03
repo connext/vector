@@ -25,14 +25,14 @@ import {
 } from "@connext/vector-types";
 import { collectDefaultMetrics, Gauge, register } from "prom-client";
 import { Wallet } from "ethers";
+import { AddressZero } from "@ethersproject/constants";
+import { formatEther, formatUnits } from "@ethersproject/units";
+import { Contract } from "@ethersproject/contracts";
 
 import { config } from "./config";
 import { IRouter, Router } from "./router";
 import { PrismaStore } from "./services/store";
 import { NatsRouterMessagingService } from "./services/messaging";
-import { AddressZero } from "@ethersproject/constants";
-import { formatEther, formatUnits } from "@ethersproject/units";
-import { Contract } from "@ethersproject/contracts";
 
 const routerPort = 8000;
 const routerBase = `http://router:${routerPort}`;

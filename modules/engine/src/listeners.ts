@@ -355,6 +355,20 @@ export async function setupEngineListeners(
       res.isError ? Result.fail(res.getError()!) : Result.ok({ channelAddress: res.getValue().channelAddress }),
     );
   });
+
+  ////////////////////////////
+  /// CHAIN SERVICE EVENTS
+  chainService.on(EngineEvents.TRANSACTION_SUBMITTED, (data) => {
+    evts[EngineEvents.TRANSACTION_SUBMITTED].post(data);
+  });
+
+  chainService.on(EngineEvents.TRANSACTION_MINED, (data) => {
+    evts[EngineEvents.TRANSACTION_MINED].post(data);
+  });
+
+  chainService.on(EngineEvents.TRANSACTION_FAILED, (data) => {
+    evts[EngineEvents.TRANSACTION_FAILED].post(data);
+  });
 }
 
 export async function resolveExistingWithdrawals(
