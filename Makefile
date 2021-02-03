@@ -106,9 +106,9 @@ start-iframe-app: browser-node
 	@bash ops/start-iframe-app.sh
 
 start-metrics: metrics
-	@bash ops/start-duet.sh
+	@bash ops/start-metrics.sh
 restart-metrics: stop-metrics
-	@bash ops/start-duet.sh
+	@bash ops/start-metrics.sh
 stop-metrics:
 	@bash ops/stop.sh metrics
 
@@ -387,6 +387,21 @@ test-runner-img: test-runner-bundle $(shell find modules/test-runner/ops $(find_
 	$(log_start)
 	docker build --file modules/test-runner/ops/Dockerfile $(image_cache) --tag $(project)_test_runner modules/test-runner
 	docker tag $(project)_test_runner $(project)_test_runner:$(commit)
+	$(log_finish) && mv -f $(totalTime) .flags/$@
+
+metrics: metrics-img
+metrics-js: utils $(shell find modules/metrics-collector/src $(find_options))
+	$(log_start)
+	$(docker_run) "cd modules/metrics-collector && npm run build && touch src/index.ts"
+	$(log_finish) && mv -f $(totalTime) .flags/$@
+metrics-bundle: utils $(shell find modules/metrics-collector/src $(find_options))
+	$(log_start)
+	$(docker_run) "cd modules/metrics-collector && npm run build-bundle"
+	$(log_finish) && mv -f $(totalTime) .flags/$@
+metrics-img: metrics-bundle $(shell find modules/metrics-collector/ops $(find_options))
+	$(log_start)
+	docker build --file modules/metrics-collector/ops/Dockerfile $(image_cache) --tag $(project)_node modules/metrics-collector
+	docker tag $(project)_node $(project)_node:$(commit)
 	$(log_finish) && mv -f $(totalTime) .flags/$@
 
 ########################################
