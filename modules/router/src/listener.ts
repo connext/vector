@@ -73,6 +73,25 @@ const openChannels = new Counter({
   labelNames: ["channelAddress", "chainId", "aliceIdentifier", "bobIdentifier"] as const,
 });
 
+// Track onChain transactions
+const transactionSubmitted = new Counter({
+  name: "router_transaction_submitted",
+  help: "router_transaction_submitted_help",
+  labelNames: ["response", "reason", "channelAddress"] as const,
+});
+
+const transactionMined = new Counter({
+  name: "router_transaction_mined",
+  help: "router_transaction_mined_help",
+  labelNames: ["response", "reason", "channelAddress"] as const,
+});
+
+const transactionFailed = new Counter({
+  name: "router_transaction_failed",
+  help: "router_transaction_failed_help",
+  labelNames: ["receipt", "reason", "channelAddress", "error"] as const,
+});
+
 export async function setupListeners(
   routerPublicIdentifier: string,
   routerSignerAddress: string,
@@ -92,6 +111,31 @@ export async function setupListeners(
       chainId: data.chainId,
       aliceIdentifier: data.aliceIdentifier,
       bobIdentifier: data.bobIdentifier,
+    });
+  });
+
+  nodeService.on(EngineEvents.TRANSACTION_SUBMITTED, async (data) => {
+    transactionSubmitted.inc({
+      response: data.response,
+      reason: data.reason,
+      channelAddress: data.channelAddress,
+    });
+  });
+
+  nodeService.on(EngineEvents.TRANSACTION_MINED, async (data) => {
+    transactionMined.inc({
+      response: data.response,
+      reason: data.reason,
+      channelAddress: data.channelAddress,
+    });
+  });
+
+  nodeService.on(EngineEvents.TRANSACTION_FAILED, async (data) => {
+    transactionFailed.inc({
+      receipt: data.receipt,
+      reason: data.reason,
+      channelAddress: data.channelAddress,
+      error: data.error,
     });
   });
 
