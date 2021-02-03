@@ -19,6 +19,7 @@ import {
   HydratedProviders,
   ERC20Abi,
   SetupPayload,
+  jsonifyError
 } from "@connext/vector-types";
 import { collectDefaultMetrics, Gauge, Registry } from "prom-client";
 import { Wallet } from "ethers";
@@ -97,6 +98,11 @@ collectDefaultMetrics({ register, prefix: "router_" });
 
 let router: IRouter;
 const store = new PrismaStore();
+const messagingService = new NatsRouterMessagingService({
+  signer,
+  logger: logger.child({ module: "NatsRouterMessagingService" }),
+  messagingUrl: config.messagingUrl,
+});
 
 const hydrated: HydratedProviders = hydrateProviders(config.chainProviders);
 
@@ -153,11 +159,6 @@ new Gauge({
 });
 
 server.addHook("onReady", async () => {
-  const messagingService = new NatsRouterMessagingService({
-    signer,
-    logger: logger.child({ module: "NatsRouterMessagingService" }),
-    messagingUrl: config.messagingUrl,
-  });
   const nodeService = await RestServerNodeService.connect(
     config.nodeUrl,
     logger.child({ module: "RouterNodeService" }),
@@ -191,6 +192,11 @@ server.get("/ping", async () => {
 // https://github.com/SkeLLLa/fastify-metrics/issues/21
 server.get("/metrics", async (request, response) => {
   const res = await register.metrics();
+  try {
+    await messagingService.publishMetrics(signer.publicIdentifier, res);
+  } catch(e) {
+    logger.error({ error: jsonifyError(e) }, "Publish metrics failed.")
+  }
   return response.status(200).send(res);
 });
 

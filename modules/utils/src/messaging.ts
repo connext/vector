@@ -15,6 +15,7 @@ import {
   RouterConfigResponse,
   IBasicMessaging,
   RouterError,
+  IMetricsMessaging
 } from "@connext/vector-types";
 import axios, { AxiosResponse } from "axios";
 import pino, { BaseLogger } from "pino";
@@ -217,6 +218,29 @@ export class NatsBasicMessagingService implements IBasicMessaging {
   protected async respondToMessage<T = any>(inbox: string, response: Result<T, Error>, method: string): Promise<void> {
     this.log.debug({ method, inbox }, `Sending response`);
     await this.publish(inbox, response.toJson());
+  }
+
+  protected async registerSubscriptionCallback<T = any>(
+    subscriptionSubject: string,
+    callback: (msg: string) => void,
+    method: string
+  ): Promise<void> {
+    await this.subscribe(subscriptionSubject, (msg, err) => {
+      this.log.debug({ method, msg }, "Received message");
+      const from = msg.subject.split(".")[1];
+      if (err) {
+        callback(msg.reply);
+        return;
+      }
+      const { result, parsed } = this.parseIncomingMessage<T>(msg);
+      if (!parsed.reply) {
+        return;
+      }
+
+      callback(msg.reply);
+      return;
+    });
+    this.log.debug({ method, subject: subscriptionSubject }, `Subscription created`);
   }
 
   protected async registerCallback<T = any>(
@@ -546,4 +570,27 @@ export class NatsMessagingService extends NatsBasicMessagingService implements I
     );
   }
   ////////////
+}
+
+export class NatsMetricsMessagingService extends NatsBasicMessagingService implements IMetricsMessaging {
+  private logger: BaseLogger;
+
+  constructor(private readonly config: MessagingConfig) {
+    super(config);
+    this.logger = config.logger ?? pino();
+  }
+
+  async publishMetrics(myPublicIdentifier: string, msg: string) {
+    return this.publish("*.router.metrics", msg);
+  }
+
+  async subscribeMetrics(callback: (msg: string) => Promise<void>) {
+    // TODO: Map callbacks to subscriber IDs.
+    return this.registerSubscriptionCallback("*.router.metrics", callback, "subscribeMetrics");
+  }
+
+  async unsubscribeMetrics() {
+    return this.unsubscribe("*.router.metrics");
+  }
+
 }

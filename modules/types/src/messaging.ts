@@ -159,3 +159,14 @@ export interface IMessagingService extends IBasicMessaging {
     numRetries?: number,
   ): Promise<Result<RouterConfigResponse, RouterError | MessagingError>>;
 }
+
+export interface IMetricsMessaging extends IBasicMessaging {
+  publishMetrics(
+    myPublicIdentifier: string,
+    msg: string
+  ): Promise<void>;
+  subscribeMetrics(
+    callback: (msg: string) => Promise<void>
+  ): Promise<void>;
+  unsubscribeMetrics(): Promise<void>;
+}

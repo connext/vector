@@ -1,5 +1,5 @@
 import { RouterConfigResponse, IBasicMessaging, Result, RouterError, MessagingError } from "@connext/vector-types";
-import { NatsBasicMessagingService, MessagingConfig } from "@connext/vector-utils";
+import { NatsMetricsMessagingService, MessagingConfig } from "@connext/vector-utils";
 import pino, { BaseLogger } from "pino";
 export interface IRouterMessagingService extends IBasicMessaging {
   // Specialized request/response methods
@@ -13,11 +13,11 @@ export interface IRouterMessagingService extends IBasicMessaging {
   ): Promise<void>;
 }
 
-export class NatsRouterMessagingService extends NatsBasicMessagingService implements IRouterMessagingService {
-  private logger: BaseLogger;
-  constructor(private readonly config: MessagingConfig) {
+export class NatsRouterMessagingService extends NatsMetricsMessagingService implements IRouterMessagingService {
+  private routerLogger: BaseLogger;
+  constructor(config: MessagingConfig) {
     super(config);
-    this.logger = config.logger ?? pino();
+    this.routerLogger = config.logger ?? pino();
   }
 
   // Config messages

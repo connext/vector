@@ -23,6 +23,48 @@ common="networks:
 echo
 echo "Preparing to launch $stack stack"
 
+####################
+# Load config
+
+if [[ ! -f "$root/metrics.config.json" ]]
+then cp "$root/ops/config/metrics.default.json" "$root/metrics.config.json"
+fi
+
+config=$(
+  cat "$root/ops/config/metrics.default.json" \
+  | cat - "$root/metrics.config.json" \
+  | jq -s '.[0] + .[1] + .[2] + .[3]'
+)
+
+function getConfig {
+  value=$(echo "$config" | jq ".$1" | tr -d '"')
+  if [[ "$value" == "null" ]]
+  then echo ""
+  else echo "$value"
+  fi
+}
+
+admin_token=$(getConfig adminToken)
+messaging_url=$(getConfig messagingUrl)
+
+common="networks:
+      - '$project'
+    logging:
+      driver: 'json-file'
+      options:
+          max-size: '10m'"
+
+####################
+# Start up dependency stacks
+
+if [[ -z "$messaging_url" ]]
+then bash "$root/ops/start-messaging.sh"
+fi
+
+echo
+echo "Preparing to launch $stack stack w config:"
+echo " - messaging_url=$messaging_url"
+
 ########################################
 ## Metrics config
 
@@ -104,6 +146,7 @@ services:
     $common
     $metrics_image
     environment:
+      VECTOR_CONFIG: '$(echo "$config" | tr -d '\n\r')'
 
   $observability_services
 
