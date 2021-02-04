@@ -11,6 +11,7 @@ import {
   FullTransferState,
 } from "@connext/vector-types";
 import { ChannelCredentials } from "@grpc/grpc-js";
+import { UnaryCall } from "@protobuf-ts/runtime-rpc";
 import { GrpcTransport } from "@protobuf-ts/grpc-transport";
 import { BaseLogger } from "pino";
 import * as grpc from "@grpc/grpc-js";
@@ -251,7 +252,7 @@ export class GRPCServerNodeClient implements INodeClient {
       const res = await this.validateAndExecuteGrpcRequest<
         OptionalPublicIdentifier<GrpcTypes.TransferRequest>,
         GrpcTypes.FullTransferState
-      >("getTransfer", params);
+      >("getTransferState", params);
       return Result.ok(convertTransfer(res));
     } catch (e) {
       return Result.fail(e);
@@ -438,14 +439,29 @@ export class GRPCServerNodeClient implements INodeClient {
   }
 
   // Helper methods
-  private async validateAndExecuteGrpcRequest<T, U>(methodName: string, params: T): Promise<U> {
+  // eslint-disable-next-line @typescript-eslint/ban-types
+  private async validateAndExecuteGrpcRequest<T extends object, U extends object>(
+    methodName: string,
+    params: T,
+  ): Promise<U> {
     const filled = { publicIdentifier: this.publicIdentifier, ...params };
 
     // Attempt request
     try {
-      const call = await this.client[methodName](filled);
-      this.logger.debug({ call, methodName, filled }, "gRPC call complete");
-      if (call.status !== grpc.status.OK) {
+      if (typeof this.client[methodName] !== "function") {
+        throw new ServerNodeServiceError(
+          ServerNodeServiceError.reasons.InternalServerError,
+          filled.publicIdentifier,
+          methodName,
+          params,
+          {
+            message: "Method does not exist",
+          },
+        );
+      }
+      const call = await (this.client[methodName](filled) as UnaryCall<T, U>);
+      this.logger.debug({ callStatus: call.status, methodName, filled }, "gRPC call complete");
+      if (call.status.code !== "OK") {
         throw new ServerNodeServiceError(
           ServerNodeServiceError.reasons.InternalServerError,
           filled.publicIdentifier,

@@ -1,5 +1,5 @@
 import { VectorEngine } from "@connext/vector-engine";
-import { EngineEvents, IVectorEngine, NodeResponses, EngineEvent } from "@connext/vector-types";
+import { EngineEvents, IVectorEngine, NodeResponses, EngineEvent, FullTransferState } from "@connext/vector-types";
 import {
   createTestFullHashlockTransferState,
   expect,
@@ -17,7 +17,6 @@ import { createStubInstance, SinonStubbedInstance, stub } from "sinon";
 import * as nodeUtils from "./helpers/nodes";
 import { config } from "./config";
 import { evts, setupServer } from "./grpcServer";
-import { FullTransferState } from "@connext/vector-types/dist/src/grpc";
 
 describe("GRPC server", () => {
   const { log: logger } = getTestLoggers("messaging", (config.logLevel ?? "fatal") as pino.Level);

@@ -11,6 +11,7 @@ import {
   EngineEvents,
   EngineEvent,
   EngineEventMap,
+  FullTransferState,
 } from "@connext/vector-types";
 import { constructRpcRequest } from "@connext/vector-utils";
 import { Evt } from "evt";
@@ -21,6 +22,15 @@ import { ServerNodeError } from "./helpers/errors";
 import { logger, store } from ".";
 
 const DEFAULT_PORT = 5000;
+
+const convertTransfer = (transfer: FullTransferState): GrpcTypes.FullTransferState => {
+  return {
+    ...transfer,
+    transferState: GrpcTypes.Struct.fromJson(transfer.transferState),
+    meta: transfer.meta ? GrpcTypes.Struct.fromJson(transfer.meta) : undefined,
+    transferResolver: transfer.transferResolver ? GrpcTypes.Struct.fromJson(transfer.transferResolver) : undefined,
+  };
+};
 
 // export so test can control it
 export const evts: { [eventName in EngineEvent]: Evt<EngineEventMap[eventName]> } = {
@@ -116,7 +126,8 @@ const vectorService: GrpcTypes.IServerNodeService = {
       });
       const res = await engine.request<"chan_getTransferState">(params);
 
-      callback(null, res);
+      const safeTransferState = res ? convertTransfer(res) : undefined;
+      callback(null, safeTransferState);
     } catch (e) {
       logger.error({ error: jsonifyError(e) });
       callback({ code: grpc.status.UNKNOWN, details: JSON.stringify(e) });
@@ -185,15 +196,7 @@ const vectorService: GrpcTypes.IServerNodeService = {
     call: grpc.ServerWritableStream<GrpcTypes.Empty, GrpcTypes.ConditionalTransferCreatedPayload>,
   ) => {
     evts.CONDITIONAL_TRANSFER_CREATED.attach((data) => {
-      console.log("conditionalTransferCreatedStream ====> data: ", data);
-      const safeTransferState = {
-        ...data.transfer,
-        transferState: GrpcTypes.Struct.fromJson(data.transfer.transferState),
-        meta: data.transfer.meta ? GrpcTypes.Struct.fromJson(data.transfer.meta) : undefined,
-        transferResolver: data.transfer.transferResolver
-          ? GrpcTypes.Struct.fromJson(data.transfer.transferResolver)
-          : undefined,
-      };
+      const safeTransferState = convertTransfer(data.transfer);
       call.write({
         ...data,
         transfer: safeTransferState,
@@ -206,14 +209,7 @@ const vectorService: GrpcTypes.IServerNodeService = {
     call: grpc.ServerWritableStream<GrpcTypes.Empty, GrpcTypes.ConditionalTransferCreatedPayload>,
   ) => {
     evts.CONDITIONAL_TRANSFER_RESOLVED.attach((data) => {
-      const safeTransferState = {
-        ...data.transfer,
-        transferState: GrpcTypes.Struct.fromJson(data.transfer.transferState),
-        meta: data.transfer.meta ? GrpcTypes.Struct.fromJson(data.transfer.meta) : undefined,
-        transferResolver: data.transfer.transferResolver
-          ? GrpcTypes.Struct.fromJson(data.transfer.transferResolver)
-          : undefined,
-      };
+      const safeTransferState = convertTransfer(data.transfer);
       call.write({
         ...data,
         transfer: safeTransferState,
@@ -254,14 +250,7 @@ const vectorService: GrpcTypes.IServerNodeService = {
 
   withdrawalCreatedStream: (call: grpc.ServerWritableStream<GrpcTypes.Empty, GrpcTypes.WithdrawalCreatedPayload>) => {
     evts.WITHDRAWAL_CREATED.attach((data) => {
-      const safeTransferState = {
-        ...data.transfer,
-        transferState: GrpcTypes.Struct.fromJson(data.transfer.transferState),
-        meta: data.transfer.meta ? GrpcTypes.Struct.fromJson(data.transfer.meta) : undefined,
-        transferResolver: data.transfer.transferResolver
-          ? GrpcTypes.Struct.fromJson(data.transfer.transferResolver)
-          : undefined,
-      };
+      const safeTransferState = convertTransfer(data.transfer);
       call.write({
         ...data,
         transfer: safeTransferState,
@@ -280,14 +269,7 @@ const vectorService: GrpcTypes.IServerNodeService = {
 
   withdrawalResolvedStream: (call: grpc.ServerWritableStream<GrpcTypes.Empty, GrpcTypes.WithdrawalCreatedPayload>) => {
     evts.WITHDRAWAL_RESOLVED.attach((data) => {
-      const safeTransferState = {
-        ...data.transfer,
-        transferState: GrpcTypes.Struct.fromJson(data.transfer.transferState),
-        meta: data.transfer.meta ? GrpcTypes.Struct.fromJson(data.transfer.meta) : undefined,
-        transferResolver: data.transfer.transferResolver
-          ? GrpcTypes.Struct.fromJson(data.transfer.transferResolver)
-          : undefined,
-      };
+      const safeTransferState = convertTransfer(data.transfer);
       call.write({
         ...data,
         transfer: safeTransferState,
