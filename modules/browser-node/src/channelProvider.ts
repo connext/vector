@@ -7,6 +7,7 @@ import {
   EngineEventMap,
   IVectorEngine,
   EngineParams,
+  VectorError,
 } from "@connext/vector-types";
 import { constructRpcRequest, safeJsonParse } from "@connext/vector-utils";
 
@@ -100,7 +101,7 @@ export class IframeChannelProvider extends EventEmitter<string> implements IRpcC
     return new Promise((resolve, reject) => {
       this.events.once(`${rpc.id}`, (response) => {
         if (response?.error?.message) {
-          return reject(new Error(response.error.message));
+          return reject(VectorError.fromJson(response.error));
         } else {
           return resolve(response?.result);
         }
