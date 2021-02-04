@@ -1,11 +1,10 @@
 import { Static, Type } from "@sinclair/typebox";
 
-import { TBytes32 } from "../schemas";
-
 import {
   TAddress,
   TBalance,
   TBasicMeta,
+  TBytes32,
   TIntegerString,
   TNetworkContext,
   TPublicIdentifier,
