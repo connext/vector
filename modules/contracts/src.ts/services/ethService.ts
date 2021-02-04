@@ -538,8 +538,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
   public on<T extends TransactionEvent>(
     event: T,
     callback: (payload: TransactionEventMap[T]) => void | Promise<void>,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    filter: (payload: TransactionEventMap[T]) => boolean = (_payload) => true,
+    filter: (payload: TransactionEventMap[T]) => boolean = () => true,
   ): void {
     (this.evts[event].pipe(filter) as Evt<TransactionEventMap[T]>).attach(callback);
   }
@@ -547,8 +546,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
   public once<T extends TransactionEvent>(
     event: T,
     callback: (payload: TransactionEventMap[T]) => void | Promise<void>,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    filter: (payload: TransactionEventMap[T]) => boolean = (_payload) => true,
+    filter: (payload: TransactionEventMap[T]) => boolean = () => true,
   ): void {
     (this.evts[event].pipe(filter) as Evt<TransactionEventMap[T]>).attachOnce(callback);
   }
@@ -564,8 +562,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
   public waitFor<T extends TransactionEvent>(
     event: T,
     timeout: number,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    filter: (payload: TransactionEventMap[T]) => boolean = (_payload) => true,
+    filter: (payload: TransactionEventMap[T]) => boolean = () => true,
   ): Promise<TransactionEventMap[T]> {
     return this.evts[event].pipe(filter).waitFor(timeout) as Promise<TransactionEventMap[T]>;
   }
