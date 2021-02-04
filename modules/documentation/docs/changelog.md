@@ -2,6 +2,10 @@
 
 ## Next Release
 
+## 0.1.15-beta.4
+
+- \[iframe\] Improve error parsing
+
 ## 0.1.15-beta.3
 
 - \[node\] Expose `getTransfers` method.

@@ -1,5 +1,5 @@
 import { BrowserNode } from "@connext/vector-browser-node";
-import { ChannelRpcMethod, ChannelRpcMethodsResponsesMap, EngineParams } from "@connext/vector-types";
+import { ChannelRpcMethod, ChannelRpcMethodsResponsesMap, EngineParams, jsonifyError } from "@connext/vector-types";
 import { ChannelSigner, constructRpcRequest, safeJsonParse } from "@connext/vector-utils";
 import { hexlify } from "@ethersproject/bytes";
 import { entropyToMnemonic } from "@ethersproject/hdnode";
@@ -70,8 +70,8 @@ export default class ConnextManager {
       const result = await this.handleRequest(request);
       response = { id: request.id, result };
     } catch (e) {
-      console.error(e);
-      response = { id: request.id, error: { message: e.message } };
+      console.error(jsonifyError(e));
+      response = { id: request.id, error: jsonifyError(e) };
     }
     window.parent.postMessage(JSON.stringify(response), this.parentOrigin);
   }
