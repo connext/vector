@@ -359,15 +359,15 @@ export async function setupEngineListeners(
   ////////////////////////////
   /// CHAIN SERVICE EVENTS
   chainService.on(EngineEvents.TRANSACTION_SUBMITTED, (data) => {
-    evts[EngineEvents.TRANSACTION_SUBMITTED].post(data);
+    evts[EngineEvents.TRANSACTION_SUBMITTED].post({ ...data, publicIdentifier: signer.publicIdentifier });
   });
 
   chainService.on(EngineEvents.TRANSACTION_MINED, (data) => {
-    evts[EngineEvents.TRANSACTION_MINED].post(data);
+    evts[EngineEvents.TRANSACTION_MINED].post({ ...data, publicIdentifier: signer.publicIdentifier });
   });
 
   chainService.on(EngineEvents.TRANSACTION_FAILED, (data) => {
-    evts[EngineEvents.TRANSACTION_FAILED].post(data);
+    evts[EngineEvents.TRANSACTION_FAILED].post({ ...data, publicIdentifier: signer.publicIdentifier });
   });
 }
 

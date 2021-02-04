@@ -31,8 +31,8 @@ export const getEngineEvtContainer = (): EngineEvtContainer => {
     [EngineEvents.WITHDRAWAL_CREATED]: Evt.create<WithdrawalCreatedPayload>(),
     [EngineEvents.WITHDRAWAL_RESOLVED]: Evt.create<WithdrawalResolvedPayload>(),
     [EngineEvents.WITHDRAWAL_RECONCILED]: Evt.create<WithdrawalReconciledPayload>(),
-    [TransactionEvents.TRANSACTION_SUBMITTED]: Evt.create<TransactionSubmittedPayload>(),
-    [TransactionEvents.TRANSACTION_MINED]: Evt.create<TransactionMinedPayload>(),
-    [TransactionEvents.TRANSACTION_FAILED]: Evt.create<TransactionFailedPayload>(),
+    [TransactionEvents.TRANSACTION_SUBMITTED]: Evt.create<TransactionSubmittedPayload & { publicIdentifier: string }>(),
+    [TransactionEvents.TRANSACTION_MINED]: Evt.create<TransactionMinedPayload & { publicIdentifier: string }>(),
+    [TransactionEvents.TRANSACTION_FAILED]: Evt.create<TransactionFailedPayload & { publicIdentifier: string }>(),
   };
 };

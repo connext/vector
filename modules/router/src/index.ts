@@ -91,15 +91,15 @@ const evts: EventCallbackConfig = {
     url: `${routerBase}${withdrawResolvedPath}`,
   },
   [EngineEvents.TRANSACTION_SUBMITTED]: {
-    evt: Evt.create<TransactionSubmittedPayload>(),
+    evt: Evt.create<TransactionSubmittedPayload & { publicIdentifier: string }>(),
     url: `${routerBase}${transactionSubmittedPath}`,
   },
   [EngineEvents.TRANSACTION_MINED]: {
-    evt: Evt.create<TransactionMinedPayload>(),
+    evt: Evt.create<TransactionMinedPayload & { publicIdentifier: string }>(),
     url: `${routerBase}${transactionMinedPath}`,
   },
   [EngineEvents.TRANSACTION_FAILED]: {
-    evt: Evt.create<TransactionFailedPayload>(),
+    evt: Evt.create<TransactionFailedPayload & { publicIdentifier: string }>(),
     url: `${routerBase}${transactionFailedPath}`,
   },
 };
@@ -260,18 +260,23 @@ server.post(requestCollateralPath, async (request, response) => {
 });
 
 server.post(transactionSubmittedPath, async (request, response) => {
-  console.log("***** router got event to submitted path", request.body)
-  evts[EngineEvents.TRANSACTION_SUBMITTED].evt!.post(request.body as TransactionSubmittedPayload);
+  evts[EngineEvents.TRANSACTION_SUBMITTED].evt!.post(
+    request.body as TransactionSubmittedPayload & { publicIdentifier: string },
+  );
   return response.status(200).send({ message: "success" });
 });
 
 server.post(transactionMinedPath, async (request, response) => {
-  evts[EngineEvents.TRANSACTION_MINED].evt!.post(request.body as TransactionMinedPayload);
+  evts[EngineEvents.TRANSACTION_MINED].evt!.post(
+    request.body as TransactionMinedPayload & { publicIdentifier: string },
+  );
   return response.status(200).send({ message: "success" });
 });
 
 server.post(transactionFailedPath, async (request, response) => {
-  evts[EngineEvents.TRANSACTION_FAILED].evt!.post(request.body as TransactionFailedPayload);
+  evts[EngineEvents.TRANSACTION_FAILED].evt!.post(
+    request.body as TransactionFailedPayload & { publicIdentifier: string },
+  );
   return response.status(200).send({ message: "success" });
 });
 

@@ -3,7 +3,7 @@ import { Balance, FullTransferState } from "./channel";
 import { EngineParams } from "./schemas";
 import { TransferName } from "./transferDefinitions";
 import { ChannelRpcMethod, ChannelRpcMethodsResponsesMap } from "./vectorProvider";
-import { TransactionEventMap, TransactionEvents } from "./event";
+import { TransactionEvent, TransactionEventMap, TransactionEvents } from "./event";
 
 ///////////////////////////////////
 ////// Engine transfer types
@@ -134,6 +134,16 @@ export interface EngineEventMap extends TransactionEventMap {
   [WITHDRAWAL_CREATED_EVENT]: WithdrawalCreatedPayload;
   [WITHDRAWAL_RESOLVED_EVENT]: WithdrawalResolvedPayload;
   [WITHDRAWAL_RECONCILED_EVENT]: WithdrawalReconciledPayload;
+  // Add public identifiers to transaction events
+  [TransactionEvents.TRANSACTION_SUBMITTED]: TransactionEventMap[typeof TransactionEvents.TRANSACTION_SUBMITTED] & {
+    publicIdentifier: string;
+  };
+  [TransactionEvents.TRANSACTION_MINED]: TransactionEventMap[typeof TransactionEvents.TRANSACTION_MINED] & {
+    publicIdentifier: string;
+  };
+  [TransactionEvents.TRANSACTION_FAILED]: TransactionEventMap[typeof TransactionEvents.TRANSACTION_FAILED] & {
+    publicIdentifier: string;
+  };
 }
 
 ///////////////////////////////////

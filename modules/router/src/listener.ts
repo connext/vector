@@ -115,7 +115,6 @@ export async function setupListeners(
   });
 
   nodeService.on(EngineEvents.TRANSACTION_SUBMITTED, async (data) => {
-    console.log("******* [router] submitted tx event captured", data);
     transactionSubmitted.inc(
       {
         hash: data.response.hash,

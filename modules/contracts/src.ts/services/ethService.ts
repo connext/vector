@@ -641,8 +641,6 @@ export class EthereumChainService extends EthereumChainReader implements IVector
           response,
           channelAddress,
           reason,
-          aliceIdentifier: "",
-          bobIdentifier: "",
         });
         // Register callbacks for saving tx, then return
         response
@@ -655,8 +653,6 @@ export class EthereumChainService extends EthereumChainReader implements IVector
                 receipt,
                 channelAddress,
                 reason,
-                aliceIdentifier: "",
-                bobIdentifier: "",
               });
             } else {
               this.store.saveTransactionReceipt(channelAddress, receipt);
@@ -664,8 +660,6 @@ export class EthereumChainService extends EthereumChainReader implements IVector
                 receipt,
                 channelAddress,
                 reason,
-                aliceIdentifier: "",
-                bobIdentifier: "",
               });
             }
           })
@@ -676,8 +670,6 @@ export class EthereumChainService extends EthereumChainReader implements IVector
               error: e,
               channelAddress,
               reason,
-              bobIdentifier: "",
-              aliceIdentifier: "",
             });
           });
         return response;

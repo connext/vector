@@ -24,23 +24,17 @@ export type ProtocolEventPayloadsMap = {
 ////////////////////////////
 ///// CHAIN SERVICE EVENTS
 export type TransactionSubmittedPayload = {
-  aliceIdentifier: string;
-  bobIdentifier: string;
   response: TransactionResponse;
   reason: TransactionReason;
   channelAddress: string;
 };
 
 export type TransactionMinedPayload = Omit<TransactionSubmittedPayload, "response"> & {
-  receipt?: TransactionReceipt;
+  receipt: TransactionReceipt;
 };
 
-export type TransactionFailedPayload = {
-  aliceIdentifier: string;
-  bobIdentifier: string;
+export type TransactionFailedPayload = Omit<TransactionSubmittedPayload, "response"> & {
   receipt?: TransactionReceipt;
-  reason: TransactionReason;
-  channelAddress: string;
   error?: Error; // thrown
 };
 
