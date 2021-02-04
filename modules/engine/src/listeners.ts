@@ -653,6 +653,7 @@ async function handleWithdrawalTransferResolution(
     return;
   }
   const method = "handleWithdrawalTransferResolution";
+  const methodId = getRandomBytes32();
 
   const {
     aliceIdentifier,
@@ -668,7 +669,7 @@ async function handleWithdrawalTransferResolution(
       fromIdentifier,
     },
   } = event.updatedChannelState as FullChannelState;
-  logger.info({ method, channelAddress, transferId }, "Started");
+  logger.info({ method, channelAddress, transferId, methodId }, "Started");
 
   // Get the withdrawal amount
   const transfer = (await store.getTransferState(transferId)) as FullTransferState;
@@ -681,9 +682,10 @@ async function handleWithdrawalTransferResolution(
     .reduce((prev, curr) => prev.add(curr), BigNumber.from(0))
     .sub(transfer.transferState.fee);
 
-  logger.debug(
+  logger.info(
     {
       method,
+      methodId,
       withdrawalAmount: withdrawalAmount.toString(),
       initiator: transfer.initiator,
       responder: transfer.responder,
@@ -711,7 +713,10 @@ async function handleWithdrawalTransferResolution(
 
   // If it is not from counterparty, do not respond
   if (fromIdentifier === signer.publicIdentifier) {
-    logger.info({ method, withdrawalAmount: withdrawalAmount.toString(), assetId }, "Completed");
+    logger.info(
+      { method, methodId, withdrawalAmount: withdrawalAmount.toString(), assetId },
+      "Our own withdrawal, no need to do anything",
+    );
     return;
   }
 
@@ -748,7 +753,7 @@ async function handleWithdrawalTransferResolution(
       transactionHash: meta?.transactionHash,
       meta: transfer.meta,
     });
-    logger.info({ method, withdrawalAmount: withdrawalAmount.toString(), assetId }, "Completed");
+    logger.info({ method, methodId, withdrawalAmount: withdrawalAmount.toString(), assetId }, "Completed");
     return;
   }
 
