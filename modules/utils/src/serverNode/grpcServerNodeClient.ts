@@ -9,12 +9,14 @@ import {
   GrpcTypes,
   jsonifyError,
   FullTransferState,
+  FullChannelState,
+  ChannelUpdateDetailsMap,
+  ChannelUpdate,
 } from "@connext/vector-types";
 import { ChannelCredentials } from "@grpc/grpc-js";
 import { UnaryCall } from "@protobuf-ts/runtime-rpc";
 import { GrpcTransport } from "@protobuf-ts/grpc-transport";
 import { BaseLogger } from "pino";
-import * as grpc from "@grpc/grpc-js";
 import { Evt } from "evt";
 
 import { ServerNodeServiceError } from "./errors";
@@ -27,6 +29,57 @@ const convertTransfer = (transfer: GrpcTypes.FullTransferState): FullTransferSta
     meta: transfer.meta ? GrpcTypes.Struct.toJson(transfer.meta) : undefined,
     balance: transfer.balance ?? { amount: [], to: [] },
   };
+};
+
+const convertChannel = <T extends "setup" | "create" | "resolve" | "deposit">(
+  channel: GrpcTypes.FullChannelState,
+): FullChannelState<T> => {
+  let updateDetails: ChannelUpdateDetailsMap[T];
+  if (channel.latestUpdate && channel.latestUpdate.type === "setup") {
+    const typedDetails: any = channel.latestUpdate.details;
+    updateDetails = {
+      ...typedDetails.setupUpdateDetails,
+      meta: typedDetails.setupUpdateDetails.meta
+        ? GrpcTypes.Struct.toJson(typedDetails.setupUpdateDetails.meta)
+        : undefined,
+    };
+  } else if (channel.latestUpdate && channel.latestUpdate.type === "create") {
+    const typedDetails: any = channel.latestUpdate.details;
+    updateDetails = {
+      ...typedDetails.createUpdateDetails,
+      transferInitialState: GrpcTypes.Struct.toJson(typedDetails.createUpdateDetails.transferInitialState),
+      meta: typedDetails.createUpdateDetails.meta
+        ? GrpcTypes.Struct.toJson(typedDetails.createUpdateDetails.meta)
+        : undefined,
+    };
+  } else if (channel.latestUpdate && channel.latestUpdate.type === "resolve") {
+    const typedDetails: any = channel.latestUpdate.details;
+    updateDetails = {
+      ...typedDetails.resolveUpdateDetails,
+      transferResolver: GrpcTypes.Struct.toJson(typedDetails.resolveUpdateDetails.transferInitialState),
+      meta: typedDetails.resolveUpdateDetails.meta
+        ? GrpcTypes.Struct.toJson(typedDetails.resolveUpdateDetails.meta)
+        : undefined,
+    };
+  } else if (channel.latestUpdate && channel.latestUpdate.type === "deposit") {
+    const typedDetails: any = channel.latestUpdate.details;
+    updateDetails = {
+      ...typedDetails.depositUpdateDetails,
+      meta: typedDetails.depositUpdateDetails.meta
+        ? GrpcTypes.Struct.toJson(typedDetails.depositUpdateDetails.meta)
+        : undefined,
+    };
+  }
+
+  const latestUpdate = {
+    ...channel.latestUpdate,
+    details: updateDetails,
+  } as ChannelUpdate<T>;
+
+  return {
+    ...channel,
+    latestUpdate,
+  } as any;
 };
 
 export class GRPCServerNodeClient implements INodeClient {
@@ -251,12 +304,82 @@ export class GRPCServerNodeClient implements INodeClient {
     try {
       const res = await this.validateAndExecuteGrpcRequest<
         OptionalPublicIdentifier<GrpcTypes.TransferRequest>,
-        GrpcTypes.FullTransferState
+        GrpcTypes.FullTransferState | undefined
       >("getTransferState", params);
-      return Result.ok(convertTransfer(res));
+      const transfer = res ? convertTransfer(res) : undefined;
+      return Result.ok(transfer);
     } catch (e) {
       return Result.fail(e);
     }
+  }
+
+  async getActiveTransfers(
+    params: OptionalPublicIdentifier<NodeParams.GetActiveTransfersByChannelAddress>,
+  ): Promise<Result<NodeResponses.GetActiveTransfersByChannelAddress, ServerNodeServiceError>> {
+    try {
+      const res = await this.validateAndExecuteGrpcRequest<
+        OptionalPublicIdentifier<GrpcTypes.ActiveTransfersRequest>,
+        GrpcTypes.FullTransferStates
+      >("getActiveTransfers", params);
+
+      const transfers = res.fullTransferStates.map(convertTransfer);
+      return Result.ok(transfers);
+    } catch (e) {
+      return Result.fail(e);
+    }
+  }
+
+  async getTransferByRoutingId(
+    params: OptionalPublicIdentifier<NodeParams.GetTransferStateByRoutingId>,
+  ): Promise<Result<NodeResponses.GetTransferStateByRoutingId, ServerNodeServiceError>> {
+    try {
+      const res = await this.validateAndExecuteGrpcRequest<
+        OptionalPublicIdentifier<GrpcTypes.TransferStateByRoutingIdRequest>,
+        GrpcTypes.FullTransferState | undefined
+      >("getTransferState", params);
+      const transfer = res ? convertTransfer(res) : undefined;
+      return Result.ok(transfer);
+    } catch (e) {
+      return Result.fail(e);
+    }
+  }
+
+  async getTransfersByRoutingId(
+    params: OptionalPublicIdentifier<NodeParams.GetTransferStatesByRoutingId>,
+  ): Promise<Result<NodeResponses.GetTransferStatesByRoutingId, ServerNodeServiceError>> {
+    try {
+      const res = await this.validateAndExecuteGrpcRequest<
+        OptionalPublicIdentifier<GrpcTypes.TransferStatesByRoutingIdRequest>,
+        GrpcTypes.FullTransferStates
+      >("getTransferStatesByRoutingId", params);
+
+      const transfers = res.fullTransferStates.map(convertTransfer);
+      return Result.ok(transfers);
+    } catch (e) {
+      return Result.fail(e);
+    }
+  }
+
+  async getStateChannel(
+    params: OptionalPublicIdentifier<NodeParams.GetChannelState>,
+  ): Promise<Result<NodeResponses.GetChannelState, ServerNodeServiceError>> {
+    try {
+      const res = await this.validateAndExecuteGrpcRequest<
+        OptionalPublicIdentifier<GrpcTypes.ChannelStateRequest>,
+        GrpcTypes.FullChannelState | undefined
+      >("getChannelState", params);
+
+      const channel = res ? convertChannel(res) : undefined;
+      return Result.ok(channel);
+    } catch (e) {
+      return Result.fail(e);
+    }
+  }
+
+  async getStateChannels(
+    params: OptionalPublicIdentifier<NodeParams.GetChannelStates>,
+  ): Promise<Result<NodeResponses.GetChannelStates, ServerNodeServiceError>> {
+    throw new Error("unimplemented");
   }
 
   sendDisputeChannelTx(
@@ -284,36 +407,6 @@ export class GRPCServerNodeClient implements INodeClient {
   }
 
   async createNode(params: NodeParams.CreateNode): Promise<Result<NodeResponses.CreateNode, ServerNodeServiceError>> {
-    throw new Error("unimplemented");
-  }
-
-  async getStateChannel(
-    params: OptionalPublicIdentifier<NodeParams.GetChannelState>,
-  ): Promise<Result<NodeResponses.GetChannelState, ServerNodeServiceError>> {
-    throw new Error("unimplemented");
-  }
-
-  async getStateChannels(
-    params: OptionalPublicIdentifier<NodeParams.GetChannelStates>,
-  ): Promise<Result<NodeResponses.GetChannelStates, ServerNodeServiceError>> {
-    throw new Error("unimplemented");
-  }
-
-  async getTransfersByRoutingId(
-    params: OptionalPublicIdentifier<NodeParams.GetTransferStatesByRoutingId>,
-  ): Promise<Result<NodeResponses.GetTransferStatesByRoutingId, ServerNodeServiceError>> {
-    throw new Error("unimplemented");
-  }
-
-  async getTransferByRoutingId(
-    params: OptionalPublicIdentifier<NodeParams.GetTransferStateByRoutingId>,
-  ): Promise<Result<NodeResponses.GetTransferStateByRoutingId, ServerNodeServiceError>> {
-    throw new Error("unimplemented");
-  }
-
-  async getActiveTransfers(
-    params: OptionalPublicIdentifier<NodeParams.GetActiveTransfersByChannelAddress>,
-  ): Promise<Result<NodeResponses.GetActiveTransfersByChannelAddress, ServerNodeServiceError>> {
     throw new Error("unimplemented");
   }
 

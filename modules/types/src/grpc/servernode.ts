@@ -209,13 +209,13 @@ export interface ChannelUpdate {
         oneofKind: undefined;
     };
     /**
-     * @generated from protobuf field: string aliceSignature = 12;
+     * @generated from protobuf field: optional string aliceSignature = 12;
      */
-    aliceSignature: string;
+    aliceSignature?: string;
     /**
-     * @generated from protobuf field: string bob_signature = 13;
+     * @generated from protobuf field: optional string bob_signature = 13;
      */
-    bobSignature: string;
+    bobSignature?: string;
 }
 /**
  * channel state helpers
@@ -233,9 +233,9 @@ export interface Balance {
     to: string[];
 }
 /**
- * @generated from protobuf message com.vector.Contractstringes
+ * @generated from protobuf message com.vector.NetworkContext
  */
-export interface Contractstringes {
+export interface NetworkContext {
     /**
      * @generated from protobuf field: string channel_factory_address = 1;
      */
@@ -244,21 +244,12 @@ export interface Contractstringes {
      * @generated from protobuf field: string transfer_registry_address = 2;
      */
     transferRegistryAddress: string;
-}
-/**
- * @generated from protobuf message com.vector.NetworkContext
- */
-export interface NetworkContext {
     /**
-     * @generated from protobuf field: com.vector.Contractstringes contract_addresses = 1;
-     */
-    contractAddresses?: Contractstringes;
-    /**
-     * @generated from protobuf field: int32 chain_id = 2;
+     * @generated from protobuf field: int32 chain_id = 3;
      */
     chainId: number;
     /**
-     * @generated from protobuf field: string provider_url = 3;
+     * @generated from protobuf field: string provider_url = 4;
      */
     providerUrl: string;
 }
@@ -305,9 +296,9 @@ export interface FullChannelState {
      */
     processedDepositsB: string[];
     /**
-     * @generated from protobuf field: repeated string defund_nounces = 10;
+     * @generated from protobuf field: repeated string defund_nonces = 10;
      */
-    defundNounces: string[];
+    defundNonces: string[];
     /**
      * @generated from protobuf field: int32 nonce = 11;
      */
@@ -430,9 +421,9 @@ export interface FullTransferState {
  */
 export interface FullTransferStates {
     /**
-     * @generated from protobuf field: repeated com.vector.FullTransferState full_transfer_state = 1;
+     * @generated from protobuf field: repeated com.vector.FullTransferState full_transfer_states = 1;
      */
-    fullTransferState: FullTransferState[];
+    fullTransferStates: FullTransferState[];
 }
 /**
  * requests
@@ -652,9 +643,9 @@ export interface ActiveTransfersRequest {
     channelAddress: string;
 }
 /**
- * @generated from protobuf message com.vector.TransferStatesByRoutingIdRequest
+ * @generated from protobuf message com.vector.TransferStateByRoutingIdRequest
  */
-export interface TransferStatesByRoutingIdRequest {
+export interface TransferStateByRoutingIdRequest {
     /**
      * @generated from protobuf field: string public_identifier = 1;
      */
@@ -669,9 +660,9 @@ export interface TransferStatesByRoutingIdRequest {
     routingId: string;
 }
 /**
- * @generated from protobuf message com.vector.TransferStateByRoutingIdRequest
+ * @generated from protobuf message com.vector.TransferStatesByRoutingIdRequest
  */
-export interface TransferStateByRoutingIdRequest {
+export interface TransferStatesByRoutingIdRequest {
     /**
      * @generated from protobuf field: string public_identifier = 1;
      */
@@ -1701,8 +1692,8 @@ class ChannelUpdate$Type extends MessageType<ChannelUpdate> {
             { no: 9, name: "deposit_update_details", kind: "message", oneof: "details", T: () => DepositUpdateDetails },
             { no: 10, name: "create_update_details", kind: "message", oneof: "details", T: () => CreateUpdateDetails },
             { no: 11, name: "resolve_update_details", kind: "message", oneof: "details", T: () => ResolveUpdateDetails },
-            { no: 12, name: "aliceSignature", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
-            { no: 13, name: "bob_signature", kind: "scalar", T: 9 /*ScalarType.STRING*/ }
+            { no: 12, name: "aliceSignature", kind: "scalar", opt: true, T: 9 /*ScalarType.STRING*/ },
+            { no: 13, name: "bob_signature", kind: "scalar", opt: true, T: 9 /*ScalarType.STRING*/ }
         ]);
     }
     internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: ChannelUpdate): ChannelUpdate {
@@ -1755,10 +1746,10 @@ class ChannelUpdate$Type extends MessageType<ChannelUpdate> {
                         resolveUpdateDetails: ResolveUpdateDetails.internalBinaryRead(reader, reader.uint32(), options, (message.details as any).resolveUpdateDetails)
                     };
                     break;
-                case /* string aliceSignature */ 12:
+                case /* optional string aliceSignature */ 12:
                     message.aliceSignature = reader.string();
                     break;
-                case /* string bob_signature */ 13:
+                case /* optional string bob_signature */ 13:
                     message.bobSignature = reader.string();
                     break;
                 default:
@@ -1806,11 +1797,11 @@ class ChannelUpdate$Type extends MessageType<ChannelUpdate> {
         /* com.vector.ResolveUpdateDetails resolve_update_details = 11; */
         if (message.details.oneofKind === "resolveUpdateDetails")
             ResolveUpdateDetails.internalBinaryWrite(message.details.resolveUpdateDetails, writer.tag(11, WireType.LengthDelimited).fork(), options).join();
-        /* string aliceSignature = 12; */
-        if (message.aliceSignature !== "")
+        /* optional string aliceSignature = 12; */
+        if (message.aliceSignature !== undefined)
             writer.tag(12, WireType.LengthDelimited).string(message.aliceSignature);
-        /* string bob_signature = 13; */
-        if (message.bobSignature !== "")
+        /* optional string bob_signature = 13; */
+        if (message.bobSignature !== undefined)
             writer.tag(13, WireType.LengthDelimited).string(message.bobSignature);
         let u = options.writeUnknownFields;
         if (u !== false)
@@ -1870,14 +1861,16 @@ class Balance$Type extends MessageType<Balance> {
  */
 export const Balance = new Balance$Type();
 // @generated message type with reflection information, may provide speed optimized methods
-class Contractstringes$Type extends MessageType<Contractstringes> {
+class NetworkContext$Type extends MessageType<NetworkContext> {
     constructor() {
-        super("com.vector.Contractstringes", [
+        super("com.vector.NetworkContext", [
             { no: 1, name: "channel_factory_address", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
-            { no: 2, name: "transfer_registry_address", kind: "scalar", T: 9 /*ScalarType.STRING*/ }
+            { no: 2, name: "transfer_registry_address", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 3, name: "chain_id", kind: "scalar", T: 5 /*ScalarType.INT32*/ },
+            { no: 4, name: "provider_url", kind: "scalar", T: 9 /*ScalarType.STRING*/ }
         ]);
     }
-    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: Contractstringes): Contractstringes {
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: NetworkContext): NetworkContext {
         let message = target ?? this.create(), end = reader.pos + length;
         while (reader.pos < end) {
             let [fieldNo, wireType] = reader.tag();
@@ -1888,55 +1881,10 @@ class Contractstringes$Type extends MessageType<Contractstringes> {
                 case /* string transfer_registry_address */ 2:
                     message.transferRegistryAddress = reader.string();
                     break;
-                default:
-                    let u = options.readUnknownField;
-                    if (u === "throw")
-                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
-                    let d = reader.skip(wireType);
-                    if (u !== false)
-                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
-            }
-        }
-        return message;
-    }
-    internalBinaryWrite(message: Contractstringes, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
-        /* string channel_factory_address = 1; */
-        if (message.channelFactoryAddress !== "")
-            writer.tag(1, WireType.LengthDelimited).string(message.channelFactoryAddress);
-        /* string transfer_registry_address = 2; */
-        if (message.transferRegistryAddress !== "")
-            writer.tag(2, WireType.LengthDelimited).string(message.transferRegistryAddress);
-        let u = options.writeUnknownFields;
-        if (u !== false)
-            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
-        return writer;
-    }
-}
-/**
- * @generated MessageType for protobuf message com.vector.Contractstringes
- */
-export const Contractstringes = new Contractstringes$Type();
-// @generated message type with reflection information, may provide speed optimized methods
-class NetworkContext$Type extends MessageType<NetworkContext> {
-    constructor() {
-        super("com.vector.NetworkContext", [
-            { no: 1, name: "contract_addresses", kind: "message", T: () => Contractstringes },
-            { no: 2, name: "chain_id", kind: "scalar", T: 5 /*ScalarType.INT32*/ },
-            { no: 3, name: "provider_url", kind: "scalar", T: 9 /*ScalarType.STRING*/ }
-        ]);
-    }
-    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: NetworkContext): NetworkContext {
-        let message = target ?? this.create(), end = reader.pos + length;
-        while (reader.pos < end) {
-            let [fieldNo, wireType] = reader.tag();
-            switch (fieldNo) {
-                case /* com.vector.Contractstringes contract_addresses */ 1:
-                    message.contractAddresses = Contractstringes.internalBinaryRead(reader, reader.uint32(), options, message.contractAddresses);
-                    break;
-                case /* int32 chain_id */ 2:
+                case /* int32 chain_id */ 3:
                     message.chainId = reader.int32();
                     break;
-                case /* string provider_url */ 3:
+                case /* string provider_url */ 4:
                     message.providerUrl = reader.string();
                     break;
                 default:
@@ -1951,15 +1899,18 @@ class NetworkContext$Type extends MessageType<NetworkContext> {
         return message;
     }
     internalBinaryWrite(message: NetworkContext, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
-        /* com.vector.Contractstringes contract_addresses = 1; */
-        if (message.contractAddresses)
-            Contractstringes.internalBinaryWrite(message.contractAddresses, writer.tag(1, WireType.LengthDelimited).fork(), options).join();
-        /* int32 chain_id = 2; */
+        /* string channel_factory_address = 1; */
+        if (message.channelFactoryAddress !== "")
+            writer.tag(1, WireType.LengthDelimited).string(message.channelFactoryAddress);
+        /* string transfer_registry_address = 2; */
+        if (message.transferRegistryAddress !== "")
+            writer.tag(2, WireType.LengthDelimited).string(message.transferRegistryAddress);
+        /* int32 chain_id = 3; */
         if (message.chainId !== 0)
-            writer.tag(2, WireType.Varint).int32(message.chainId);
-        /* string provider_url = 3; */
+            writer.tag(3, WireType.Varint).int32(message.chainId);
+        /* string provider_url = 4; */
         if (message.providerUrl !== "")
-            writer.tag(3, WireType.LengthDelimited).string(message.providerUrl);
+            writer.tag(4, WireType.LengthDelimited).string(message.providerUrl);
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
@@ -1983,7 +1934,7 @@ class FullChannelState$Type extends MessageType<FullChannelState> {
             { no: 7, name: "balances", kind: "message", repeat: 1 /*RepeatType.PACKED*/, T: () => Balance },
             { no: 8, name: "processed_deposits_a", kind: "scalar", repeat: 2 /*RepeatType.UNPACKED*/, T: 9 /*ScalarType.STRING*/ },
             { no: 9, name: "processed_deposits_b", kind: "scalar", repeat: 2 /*RepeatType.UNPACKED*/, T: 9 /*ScalarType.STRING*/ },
-            { no: 10, name: "defund_nounces", kind: "scalar", repeat: 2 /*RepeatType.UNPACKED*/, T: 9 /*ScalarType.STRING*/ },
+            { no: 10, name: "defund_nonces", kind: "scalar", repeat: 2 /*RepeatType.UNPACKED*/, T: 9 /*ScalarType.STRING*/ },
             { no: 11, name: "nonce", kind: "scalar", T: 5 /*ScalarType.INT32*/ },
             { no: 12, name: "merkle_root", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
             { no: 13, name: "in_dispute", kind: "scalar", T: 8 /*ScalarType.BOOL*/ },
@@ -2024,8 +1975,8 @@ class FullChannelState$Type extends MessageType<FullChannelState> {
                 case /* repeated string processed_deposits_b */ 9:
                     message.processedDepositsB.push(reader.string());
                     break;
-                case /* repeated string defund_nounces */ 10:
-                    message.defundNounces.push(reader.string());
+                case /* repeated string defund_nonces */ 10:
+                    message.defundNonces.push(reader.string());
                     break;
                 case /* int32 nonce */ 11:
                     message.nonce = reader.int32();
@@ -2084,9 +2035,9 @@ class FullChannelState$Type extends MessageType<FullChannelState> {
         /* repeated string processed_deposits_b = 9; */
         for (let i = 0; i < message.processedDepositsB.length; i++)
             writer.tag(9, WireType.LengthDelimited).string(message.processedDepositsB[i]);
-        /* repeated string defund_nounces = 10; */
-        for (let i = 0; i < message.defundNounces.length; i++)
-            writer.tag(10, WireType.LengthDelimited).string(message.defundNounces[i]);
+        /* repeated string defund_nonces = 10; */
+        for (let i = 0; i < message.defundNonces.length; i++)
+            writer.tag(10, WireType.LengthDelimited).string(message.defundNonces[i]);
         /* int32 nonce = 11; */
         if (message.nonce !== 0)
             writer.tag(11, WireType.Varint).int32(message.nonce);
@@ -2325,7 +2276,7 @@ export const FullTransferState = new FullTransferState$Type();
 class FullTransferStates$Type extends MessageType<FullTransferStates> {
     constructor() {
         super("com.vector.FullTransferStates", [
-            { no: 1, name: "full_transfer_state", kind: "message", repeat: 1 /*RepeatType.PACKED*/, T: () => FullTransferState }
+            { no: 1, name: "full_transfer_states", kind: "message", repeat: 1 /*RepeatType.PACKED*/, T: () => FullTransferState }
         ]);
     }
     internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: FullTransferStates): FullTransferStates {
@@ -2333,8 +2284,8 @@ class FullTransferStates$Type extends MessageType<FullTransferStates> {
         while (reader.pos < end) {
             let [fieldNo, wireType] = reader.tag();
             switch (fieldNo) {
-                case /* repeated com.vector.FullTransferState full_transfer_state */ 1:
-                    message.fullTransferState.push(FullTransferState.internalBinaryRead(reader, reader.uint32(), options));
+                case /* repeated com.vector.FullTransferState full_transfer_states */ 1:
+                    message.fullTransferStates.push(FullTransferState.internalBinaryRead(reader, reader.uint32(), options));
                     break;
                 default:
                     let u = options.readUnknownField;
@@ -2348,9 +2299,9 @@ class FullTransferStates$Type extends MessageType<FullTransferStates> {
         return message;
     }
     internalBinaryWrite(message: FullTransferStates, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
-        /* repeated com.vector.FullTransferState full_transfer_state = 1; */
-        for (let i = 0; i < message.fullTransferState.length; i++)
-            FullTransferState.internalBinaryWrite(message.fullTransferState[i], writer.tag(1, WireType.LengthDelimited).fork(), options).join();
+        /* repeated com.vector.FullTransferState full_transfer_states = 1; */
+        for (let i = 0; i < message.fullTransferStates.length; i++)
+            FullTransferState.internalBinaryWrite(message.fullTransferStates[i], writer.tag(1, WireType.LengthDelimited).fork(), options).join();
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
@@ -3005,15 +2956,15 @@ class ActiveTransfersRequest$Type extends MessageType<ActiveTransfersRequest> {
  */
 export const ActiveTransfersRequest = new ActiveTransfersRequest$Type();
 // @generated message type with reflection information, may provide speed optimized methods
-class TransferStatesByRoutingIdRequest$Type extends MessageType<TransferStatesByRoutingIdRequest> {
+class TransferStateByRoutingIdRequest$Type extends MessageType<TransferStateByRoutingIdRequest> {
     constructor() {
-        super("com.vector.TransferStatesByRoutingIdRequest", [
+        super("com.vector.TransferStateByRoutingIdRequest", [
             { no: 1, name: "public_identifier", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
             { no: 2, name: "channel_address", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
             { no: 3, name: "routing_id", kind: "scalar", T: 9 /*ScalarType.STRING*/ }
         ]);
     }
-    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: TransferStatesByRoutingIdRequest): TransferStatesByRoutingIdRequest {
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: TransferStateByRoutingIdRequest): TransferStateByRoutingIdRequest {
         let message = target ?? this.create(), end = reader.pos + length;
         while (reader.pos < end) {
             let [fieldNo, wireType] = reader.tag();
@@ -3038,7 +2989,7 @@ class TransferStatesByRoutingIdRequest$Type extends MessageType<TransferStatesBy
         }
         return message;
     }
-    internalBinaryWrite(message: TransferStatesByRoutingIdRequest, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+    internalBinaryWrite(message: TransferStateByRoutingIdRequest, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
         /* string public_identifier = 1; */
         if (message.publicIdentifier !== "")
             writer.tag(1, WireType.LengthDelimited).string(message.publicIdentifier);
@@ -3055,18 +3006,18 @@ class TransferStatesByRoutingIdRequest$Type extends MessageType<TransferStatesBy
     }
 }
 /**
- * @generated MessageType for protobuf message com.vector.TransferStatesByRoutingIdRequest
+ * @generated MessageType for protobuf message com.vector.TransferStateByRoutingIdRequest
  */
-export const TransferStatesByRoutingIdRequest = new TransferStatesByRoutingIdRequest$Type();
+export const TransferStateByRoutingIdRequest = new TransferStateByRoutingIdRequest$Type();
 // @generated message type with reflection information, may provide speed optimized methods
-class TransferStateByRoutingIdRequest$Type extends MessageType<TransferStateByRoutingIdRequest> {
+class TransferStatesByRoutingIdRequest$Type extends MessageType<TransferStatesByRoutingIdRequest> {
     constructor() {
-        super("com.vector.TransferStateByRoutingIdRequest", [
+        super("com.vector.TransferStatesByRoutingIdRequest", [
             { no: 1, name: "public_identifier", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
             { no: 2, name: "routing_id", kind: "scalar", T: 9 /*ScalarType.STRING*/ }
         ]);
     }
-    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: TransferStateByRoutingIdRequest): TransferStateByRoutingIdRequest {
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: TransferStatesByRoutingIdRequest): TransferStatesByRoutingIdRequest {
         let message = target ?? this.create(), end = reader.pos + length;
         while (reader.pos < end) {
             let [fieldNo, wireType] = reader.tag();
@@ -3088,7 +3039,7 @@ class TransferStateByRoutingIdRequest$Type extends MessageType<TransferStateByRo
         }
         return message;
     }
-    internalBinaryWrite(message: TransferStateByRoutingIdRequest, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+    internalBinaryWrite(message: TransferStatesByRoutingIdRequest, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
         /* string public_identifier = 1; */
         if (message.publicIdentifier !== "")
             writer.tag(1, WireType.LengthDelimited).string(message.publicIdentifier);
@@ -3102,9 +3053,9 @@ class TransferStateByRoutingIdRequest$Type extends MessageType<TransferStateByRo
     }
 }
 /**
- * @generated MessageType for protobuf message com.vector.TransferStateByRoutingIdRequest
+ * @generated MessageType for protobuf message com.vector.TransferStatesByRoutingIdRequest
  */
-export const TransferStateByRoutingIdRequest = new TransferStateByRoutingIdRequest$Type();
+export const TransferStatesByRoutingIdRequest = new TransferStatesByRoutingIdRequest$Type();
 // @generated message type with reflection information, may provide speed optimized methods
 class TransfersRequest$Type extends MessageType<TransfersRequest> {
     constructor() {

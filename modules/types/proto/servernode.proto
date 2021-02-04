@@ -120,8 +120,8 @@ message ChannelUpdate {
         CreateUpdateDetails create_update_details = 10;
         ResolveUpdateDetails resolve_update_details = 11;
     };
-    string aliceSignature = 12;
-    string bob_signature = 13;
+    optional string aliceSignature = 12;
+    optional string bob_signature = 13;
 }
 
 // channel state helpers
@@ -130,15 +130,11 @@ message Balance {
     repeated string to = 2;
 }
 
-message Contractstringes {
+message NetworkContext {
     string channel_factory_address = 1;
     string transfer_registry_address = 2;
-}
-
-message NetworkContext {
-    Contractstringes contract_addresses = 1;
-    int32 chain_id = 2;
-    string provider_url = 3;
+    int32 chain_id = 3;
+    string provider_url = 4;
 }
 
 // channel state
@@ -153,7 +149,7 @@ message FullChannelState {
     repeated Balance balances = 7;
     repeated string processed_deposits_a = 8;
     repeated string processed_deposits_b = 9;
-    repeated string defund_nounces = 10;
+    repeated string defund_nonces = 10;
     
     int32 nonce = 11;
     string merkle_root = 12;
@@ -199,7 +195,7 @@ message FullTransferState {
 }
 
 message FullTransferStates {
-    repeated FullTransferState full_transfer_state = 1;
+    repeated FullTransferState full_transfer_states = 1;
 }
 
 // requests
@@ -278,13 +274,13 @@ message ActiveTransfersRequest {
     string channel_address = 2;
 }
 
-message  TransferStatesByRoutingIdRequest {
+message  TransferStateByRoutingIdRequest {
    string public_identifier = 1;
    string channel_address = 2;
    string routing_id = 3;
 }
 
-message  TransferStateByRoutingIdRequest {
+message  TransferStatesByRoutingIdRequest {
     string public_identifier = 1;
     string routing_id = 2;
 }

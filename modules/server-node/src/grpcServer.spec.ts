@@ -1,6 +1,7 @@
 import { VectorEngine } from "@connext/vector-engine";
 import { EngineEvents, IVectorEngine, NodeResponses, EngineEvent, FullTransferState } from "@connext/vector-types";
 import {
+  createTestChannelState,
   createTestFullHashlockTransferState,
   expect,
   getRandomIdentifier,
@@ -94,13 +95,68 @@ describe("GRPC server", () => {
     expect(result.getValue()).to.deep.eq(expectedResponse);
   });
 
-  it.only("should getTransfer", async () => {
+  it("should getTransfer", async () => {
     const expectedResponse: FullTransferState = createTestFullHashlockTransferState();
 
     engine.request.resolves(expectedResponse);
     const result = await client.getTransfer({
       publicIdentifier: mkPublicIdentifier("vectorB"),
       transferId: mkHash("0xa"),
+    });
+    expect(result.getError()).to.be.not.ok;
+    expect(result.getValue()).to.deep.eq(expectedResponse);
+  });
+
+  it("should getActiveTransfers", async () => {
+    const expectedResponse: FullTransferState[] = [
+      createTestFullHashlockTransferState(),
+      createTestFullHashlockTransferState({ transferId: mkHash("0xbbb") }),
+    ];
+
+    engine.request.resolves(expectedResponse);
+    const result = await client.getActiveTransfers({
+      publicIdentifier: mkPublicIdentifier("vectorB"),
+      channelAddress: mkAddress("0xa"),
+    });
+    expect(result.getError()).to.be.not.ok;
+    expect(result.getValue()).to.deep.eq(expectedResponse);
+  });
+
+  it("should getTransferByRoutingId", async () => {
+    const expectedResponse: FullTransferState = createTestFullHashlockTransferState();
+
+    engine.request.resolves(expectedResponse);
+    const result = await client.getTransferByRoutingId({
+      publicIdentifier: mkPublicIdentifier("vectorB"),
+      channelAddress: mkAddress("0xa"),
+      routingId: mkHash("0xb"),
+    });
+    expect(result.getError()).to.be.not.ok;
+    expect(result.getValue()).to.deep.eq(expectedResponse);
+  });
+
+  it("should getTransfersByRoutingId", async () => {
+    const expectedResponse: FullTransferState[] = [
+      createTestFullHashlockTransferState(),
+      createTestFullHashlockTransferState({ transferId: mkHash("0xbbb") }),
+    ];
+
+    engine.request.resolves(expectedResponse);
+    const result = await client.getTransfersByRoutingId({
+      publicIdentifier: mkPublicIdentifier("vectorB"),
+      routingId: mkHash("0xb"),
+    });
+    expect(result.getError()).to.be.not.ok;
+    expect(result.getValue()).to.deep.eq(expectedResponse);
+  });
+
+  it.only("should getStateChannel", async () => {
+    const expectedResponse = createTestChannelState("create").channel;
+
+    engine.request.resolves(expectedResponse);
+    const result = await client.getStateChannel({
+      publicIdentifier: mkPublicIdentifier("vectorB"),
+      channelAddress: mkAddress("0xa"),
     });
     expect(result.getError()).to.be.not.ok;
     expect(result.getValue()).to.deep.eq(expectedResponse);
