@@ -260,6 +260,7 @@ server.post(requestCollateralPath, async (request, response) => {
 });
 
 server.post(transactionSubmittedPath, async (request, response) => {
+  console.log("***** router got event to submitted path", request.body)
   evts[EngineEvents.TRANSACTION_SUBMITTED].evt!.post(request.body as TransactionSubmittedPayload);
   return response.status(200).send({ message: "success" });
 });

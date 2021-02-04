@@ -9,6 +9,7 @@ import {
   Values,
   NodeError,
   GetTransfersFilterOpts,
+  EngineEvents,
 } from "@connext/vector-types";
 import Ajv from "ajv";
 import Axios from "axios";
@@ -92,6 +93,17 @@ export class RestServerNodeService implements INodeService {
       const { publicIdentifier, signerAddress } = node.getValue();
       service.publicIdentifier = publicIdentifier;
       service.signerAddress = signerAddress;
+
+      if (service.evts && service.publicIdentifier !== "") {
+        service.evts[EngineEvents.TRANSACTION_SUBMITTED].evt.attach((data) => {
+          console.log("******** [utils] data without context", data);
+        });
+        service.evts[EngineEvents.TRANSACTION_SUBMITTED].evt
+          .pipe(service.ctxs[service.publicIdentifier])
+          .attach((data) => {
+            console.log("******** [utils] data with context", data);
+          });
+      }
     }
 
     return service;
@@ -457,7 +469,9 @@ export class RestServerNodeService implements INodeService {
     filter: (payload: EngineEventMap[T]) => boolean = () => true,
     publicIdentifier?: string,
   ): void {
+    console.log("**** [utils] trying to attach callback for", event);
     if (!this.evts || !this.evts[event]?.evt) {
+      console.log("**** [utils] no evt", event);
       throw new ServerNodeServiceError(
         ServerNodeServiceError.reasons.NoEvts,
         publicIdentifier ?? this.publicIdentifier,
@@ -467,12 +481,14 @@ export class RestServerNodeService implements INodeService {
     }
     const pubId = publicIdentifier ?? this.publicIdentifier;
     if (!pubId) {
+      console.log("**** [utils] no pubId", event);
       throw new ServerNodeServiceError(ServerNodeServiceError.reasons.NoPublicIdentifier, "", "", {
         event,
         publicIdentifier,
       });
     }
     const ctx = this.ctxs[pubId];
+    console.log("**** [utils] attaching callback for", event);
     this.evts[event].evt
       .pipe(ctx)
       .pipe((data: EngineEventMap[T]) => {
@@ -480,6 +496,8 @@ export class RestServerNodeService implements INodeService {
         return filtered && (data.aliceIdentifier === pubId || data.bobIdentifier === pubId);
       })
       .attach(callback);
+
+    console.log("**** [utils] attached callback for", event);
   }
 
   public waitFor<T extends EngineEvent>(
@@ -504,13 +522,15 @@ export class RestServerNodeService implements INodeService {
       });
     }
     const ctx = this.ctxs[pubId];
-    return this.evts[event].evt
-      .pipe(ctx)
-      .pipe((data: EngineEventMap[T]) => {
-        const filtered = filter(data);
-        return filtered && (data.aliceIdentifier === pubId || data.bobIdentifier === pubId);
-      })
-      .waitFor(timeout) as Promise<EngineEventMap[T]>;
+    return (
+      this.evts[event].evt
+        .pipe(ctx)
+        // .pipe((data: EngineEventMap[T]) => {
+        //   const filtered = filter(data);
+        //   return filtered && (data.aliceIdentifier === pubId || data.bobIdentifier === pubId);
+        // })
+        .waitFor(timeout) as Promise<EngineEventMap[T]>
+    );
   }
 
   public off<T extends EngineEvent>(event: T, publicIdentifier?: string): void {

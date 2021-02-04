@@ -115,7 +115,7 @@ export async function setupListeners(
   });
 
   nodeService.on(EngineEvents.TRANSACTION_SUBMITTED, async (data) => {
-    console.log("******* submitted tx");
+    console.log("******* [router] submitted tx event captured", data);
     transactionSubmitted.inc(
       {
         hash: data.response.hash,
@@ -129,7 +129,6 @@ export async function setupListeners(
   });
 
   nodeService.on(EngineEvents.TRANSACTION_MINED, async (data) => {
-    console.log("******* minted tx");
     transactionMined.inc(
       {
         hash: data.receipt?.transactionHash,
@@ -142,7 +141,6 @@ export async function setupListeners(
   });
 
   nodeService.on(EngineEvents.TRANSACTION_FAILED, async (data) => {
-    console.log("******* failed tx");
     transactionFailed.inc(
       {
         hash: data.receipt?.transactionHash,
