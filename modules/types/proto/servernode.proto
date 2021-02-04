@@ -15,7 +15,7 @@ service ServerNodeService {
 
     // channel and transfer state getters
     rpc GetChannelState (ChannelStateRequest) returns (FullChannelState) {}
-    rpc GetChannelStates (Empty) returns (FullChannelStates) {}
+    rpc GetChannelStates (GenericPublicIdentifierRequest) returns (FullChannelStates) {}
     rpc GetChannelStateByParticipants (ChannelStateByParticipantsRequest) returns (FullChannelState) {}
     rpc GetTransferState (TransfersRequest) returns (FullTransferState) {}
     rpc GetTransferStateByRoutingId (TransferStateByRoutingIdRequest) returns (FullTransferState) {}
@@ -263,10 +263,6 @@ message SetupRequest {
 message RegisteredTransfersRequest {
     string public_identifier = 1;    
     int32 chain_id = 2;
-}
-
-message ChannelStatesRequest {
-    string public_identifier = 1;
 }
 
 message ActiveTransfersRequest {

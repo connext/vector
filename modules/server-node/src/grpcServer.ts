@@ -312,8 +312,62 @@ const vectorService: GrpcTypes.IServerNodeService = {
     }
   },
 
-  getChannelStateByParticipants: () => undefined,
-  getChannelStates: () => undefined,
+  async getChannelStateByParticipants(
+    call: grpc.ServerUnaryCall<GrpcTypes.ChannelStateByParticipantsRequest, GrpcTypes.FullChannelState | undefined>,
+    callback: grpc.sendUnaryData<GrpcTypes.FullChannelState | undefined>,
+  ): Promise<void> {
+    const engine = getNode(call.request.publicIdentifier);
+    if (!engine) {
+      const error = new ServerNodeError(
+        ServerNodeError.reasons.NodeNotFound,
+        call.request.publicIdentifier,
+        call.request,
+      );
+      logger.error({ error }, "Could not find engine");
+      return callback({ code: grpc.status.NOT_FOUND, details: JSON.stringify(error) });
+    }
+    try {
+      const params = constructRpcRequest(ChannelRpcMethods.chan_getChannelStateByParticipants, {
+        alice: call.request.publicIdentifier,
+        bob: call.request.counterparty,
+        chainId: call.request.chainId,
+      });
+      const res = await engine.request<"chan_getChannelStateByParticipants">(params);
+
+      const safeChannelState = res ? convertChannel(res) : undefined;
+      callback(null, safeChannelState);
+    } catch (e) {
+      logger.error({ error: jsonifyError(e) });
+      callback({ code: grpc.status.UNKNOWN, details: JSON.stringify(e) });
+    }
+  },
+
+  async getChannelStates(
+    call: grpc.ServerUnaryCall<GrpcTypes.GenericPublicIdentifierRequest, GrpcTypes.FullChannelStates>,
+    callback: grpc.sendUnaryData<GrpcTypes.FullChannelStates>,
+  ): Promise<void> {
+    const engine = getNode(call.request.publicIdentifier);
+    if (!engine) {
+      const error = new ServerNodeError(
+        ServerNodeError.reasons.NodeNotFound,
+        call.request.publicIdentifier,
+        call.request,
+      );
+      logger.error({ error }, "Could not find engine");
+      return callback({ code: grpc.status.NOT_FOUND, details: JSON.stringify(error) });
+    }
+    try {
+      const params = constructRpcRequest(ChannelRpcMethods.chan_getChannelStates, {});
+      const res = await engine.request<"chan_getChannelStates">(params);
+
+      const safeChannelStates = res.map(convertChannel);
+      callback(null, { fullChannelState: safeChannelStates });
+    } catch (e) {
+      logger.error({ error: jsonifyError(e) });
+      callback({ code: grpc.status.UNKNOWN, details: JSON.stringify(e) });
+    }
+  },
+
   getConfig: () => undefined,
   getRegisteredTransfers: () => undefined,
   getSubscription: () => undefined,

@@ -80,9 +80,9 @@ export interface IServerNodeServiceClient {
      */
     getChannelState(input: ChannelStateRequest, options?: RpcOptions): UnaryCall<ChannelStateRequest, FullChannelState>;
     /**
-     * @generated from protobuf rpc: GetChannelStates(com.vector.Empty) returns (com.vector.FullChannelStates);
+     * @generated from protobuf rpc: GetChannelStates(com.vector.GenericPublicIdentifierRequest) returns (com.vector.FullChannelStates);
      */
-    getChannelStates(input: Empty, options?: RpcOptions): UnaryCall<Empty, FullChannelStates>;
+    getChannelStates(input: GenericPublicIdentifierRequest, options?: RpcOptions): UnaryCall<GenericPublicIdentifierRequest, FullChannelStates>;
     /**
      * @generated from protobuf rpc: GetChannelStateByParticipants(com.vector.ChannelStateByParticipantsRequest) returns (com.vector.FullChannelState);
      */
@@ -272,11 +272,11 @@ export class ServerNodeServiceClient implements IServerNodeServiceClient, Servic
         return stackIntercept<ChannelStateRequest, FullChannelState>("unary", this._transport, method, opt, input);
     }
     /**
-     * @generated from protobuf rpc: GetChannelStates(com.vector.Empty) returns (com.vector.FullChannelStates);
+     * @generated from protobuf rpc: GetChannelStates(com.vector.GenericPublicIdentifierRequest) returns (com.vector.FullChannelStates);
      */
-    getChannelStates(input: Empty, options?: RpcOptions): UnaryCall<Empty, FullChannelStates> {
+    getChannelStates(input: GenericPublicIdentifierRequest, options?: RpcOptions): UnaryCall<GenericPublicIdentifierRequest, FullChannelStates> {
         const method = this.methods[5], opt = this._transport.mergeOptions(options);
-        return stackIntercept<Empty, FullChannelStates>("unary", this._transport, method, opt, input);
+        return stackIntercept<GenericPublicIdentifierRequest, FullChannelStates>("unary", this._transport, method, opt, input);
     }
     /**
      * @generated from protobuf rpc: GetChannelStateByParticipants(com.vector.ChannelStateByParticipantsRequest) returns (com.vector.FullChannelState);

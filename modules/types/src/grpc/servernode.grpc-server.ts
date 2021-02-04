@@ -74,9 +74,9 @@ export interface IServerNodeService extends grpc.UntypedServiceImplementation {
      */
     getChannelState: grpc.handleUnaryCall<ChannelStateRequest, FullChannelState>;
     /**
-     * @generated from protobuf rpc: GetChannelStates(com.vector.Empty) returns (com.vector.FullChannelStates);
+     * @generated from protobuf rpc: GetChannelStates(com.vector.GenericPublicIdentifierRequest) returns (com.vector.FullChannelStates);
      */
-    getChannelStates: grpc.handleUnaryCall<Empty, FullChannelStates>;
+    getChannelStates: grpc.handleUnaryCall<GenericPublicIdentifierRequest, FullChannelStates>;
     /**
      * @generated from protobuf rpc: GetChannelStateByParticipants(com.vector.ChannelStateByParticipantsRequest) returns (com.vector.FullChannelState);
      */
@@ -282,9 +282,9 @@ export const serverNodeServiceDefinition: grpc.ServiceDefinition<IServerNodeServ
         requestStream: false,
         responseStream: false,
         responseDeserialize: bytes => FullChannelStates.fromBinary(bytes),
-        requestDeserialize: bytes => Empty.fromBinary(bytes),
+        requestDeserialize: bytes => GenericPublicIdentifierRequest.fromBinary(bytes),
         responseSerialize: value => Buffer.from(FullChannelStates.toBinary(value)),
-        requestSerialize: value => Buffer.from(Empty.toBinary(value))
+        requestSerialize: value => Buffer.from(GenericPublicIdentifierRequest.toBinary(value))
     },
     getChannelStateByParticipants: {
         path: "/com.vector.ServerNodeService/GetChannelStateByParticipants",

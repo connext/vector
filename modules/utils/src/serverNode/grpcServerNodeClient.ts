@@ -376,6 +376,22 @@ export class GRPCServerNodeClient implements INodeClient {
     }
   }
 
+  async getStateChannelByParticipants(
+    params: OptionalPublicIdentifier<NodeParams.GetChannelStateByParticipants>,
+  ): Promise<Result<NodeResponses.GetChannelStateByParticipants, ServerNodeServiceError>> {
+    try {
+      const res = await this.validateAndExecuteGrpcRequest<
+        OptionalPublicIdentifier<GrpcTypes.ChannelStateByParticipantsRequest>,
+        GrpcTypes.FullChannelState | undefined
+      >("getChannelState", params);
+
+      const channel = res ? convertChannel(res) : undefined;
+      return Result.ok(channel);
+    } catch (e) {
+      return Result.fail(e);
+    }
+  }
+
   async getStateChannels(
     params: OptionalPublicIdentifier<NodeParams.GetChannelStates>,
   ): Promise<Result<NodeResponses.GetChannelStates, ServerNodeServiceError>> {
@@ -407,12 +423,6 @@ export class GRPCServerNodeClient implements INodeClient {
   }
 
   async createNode(params: NodeParams.CreateNode): Promise<Result<NodeResponses.CreateNode, ServerNodeServiceError>> {
-    throw new Error("unimplemented");
-  }
-
-  async getStateChannelByParticipants(
-    params: OptionalPublicIdentifier<NodeParams.GetChannelStateByParticipants>,
-  ): Promise<Result<NodeResponses.GetChannelStateByParticipants, ServerNodeServiceError>> {
     throw new Error("unimplemented");
   }
 

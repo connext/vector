@@ -621,15 +621,6 @@ export interface RegisteredTransfersRequest {
     chainId: number;
 }
 /**
- * @generated from protobuf message com.vector.ChannelStatesRequest
- */
-export interface ChannelStatesRequest {
-    /**
-     * @generated from protobuf field: string public_identifier = 1;
-     */
-    publicIdentifier: string;
-}
-/**
  * @generated from protobuf message com.vector.ActiveTransfersRequest
  */
 export interface ActiveTransfersRequest {
@@ -2869,46 +2860,6 @@ class RegisteredTransfersRequest$Type extends MessageType<RegisteredTransfersReq
  */
 export const RegisteredTransfersRequest = new RegisteredTransfersRequest$Type();
 // @generated message type with reflection information, may provide speed optimized methods
-class ChannelStatesRequest$Type extends MessageType<ChannelStatesRequest> {
-    constructor() {
-        super("com.vector.ChannelStatesRequest", [
-            { no: 1, name: "public_identifier", kind: "scalar", T: 9 /*ScalarType.STRING*/ }
-        ]);
-    }
-    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: ChannelStatesRequest): ChannelStatesRequest {
-        let message = target ?? this.create(), end = reader.pos + length;
-        while (reader.pos < end) {
-            let [fieldNo, wireType] = reader.tag();
-            switch (fieldNo) {
-                case /* string public_identifier */ 1:
-                    message.publicIdentifier = reader.string();
-                    break;
-                default:
-                    let u = options.readUnknownField;
-                    if (u === "throw")
-                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
-                    let d = reader.skip(wireType);
-                    if (u !== false)
-                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
-            }
-        }
-        return message;
-    }
-    internalBinaryWrite(message: ChannelStatesRequest, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
-        /* string public_identifier = 1; */
-        if (message.publicIdentifier !== "")
-            writer.tag(1, WireType.LengthDelimited).string(message.publicIdentifier);
-        let u = options.writeUnknownFields;
-        if (u !== false)
-            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
-        return writer;
-    }
-}
-/**
- * @generated MessageType for protobuf message com.vector.ChannelStatesRequest
- */
-export const ChannelStatesRequest = new ChannelStatesRequest$Type();
-// @generated message type with reflection information, may provide speed optimized methods
 class ActiveTransfersRequest$Type extends MessageType<ActiveTransfersRequest> {
     constructor() {
         super("com.vector.ActiveTransfersRequest", [
@@ -4801,7 +4752,7 @@ export const ServerNodeService = new ServiceType("com.vector.ServerNodeService",
     { name: "GetStatus", options: {}, I: GenericPublicIdentifierRequest, O: Status },
     { name: "GetRouterConfig", options: {}, I: GetRouterConfigRequest, O: RouterConfig },
     { name: "GetChannelState", options: {}, I: ChannelStateRequest, O: FullChannelState },
-    { name: "GetChannelStates", options: {}, I: Empty, O: FullChannelStates },
+    { name: "GetChannelStates", options: {}, I: GenericPublicIdentifierRequest, O: FullChannelStates },
     { name: "GetChannelStateByParticipants", options: {}, I: ChannelStateByParticipantsRequest, O: FullChannelState },
     { name: "GetTransferState", options: {}, I: TransfersRequest, O: FullTransferState },
     { name: "GetTransferStateByRoutingId", options: {}, I: TransferStateByRoutingIdRequest, O: FullTransferState },

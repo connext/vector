@@ -1,5 +1,12 @@
 import { VectorEngine } from "@connext/vector-engine";
-import { EngineEvents, IVectorEngine, NodeResponses, EngineEvent, FullTransferState } from "@connext/vector-types";
+import {
+  EngineEvents,
+  IVectorEngine,
+  NodeResponses,
+  EngineEvent,
+  FullTransferState,
+  FullChannelState,
+} from "@connext/vector-types";
 import {
   createTestChannelState,
   createTestFullHashlockTransferState,
@@ -150,13 +157,40 @@ describe("GRPC server", () => {
     expect(result.getValue()).to.deep.eq(expectedResponse);
   });
 
-  it.only("should getStateChannel", async () => {
-    const expectedResponse = createTestChannelState("create").channel;
+  it("should getStateChannel", async () => {
+    const expectedResponse: FullChannelState = createTestChannelState("create").channel;
 
     engine.request.resolves(expectedResponse);
     const result = await client.getStateChannel({
       publicIdentifier: mkPublicIdentifier("vectorB"),
       channelAddress: mkAddress("0xa"),
+    });
+    expect(result.getError()).to.be.not.ok;
+    expect(result.getValue()).to.deep.eq(expectedResponse);
+  });
+
+  it.only("should getStateChannelByParticipants", async () => {
+    const expectedResponse: FullChannelState = createTestChannelState("resolve").channel;
+
+    engine.request.resolves(expectedResponse);
+    const result = await client.getStateChannelByParticipants({
+      publicIdentifier: mkPublicIdentifier("vectorB"),
+      counterparty: mkPublicIdentifier("vectorA"),
+      chainId: 1337,
+    });
+    expect(result.getError()).to.be.not.ok;
+    expect(result.getValue()).to.deep.eq(expectedResponse);
+  });
+
+  it.only("should getStateChannels", async () => {
+    const expectedResponse: FullChannelState[] = [
+      createTestChannelState("deposit").channel,
+      createTestChannelState("setup", { channelAddress: mkAddress("0xd") }).channel,
+    ];
+
+    engine.request.resolves(expectedResponse);
+    const result = await client.getStateChannels({
+      publicIdentifier: mkPublicIdentifier("vectorB"),
     });
     expect(result.getError()).to.be.not.ok;
     expect(result.getValue()).to.deep.eq(expectedResponse);
