@@ -2,6 +2,8 @@
 
 ## Next Release
 
+## 0.1.15-beta.3
+
 - \[node\] Expose `getTransfers` method.
 
 ## 0.1.15-beta.2
