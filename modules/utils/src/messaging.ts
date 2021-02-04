@@ -15,7 +15,7 @@ import {
   RouterConfigResponse,
   IBasicMessaging,
   RouterError,
-  IMetricsMessaging
+  IMetricsMessaging,
 } from "@connext/vector-types";
 import axios, { AxiosResponse } from "axios";
 import pino, { BaseLogger } from "pino";
@@ -220,24 +220,23 @@ export class NatsBasicMessagingService implements IBasicMessaging {
     await this.publish(inbox, response.toJson());
   }
 
-  protected async registerSubscriptionCallback<T = any>(
+  protected async registerSubscriptionCallback(
     subscriptionSubject: string,
     callback: (msg: string) => void,
-    method: string
+    method: string,
   ): Promise<void> {
     await this.subscribe(subscriptionSubject, (msg, err) => {
       this.log.debug({ method, msg }, "Received message");
       const from = msg.subject.split(".")[1];
       if (err) {
-        callback(msg.reply);
         return;
       }
-      const { result, parsed } = this.parseIncomingMessage<T>(msg);
+      const { result, parsed } = this.parseIncomingMessage<string>(msg);
       if (!parsed.reply) {
         return;
       }
 
-      callback(msg.reply);
+      callback(result.getValue());
       return;
     });
     this.log.debug({ method, subject: subscriptionSubject }, `Subscription created`);
@@ -581,7 +580,7 @@ export class NatsMetricsMessagingService extends NatsBasicMessagingService imple
   }
 
   async publishMetrics(myPublicIdentifier: string, msg: string) {
-    return this.publish("*.router.metrics", msg);
+    return this.publish(`${myPublicIdentifier}.router.metrics`, msg);
   }
 
   async subscribeMetrics(callback: (msg: string) => Promise<void>) {
@@ -592,5 +591,4 @@ export class NatsMetricsMessagingService extends NatsBasicMessagingService imple
   async unsubscribeMetrics() {
     return this.unsubscribe("*.router.metrics");
   }
-
 }

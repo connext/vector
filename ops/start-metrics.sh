@@ -95,7 +95,7 @@ prometheus_services="prometheus:
     image: $prometheus_image
     $common
     ports:
-      - 9081:9090
+      - 9071:9090
     command:
       - --config.file=/etc/prometheus/prometheus.yml
     volumes:

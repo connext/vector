@@ -19,18 +19,18 @@ import {
   HydratedProviders,
   ERC20Abi,
   SetupPayload,
-  jsonifyError
+  jsonifyError,
 } from "@connext/vector-types";
 import { collectDefaultMetrics, Gauge, Registry } from "prom-client";
 import { Wallet } from "ethers";
+import { AddressZero } from "@ethersproject/constants";
+import { formatEther, formatUnits } from "@ethersproject/units";
+import { Contract } from "@ethersproject/contracts";
 
 import { config } from "./config";
 import { IRouter, Router } from "./router";
 import { PrismaStore } from "./services/store";
 import { NatsRouterMessagingService } from "./services/messaging";
-import { AddressZero } from "@ethersproject/constants";
-import { formatEther, formatUnits } from "@ethersproject/units";
-import { Contract } from "@ethersproject/contracts";
 
 const routerPort = 8000;
 const routerBase = `http://router:${routerPort}`;
@@ -194,8 +194,8 @@ server.get("/metrics", async (request, response) => {
   const res = await register.metrics();
   try {
     await messagingService.publishMetrics(signer.publicIdentifier, res);
-  } catch(e) {
-    logger.error({ error: jsonifyError(e) }, "Publish metrics failed.")
+  } catch (e) {
+    logger.error({ error: jsonifyError(e) }, "Publish metrics failed.");
   }
   return response.status(200).send(res);
 });

@@ -3,16 +3,16 @@ import "regenerator-runtime/runtime";
 import fastify from "fastify";
 import fastifyCors from "fastify-cors";
 import pino from "pino";
+import { NatsMetricsMessagingService, getRandomChannelSigner } from "@connext/vector-utils";
 
 import { config } from "./config";
-import { NatsMetricsMessagingService, getRandomChannelSigner } from "@connext/vector-utils";
 
 export const logger = pino({ name: "metrics-collector" });
 logger.info("Starting metrics-collector");
 
 const subscribeCallback = async (msg: string) => {
   console.log(msg);
-}
+};
 
 const server = fastify({ logger, pluginTimeout: 300_000 });
 server.register(fastifyCors, {
@@ -22,17 +22,15 @@ server.register(fastifyCors, {
 });
 
 server.addHook("onReady", async () => {
-  const messagingService = new NatsMetricsMessagingService(
-    {
-      messagingUrl: config.messagingUrl!,
-      logger: logger.child({
-        module: "Nats metrics messaging service"
-      }),
-      signer: getRandomChannelSigner()
-    }
-  );
+  const messagingService = new NatsMetricsMessagingService({
+    messagingUrl: config.messagingUrl!,
+    logger: logger.child({
+      module: "NatsMetricsMessagingService",
+    }),
+    signer: getRandomChannelSigner(),
+  });
   await messagingService.connect();
-  await messagingService.subscribeMetrics(subscribeCallback);
+  await messagingService.subscribeMetrics((msg: string) => subscribeCallback(msg));
 });
 
 server.get("/ping", async () => {
