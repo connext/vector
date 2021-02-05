@@ -2,7 +2,7 @@
   "name": "router",
   "description": "This is only used to install & pin versions for a few global packages in the prod-mode docker container",
   "dependencies": {
-    "@prisma/cli": "2.12.1",
+    "@prisma/cli": "2.16.0",
     "hardhat": "2.0.5",
     "pg": "8.5.1",
     "pino-pretty": "4.3.0",
