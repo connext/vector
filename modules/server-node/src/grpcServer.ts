@@ -21,7 +21,7 @@ import {
 import { constructRpcRequest } from "@connext/vector-utils";
 import { Evt } from "evt";
 
-import { createNode, deleteNodes, getNode } from "./helpers/nodes";
+import { createNode, deleteNodes, getNode, getNodes } from "./helpers/nodes";
 import { ServerNodeError } from "./helpers/errors";
 
 import { logger, store } from ".";
@@ -361,17 +361,54 @@ const vectorService: GrpcTypes.IServerNodeService = {
       const res = await engine.request<"chan_getChannelStates">(params);
 
       const safeChannelStates = res.map(convertChannel);
-      callback(null, { fullChannelState: safeChannelStates });
+      callback(null, { fullChannelStates: safeChannelStates });
     } catch (e) {
       logger.error({ error: jsonifyError(e) });
       callback({ code: grpc.status.UNKNOWN, details: JSON.stringify(e) });
     }
   },
 
-  getConfig: () => undefined,
-  getRegisteredTransfers: () => undefined,
-  getSubscription: () => undefined,
-  getSubscriptionWithOnlyPublicIdentifier: () => undefined,
+  async getConfig(
+    call: grpc.ServerUnaryCall<GrpcTypes.Empty, GrpcTypes.Config>,
+    callback: grpc.sendUnaryData<GrpcTypes.Configs>,
+  ): Promise<void> {
+    const nodes = getNodes();
+    const config = nodes.map((node) => {
+      return {
+        index: node.index,
+        publicIdentifier: node.node.publicIdentifier,
+        signerAddress: node.node.signerAddress,
+      };
+    });
+    callback(null, { config });
+  },
+
+  async getRegisteredTransfers(
+    call: grpc.ServerUnaryCall<GrpcTypes.RegisteredTransfersRequest, GrpcTypes.RegisteredTransfers>,
+    callback: grpc.sendUnaryData<GrpcTypes.RegisteredTransfers>,
+  ): Promise<void> {
+    const engine = getNode(call.request.publicIdentifier);
+    if (!engine) {
+      const error = new ServerNodeError(
+        ServerNodeError.reasons.NodeNotFound,
+        call.request.publicIdentifier,
+        call.request,
+      );
+      logger.error({ error }, "Could not find engine");
+      return callback({ code: grpc.status.NOT_FOUND, details: JSON.stringify(error) });
+    }
+    try {
+      const params = constructRpcRequest(ChannelRpcMethods.chan_getRegisteredTransfers, {
+        chainId: call.request.chainId,
+      });
+      const registeredTransfer = await engine.request<"chan_getRegisteredTransfers">(params);
+
+      callback(null, { registeredTransfer });
+    } catch (e) {
+      logger.error({ error: jsonifyError(e) });
+      callback({ code: grpc.status.UNKNOWN, details: JSON.stringify(e) });
+    }
+  },
 
   async createNode(
     call: grpc.ServerUnaryCall<GrpcTypes.CreateNodeRequest, GrpcTypes.CreateNodeReply>,
@@ -389,6 +426,7 @@ const vectorService: GrpcTypes.IServerNodeService = {
 
       // every node needs to register to evts so that events get sent over as part of the stream
       const newNode = await createNode(call.request.index, store, storedMnemonic!, call.request.skipCheckIn ?? false);
+      console.log("newNode: ", newNode);
       newNode.on(EngineEvents.CONDITIONAL_TRANSFER_CREATED, (data) => {
         evts.CONDITIONAL_TRANSFER_CREATED.post(data);
       });
@@ -426,7 +464,7 @@ const vectorService: GrpcTypes.IServerNodeService = {
         signerAddress: newNode.signerAddress,
       });
     } catch (e) {
-      logger.error({ error: e.toJson() });
+      logger.error({ error: jsonifyError(e) });
       callback({ code: grpc.status.INTERNAL, details: JSON.stringify(jsonifyError(e)) });
     }
   },
@@ -518,11 +556,13 @@ const vectorService: GrpcTypes.IServerNodeService = {
   },
 
   clearStore: () => undefined,
-  createTransfer: () => undefined,
-  deposit: () => undefined,
-  ethProvider: () => undefined,
   internalSetup: () => undefined,
+  setup: () => undefined,
+  deposit: () => undefined,
+  createTransfer: () => undefined,
   resolveTransfer: () => undefined,
+  ethProvider: () => undefined,
+  withdraw: () => undefined,
   restoreState: () => undefined,
   sendDefundChannelTx: () => undefined,
   sendDefundTransfer: () => undefined,
@@ -530,9 +570,6 @@ const vectorService: GrpcTypes.IServerNodeService = {
   sendDisputeChannelTx: () => undefined,
   sendDisputeTransfer: () => undefined,
   sendRequestCollateral: () => undefined,
-  setup: () => undefined,
-  transferState: () => undefined,
-  withdraw: () => undefined,
 };
 
 function getServer(): grpc.Server {

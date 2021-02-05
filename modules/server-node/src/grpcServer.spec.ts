@@ -1,4 +1,5 @@
 import { VectorEngine } from "@connext/vector-engine";
+import { VectorChainService } from "@connext/vector-contracts";
 import {
   EngineEvents,
   IVectorEngine,
@@ -6,6 +7,7 @@ import {
   EngineEvent,
   FullTransferState,
   FullChannelState,
+  IVectorChainService,
 } from "@connext/vector-types";
 import {
   createTestChannelState,
@@ -25,17 +27,24 @@ import { createStubInstance, SinonStubbedInstance, stub } from "sinon";
 import * as nodeUtils from "./helpers/nodes";
 import { config } from "./config";
 import { evts, setupServer } from "./grpcServer";
+import { IServerNodeStore, PrismaStore } from "./services/store";
 
 describe("GRPC server", () => {
   const { log: logger } = getTestLoggers("messaging", (config.logLevel ?? "fatal") as pino.Level);
   let engine: SinonStubbedInstance<IVectorEngine>;
   let client: GRPCServerNodeClient;
+  let store: SinonStubbedInstance<IServerNodeStore>;
+  let chainService: SinonStubbedInstance<IVectorChainService>;
 
   before(async () => {
     await setupServer(5000);
     engine = createStubInstance(VectorEngine);
+    store = createStubInstance(PrismaStore);
+    chainService = createStubInstance(VectorChainService);
     client = await GRPCServerNodeClient.connect("localhost:5000", logger);
     stub(nodeUtils, "getNode").returns(engine as any);
+    stub(nodeUtils, "getNodes").returns([{ node: engine as any, chainService: chainService, index: 1 }]);
+    stub(nodeUtils, "createNode").resolves(engine as any);
   });
 
   it("should ping", async () => {
@@ -169,7 +178,7 @@ describe("GRPC server", () => {
     expect(result.getValue()).to.deep.eq(expectedResponse);
   });
 
-  it.only("should getStateChannelByParticipants", async () => {
+  it("should getStateChannelByParticipants", async () => {
     const expectedResponse: FullChannelState = createTestChannelState("resolve").channel;
 
     engine.request.resolves(expectedResponse);
@@ -182,7 +191,7 @@ describe("GRPC server", () => {
     expect(result.getValue()).to.deep.eq(expectedResponse);
   });
 
-  it.only("should getStateChannels", async () => {
+  it("should getStateChannels", async () => {
     const expectedResponse: FullChannelState[] = [
       createTestChannelState("deposit").channel,
       createTestChannelState("setup", { channelAddress: mkAddress("0xd") }).channel,
@@ -190,6 +199,56 @@ describe("GRPC server", () => {
 
     engine.request.resolves(expectedResponse);
     const result = await client.getStateChannels({
+      publicIdentifier: mkPublicIdentifier("vectorB"),
+    });
+    expect(result.getError()).to.be.not.ok;
+    expect(result.getValue()).to.deep.eq(expectedResponse);
+  });
+
+  it("should createNode", async () => {
+    store.getMnemonic.resolves("candy maple cake sugar pudding cream honey rich smooth crumble sweet treat");
+    engine.publicIdentifier = mkPublicIdentifier("vectorB");
+    engine.signerAddress = mkAddress("0xb");
+    const result = await client.createNode({
+      index: 1,
+    });
+    expect(result.getError()).to.be.not.ok;
+    expect(result.getValue()).to.deep.eq({
+      index: 1,
+      publicIdentifier: engine.publicIdentifier,
+      signerAddress: engine.signerAddress,
+    });
+  });
+
+  it("should getConfig", async () => {
+    store.getMnemonic.resolves("candy maple cake sugar pudding cream honey rich smooth crumble sweet treat");
+    engine.publicIdentifier = mkPublicIdentifier("vectorB");
+    engine.signerAddress = mkAddress("0xb");
+    const result = await client.getConfig();
+    expect(result.getError()).to.be.not.ok;
+    expect(result.getValue()).to.deep.eq([
+      {
+        index: 1,
+        publicIdentifier: engine.publicIdentifier,
+        signerAddress: engine.signerAddress,
+      },
+    ]);
+  });
+
+  it.only("should getRegisteredTransfers", async () => {
+    const expectedResponse = [
+      {
+        name: "foo",
+        stateEncoding: "state",
+        resolverEncoding: "resolver",
+        definition: mkAddress("0xa"),
+        encodedCancel: "cancel",
+      },
+    ];
+
+    engine.request.resolves(expectedResponse);
+    const result = await client.getRegisteredTransfers({
+      chainId: 1337,
       publicIdentifier: mkPublicIdentifier("vectorB"),
     });
     expect(result.getError()).to.be.not.ok;

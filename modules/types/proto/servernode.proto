@@ -162,7 +162,7 @@ message FullChannelState {
 }
 
 message FullChannelStates {
-    repeated FullChannelState full_channel_state = 1;
+    repeated FullChannelState full_channel_states = 1;
 }
 
 // transfer states
@@ -456,8 +456,8 @@ message WithdrawalReconciledPayload {
 
 message CreateNodeRequest {
     int32 index = 1;
-    string mnemonic  = 2;
-    bool skipCheckIn = 3;
+    optional string mnemonic  = 2;
+    optional bool skipCheckIn = 3;
 }
 
 message CreateNodeReply {

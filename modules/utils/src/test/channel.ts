@@ -135,12 +135,14 @@ export function createTestChannelUpdate<T extends UpdateType>(
           providerUrl: "http://localhost:8545",
         },
         timeout: "1",
+        meta: { hello: "world" },
       } as SetupUpdateDetails;
       break;
     case UpdateType.deposit:
       details = {
         totalDepositsAlice: "10",
         totalDepositsBob: "5",
+        meta: { hello: "world" },
       } as DepositUpdateDetails;
       break;
     case UpdateType.create:
@@ -156,6 +158,7 @@ export function createTestChannelUpdate<T extends UpdateType>(
           expiry: "0",
         },
         transferTimeout: DEFAULT_TRANSFER_TIMEOUT.toString(),
+        meta: { hello: "world" },
       };
       details = { ...createDeets };
       break;
@@ -165,6 +168,7 @@ export function createTestChannelUpdate<T extends UpdateType>(
         transferDefinition: mkAddress("0xdef"),
         transferId: mkBytes32("0xeee3332222111"),
         transferResolver: { preImage: mkBytes32("0xpre") },
+        meta: { hello: "world" },
       };
       details = { ...resolveDetails };
       break;
@@ -230,7 +234,6 @@ export function createTestChannelState<T extends UpdateType = typeof UpdateType.
   if (type === "create" || type === "resolve") {
     transfer = createTestFullHashlockTransferState();
     transfer.balance = latestUpdate.balance ?? transfer.balance;
-    transfer.meta = type === "create" ? (latestUpdate.details as any).meta : undefined;
     (latestUpdate.details as CreateUpdateDetails).meta =
       type === "create" ? (latestUpdate.details as any).meta : undefined;
     transfer.channelFactoryAddress = networkContext.channelFactoryAddress ?? transfer.channelFactoryAddress;

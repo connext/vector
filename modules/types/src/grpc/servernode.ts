@@ -329,9 +329,9 @@ export interface FullChannelState {
  */
 export interface FullChannelStates {
     /**
-     * @generated from protobuf field: repeated com.vector.FullChannelState full_channel_state = 1;
+     * @generated from protobuf field: repeated com.vector.FullChannelState full_channel_states = 1;
      */
-    fullChannelState: FullChannelState[];
+    fullChannelStates: FullChannelState[];
 }
 /**
  * transfer states
@@ -1206,13 +1206,13 @@ export interface CreateNodeRequest {
      */
     index: number;
     /**
-     * @generated from protobuf field: string mnemonic = 2;
+     * @generated from protobuf field: optional string mnemonic = 2;
      */
-    mnemonic: string;
+    mnemonic?: string;
     /**
-     * @generated from protobuf field: bool skipCheckIn = 3;
+     * @generated from protobuf field: optional bool skipCheckIn = 3;
      */
-    skipCheckIn: boolean;
+    skipCheckIn?: boolean;
 }
 /**
  * @generated from protobuf message com.vector.CreateNodeReply
@@ -2061,7 +2061,7 @@ export const FullChannelState = new FullChannelState$Type();
 class FullChannelStates$Type extends MessageType<FullChannelStates> {
     constructor() {
         super("com.vector.FullChannelStates", [
-            { no: 1, name: "full_channel_state", kind: "message", repeat: 1 /*RepeatType.PACKED*/, T: () => FullChannelState }
+            { no: 1, name: "full_channel_states", kind: "message", repeat: 1 /*RepeatType.PACKED*/, T: () => FullChannelState }
         ]);
     }
     internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: FullChannelStates): FullChannelStates {
@@ -2069,8 +2069,8 @@ class FullChannelStates$Type extends MessageType<FullChannelStates> {
         while (reader.pos < end) {
             let [fieldNo, wireType] = reader.tag();
             switch (fieldNo) {
-                case /* repeated com.vector.FullChannelState full_channel_state */ 1:
-                    message.fullChannelState.push(FullChannelState.internalBinaryRead(reader, reader.uint32(), options));
+                case /* repeated com.vector.FullChannelState full_channel_states */ 1:
+                    message.fullChannelStates.push(FullChannelState.internalBinaryRead(reader, reader.uint32(), options));
                     break;
                 default:
                     let u = options.readUnknownField;
@@ -2084,9 +2084,9 @@ class FullChannelStates$Type extends MessageType<FullChannelStates> {
         return message;
     }
     internalBinaryWrite(message: FullChannelStates, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
-        /* repeated com.vector.FullChannelState full_channel_state = 1; */
-        for (let i = 0; i < message.fullChannelState.length; i++)
-            FullChannelState.internalBinaryWrite(message.fullChannelState[i], writer.tag(1, WireType.LengthDelimited).fork(), options).join();
+        /* repeated com.vector.FullChannelState full_channel_states = 1; */
+        for (let i = 0; i < message.fullChannelStates.length; i++)
+            FullChannelState.internalBinaryWrite(message.fullChannelStates[i], writer.tag(1, WireType.LengthDelimited).fork(), options).join();
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
@@ -4546,8 +4546,8 @@ class CreateNodeRequest$Type extends MessageType<CreateNodeRequest> {
     constructor() {
         super("com.vector.CreateNodeRequest", [
             { no: 1, name: "index", kind: "scalar", T: 5 /*ScalarType.INT32*/ },
-            { no: 2, name: "mnemonic", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
-            { no: 3, name: "skipCheckIn", kind: "scalar", T: 8 /*ScalarType.BOOL*/ }
+            { no: 2, name: "mnemonic", kind: "scalar", opt: true, T: 9 /*ScalarType.STRING*/ },
+            { no: 3, name: "skipCheckIn", kind: "scalar", opt: true, T: 8 /*ScalarType.BOOL*/ }
         ]);
     }
     internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: CreateNodeRequest): CreateNodeRequest {
@@ -4558,10 +4558,10 @@ class CreateNodeRequest$Type extends MessageType<CreateNodeRequest> {
                 case /* int32 index */ 1:
                     message.index = reader.int32();
                     break;
-                case /* string mnemonic */ 2:
+                case /* optional string mnemonic */ 2:
                     message.mnemonic = reader.string();
                     break;
-                case /* bool skipCheckIn */ 3:
+                case /* optional bool skipCheckIn */ 3:
                     message.skipCheckIn = reader.bool();
                     break;
                 default:
@@ -4579,11 +4579,11 @@ class CreateNodeRequest$Type extends MessageType<CreateNodeRequest> {
         /* int32 index = 1; */
         if (message.index !== 0)
             writer.tag(1, WireType.Varint).int32(message.index);
-        /* string mnemonic = 2; */
-        if (message.mnemonic !== "")
+        /* optional string mnemonic = 2; */
+        if (message.mnemonic !== undefined)
             writer.tag(2, WireType.LengthDelimited).string(message.mnemonic);
-        /* bool skipCheckIn = 3; */
-        if (message.skipCheckIn !== false)
+        /* optional bool skipCheckIn = 3; */
+        if (message.skipCheckIn !== undefined)
             writer.tag(3, WireType.Varint).bool(message.skipCheckIn);
         let u = options.writeUnknownFields;
         if (u !== false)

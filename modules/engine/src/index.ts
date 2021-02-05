@@ -61,6 +61,11 @@ export class VectorEngine implements IVectorEngine {
 
   private readonly restoreLocks: { [channelAddress: string]: string } = {};
 
+  // had to make these public to make some of the tests work
+  // TODO: see grpcServer.spec.ts
+  public publicIdentifier = "";
+  public signerAddress = "";
+
   private constructor(
     private readonly signer: IChannelSigner,
     private readonly messaging: IMessagingService,
@@ -93,6 +98,7 @@ export class VectorEngine implements IVectorEngine {
       skipCheckIn,
       validationService,
     );
+
     const engine = new VectorEngine(
       signer,
       messaging,
@@ -103,6 +109,8 @@ export class VectorEngine implements IVectorEngine {
       lock,
       logger.child({ module: "VectorEngine" }),
     );
+    engine.publicIdentifier = vector.publicIdentifier;
+    engine.signerAddress = vector.signerAddress;
     await engine.setupListener();
     logger.debug({}, "Setup engine listeners");
     if (!skipCheckIn) {
@@ -112,14 +120,6 @@ export class VectorEngine implements IVectorEngine {
     }
     logger.info({ vector: vector.publicIdentifier }, "Vector Engine connected 🚀!");
     return engine;
-  }
-
-  get publicIdentifier(): string {
-    return this.vector.publicIdentifier;
-  }
-
-  get signerAddress(): string {
-    return this.vector.signerAddress;
   }
 
   // TODO: create injected validation that handles submitting transactions

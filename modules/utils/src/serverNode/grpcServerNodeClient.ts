@@ -56,7 +56,7 @@ const convertChannel = <T extends "setup" | "create" | "resolve" | "deposit">(
     const typedDetails: any = channel.latestUpdate.details;
     updateDetails = {
       ...typedDetails.resolveUpdateDetails,
-      transferResolver: GrpcTypes.Struct.toJson(typedDetails.resolveUpdateDetails.transferInitialState),
+      transferResolver: GrpcTypes.Struct.toJson(typedDetails.resolveUpdateDetails.transferResolver),
       meta: typedDetails.resolveUpdateDetails.meta
         ? GrpcTypes.Struct.toJson(typedDetails.resolveUpdateDetails.meta)
         : undefined,
@@ -383,7 +383,7 @@ export class GRPCServerNodeClient implements INodeClient {
       const res = await this.validateAndExecuteGrpcRequest<
         OptionalPublicIdentifier<GrpcTypes.ChannelStateByParticipantsRequest>,
         GrpcTypes.FullChannelState | undefined
-      >("getChannelState", params);
+      >("getChannelStateByParticipants", params);
 
       const channel = res ? convertChannel(res) : undefined;
       return Result.ok(channel);
@@ -395,6 +395,78 @@ export class GRPCServerNodeClient implements INodeClient {
   async getStateChannels(
     params: OptionalPublicIdentifier<NodeParams.GetChannelStates>,
   ): Promise<Result<NodeResponses.GetChannelStates, ServerNodeServiceError>> {
+    try {
+      const res = await this.validateAndExecuteGrpcRequest<
+        OptionalPublicIdentifier<GrpcTypes.GenericPublicIdentifierRequest>,
+        GrpcTypes.FullChannelStates
+      >("getChannelStates", params);
+
+      const channels = res.fullChannelStates.map(convertChannel);
+      return Result.ok(channels as any);
+    } catch (e) {
+      return Result.fail(e);
+    }
+  }
+
+  async createNode(params: NodeParams.CreateNode): Promise<Result<NodeResponses.CreateNode, ServerNodeServiceError>> {
+    try {
+      const call = await this.client.createNode(params);
+      this.logger.debug({ callStatus: call.status, methodName: "createNode", filled: params }, "gRPC call complete");
+      if (call.status.code !== "OK") {
+        return Result.fail(
+          new ServerNodeServiceError(
+            ServerNodeServiceError.reasons.InternalServerError,
+            this.publicIdentifier,
+            "createNode",
+            params,
+            {
+              call,
+            },
+          ),
+        );
+      }
+      return Result.ok(call.response);
+    } catch (e) {
+      this.logger.error({ error: jsonifyError(e), methodName: "createNode", params }, "Error occurred");
+      return Result.fail(
+        new ServerNodeServiceError(
+          ServerNodeServiceError.reasons.InternalServerError,
+          this.publicIdentifier,
+          "createNode",
+          params,
+          {
+            error: jsonifyError(e),
+          },
+        ),
+      );
+    }
+  }
+
+  async getRegisteredTransfers(
+    params: OptionalPublicIdentifier<NodeParams.GetRegisteredTransfers>,
+  ): Promise<Result<NodeResponses.GetRegisteredTransfers, ServerNodeServiceError>> {
+    try {
+      const res = await this.validateAndExecuteGrpcRequest<
+        OptionalPublicIdentifier<GrpcTypes.RegisteredTransfersRequest>,
+        GrpcTypes.RegisteredTransfers
+      >("getRegisteredTransfers", params);
+
+      res.registeredTransfer;
+      return Result.ok(res.registeredTransfer);
+    } catch (e) {
+      return Result.fail(e);
+    }
+  }
+
+  async setup(
+    params: OptionalPublicIdentifier<NodeParams.RequestSetup>,
+  ): Promise<Result<NodeResponses.RequestSetup, ServerNodeServiceError>> {
+    throw new Error("unimplemented");
+  }
+
+  async internalSetup(
+    params: OptionalPublicIdentifier<NodeParams.Setup>,
+  ): Promise<Result<NodeResponses.Setup, ServerNodeServiceError>> {
     throw new Error("unimplemented");
   }
 
@@ -422,31 +494,9 @@ export class GRPCServerNodeClient implements INodeClient {
     throw new Error("unimplemented");
   }
 
-  async createNode(params: NodeParams.CreateNode): Promise<Result<NodeResponses.CreateNode, ServerNodeServiceError>> {
-    throw new Error("unimplemented");
-  }
-
-  getRegisteredTransfers(
-    params: OptionalPublicIdentifier<NodeParams.GetRegisteredTransfers>,
-  ): Promise<Result<NodeResponses.GetRegisteredTransfers, ServerNodeServiceError>> {
-    throw new Error("unimplemented");
-  }
-
   restoreState(
     params: OptionalPublicIdentifier<NodeParams.RestoreState>,
   ): Promise<Result<NodeResponses.RestoreState, ServerNodeServiceError>> {
-    throw new Error("unimplemented");
-  }
-
-  async setup(
-    params: OptionalPublicIdentifier<NodeParams.RequestSetup>,
-  ): Promise<Result<NodeResponses.RequestSetup, ServerNodeServiceError>> {
-    throw new Error("unimplemented");
-  }
-
-  async internalSetup(
-    params: OptionalPublicIdentifier<NodeParams.Setup>,
-  ): Promise<Result<NodeResponses.Setup, ServerNodeServiceError>> {
     throw new Error("unimplemented");
   }
 
@@ -548,6 +598,7 @@ export class GRPCServerNodeClient implements INodeClient {
     params: T,
   ): Promise<U> {
     const filled = { publicIdentifier: this.publicIdentifier, ...params };
+    console.log("filled: ", filled);
 
     // Attempt request
     try {
