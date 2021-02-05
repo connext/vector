@@ -359,7 +359,10 @@ export async function setupEngineListeners(
   ////////////////////////////
   /// CHAIN SERVICE EVENTS
   chainService.on(EngineEvents.TRANSACTION_SUBMITTED, (data) => {
-    evts[EngineEvents.TRANSACTION_SUBMITTED].post({ ...data, publicIdentifier: signer.publicIdentifier });
+    evts[EngineEvents.TRANSACTION_SUBMITTED].post({
+      ...data,
+      publicIdentifier: signer.publicIdentifier,
+    });
   });
 
   chainService.on(EngineEvents.TRANSACTION_MINED, (data) => {

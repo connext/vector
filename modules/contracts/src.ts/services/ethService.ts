@@ -13,6 +13,7 @@ import {
   EngineEvents,
   TransactionEvent,
   TransactionEventMap,
+  StringifiedTransactionReceipt,
 } from "@connext/vector-types";
 import {
   bufferify,
@@ -638,7 +639,11 @@ export class EthereumChainService extends EthereumChainReader implements IVector
         }
         await this.store.saveTransactionResponse(channelAddress, reason, response);
         this.evts[EngineEvents.TRANSACTION_SUBMITTED].post({
-          response,
+          response: Object.fromEntries(
+            Object.entries(response).map(([key, value]) => {
+              return [key, BigNumber.isBigNumber(value) ? value.toString() : value];
+            }),
+          ) as TransactionResponse,
           channelAddress,
           reason,
         });
@@ -650,14 +655,22 @@ export class EthereumChainService extends EthereumChainReader implements IVector
               this.log.error({ method: "sendTxAndParseResponse", receipt }, "Transaction reverted");
               this.store.saveTransactionFailure(channelAddress, response.hash, "Tx reverted");
               this.evts[EngineEvents.TRANSACTION_FAILED].post({
-                receipt,
+                receipt: Object.fromEntries(
+                  Object.entries(response).map(([key, value]) => {
+                    return [key, BigNumber.isBigNumber(value) ? value.toString() : value];
+                  }),
+                ) as StringifiedTransactionReceipt,
                 channelAddress,
                 reason,
               });
             } else {
               this.store.saveTransactionReceipt(channelAddress, receipt);
               this.evts[EngineEvents.TRANSACTION_MINED].post({
-                receipt,
+                receipt: Object.fromEntries(
+                  Object.entries(response).map(([key, value]) => {
+                    return [key, BigNumber.isBigNumber(value) ? value.toString() : value];
+                  }),
+                ) as StringifiedTransactionReceipt,
                 channelAddress,
                 reason,
               });

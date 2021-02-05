@@ -29,12 +29,16 @@ export type TransactionSubmittedPayload = {
   channelAddress: string;
 };
 
+export type StringifiedTransactionReceipt = Omit<TransactionReceipt, "gasUsed" | "cumulativeGasUsed"> & {
+  gasUsed: string;
+  cumulativeGasUsed: string;
+};
 export type TransactionMinedPayload = Omit<TransactionSubmittedPayload, "response"> & {
-  receipt: TransactionReceipt;
+  receipt: StringifiedTransactionReceipt;
 };
 
 export type TransactionFailedPayload = Omit<TransactionSubmittedPayload, "response"> & {
-  receipt?: TransactionReceipt;
+  receipt?: StringifiedTransactionReceipt;
   error?: Error; // thrown
 };
 
