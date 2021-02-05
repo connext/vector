@@ -45,7 +45,7 @@ const successfulCreation = new Gauge({
 const successfulResolution = new Gauge({
   name: "router_successful_forwarded_resolution",
   help: "router_successful_forwarded_resolution_help",
-  labelNames: ["routingId"] as const,
+  labelNames: ["routingId", "recipientAmount", "recipientAssetId"] as const,
 });
 
 // Track failing forwards

@@ -143,6 +143,7 @@ Object.entries(hydrated).forEach(async ([chainId, provider]) => {
   });
 });
 
+// TODO: add asset name label
 new Gauge({
   name: "router_onchain_balance",
   help: "router_onchain_balance_help",

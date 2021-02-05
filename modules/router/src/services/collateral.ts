@@ -7,7 +7,6 @@ import {
   jsonifyError,
 } from "@connext/vector-types";
 import { getBalanceForAssetId, getRandomBytes32, getParticipant } from "@connext/vector-utils";
-import { Gauge } from "prom-client";
 import { getAddress } from "@ethersproject/address";
 import { BigNumber } from "@ethersproject/bignumber";
 import { BaseLogger } from "pino";
@@ -15,25 +14,6 @@ import { BaseLogger } from "pino";
 import { CollateralError } from "../errors";
 
 import { getRebalanceProfile } from "./config";
-
-// router_deposit_transaction
-const attemptDepositTransaction = new Gauge({
-  name: "router_deposit_transaction_attempt",
-  help: "router_deposit_transaction_attempt_help",
-  labelNames: ["methodId", "amountToDeposit", "channelAddress", "chainId", "assetId"] as const,
-});
-
-const submittedDepositTransaction = new Gauge({
-  name: "router_deposit_transaction_submit",
-  help: "router_deposit_transaction_submit_help",
-  labelNames: ["methodId", "txHash"] as const,
-});
-
-const successfulDepositTransaction = new Gauge({
-  name: "router_deposit_transaction_success",
-  help: "router_deposit_transaction_success_help",
-  labelNames: ["methodId", "txHash"] as const,
-});
 
 /**
  * This function should be called before a transfer is created/forwarded.
@@ -354,15 +334,6 @@ export const requestCollateral = async (
       },
       "Deposit calculated, submitting tx",
     );
-    attemptDepositTransaction
-      .labels(
-        methodId,
-        amountToDeposit.toString(),
-        channel.channelAddress,
-        channel.networkContext.chainId.toString(),
-        assetId,
-      )
-      .inc(1);
     const txRes = await node.sendDepositTx({
       amount: amountToDeposit.toString(),
       assetId: assetId,
@@ -388,7 +359,6 @@ export const requestCollateral = async (
 
     const tx = txRes.getValue();
     logger.info({ method, methodId, txHash: tx.txHash }, "Submitted deposit tx");
-    submittedDepositTransaction.labels(methodId, tx.txHash).inc(1);
     const receipt = await provider.waitForTransaction(tx.txHash);
     if (receipt.status === 0) {
       return Result.fail(
@@ -407,7 +377,6 @@ export const requestCollateral = async (
     }
     logger.info({ method, methodId, txHash: tx.txHash }, "Tx mined");
     logger.debug({ method, methodId, txHash: tx.txHash, logs: receipt.logs }, "Tx mined");
-    successfulDepositTransaction.labels(methodId, tx.txHash).inc(1);
   } else {
     logger.info(
       {
