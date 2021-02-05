@@ -23,16 +23,23 @@ export type ProtocolEventPayloadsMap = {
 
 ////////////////////////////
 ///// CHAIN SERVICE EVENTS
-export type TransactionSubmittedPayload = {
-  response: TransactionResponse;
-  reason: TransactionReason;
-  channelAddress: string;
-};
-
 export type StringifiedTransactionReceipt = Omit<TransactionReceipt, "gasUsed" | "cumulativeGasUsed"> & {
   gasUsed: string;
   cumulativeGasUsed: string;
 };
+
+export type StringifiedTransactionResponse = Omit<TransactionResponse, "gasLimit" | "gasPrice" | "value"> & {
+  gasLimit: string;
+  gasPrice: string;
+  value: string;
+};
+
+export type TransactionSubmittedPayload = {
+  response: StringifiedTransactionResponse;
+  reason: TransactionReason;
+  channelAddress: string;
+};
+
 export type TransactionMinedPayload = Omit<TransactionSubmittedPayload, "response"> & {
   receipt: StringifiedTransactionReceipt;
 };

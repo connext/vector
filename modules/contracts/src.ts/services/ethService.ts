@@ -14,6 +14,7 @@ import {
   TransactionEvent,
   TransactionEventMap,
   StringifiedTransactionReceipt,
+  StringifiedTransactionResponse,
 } from "@connext/vector-types";
 import {
   bufferify,
@@ -643,7 +644,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
             Object.entries(response).map(([key, value]) => {
               return [key, BigNumber.isBigNumber(value) ? value.toString() : value];
             }),
-          ) as TransactionResponse,
+          ) as StringifiedTransactionResponse,
           channelAddress,
           reason,
         });
