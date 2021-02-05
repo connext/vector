@@ -461,13 +461,33 @@ export class GRPCServerNodeClient implements INodeClient {
   async setup(
     params: OptionalPublicIdentifier<NodeParams.RequestSetup>,
   ): Promise<Result<NodeResponses.RequestSetup, ServerNodeServiceError>> {
-    throw new Error("unimplemented");
+    try {
+      const res = await this.validateAndExecuteGrpcRequest<
+        OptionalPublicIdentifier<GrpcTypes.SetupRequest>,
+        GrpcTypes.FullChannelState
+      >("setup", { ...params, meta: params.meta ? GrpcTypes.Struct.fromJson(params.meta) : null });
+
+      const safeChannelState = convertChannel(res);
+      return Result.ok(safeChannelState);
+    } catch (e) {
+      return Result.fail(e);
+    }
   }
 
   async internalSetup(
     params: OptionalPublicIdentifier<NodeParams.Setup>,
   ): Promise<Result<NodeResponses.Setup, ServerNodeServiceError>> {
-    throw new Error("unimplemented");
+    try {
+      const res = await this.validateAndExecuteGrpcRequest<
+        OptionalPublicIdentifier<GrpcTypes.SetupRequest>,
+        GrpcTypes.FullChannelState
+      >("internalSetup", { ...params, meta: params.meta ? GrpcTypes.Struct.fromJson(params.meta) : null });
+
+      const safeChannelState = convertChannel(res);
+      return Result.ok(safeChannelState);
+    } catch (e) {
+      return Result.fail(e);
+    }
   }
 
   sendDisputeChannelTx(
