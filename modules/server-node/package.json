@@ -17,7 +17,6 @@
     "@connext/vector-engine": "0.1.0",
     "@connext/vector-types": "0.1.0",
     "@connext/vector-utils": "0.1.0",
-    "@prisma/cli": "2.16.0",
     "@prisma/client": "2.16.0",
     "@sinclair/typebox": "0.12.7",
     "ajv": "6.12.6",
@@ -30,6 +29,7 @@
     "merkletreejs": "0.2.9",
     "pg": "8.5.1",
     "pino": "6.7.0",
+    "prisma": "2.16.0",
     "regenerator-runtime": "0.13.7",
     "sqlite3": "5.0.0",
     "ts-nats": "1.2.15"
