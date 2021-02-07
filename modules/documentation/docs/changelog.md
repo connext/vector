@@ -2,6 +2,10 @@
 
 ## Next Release
 
+## 0.1.15-beta.5
+
+- \[contracts\] Fix token approval bug
+
 ## 0.1.15-beta.4
 
 - \[iframe\] Improve error parsing
