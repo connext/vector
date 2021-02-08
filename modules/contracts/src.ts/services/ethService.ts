@@ -290,7 +290,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
       channelState.channelAddress,
       channelState.networkContext.channelFactoryAddress,
       sender,
-      UINT_MAX,
+      amount,
       assetId,
       channelState.networkContext.chainId,
       gasPrice,
@@ -703,54 +703,88 @@ export class EthereumChainService extends EthereumChainReader implements IVector
     channelAddress: string,
     spender: string,
     owner: string,
-    amount: string,
+    depositAmount: string,
     assetId: string,
     chainId: number,
     gasPrice: BigNumber,
+    approvalAmount: string = UINT_MAX,
   ): Promise<Result<TransactionResponse | undefined, ChainError>> {
+    const method = "approveTokens";
+    this.log.debug(
+      {
+        method,
+        channelAddress,
+        spender,
+        owner,
+        approvalAmount,
+        depositAmount,
+        assetId,
+        chainId,
+        gasPrice: gasPrice.toString(),
+      },
+      "Method started",
+    );
     const signer = this.signers.get(chainId);
     if (!signer?._isSigner) {
       return Result.fail(new ChainError(ChainError.reasons.SignerNotFound));
     }
 
-    this.log.info({ assetId, channelAddress: spender }, "Approving token");
+    this.log.info({ method, assetId, spender, owner, channelAddress }, "Checking allowance");
     const erc20 = new Contract(assetId, ERC20Abi, signer);
-    const checkApprovalRes = await this.getTokenAllowance(assetId, owner, spender, chainId);
-    if (checkApprovalRes.isError) {
+    const allowanceRes = await this.getTokenAllowance(assetId, owner, spender, chainId);
+    if (allowanceRes.isError) {
       this.log.error(
         {
-          method: "approveTokens",
+          method,
           spender,
           owner,
           assetId,
-          error: checkApprovalRes.getError()?.message,
+          error: allowanceRes.getError()?.message,
         },
         "Error checking approved tokens for deposit A",
       );
-      return Result.fail(checkApprovalRes.getError()!);
+      return Result.fail(allowanceRes.getError()!);
     }
+    const allowance = allowanceRes.getValue();
+    this.log.info(
+      { method, assetId, spender, owner, channelAddress, allowance: allowance.toString(), depositAmount },
+      "Retrieved allowance",
+    );
 
-    if (BigNumber.from(checkApprovalRes.getValue()).gte(amount)) {
+    if (BigNumber.from(allowanceRes.getValue()).gte(depositAmount)) {
       this.log.info(
         {
-          method: "approveTokens",
+          method,
           assetId,
-          spender,
-          owner,
-          approved: checkApprovalRes.getValue().toString(),
+          channelAddress,
         },
         "Allowance is sufficient",
       );
       return Result.ok(undefined);
     }
+    this.log.info(
+      {
+        method,
+        assetId,
+        channelAddress,
+        spender,
+        owner,
+        approvalAmount,
+      },
+      "Approving tokens",
+    );
     const approveRes = await this.sendTxWithRetries(channelAddress, TransactionReason.approveTokens, () =>
-      erc20.approve(spender, amount, { gasPrice }),
+      erc20.approve(spender, approvalAmount, { gasPrice }),
     );
     if (approveRes.isError) {
       this.log.error(
         {
-          method: "approveTokens",
+          method,
           spender,
+          owner,
+          assetId,
+          approvalAmount,
+          allowance: allowance.toString(),
           error: approveRes.getError()?.message,
         },
         "Error approving tokens for deposit A",
@@ -758,7 +792,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
       return approveRes;
     }
     const approveTx = approveRes.getValue();
-    this.log.info({ txHash: approveTx!.hash, method: "approveTokens", assetId, amount }, "Approve token tx submitted");
+    this.log.info({ txHash: approveTx!.hash, method, assetId, approvalAmount }, "Approve token tx submitted");
     return approveRes;
   }
 
@@ -783,7 +817,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
         channelState.channelAddress,
         channelState.channelAddress,
         channelState.alice,
-        UINT_MAX,
+        amount,
         assetId,
         channelState.networkContext.chainId,
         gasPrice,
