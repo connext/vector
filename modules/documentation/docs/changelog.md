@@ -2,6 +2,8 @@
 
 ## Next Release
 
+## 0.1.15-beta.6
+
 - \[node, router\] Prisma upgrade.
 
 ## 0.1.15-beta.5
