@@ -2,6 +2,10 @@
 
 ## Next Release
 
+## 0.1.15-beta.7
+
+- \[ops\] Fix github actions.
+
 ## 0.1.15-beta.6
 
 - \[node, router\] Prisma upgrade.

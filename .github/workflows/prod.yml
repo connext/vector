@@ -163,7 +163,7 @@ jobs:
   deploy-messaging:
     env:
       DOMAINNAME: messaging.connext.network
-    needs: [ssh, utils, contracts, protocol, engine, server-node, browser-node, router, messaging, duet, trio, node, routing-node, messaging-prod, routing-node-prod]
+    needs: [ssh, utils, contracts, protocol, engine, server-node, browser-node, router, messaging, duet, trio, messaging-prod, routing-node-prod]
     runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v1
@@ -183,7 +183,7 @@ jobs:
     env:
       DOMAINNAME: testnet-vector.connext.network
       MESSAGING_URL: https://messaging.connext.network
-    needs: [ssh, utils, contracts, protocol, engine, server-node, browser-node, router, messaging, duet, trio, node, routing-node, messaging-prod, routing-node-prod]
+    needs: [ssh, utils, contracts, protocol, engine, server-node, browser-node, router, messaging, duet, trio, messaging-prod, routing-node-prod]
     runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v1
