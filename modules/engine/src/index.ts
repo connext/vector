@@ -33,6 +33,7 @@ import {
   validateChannelUpdateSignatures,
   getSignerAddressFromPublicIdentifier,
   getRandomBytes32,
+  getParticipant,
 } from "@connext/vector-utils";
 import pino from "pino";
 import Ajv from "ajv";
@@ -317,6 +318,33 @@ export class VectorEngine implements IVectorEngine {
       return Result.fail(
         new RpcError(RpcError.reasons.StoreMethodFailed, params.channelAddress, this.publicIdentifier, {
           storeMethod: "getActiveTransfers",
+          storeError: e.message,
+        }),
+      );
+    }
+  }
+
+  private async getTransfers(
+    params: EngineParams.GetTransfers,
+  ): Promise<Result<ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_getTransfers], EngineError>> {
+    const validate = ajv.compile(EngineParams.GetTransfersSchema);
+    const valid = validate(params);
+    if (!valid) {
+      return Result.fail(
+        new RpcError(RpcError.reasons.InvalidParams, "", this.publicIdentifier, {
+          invalidParamsError: validate.errors?.map((e) => e.message).join(","),
+          invalidParams: params,
+        }),
+      );
+    }
+
+    try {
+      const transfers = await this.store.getTransfers(params);
+      return Result.ok(transfers);
+    } catch (e) {
+      return Result.fail(
+        new RpcError(RpcError.reasons.StoreMethodFailed, "", this.publicIdentifier, {
+          storeMethod: "getTransfers",
           storeError: e.message,
         }),
       );
@@ -650,9 +678,20 @@ export class VectorEngine implements IVectorEngine {
       return Result.fail(new RpcError(RpcError.reasons.ChannelNotFound, params.channelAddress, this.publicIdentifier));
     }
 
+    const participant = getParticipant(channel, this.publicIdentifier);
+    if (!participant) {
+      return Result.fail(
+        new RpcError(RpcError.reasons.SignerNotInChannel, channel.channelAddress, this.publicIdentifier, {
+          alice: channel.aliceIdentifier,
+          bob: channel.bobIdentifier,
+          signer: this.publicIdentifier,
+        }),
+      );
+    }
+
     const request = await this.messaging.sendRequestCollateralMessage(
       Result.ok(params),
-      this.publicIdentifier === channel.aliceIdentifier ? channel.bobIdentifier : channel.aliceIdentifier,
+      participant === "alice" ? channel.bobIdentifier : channel.aliceIdentifier,
       this.publicIdentifier,
     );
     this.logger.info(

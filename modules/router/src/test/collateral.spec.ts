@@ -81,7 +81,10 @@ describe(testName, () => {
 
     it("should fail if it cannot get the collateral profile", async () => {
       getRebalanceProfile.returns(Result.fail(new ChainError("fail" as any)));
-      const { channel } = createTestChannelState(UpdateType.deposit);
+      const { channel } = createTestChannelState(UpdateType.deposit, {
+        alice: mkAddress("0xaaa"),
+        aliceIdentifier: routerPublicIdentifier,
+      });
       const res = await justInTimeCollateral(
         channel,
         AddressZero,
@@ -378,7 +381,10 @@ describe(testName, () => {
   describe("requestCollateral", () => {
     it("should fail if getRebalanceProfile fails", async () => {
       getRebalanceProfile.returns(Result.fail(new ChainError("fail")));
-      const { channel } = createTestChannelState(UpdateType.deposit);
+      const { channel } = createTestChannelState(UpdateType.deposit, {
+        alice: mkAddress("0xaaa"),
+        aliceIdentifier: routerPublicIdentifier,
+      });
       const res = await requestCollateral(
         channel,
         AddressZero,
@@ -391,7 +397,10 @@ describe(testName, () => {
     });
 
     it("should fail if it cannot get the chainProviders", async () => {
-      const { channel } = createTestChannelState(UpdateType.deposit);
+      const { channel } = createTestChannelState(UpdateType.deposit, {
+        alice: mkAddress("0xaaa"),
+        aliceIdentifier: routerPublicIdentifier,
+      });
       chainReader.getHydratedProviders.returns(Result.fail(new ChainError("fail") as any));
       const res = await requestCollateral(
         channel,
@@ -405,7 +414,10 @@ describe(testName, () => {
     });
 
     it("should fail if it cannot get a provider on the right chain", async () => {
-      const { channel } = createTestChannelState(UpdateType.deposit);
+      const { channel } = createTestChannelState(UpdateType.deposit, {
+        alice: mkAddress("0xaaa"),
+        aliceIdentifier: routerPublicIdentifier,
+      });
       chainReader.getHydratedProviders.returns(Result.ok({ [7]: {} as any }));
       const res = await requestCollateral(
         channel,
@@ -419,8 +431,11 @@ describe(testName, () => {
     });
 
     it("should fail if it cannot get the onchain balance", async () => {
-      const { channel } = createTestChannelState(UpdateType.deposit);
-      chainReader.getTotalDepositedB.resolves(Result.fail(new ChainError("fail") as any));
+      const { channel } = createTestChannelState(UpdateType.deposit, {
+        alice: mkAddress("0xaaa"),
+        aliceIdentifier: routerPublicIdentifier,
+      });
+      chainReader.getTotalDepositedA.resolves(Result.fail(new ChainError("fail") as any));
       const res = await requestCollateral(
         channel,
         AddressZero,
@@ -562,6 +577,7 @@ describe(testName, () => {
 
       it("if no collateral needed", async () => {
         const { channel } = createTestChannelState(UpdateType.deposit, {
+          aliceIdentifier: routerPublicIdentifier,
           balances: [
             { to: [mkAddress(), mkAddress()], amount: [parseEther("10").toString(), parseEther("10").toString()] },
           ],

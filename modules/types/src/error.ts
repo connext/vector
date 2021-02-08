@@ -110,7 +110,7 @@ export class VectorError extends Error {
   }
 
   public static fromJson(json: VectorErrorJson): VectorError {
-    return new VectorError(json.message, json.context, json.type);
+    return new VectorError(json.message, json.context ?? {}, json.type ?? (json as any).name ?? "VectorError");
   }
 }
 

@@ -4,14 +4,7 @@ import { WithdrawCommitmentJson } from "./transferDefinitions/withdraw";
 import { FullTransferState, FullChannelState } from "./channel";
 import { Address } from "./basic";
 import { ChannelDispute, TransferDispute } from "./dispute";
-
-export type GetTransfersFilterOpts = {
-  channelAddress?: string;
-  startDate?: Date;
-  endDate?: Date;
-  active?: boolean;
-  routingId?: string;
-};
+import { GetTransfersFilterOpts } from "./schemas/engine";
 
 export interface IVectorStore {
   // Store management methods

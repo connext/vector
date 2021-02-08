@@ -2,10 +2,32 @@
 
 ## Next Release
 
+## 0.1.15-beta.6
+
+- \[node, router\] Prisma upgrade.
+
+## 0.1.15-beta.5
+
+- \[contracts\] Fix token approval bug
+
+## 0.1.15-beta.4
+
+- \[iframe\] Improve error parsing
+
+## 0.1.15-beta.3
+
+- \[node\] Expose `getTransfers` method.
+
+## 0.1.15-beta.2
+
+- \[utils\] Create util for determining which participant
+- \[all\] Don't use pino-pretty in prod mode
+
 ## 0.1.15-beta.1
 
 - \[router\] Do not forward if deposit balance is not present in channel
 - \[router\] Fix start script to pass mnemonic secret into router
+
 ## 0.1.15-beta.0
 
 - \[utils\] Don't use `instanceof` operator
