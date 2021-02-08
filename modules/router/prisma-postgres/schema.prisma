@@ -1,16 +1,16 @@
 generator client {
   provider      = "prisma-client-js"
   binaryTargets = ["native"]
-  output        = "./src/generated/db-client"
+  output        = "../src/generated/db-client"
 }
 
 datasource db {
-  provider = ["postgresql", "sqlite"]
+  provider = "postgresql"
   url      = env("VECTOR_DATABASE_URL")
 }
 
 model QueuedUpdate {
-  id             String @id @default(uuid())
+  id             String  @id @default(uuid())
   type           String
   channelAddress String
   updateData     String
