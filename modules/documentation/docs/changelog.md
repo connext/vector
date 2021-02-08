@@ -2,6 +2,8 @@
 
 ## Next Release
 
+- \[node, router\] Prisma upgrade.
+
 ## 0.1.15-beta.5
 
 - \[contracts\] Fix token approval bug
