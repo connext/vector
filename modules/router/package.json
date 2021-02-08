@@ -4,9 +4,9 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "build": "prisma generate --schema prisma-postgres/schema.prisma && rm -rf dist && tsc",
+    "build": "prisma generate --schema prisma-sqlite/schema.prisma && rm -rf dist && tsc",
     "build-bundle": "webpack --config ops/webpack.config.js",
-    "start": "prisma migrate up --experimental && node dist/index.js",
+    "start": "prisma migrate dev --preview-feature --schema prisma-sqlite/schema.prisma && node dist/index.js",
     "test": "bash ops/test.sh",
     "migration:generate": "prisma migrate save --experimental"
   },
