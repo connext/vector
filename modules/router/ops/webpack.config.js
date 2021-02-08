@@ -63,8 +63,12 @@ module.exports = {
           to: path.join(__dirname, "../dist/pure-evm_bg.wasm"),
         },
         {
-          from: path.join(__dirname, "../schema.prisma"),
-          to: path.join(__dirname, "../dist/schema.prisma"),
+          from: path.join(__dirname, "../prisma-postgres"),
+          to: path.join(__dirname, "../dist/prisma-postgres"),
+        },
+        {
+          from: path.join(__dirname, "../prisma-sqlite"),
+          to: path.join(__dirname, "../dist/prisma-sqlite"),
         },
         {
           from: path.join(__dirname, "../src/generated"),
