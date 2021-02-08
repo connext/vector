@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "build": "prisma generate && rm -rf dist && tsc",
+    "build": "prisma generate --schema prisma-postgres/schema.prisma && rm -rf dist && tsc",
     "build-bundle": "webpack --config ops/webpack.config.js",
     "start": "prisma migrate up --experimental && node dist/index.js",
     "test": "bash ops/test.sh",
@@ -23,6 +23,7 @@
     "@ethersproject/contracts": "5.0.8",
     "@ethersproject/providers": "5.0.15",
     "@ethersproject/units": "5.0.8",
+    "@prisma/client": "2.16.1",
     "@sinclair/typebox": "0.12.7",
     "ajv": "6.12.6",
     "axios": "0.21.1",
@@ -34,7 +35,7 @@
     "pg": "8.5.1",
     "pino": "6.7.0",
     "regenerator-runtime": "0.13.7",
-    "sqlite3": "5.0.0",
+    "sqlite3": "5.0.1",
     "prom-client": "13.1.0"
   },
   "devDependencies": {
@@ -49,6 +50,7 @@
     "mocha": "8.2.0",
     "nodemon": "2.0.6",
     "nyc": "15.1.0",
+    "prisma": "2.16.1",
     "pino-pretty": "4.3.0",
     "ts-loader": "8.0.7",
     "ts-mocha": "8.0.0",
