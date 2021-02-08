@@ -32,6 +32,7 @@ then
   echo "Using configured Postgres store at $VECTOR_PG_HOST"
   export VECTOR_DATABASE_URL="postgresql://$VECTOR_PG_USERNAME:$VECTOR_PG_PASSWORD@${VECTOR_PG_HOST}:$VECTOR_PG_PORT/$VECTOR_PG_DATABASE"
   schema="prisma-postgres/schema.prisma"
+  cp prisma-postgres/schema.prisma dist/schema.prisma
 
 else
   sqlite_file=${VECTOR_SQLITE_FILE:-/tmp/store.sqlite}
@@ -39,6 +40,7 @@ else
   touch "$sqlite_file"
   export VECTOR_DATABASE_URL="sqlite://$sqlite_file"
   schema="prisma-sqlite/schema.prisma"
+  cp prisma-sqlite/schema.prisma dist/schema.prisma
 fi
 echo "VECTOR_DATABASE_URL: $VECTOR_DATABASE_URL"
 
