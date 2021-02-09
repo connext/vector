@@ -657,7 +657,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
               this.store.saveTransactionFailure(channelAddress, response.hash, "Tx reverted");
               this.evts[EngineEvents.TRANSACTION_FAILED].post({
                 receipt: Object.fromEntries(
-                  Object.entries(response).map(([key, value]) => {
+                  Object.entries(receipt).map(([key, value]) => {
                     return [key, BigNumber.isBigNumber(value) ? value.toString() : value];
                   }),
                 ) as StringifiedTransactionReceipt,
@@ -668,7 +668,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
               this.store.saveTransactionReceipt(channelAddress, receipt);
               this.evts[EngineEvents.TRANSACTION_MINED].post({
                 receipt: Object.fromEntries(
-                  Object.entries(response).map(([key, value]) => {
+                  Object.entries(receipt).map(([key, value]) => {
                     return [key, BigNumber.isBigNumber(value) ? value.toString() : value];
                   }),
                 ) as StringifiedTransactionReceipt,
