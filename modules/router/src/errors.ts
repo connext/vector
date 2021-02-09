@@ -102,7 +102,13 @@ export class ForwardTransferCreationError extends RouterError {
   ) {
     super(
       message,
-      { routingId, senderChannel, senderTransfer, receiverChannel, ...context },
+      {
+        routingId,
+        senderChannel,
+        senderTransfer,
+        receiverChannel,
+        ...context,
+      },
       ForwardTransferCreationError.type,
     );
   }

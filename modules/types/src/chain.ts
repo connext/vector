@@ -5,6 +5,7 @@ import { Address, HexString } from "./basic";
 import { Balance, FullChannelState, FullTransferState } from "./channel";
 import { ChannelDispute } from "./dispute";
 import { Result, Values, VectorError } from "./error";
+import { TransactionEvent, TransactionEventMap } from "./event";
 import { ChainProviders, HydratedProviders } from "./network";
 import { RegisteredTransfer, TransferName, TransferState } from "./transferDefinitions";
 
@@ -203,4 +204,20 @@ export interface IVectorChainService extends IVectorChainReader {
     activeTransfers: FullTransferState[],
   ): Promise<Result<TransactionResponse, ChainError>>;
   sendDefundTransferTx(transferState: FullTransferState): Promise<Result<TransactionResponse, ChainError>>;
+  on<T extends TransactionEvent>(
+    event: T,
+    callback: (payload: TransactionEventMap[T]) => void | Promise<void>,
+    filter?: (payload: TransactionEventMap[T]) => boolean,
+  ): void;
+  once<T extends TransactionEvent>(
+    event: T,
+    callback: (payload: TransactionEventMap[T]) => void | Promise<void>,
+    filter?: (payload: TransactionEventMap[T]) => boolean,
+  ): void;
+  off<T extends TransactionEvent>(event?: T): void;
+  waitFor<T extends TransactionEvent>(
+    event: T,
+    timeout: number,
+    filter?: (payload: TransactionEventMap[T]) => boolean,
+  ): Promise<TransactionEventMap[T]>;
 }
