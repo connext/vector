@@ -2,6 +2,15 @@
 
 ## Next Release
 
+## 0.1.15-beta.10
+
+- \[router\] Improve router dashboards
+- \[contracts\] Add xdai deployment
+
+## 0.1.15-beta.9
+
+- \[router\] Add router dashboards
+
 ## 0.1.15-beta.8
 
 - \[types\] Remove unique constraint from `TransferEncodingSchema`

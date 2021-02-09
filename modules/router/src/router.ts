@@ -1,6 +1,5 @@
 import { BaseLogger } from "pino";
 import { INodeService, IVectorChainReader } from "@connext/vector-types";
-import { Registry } from "prom-client";
 
 import { setupListeners } from "./listener";
 import { IRouterStore } from "./services/store";
@@ -19,7 +18,6 @@ export class Router implements IRouter {
     private readonly store: IRouterStore,
     private readonly messagingService: IRouterMessagingService,
     private readonly logger: BaseLogger,
-    private readonly register: Registry,
   ) {}
 
   static async connect(
@@ -30,7 +28,6 @@ export class Router implements IRouter {
     store: IRouterStore,
     messagingService: IRouterMessagingService,
     logger: BaseLogger,
-    register: Registry,
   ): Promise<Router> {
     const router = new Router(
       publicIdentifier,
@@ -40,7 +37,6 @@ export class Router implements IRouter {
       store,
       messagingService,
       logger,
-      register,
     );
     await router.startup();
     logger.info("Vector Router connected 🚀");
@@ -57,7 +53,6 @@ export class Router implements IRouter {
       this.chainReader,
       this.messagingService,
       this.logger,
-      this.register,
     );
   }
 }

@@ -59,7 +59,6 @@ describe("utils", () => {
       });
 
       const updated = mergeAssetIds(channel);
-      console.log("updated", updated);
       expect(updated).to.containSubset({
         ...channel,
         assetIds: ["0x6818D725D967af69eFfFf23c5B1201a607242269", "0xb9A355a6BFd995642EC64D9186873A8adFC27DAf"],

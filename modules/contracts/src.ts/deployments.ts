@@ -137,3 +137,22 @@ const arbitrumtestDeployment = {
 };
 deployments.arbitrumtest = arbitrumtestDeployment;
 deployments["79377087078960"] = arbitrumtestDeployment;
+
+////////////////////////////////////////
+// 100 - xdai
+import * as xdaiChannelFactory from "../deployments/xdai/ChannelFactory.json";
+import * as xdaiChannelMastercopy from "../deployments/xdai/ChannelMastercopy.json";
+import * as xdaiHashlockTransfer from "../deployments/xdai/HashlockTransfer.json";
+import * as xdaiTestToken from "../deployments/xdai/TestToken.json";
+import * as xdaiTransferRegistry from "../deployments/xdai/TransferRegistry.json";
+import * as xdaiWithdraw from "../deployments/xdai/Withdraw.json";
+const xdaiDeployment = {
+  ChannelFactory: xdaiChannelFactory,
+  ChannelMastercopy: xdaiChannelMastercopy,
+  HashlockTransfer: xdaiHashlockTransfer,
+  TestToken: xdaiTestToken,
+  TransferRegistry: xdaiTransferRegistry,
+  Withdraw: xdaiWithdraw,
+};
+deployments.xdai = xdaiDeployment;
+deployments["100"] = xdaiDeployment;

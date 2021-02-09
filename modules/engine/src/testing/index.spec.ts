@@ -1,5 +1,5 @@
 import { VectorChainService } from "@connext/vector-contracts";
-import { Result, EngineParams, IEngineStore } from "@connext/vector-types";
+import { Result, EngineParams, IEngineStore, IVectorChainService } from "@connext/vector-types";
 import {
   expect,
   getRandomChannelSigner,
@@ -54,7 +54,7 @@ describe("VectorEngine", () => {
       Sinon.createStubInstance(MemoryLockService),
       storeService,
       getRandomChannelSigner(),
-      chainService,
+      chainService as IVectorChainService,
       chainAddresses,
       log,
       false,
@@ -68,7 +68,7 @@ describe("VectorEngine", () => {
       Sinon.createStubInstance(MemoryLockService),
       storeService,
       getRandomChannelSigner(),
-      chainService,
+      chainService as IVectorChainService,
       chainAddresses,
       log,
       false,
@@ -157,7 +157,7 @@ describe("VectorEngine", () => {
           Sinon.createStubInstance(MemoryLockService),
           storeService,
           getRandomChannelSigner(),
-          chainService,
+          chainService as IVectorChainService,
           chainAddresses,
           log,
           false,
@@ -195,7 +195,7 @@ describe("VectorEngine", () => {
             Sinon.createStubInstance(MemoryLockService),
             storeService,
             getRandomChannelSigner(),
-            chainService,
+            chainService as IVectorChainService,
             chainAddresses,
             log,
             false,
@@ -821,7 +821,7 @@ describe("VectorEngine", () => {
             Sinon.createStubInstance(MemoryLockService),
             storeService,
             getRandomChannelSigner(),
-            chainService,
+            chainService as IVectorChainService,
             chainAddresses,
             log,
             false,
