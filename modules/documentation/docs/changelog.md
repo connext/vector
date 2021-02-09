@@ -2,6 +2,10 @@
 
 ## Next Release
 
+## 0.1.15-beta.9
+
+- \[router\] Add router dashboards
+
 ## 0.1.15-beta.8
 
 - \[types\] Remove unique constraint from `TransferEncodingSchema`
