@@ -45,4 +45,5 @@ export type WithdrawCommitmentJson = {
   nonce: string;
   callTo: string;
   callData: string;
+  transactionHash?: string;
 };

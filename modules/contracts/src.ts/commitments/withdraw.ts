@@ -25,6 +25,7 @@ export class WithdrawCommitment {
     public readonly nonce: string,
     public readonly callTo: string = AddressZero,
     public readonly callData: string = "0x",
+    public transactionHash?: string,
   ) {}
 
   get signatures(): string[] {
@@ -51,7 +52,12 @@ export class WithdrawCommitment {
       nonce: this.nonce,
       callTo: this.callTo,
       callData: this.callData,
+      transactionHash: this.transactionHash,
     };
+  }
+
+  public addTransaction(transactionHash: string): void {
+    this.transactionHash = transactionHash;
   }
 
   public static async fromJson(json: WithdrawCommitmentJson): Promise<WithdrawCommitment> {
@@ -65,6 +71,7 @@ export class WithdrawCommitment {
       json.nonce,
       json.callTo,
       json.callData,
+      json.transactionHash,
     );
     if (json.aliceSignature || json.bobSignature) {
       await commitment.addSignatures(json.aliceSignature, json.bobSignature);
