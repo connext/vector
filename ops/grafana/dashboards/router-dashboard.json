@@ -15,6 +15,7 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
+  "id": null,
   "links": [],
   "panels": [
     {
@@ -551,7 +552,7 @@
       "pluginVersion": "7.4.0",
       "targets": [
         {
-          "expr": "router_gas_consumed",
+          "expr": "sum by (chainId) (router_gas_consumed)",
           "format": "table",
           "instant": true,
           "interval": "",
@@ -561,7 +562,21 @@
         }
       ],
       "title": "Gas Consumed",
-      "transformations": [],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true
+            },
+            "indexByName": {},
+            "renameByName": {
+              "Value": "Ether",
+              "chainId": "Chain Id"
+            }
+          }
+        }
+      ],
       "type": "table"
     }
   ],
