@@ -75,7 +75,10 @@ export const onchainLiquidity = new Gauge({
         const balance = await provider.getBalance(signerAddress);
         const chainInfo: ChainInfo = await getChainInfo(Number(chainId));
         const baseAssetName: string = getAssetName(Number(chainId), AddressZero);
-        this.set({ chainName: chainInfo.name, chainId, assetId: AddressZero }, parseFloat(formatEther(balance)));
+        this.set(
+          { chainName: chainInfo.name, chainId, assetName: baseAssetName, assetId: AddressZero },
+          parseFloat(formatEther(balance)),
+        );
 
         // tokens
         await Promise.all(
