@@ -19,15 +19,10 @@ import {
   TransactionSubmittedPayload,
   TransactionMinedPayload,
   TransactionFailedPayload,
-  HydratedProviders,
-  ERC20Abi,
   SetupPayload,
 } from "@connext/vector-types";
-import { collectDefaultMetrics, Gauge, register } from "prom-client";
+import { collectDefaultMetrics, register } from "prom-client";
 import { Wallet } from "ethers";
-import { AddressZero } from "@ethersproject/constants";
-import { formatEther, formatUnits } from "@ethersproject/units";
-import { Contract } from "@ethersproject/contracts";
 
 import { config } from "./config";
 import { IRouter, Router } from "./router";
@@ -115,59 +110,8 @@ collectDefaultMetrics({ prefix: "router_" });
 let router: IRouter;
 const store = new PrismaStore();
 
-const hydrated: HydratedProviders = hydrateProviders(config.chainProviders);
-
 // create gauge to store balance for each rebalanced asset and each native asset for the signer address
 // TODO: maybe want to look into an API rather than blowing up our eth providers? although its not that many calls
-
-// get all non-zero addresses
-const rebalancedTokens: {
-  [chainId: string]: {
-    [assetId: string]: {
-      contract: Contract;
-      decimals?: number;
-    };
-  };
-} = {};
-Object.entries(hydrated).forEach(async ([chainId, provider]) => {
-  rebalancedTokens[chainId] = {};
-  const assets = config.rebalanceProfiles
-    .filter((prof) => prof.chainId.toString() === chainId && prof.assetId !== AddressZero)
-    .map((p) => p.assetId);
-
-  assets.forEach((asset) => {
-    rebalancedTokens[chainId][asset] = {
-      contract: new Contract(asset, ERC20Abi, provider),
-      decimals: undefined,
-    };
-  });
-});
-
-// TODO: add asset name label
-new Gauge({
-  name: "router_onchain_balance",
-  help: "router_onchain_balance_help",
-  labelNames: ["chainId", "assetId", "signerAddress"] as const,
-  async collect() {
-    await Promise.all(
-      Object.entries(hydrated).map(async ([chainId, provider]) => {
-        // base asset
-        const balance = await provider.getBalance(signer.address);
-        this.set({ chainId, assetId: AddressZero, signerAddress: signer.address }, parseFloat(formatEther(balance)));
-
-        // tokens
-        await Promise.all(
-          Object.entries(rebalancedTokens[chainId] ?? {}).map(async ([assetId, config]) => {
-            const decimals = config.decimals ?? (await config.contract.functions.decimals());
-            rebalancedTokens[chainId][assetId].decimals = decimals;
-            const balance = await config.contract.balanceOf(signer.address);
-            this.set({ chainId, assetId, signerAddress: signer.address }, parseFloat(formatUnits(balance, decimals)));
-          }),
-        );
-      }),
-    );
-  },
-});
 
 server.addHook("onReady", async () => {
   const messagingService = new NatsRouterMessagingService({
