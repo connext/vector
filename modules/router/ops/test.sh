@@ -12,8 +12,7 @@ touch "$sqlite_file"
 export VECTOR_DATABASE_URL="sqlite://$sqlite_file"
 
 # Migrate db
-prisma generate
-prisma migrate up --experimental
+prisma migrate deploy --preview-feature --schema prisma-sqlite/schema.prisma
 
 # Launch tests
 nyc ts-mocha --check-leaks --exit --timeout 60000 'src/**/*.spec.ts' "$@"
