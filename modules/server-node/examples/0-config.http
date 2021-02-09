@@ -14,9 +14,9 @@
 @rogerPublicIdentifier = vector8Uz1BdpA9hV5uTm6QUv5jj1PsUyCH8m8ciA94voCzsxVmrBRor
 @chainId = 1337
 
-@nodeUrl = {{rogerUrl}}
+@nodeUrl = {{carolUrl}}
 @nodePublicIdentifier = {{carolPublicIdentifier}}
-@counterpartyPublicIdentifier = {{rogerPublicIdentifier}}
+@counterpartyPublicIdentifier = {{carolPublicIdentifier}}
 @channel = {{carolRogerChannel}}
 
 ##############
