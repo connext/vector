@@ -277,6 +277,7 @@ prometheus_services="prometheus:
       - --config.file=/etc/prometheus/prometheus.yml
     volumes:
       - $root/ops/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - 'prometheus:/prometheus'
 
   cadvisor:
     $common
@@ -361,6 +362,7 @@ volumes:
   certs:
   database_node:
   database_router:
+  prometheus:
 
 services:
 

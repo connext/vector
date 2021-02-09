@@ -244,7 +244,6 @@ function App() {
       console.error("Error withdrawing", requestRes.getError());
       return requestRes.getError().message;
     }
-    console.log("requestRes.getValue(): ", requestRes.getValue());
     return requestRes.getValue().signedMessage;
   };
 
@@ -695,7 +694,6 @@ function App() {
                 name="signMessage"
                 onFinish={async (values) => {
                   const signedMessage = await signMessage(values.message);
-                  console.log("signedMessage: ", signedMessage);
                   signMessageForm.setFieldsValue({ signedMessage });
                 }}
                 onFinishFailed={onFinishFailed}

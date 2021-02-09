@@ -232,6 +232,7 @@ export const transferWithCollateralization = async (
         senderChannel,
         senderTransfer,
         channel.channelAddress,
+
         {
           ...params,
           collateralError: jsonifyError(collateralRes.getError()!),

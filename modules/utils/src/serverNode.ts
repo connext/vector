@@ -9,6 +9,7 @@ import {
   Values,
   NodeError,
   GetTransfersFilterOpts,
+  EngineEvents,
 } from "@connext/vector-types";
 import Ajv from "ajv";
 import Axios from "axios";
@@ -446,7 +447,9 @@ export class RestServerNodeService implements INodeService {
       .pipe(ctx)
       .pipe((data: EngineEventMap[T]) => {
         const filtered = filter(data);
-        return filtered && (data.aliceIdentifier === pubId || data.bobIdentifier === pubId);
+        const toStrip = data as any;
+        const pubIds = [toStrip.publicIdentifier, toStrip.bobIdentifier, toStrip.aliceIdentifier].filter((x) => !!x);
+        return filtered && pubIds.includes(pubId);
       })
       .attachOnce(callback);
   }
@@ -477,7 +480,9 @@ export class RestServerNodeService implements INodeService {
       .pipe(ctx)
       .pipe((data: EngineEventMap[T]) => {
         const filtered = filter(data);
-        return filtered && (data.aliceIdentifier === pubId || data.bobIdentifier === pubId);
+        const toStrip = data as any;
+        const pubIds = [toStrip.publicIdentifier, toStrip.bobIdentifier, toStrip.aliceIdentifier].filter((x) => !!x);
+        return filtered && pubIds.includes(pubId);
       })
       .attach(callback);
   }
@@ -508,7 +513,9 @@ export class RestServerNodeService implements INodeService {
       .pipe(ctx)
       .pipe((data: EngineEventMap[T]) => {
         const filtered = filter(data);
-        return filtered && (data.aliceIdentifier === pubId || data.bobIdentifier === pubId);
+        const toStrip = data as any;
+        const pubIds = [toStrip.publicIdentifier, toStrip.bobIdentifier, toStrip.aliceIdentifier].filter((x) => !!x);
+        return filtered && pubIds.includes(pubId);
       })
       .waitFor(timeout) as Promise<EngineEventMap[T]>;
   }

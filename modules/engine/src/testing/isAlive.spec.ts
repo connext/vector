@@ -1,5 +1,5 @@
 import { VectorChainService } from "@connext/vector-contracts";
-import { Result } from "@connext/vector-types";
+import { IVectorChainService, Result } from "@connext/vector-types";
 import {
   createTestChannelState,
   expect,
@@ -35,7 +35,7 @@ describe("checkIn", () => {
   it("should send no checkIn messages if there are no channels", async () => {
     const signer = getRandomChannelSigner();
     storeService.getChannelStates.resolves([]);
-    await sendIsAlive(signer, messagingService, storeService, chainService, log);
+    await sendIsAlive(signer, messagingService, storeService, chainService as IVectorChainService, log);
     expect(messagingService.sendIsAliveMessage.called).to.be.false;
   });
 
@@ -62,7 +62,7 @@ describe("checkIn", () => {
     messagingService.sendIsAliveMessage.resolves(Result.ok({ channelAddress: channel1.channelAddress }));
     storeService.getChannelStates.resolves([channel1, channel2]);
 
-    await sendIsAlive(signer, messagingService, storeService, chainService, log);
+    await sendIsAlive(signer, messagingService, storeService, chainService as IVectorChainService, log);
     expect(messagingService.sendIsAliveMessage.callCount).to.eq(2);
   });
 });

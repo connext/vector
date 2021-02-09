@@ -8,12 +8,12 @@ import {
   jsonifyError,
   Result,
 } from "@connext/vector-types";
-import { getRandomBytes32 } from "@connext/vector-utils";
-import { Counter, Gauge, Registry } from "prom-client";
+import { getBalanceForAssetId, getParticipant, getRandomBytes32 } from "@connext/vector-utils";
 import Ajv from "ajv";
 import { JsonRpcProvider } from "@ethersproject/providers";
 import { BaseLogger } from "pino";
 import { BigNumber } from "@ethersproject/bignumber";
+import { AddressZero } from "@ethersproject/constants";
 
 import { adjustCollateral, requestCollateral } from "./services/collateral";
 import { forwardTransferCreation, forwardTransferResolution, handleIsAlive } from "./forwarding";
@@ -21,61 +21,24 @@ import { IRouterStore } from "./services/store";
 import { getRebalanceProfile } from "./services/config";
 import { IRouterMessagingService } from "./services/messaging";
 import { config } from "./config";
+import {
+  openChannels,
+  transactionAttempt,
+  transactionSuccess,
+  transactionFailed,
+  offchainLiquidity,
+  parseBalanceToNumber,
+  successfulTransfer,
+  failedTransfer,
+  gasConsumed,
+  forwardedVolume,
+  attemptedTransfer,
+} from "./metrics";
 
 const ajv = new Ajv();
 
 export type ChainJsonProviders = {
   [k: string]: JsonRpcProvider;
-};
-
-const configureMetrics = (register: Registry) => {
-  // Track number of times a payment was forwarded
-  const attempts = new Gauge({
-    name: "router_forwarded_payment_attempts",
-    help: "router_forwarded_payment_attempts_help",
-    labelNames: ["routingId"] as const,
-    registers: [register],
-  });
-
-  // Track successful forwards
-  const successful = new Gauge({
-    name: "router_successful_forwarded_payments",
-    help: "router_successful_forwarded_payments_help",
-    labelNames: ["routingId"] as const,
-    registers: [register],
-  });
-
-  // Track failing forwards
-  const failed = new Gauge({
-    name: "router_failed_forwarded_payments",
-    help: "router_failed_forwarded_payments_help",
-    labelNames: ["routingId"] as const,
-    registers: [register],
-  });
-
-  const activeTransfers = new Gauge({
-    name: "router_active_transfers",
-    help: "router_active_transfers_help",
-    labelNames: ["channelAddress"] as const,
-    registers: [register],
-  });
-
-  const transferSendTime = new Gauge({
-    name: "router_sent_payments_time",
-    help: "router_sent_payments_time_help",
-    labelNames: ["routingId"] as const,
-    registers: [register],
-  });
-
-  const openChannels = new Counter({
-    name: "router_open_channels",
-    help: "router_open_channels_help",
-    labelNames: ["channelAddress", "chainId", "aliceIdentifier", "bobIdentifier"] as const,
-    registers: [register],
-  });
-
-  // Return the metrics so they can be incremented as needed
-  return { failed, successful, attempts, activeTransfers, transferSendTime, openChannels };
 };
 
 export async function setupListeners(
@@ -86,20 +49,64 @@ export async function setupListeners(
   chainReader: IVectorChainReader,
   messagingService: IRouterMessagingService,
   logger: BaseLogger,
-  register: Registry,
 ): Promise<void> {
   const method = "setupListeners";
   const methodId = getRandomBytes32();
   logger.debug({ method, methodId, routerPublicIdentifier, routerSignerAddress }, "Method started");
-  const { failed, successful, attempts, activeTransfers, transferSendTime, openChannels } = configureMetrics(register);
 
   nodeService.on(EngineEvents.SETUP, async (data) => {
     openChannels.inc({
-      channelAddress: data.channelAddress,
       chainId: data.chainId,
-      aliceIdentifier: data.aliceIdentifier,
-      bobIdentifier: data.bobIdentifier,
     });
+  });
+
+  nodeService.on(EngineEvents.TRANSACTION_SUBMITTED, async (data) => {
+    const channel = await nodeService.getStateChannel({ channelAddress: data.channelAddress });
+    if (channel.isError) {
+      logger.warn({ ...channel.getError()?.toJson() }, "Failed to get channel");
+      return;
+    }
+    const chainId = channel.getValue()?.networkContext.chainId;
+    transactionAttempt.inc({
+      reason: data.reason,
+      chainId,
+    });
+  });
+
+  nodeService.on(EngineEvents.TRANSACTION_MINED, async (data) => {
+    const channel = await nodeService.getStateChannel({ channelAddress: data.channelAddress });
+    if (channel.isError) {
+      logger.warn({ ...channel.getError()?.toJson() }, "Failed to get channel");
+      return;
+    }
+    const chainId = channel.getValue()?.networkContext.chainId;
+    transactionSuccess.inc({
+      reason: data.reason,
+      chainId,
+    });
+    gasConsumed.set(
+      { chainId, reason: data.reason },
+      await parseBalanceToNumber(data.receipt!.cumulativeGasUsed, chainId!.toString(), AddressZero),
+    );
+  });
+
+  nodeService.on(EngineEvents.TRANSACTION_FAILED, async (data) => {
+    const channel = await nodeService.getStateChannel({ channelAddress: data.channelAddress });
+    if (channel.isError) {
+      logger.warn({ ...channel.getError()?.toJson() }, "Failed to get channel");
+      return;
+    }
+    const chainId = channel.getValue()?.networkContext.chainId;
+    transactionFailed.inc({
+      reason: data.reason,
+      chainId,
+    });
+    if (data.receipt) {
+      gasConsumed.set(
+        { chainId, reason: data.reason },
+        await parseBalanceToNumber(data.receipt.cumulativeGasUsed, chainId!.toString(), AddressZero),
+      );
+    }
   });
 
   // Set up listener to handle transfer creation
@@ -107,8 +114,12 @@ export async function setupListeners(
     EngineEvents.CONDITIONAL_TRANSFER_CREATED,
     async (data: ConditionalTransferCreatedPayload) => {
       const meta = data.transfer.meta as RouterSchemas.RouterMeta;
-      attempts.labels(meta.routingId).inc(1);
-      const end = transferSendTime.labels(meta.routingId).startTimer();
+      const assetId = meta.path[0].recipientAssetId;
+      const chainId = meta.path[0].recipientChainId;
+      attemptedTransfer.inc({
+        assetId,
+        chainId,
+      });
       const res = await forwardTransferCreation(
         data,
         routerPublicIdentifier,
@@ -119,16 +130,20 @@ export async function setupListeners(
         chainReader,
       );
       if (res.isError) {
-        failed.labels(meta.routingId).inc(1);
+        const { receiverAmount } = res.getError()?.context;
+        // TODO: if we did *not* cancel sender side transfer, should we
+        // increment?
+        failedTransfer.inc({
+          assetId,
+          chainId,
+        });
         return logger.error(
           { method: "forwardTransferCreation", error: jsonifyError(res.getError()!) },
           "Error forwarding transfer",
         );
       }
-      end();
-      successful.labels(meta.routingId).inc(1);
-      activeTransfers.labels(data.channelAddress).set(data.activeTransferIds?.length ?? 0);
-      logger.info({ method: "forwardTransferCreation", result: res.getValue() }, "Successfully forwarded transfer");
+      const created = res.getValue();
+      logger.info({ method: "forwardTransferCreation", result: created }, "Successfully forwarded transfer");
     },
     (data: ConditionalTransferCreatedPayload) => {
       // Only forward transfers with valid routing metas
@@ -180,18 +195,39 @@ export async function setupListeners(
         logger,
       );
       if (res.isError) {
+        const amount = BigNumber.from(data.transfer.balance.amount[0]).add(data.transfer.balance.amount[1]);
+        failedTransfer.inc({
+          assetId: data.transfer.assetId,
+          chainId: data.transfer.chainId,
+        });
+
         return logger.error(
           { method: "forwardTransferResolution", error: jsonifyError(res.getError()!) },
           "Error forwarding resolution",
         );
       }
+      const resolved = res.getValue();
+      if (!!resolved) {
+        // was not queued, use receiver transfer for values
+        const amount = BigNumber.from(data.transfer.balance.amount[0]).add(data.transfer.balance.amount[1]);
+        successfulTransfer.inc({
+          assetId: data.transfer.assetId,
+          chainId: data.transfer.chainId,
+        });
+
+        // add volume
+        forwardedVolume.set(
+          { assetId: data.transfer.assetId, chainId: data.transfer.chainId },
+          await parseBalanceToNumber(amount, data.transfer.chainId.toString(), data.transfer.assetId),
+        );
+      }
       logger.info(
-        { event: EngineEvents.CONDITIONAL_TRANSFER_RESOLVED, result: res.getValue() },
+        { event: EngineEvents.CONDITIONAL_TRANSFER_RESOLVED, result: resolved },
         "Successfully forwarded resolution",
       );
 
-      const transferSenderResolutionChannelAddress = res.getValue()?.channelAddress;
-      const transferSenderResolutionAssetId = res.getValue()?.assetId;
+      const transferSenderResolutionChannelAddress = resolved?.channelAddress;
+      const transferSenderResolutionAssetId = resolved?.assetId;
       if (!transferSenderResolutionChannelAddress || !transferSenderResolutionAssetId) {
         logger.warn(
           {
@@ -251,11 +287,11 @@ export async function setupListeners(
       }
 
       // If we are the receiver of this transfer, do nothing
+      // (indicates a sender-side resolve)
       if (data.transfer.responder === routerSignerAddress) {
         logger.info({ routingId: data.transfer.meta.routingId }, "Nothing to reclaim");
         return false;
       }
-      activeTransfers.labels(data.channelAddress).set(data.activeTransferIds?.length ?? 0);
 
       return true;
     },
@@ -345,6 +381,39 @@ export async function setupListeners(
       { method, methodId, assetId: data.assetId, channelAddress: channel.channelAddress },
       "Succesfully requested collateral",
     );
+  });
+
+  nodeService.on(EngineEvents.DEPOSIT_RECONCILED, async (data) => {
+    // TODO: do we want this to be updated on withdrawal as well
+    const channelRes = await nodeService.getStateChannel({ channelAddress: data.channelAddress });
+    if (channelRes.isError) {
+      logger.warn({ ...channelRes.getError()?.toJson() }, "Failed to get channel");
+      return;
+    }
+    const channel = channelRes.getValue() as FullChannelState;
+    const participant = getParticipant(channel, nodeService.publicIdentifier);
+    if (!participant) {
+      return;
+    }
+    const balance = getBalanceForAssetId(channel, data.assetId, participant);
+    const parsed = await parseBalanceToNumber(balance, channel.networkContext.chainId.toString(), data.assetId);
+    offchainLiquidity.set({ assetId: data.assetId, chainId: channel.networkContext.chainId }, parsed);
+  });
+
+  nodeService.on(EngineEvents.WITHDRAWAL_RESOLVED, async (data) => {
+    const channelRes = await nodeService.getStateChannel({ channelAddress: data.channelAddress });
+    if (channelRes.isError) {
+      logger.warn({ ...channelRes.getError()?.toJson() }, "Failed to get channel");
+      return;
+    }
+    const channel = channelRes.getValue() as FullChannelState;
+    const participant = getParticipant(channel, nodeService.publicIdentifier);
+    if (!participant) {
+      return;
+    }
+    const balance = getBalanceForAssetId(channel, data.assetId, participant);
+    const parsed = await parseBalanceToNumber(balance, channel.networkContext.chainId.toString(), data.assetId);
+    offchainLiquidity.set({ assetId: data.assetId, chainId: channel.networkContext.chainId }, parsed);
   });
 
   nodeService.on(EngineEvents.IS_ALIVE, async (data) => {
