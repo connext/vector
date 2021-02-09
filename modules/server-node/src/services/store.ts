@@ -381,16 +381,28 @@ export class PrismaStore implements IServerNodeStore {
     const initialState = JSON.parse(entity.createUpdate?.transferInitialState ?? "{}");
     const resolver = JSON.parse(entity.resolveUpdate?.transferResolver ?? "{}");
 
+    // if there is not an attached channel, the transfer has been resolved
+    // so grab channel
+    const channel =
+      entity.channel ??
+      (await this.prisma.channel.findUnique({
+        where: { channelAddress: entity.channelAddressId },
+      }));
+
+    if (!channel) {
+      throw new Error("Could not retrieve channel for withdraw commitment");
+    }
+
     // TODO: will this return invalid jsons if the transfer is resolved
     const aliceIsInitiator =
-      entity.channel!.participantA === getSignerAddressFromPublicIdentifier(entity.createUpdate!.fromIdentifier);
+      channel.participantA === getSignerAddressFromPublicIdentifier(entity.createUpdate!.fromIdentifier);
 
     return {
       aliceSignature: aliceIsInitiator ? initialState.initiatorSignature : resolver.responderSignature,
       bobSignature: aliceIsInitiator ? resolver.responderSignature : initialState.initiatorSignature,
       channelAddress: entity.channelAddressId,
-      alice: entity.channel!.participantA,
-      bob: entity.channel!.participantB,
+      alice: channel.participantA,
+      bob: channel.participantB,
       recipient: entity.toA, // balance = [toA, toB]
       assetId: entity.createUpdate!.assetId,
       amount: BigNumber.from(entity.amountA).sub(initialState.fee).toString(),
