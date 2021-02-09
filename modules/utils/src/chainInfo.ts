@@ -7,24 +7,19 @@ import chains from "./chains.json";
 
 export const CHAIN_INFO_URL = "https://chainid.network/chains.json";
 
-export const getChainInfo = async (chainId: number): Promise<ChainInfo | string> => {
-  let chain: ChainInfo | undefined;
+export const getChainInfo = async (chainId: number): Promise<ChainInfo> => {
+  let chain: ChainInfo = chains[0];
   try {
     chain = chains.find((info: ChainInfo) => info.chainId === chainId);
-    if (!chain) {
+    if (chain.chainId === 0) {
       console.log("fetching ChainInfo");
       const chainInfo: ChainInfo[] = await fetchJson(CHAIN_INFO_URL);
       chain = chainInfo!.find((info) => info.chainId === chainId);
     }
-
-    if (chain) {
-      return chain;
-    } else return "N/A";
   } catch (e) {
-    console.log(e);
     console.warn(`Could not fetch chain info`);
-    return "N/A";
   }
+  return chain;
 };
 
 export const getAssetName = (chainId: number, assetId: string): string => {
@@ -37,17 +32,14 @@ export const getAssetName = (chainId: number, assetId: string): string => {
 };
 
 export const getAssetDecimals = async (assetId: string, ethProvider: JsonRpcProvider) => {
-  let decimals: number;
+  let decimals: number = 18;
   if (assetId !== AddressZero) {
     try {
       const token = new Contract(assetId, ERC20Abi, ethProvider);
       decimals = await token.decimals();
     } catch (e) {
-      // Error detecting decimals, unsafely falling back to 18 decimals for chainId
-      decimals = 18;
+      console.warn(`Error detecting decimals, unsafely falling back to 18 decimals for ${assetId}`);
     }
-  } else {
-    decimals = 18;
   }
   return decimals;
 };
