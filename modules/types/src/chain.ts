@@ -74,6 +74,7 @@ export type ChainInfo = {
     symbol: string;
     decimals: number;
   };
+  assetId: { [assetId: string]: string };
   rpc: string[];
   faucets: string[];
   infoURL: string;
