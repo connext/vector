@@ -4,7 +4,13 @@ import fastify from "fastify";
 import pino from "pino";
 import { Evt } from "evt";
 import { VectorChainReader } from "@connext/vector-contracts";
-import { EventCallbackConfig, hydrateProviders, RestServerNodeService, ChannelSigner } from "@connext/vector-utils";
+import {
+  EventCallbackConfig,
+  hydrateProviders,
+  RestServerNodeService,
+  ChannelSigner,
+  getChainInfo,
+} from "@connext/vector-utils";
 import {
   IsAlivePayload,
   ConditionalTransferCreatedPayload,
@@ -19,6 +25,7 @@ import {
   HydratedProviders,
   ERC20Abi,
   SetupPayload,
+  ChainInfo,
 } from "@connext/vector-types";
 import { collectDefaultMetrics, Gauge, Registry } from "prom-client";
 import { Wallet } from "ethers";
@@ -129,14 +136,18 @@ Object.entries(hydrated).forEach(async ([chainId, provider]) => {
 new Gauge({
   name: "router_onchain_balance",
   help: "router_onchain_balance_help",
-  labelNames: ["chainId", "assetId", "signerAddress"] as const,
+  labelNames: ["chainName", "chainId", "assetId", "signerAddress"] as const,
   registers: [register],
   async collect() {
     await Promise.all(
       Object.entries(hydrated).map(async ([chainId, provider]) => {
         // base asset
         const balance = await provider.getBalance(signer.address);
-        this.set({ chainId, assetId: AddressZero, signerAddress: signer.address }, parseFloat(formatEther(balance)));
+        const chainInfo: ChainInfo = await getChainInfo(Number(chainId));
+        this.set(
+          { chainName: chainInfo.name, chainId, assetId: AddressZero, signerAddress: signer.address },
+          parseFloat(formatEther(balance)),
+        );
 
         // tokens
         await Promise.all(
