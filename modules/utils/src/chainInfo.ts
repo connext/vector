@@ -1,8 +1,6 @@
 import { fetchJson } from "@ethersproject/web";
-
 import { ChainInfo } from "@connext/vector-types";
-
-const chains = require("./chains.json");
+import chains from "./chains.json";
 
 export const CHAIN_INFO_URL = "https://chainid.network/chains.json";
 
