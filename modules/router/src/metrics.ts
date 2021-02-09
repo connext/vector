@@ -48,9 +48,16 @@ export const parseBalanceToNumber = async (
     return parseFloat(formatEther(toFormat));
   }
   const { decimals: _decimals, contract } = rebalancedTokens[chainId][assetId];
-  const decimals = _decimals ?? (await contract.decimals()).toNumber();
-  rebalancedTokens[chainId][assetId] = decimals ?? 18;
-  return parseFloat(formatUnits(toFormat, decimals ?? 18));
+  let decimals = 18;
+  if (!_decimals) {
+    try {
+      decimals = await contract.decimals();
+    } catch (e) {
+      // default to 18
+    }
+    rebalancedTokens[chainId][assetId].decimals = decimals;
+  }
+  return parseFloat(formatUnits(toFormat, decimals));
 };
 
 //////////////////////////
