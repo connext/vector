@@ -72,6 +72,7 @@ export type ForwardTransferCreationErrorContext = RouterErrorContext & {
   senderChannel: string;
   senderTransfer: string;
   receiverChannel: string;
+  receiverAmount?: string;
 };
 export class ForwardTransferCreationError extends RouterError {
   static readonly type = "ForwardTransferCreationError";
@@ -98,11 +99,19 @@ export class ForwardTransferCreationError extends RouterError {
     senderChannel: string,
     senderTransfer: string,
     receiverChannel: string,
+    receiverAmount = "",
     context: any = {},
   ) {
     super(
       message,
-      { routingId, senderChannel, senderTransfer, receiverChannel, ...context },
+      {
+        routingId,
+        senderChannel,
+        senderTransfer,
+        receiverChannel,
+        receiverAmount: receiverAmount === "" ? undefined : receiverAmount,
+        ...context,
+      },
       ForwardTransferCreationError.type,
     );
   }
