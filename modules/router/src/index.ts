@@ -4,13 +4,7 @@ import fastify from "fastify";
 import pino from "pino";
 import { Evt } from "evt";
 import { VectorChainReader } from "@connext/vector-contracts";
-import {
-  EventCallbackConfig,
-  hydrateProviders,
-  RestServerNodeService,
-  ChannelSigner,
-  getChainInfo,
-} from "@connext/vector-utils";
+import { EventCallbackConfig, hydrateProviders, RestServerNodeService, ChannelSigner } from "@connext/vector-utils";
 import {
   IsAlivePayload,
   ConditionalTransferCreatedPayload,
@@ -26,7 +20,6 @@ import {
   TransactionMinedPayload,
   TransactionFailedPayload,
   SetupPayload,
-  ChainInfo,
 } from "@connext/vector-types";
 import { collectDefaultMetrics, register } from "prom-client";
 import { Wallet } from "ethers";
