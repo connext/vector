@@ -1,5 +1,5 @@
-import { HydratedProviders, ERC20Abi } from "@connext/vector-types";
-import { hydrateProviders } from "@connext/vector-utils";
+import { HydratedProviders, ERC20Abi, ChainInfo } from "@connext/vector-types";
+import { hydrateProviders, getChainInfo } from "@connext/vector-utils";
 import { BigNumberish } from "@ethersproject/bignumber";
 import { AddressZero } from "@ethersproject/constants";
 import { Contract } from "@ethersproject/contracts";
@@ -67,13 +67,14 @@ export const parseBalanceToNumber = async (
 export const onchainLiquidity = new Gauge({
   name: "router_onchain_liquidity",
   help: "router_onchain_liquidity_help",
-  labelNames: ["chainId", "assetId"] as const,
+  labelNames: ["chainName", "chainId", "assetId"] as const,
   async collect() {
     await Promise.all(
       Object.entries(hydrated).map(async ([chainId, provider]) => {
         // base asset
         const balance = await provider.getBalance(signerAddress);
-        this.set({ chainId, assetId: AddressZero }, parseFloat(formatEther(balance)));
+        const chainInfo: ChainInfo = await getChainInfo(Number(chainId));
+        this.set({ chainName: chainInfo.name, chainId, assetId: AddressZero }, parseFloat(formatEther(balance)));
 
         // tokens
         await Promise.all(
