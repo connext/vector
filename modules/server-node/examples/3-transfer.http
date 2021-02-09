@@ -80,5 +80,13 @@ Content-Type: application/json
 }
 
 ##############
-### Get Transfers
-GET {{nodeUrl}}/{{nodePublicIdentifier}}/transfers?
+### Get Transfer By Id
+GET {{nodeUrl}}/{{nodePublicIdentifier}}/transfers/{{transferId}}
+
+##############
+### Get Active Transfers
+GET {{nodeUrl}}/{{nodePublicIdentifier}}/channels/{{channel}}/active-transfers
+
+##############
+### Get Transfer By Routing Id
+GET {{nodeUrl}}/{{nodePublicIdentifier}}/{{channel}}/transfers/routing-id/{{routingId}}
