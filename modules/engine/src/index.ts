@@ -53,7 +53,7 @@ import { sendIsAlive } from "./isAlive";
 
 export const ajv = new Ajv();
 
-export type EngineEvtContainer = { [K in keyof EngineEventMap]: Evt<EngineEventMap[K]> };
+export type EngineEvtContainer = { [K in EngineEvent]: Evt<EngineEventMap[K]> };
 
 export class VectorEngine implements IVectorEngine {
   // Setup event container to emit events from vector
