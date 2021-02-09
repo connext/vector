@@ -86,7 +86,7 @@ export async function setupListeners(
     });
     gasConsumed.set(
       { chainId, reason: data.reason },
-      await parseBalanceToNumber(data.receipt.cumulativeGasUsed, chainId!.toString(), AddressZero),
+      await parseBalanceToNumber(data.receipt!.cumulativeGasUsed, chainId!.toString(), AddressZero),
     );
   });
 
@@ -135,7 +135,6 @@ export async function setupListeners(
         // increment?
         failedTransfer.inc({
           assetId,
-          amount: receiverAmount, // may be undefined
           chainId,
         });
         return logger.error(
@@ -199,7 +198,6 @@ export async function setupListeners(
         const amount = BigNumber.from(data.transfer.balance.amount[0]).add(data.transfer.balance.amount[1]);
         failedTransfer.inc({
           assetId: data.transfer.assetId,
-          amount: amount.toString(),
           chainId: data.transfer.chainId,
         });
 
@@ -214,7 +212,6 @@ export async function setupListeners(
         const amount = BigNumber.from(data.transfer.balance.amount[0]).add(data.transfer.balance.amount[1]);
         successfulTransfer.inc({
           assetId: data.transfer.assetId,
-          amount: amount.toString(),
           chainId: data.transfer.chainId,
         });
 

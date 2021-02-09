@@ -72,7 +72,6 @@ export const attemptTransferWithCollateralization = async (
         senderChannel,
         senderTransfer,
         recipientChannel.channelAddress,
-        params.amount,
         {
           params,
           shouldCancelSender: true,
@@ -106,7 +105,6 @@ export const attemptTransferWithCollateralization = async (
         senderChannel,
         senderTransfer,
         recipientChannel.channelAddress,
-        params.amount,
         {
           shouldCancelSender: true,
           params,
@@ -137,7 +135,6 @@ export const attemptTransferWithCollateralization = async (
           senderChannel,
           senderTransfer,
           recipientChannel.channelAddress,
-          params.amount,
           {
             storeError: e.message,
             shouldCancelSender: true,
@@ -164,7 +161,6 @@ export const attemptTransferWithCollateralization = async (
         senderChannel,
         senderTransfer,
         recipientChannel.channelAddress,
-        params.amount,
         {
           params,
           shouldCancelSender: true,
@@ -185,7 +181,6 @@ export const attemptTransferWithCollateralization = async (
           senderChannel,
           senderTransfer,
           recipientChannel.channelAddress,
-          params.amount,
           {
             transferError: jsonifyError(transfer.getError()!),
             // if its a timeout, could be withholding sig, so do not cancel
@@ -237,7 +232,7 @@ export const transferWithCollateralization = async (
         senderChannel,
         senderTransfer,
         channel.channelAddress,
-        params.amount,
+
         {
           ...params,
           collateralError: jsonifyError(collateralRes.getError()!),
@@ -259,7 +254,6 @@ export const transferWithCollateralization = async (
           senderChannel,
           senderTransfer,
           channel.channelAddress,
-          params.amount,
           {
             transferError: jsonifyError(transfer.getError()!),
             ...params,
@@ -299,7 +293,6 @@ export const cancelCreatedTransfer = async (
         toCancel.channelAddress,
         toCancel.transferId,
         receiverChannel,
-        "",
         {
           cancellationError: jsonifyError(transferResolverRes.getError()!),
           senderTransfer: toCancel.transferId,
@@ -368,7 +361,6 @@ export const cancelCreatedTransfer = async (
       toCancel.channelAddress,
       toCancel.transferId,
       receiverChannel,
-      "",
       {
         cancellationError: jsonifyError(resolveResult.getError()!),
         cancellationReason,

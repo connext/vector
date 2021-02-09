@@ -100,8 +100,6 @@ export const openChannels = new Counter({
 //////////////////////////
 ///// Transfer metrics
 // Track number of times a transfer attempt was made
-// TODO: is there any way to get receiver amount at attempt?
-// Do we want to track amount at all here?
 export const attemptedTransfer = new Counter({
   name: "router_transfer_attempt",
   help: "router_transfer_attempt_help",
@@ -112,14 +110,14 @@ export const attemptedTransfer = new Counter({
 export const successfulTransfer = new Counter({
   name: "router_transfer_successful",
   help: "router_transfer_successful_help",
-  labelNames: ["amount", "assetId", "chainId"] as const,
+  labelNames: ["assetId", "chainId"] as const,
 });
 
 // Track failing forwards
 export const failedTransfer = new Counter({
   name: "router_transfer_failed",
   help: "router_transfer_failed_help",
-  labelNames: ["amount", "assetId", "chainId"] as const,
+  labelNames: ["assetId", "chainId"] as const,
 });
 
 // Track volume from receiver side

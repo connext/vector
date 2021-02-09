@@ -85,7 +85,6 @@ export async function forwardTransferCreation(
     routingId: string,
     senderTransfer: FullTransferState,
     errorReason: Values<typeof ForwardTransferCreationError.reasons>,
-    receiverAmount = "",
     receiverChannel = "",
     context: any = {},
   ): Promise<Result<any, ForwardTransferCreationError>> => {
@@ -123,7 +122,6 @@ export async function forwardTransferCreation(
         senderTransfer.channelAddress,
         senderTransfer.transferId,
         receiverChannel,
-        receiverAmount,
         {
           ...context,
           senderTransferCancellation: !!cancelRes.getValue() ? "executed" : "enqueued",
@@ -156,7 +154,6 @@ export async function forwardTransferCreation(
         senderChannelAddress,
         senderTransfer.transferId,
         "",
-        "",
         {
           meta,
         },
@@ -176,7 +173,6 @@ export async function forwardTransferCreation(
         routingId,
         senderChannelAddress,
         senderTransfer.transferId,
-        "",
         "",
         {
           nodeError: senderChannelRes.getError()!.toJson(),
@@ -227,7 +223,6 @@ export async function forwardTransferCreation(
         senderTransfer,
         ForwardTransferCreationError.reasons.UnableToCalculateSwap,
         "",
-        "",
         {
           swapError: swapRes.getError(),
         },
@@ -258,7 +253,6 @@ export async function forwardTransferCreation(
       senderTransfer,
       ForwardTransferCreationError.reasons.RecipientChannelNotFound,
       "",
-      recipientAmount,
       {
         storeError: recipientChannelRes.getError()!.toJson(),
         recipientChainId,
@@ -273,7 +267,6 @@ export async function forwardTransferCreation(
       senderTransfer,
       ForwardTransferCreationError.reasons.RecipientChannelNotFound,
       "",
-      recipientAmount,
       {
         participants: [routerPublicIdentifier, recipientIdentifier],
         chainId: recipientChainId,
