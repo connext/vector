@@ -2,6 +2,10 @@
 
 ## Next Release
 
+## 0.1.15-beta.8
+
+- \[types\] Remove unique constraint from `TransferEncodingSchema`
+
 ## 0.1.15-beta.7
 
 - \[ops\] Fix github actions.
