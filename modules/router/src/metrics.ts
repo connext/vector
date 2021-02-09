@@ -1,5 +1,5 @@
 import { HydratedProviders, ERC20Abi, ChainInfo } from "@connext/vector-types";
-import { hydrateProviders, getChainInfo } from "@connext/vector-utils";
+import { hydrateProviders, getChainInfo, getAssetName } from "@connext/vector-utils";
 import { BigNumberish } from "@ethersproject/bignumber";
 import { AddressZero } from "@ethersproject/constants";
 import { Contract } from "@ethersproject/contracts";
@@ -67,21 +67,23 @@ export const parseBalanceToNumber = async (
 export const onchainLiquidity = new Gauge({
   name: "router_onchain_liquidity",
   help: "router_onchain_liquidity_help",
-  labelNames: ["chainName", "chainId", "assetId"] as const,
+  labelNames: ["chainName", "chainId", "assetName", "assetId"] as const,
   async collect() {
     await Promise.all(
       Object.entries(hydrated).map(async ([chainId, provider]) => {
         // base asset
         const balance = await provider.getBalance(signerAddress);
         const chainInfo: ChainInfo = await getChainInfo(Number(chainId));
+        const baseAssetName: string = getAssetName(Number(chainId), AddressZero);
         this.set({ chainName: chainInfo.name, chainId, assetId: AddressZero }, parseFloat(formatEther(balance)));
 
         // tokens
         await Promise.all(
           Object.entries(rebalancedTokens[chainId] ?? {}).map(async ([assetId, config]) => {
             const balance = await config.contract.balanceOf(signerAddress);
+            const assetName: string = getAssetName(Number(chainId), assetId);
             const toSet = await parseBalanceToNumber(balance, chainId, assetId);
-            this.set({ chainId, assetId }, toSet);
+            this.set({ chainName: chainInfo.name, chainId, assetName, assetId }, toSet);
           }),
         );
       }),
