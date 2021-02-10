@@ -1,3 +1,9 @@
+/*
+  Warnings:
+
+  - The migration will add a unique constraint covering the columns `[transactionHash]` on the table `onchain_transaction`. If there are existing duplicate values, the migration will fail.
+
+*/
 -- RedefineTables
 PRAGMA foreign_keys=OFF;
 CREATE TABLE "new_transfer" (
@@ -31,3 +37,6 @@ CREATE UNIQUE INDEX "transfer_createUpdateChannelAddressId_createUpdateNonce_uni
 CREATE UNIQUE INDEX "transfer_resolveUpdateChannelAddressId_resolveUpdateNonce_unique" ON "transfer"("resolveUpdateChannelAddressId", "resolveUpdateNonce");
 PRAGMA foreign_key_check;
 PRAGMA foreign_keys=ON;
+
+-- CreateIndex
+CREATE UNIQUE INDEX "onchain_transaction.transactionHash_unique" ON "onchain_transaction"("transactionHash");
