@@ -740,12 +740,11 @@ async function handleWithdrawalTransferResolution(
     transfer.transferResolver!.responderSignature,
   );
 
-  // Store the double signed commitment
-  await store.saveWithdrawalCommitment(transferId, commitment.toJson());
-
   // Try to submit the transaction to chain IFF you are alice
   // Otherwise, alice should have submitted the tx (hash is in meta)
   if (signer.address !== alice) {
+    // Store the double signed commitment
+    await store.saveWithdrawalCommitment(transferId, commitment.toJson());
     // Withdrawal resolution meta will include the transaction hash,
     // post to EVT here
     evts[WITHDRAWAL_RECONCILED_EVENT].post({
@@ -767,12 +766,16 @@ async function handleWithdrawalTransferResolution(
   );
 
   if (withdrawalResponse.isError) {
+    // Store the double signed commitment
+    await store.saveWithdrawalCommitment(transferId, commitment.toJson());
     logger.warn(
       { method, error: withdrawalResponse.getError()!.message, channelAddress, transferId },
       "Failed to submit withdraw",
     );
     return;
   }
+  commitment.addTransaction(withdrawalResponse.getValue().hash);
+  await store.saveWithdrawalCommitment(transferId, commitment.toJson());
 
   const tx = withdrawalResponse.getValue()!;
   // alice submitted her own withdrawal, post to evt
