@@ -2,6 +2,8 @@
 
 ## Next Release
 
+- \[ops\] Add persistent storage for Grafana
+
 ## 0.1.15-beta.10
 
 - \[router\] Improve router dashboards
