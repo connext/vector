@@ -90,7 +90,11 @@ export default class ConnextManager {
     request: EngineParams.RpcRequest,
   ): Promise<ChannelRpcMethodsResponsesMap[T]> {
     if (request.method === "connext_authenticate") {
-      const node = await this.initNode(request.params.chainProviders);
+      const node = await this.initNode(
+        request.params.chainProviders,
+        request.params.chainAddresses,
+        request.params.messagingUrl,
+      );
       return {
         publicIdentifier: node.publicIdentifier,
         signerAddress: node.signerAddress,
