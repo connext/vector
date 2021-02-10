@@ -191,6 +191,7 @@ model OnchainTransaction {
   createdAt DateTime @default(now())
 
   @@unique([transactionHash, chainId])
+  @@unique(transactionHash)
   @@map(name: "onchain_transaction")
 }
 
