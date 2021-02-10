@@ -372,7 +372,7 @@ export class PrismaStore implements IServerNodeStore {
   async getWithdrawalCommitment(transferId: string): Promise<WithdrawCommitmentJson | undefined> {
     const entity = await this.prisma.transfer.findUnique({
       where: { transferId },
-      include: { channel: true, createUpdate: true, resolveUpdate: true },
+      include: { channel: true, createUpdate: true, resolveUpdate: true, transaction: true },
     });
     if (!entity) {
       return undefined;
@@ -409,14 +409,29 @@ export class PrismaStore implements IServerNodeStore {
       nonce: initialState.nonce,
       callData: initialState.callData,
       callTo: initialState.callTo,
+      transactionHash: entity.transactionHash ?? undefined,
     };
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  saveWithdrawalCommitment(transferId: string, withdrawCommitment: WithdrawCommitmentJson): Promise<void> {
-    // All information is stored in the transfer entity already (see getter)
-    // So no need to save commitment explicitly
-    return Promise.resolve();
+  async saveWithdrawalCommitment(transferId: string, withdrawCommitment: WithdrawCommitmentJson): Promise<void> {
+    // if there is not a transaction hash on the commitment, do nothing
+    if (!withdrawCommitment.transactionHash) {
+      return;
+    }
+
+    // otherwise associate with a transaction
+    const updated = await this.prisma.transfer.update({
+      where: {
+        transferId,
+      },
+      data: {
+        transaction: { connect: { transactionHash: withdrawCommitment.transactionHash } },
+      },
+    });
+    console.log("****** updated", updated);
+
+    return;
   }
 
   async registerSubscription<T extends EngineEvent>(publicIdentifier: string, event: T, url: string): Promise<void> {
