@@ -56,7 +56,7 @@ export class WithdrawCommitment {
     };
   }
 
-  public addTransaction(transactionHash: string): void {
+  public addTransaction(transactionHash?: string): void {
     this.transactionHash = transactionHash;
   }
 

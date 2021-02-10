@@ -734,6 +734,9 @@ async function handleWithdrawalTransferResolution(
     assetId,
     withdrawalAmount.toString(),
     transfer.transferState.nonce,
+    transfer.transferState.callTo,
+    transfer.transferState.callData,
+    meta?.transactionHash ?? undefined,
   );
   await commitment.addSignatures(
     transfer.transferState.initiatorSignature,
@@ -774,10 +777,10 @@ async function handleWithdrawalTransferResolution(
     );
     return;
   }
-  commitment.addTransaction(withdrawalResponse.getValue().hash);
+  const tx = withdrawalResponse.getValue();
+  commitment.addTransaction(tx.hash);
   await store.saveWithdrawalCommitment(transferId, commitment.toJson());
 
-  const tx = withdrawalResponse.getValue()!;
   // alice submitted her own withdrawal, post to evt
   evts[WITHDRAWAL_RECONCILED_EVENT].post({
     aliceIdentifier,
@@ -896,14 +899,11 @@ export const resolveWithdrawal = async (
   const responderSignature = await signer.signMessage(commitment.hashToSign());
   await commitment.addSignatures(initiatorSignature, responderSignature);
 
-  // Store the double signed commitment
-  await store.saveWithdrawalCommitment(transfer.transferId, commitment.toJson());
-
   // Assume that only alice will try to submit the withdrawal to chain.
   // Alice may or may not charge a fee for this service, and both parties
   // are welcome to submit the commitment if the other party does not.
 
-  // NOTE: if bob is the withdrawal creator and alice has charged a fee
+  // TODO: if bob is the withdrawal creator and alice has charged a fee
   // for submitting the withdrawal, bob will refuse to sign the resolve
   // update until the transaction is properly submitted onchain (enforced
   // via injected validation)
@@ -934,6 +934,9 @@ export const resolveWithdrawal = async (
       logger.warn({ error: withdrawalResponse.getError()!.message, method }, "Failed to submit tx");
     }
   }
+  commitment.addTransaction(transactionHash);
+  // Store the double signed commitment
+  await store.saveWithdrawalCommitment(transfer.transferId, commitment.toJson());
 
   // Resolve withdrawal from counterparty
   // See note above re: fees + injected validation

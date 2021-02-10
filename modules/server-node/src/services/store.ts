@@ -413,7 +413,6 @@ export class PrismaStore implements IServerNodeStore {
     };
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async saveWithdrawalCommitment(transferId: string, withdrawCommitment: WithdrawCommitmentJson): Promise<void> {
     // if there is not a transaction hash on the commitment, do nothing
     if (!withdrawCommitment.transactionHash) {
@@ -421,16 +420,16 @@ export class PrismaStore implements IServerNodeStore {
     }
 
     // otherwise associate with a transaction
-    const updated = await this.prisma.transfer.update({
+    await this.prisma.transfer.update({
       where: {
         transferId,
       },
       data: {
-        transaction: { connect: { transactionHash: withdrawCommitment.transactionHash } },
+        transaction: {
+          connect: { transactionHash: withdrawCommitment.transactionHash },
+        },
       },
     });
-    console.log("****** updated", updated);
-
     return;
   }
 
