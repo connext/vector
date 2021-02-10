@@ -115,6 +115,9 @@ model Transfer {
   createUpdate  Update? @relation(name: "CreatedTransfer", fields: [createUpdateChannelAddressId, createUpdateNonce], references: [channelAddressId, nonce])
   resolveUpdate Update? @relation(name: "ResolvedTransfer", fields: [resolveUpdateChannelAddressId, resolveUpdateNonce], references: [channelAddressId, nonce])
 
+  // add an onchain transaction for withdrawals
+  transaction   OnchainTransaction? @relation(name: "TransferTransaction", fields: [transactionHash], references: [transactionHash])
+
   // balance
   amountA String
   amountB String
@@ -134,6 +137,9 @@ model Transfer {
   // resolved will not always exist
   resolveUpdateChannelAddressId String?
   resolveUpdateNonce            Int?
+
+  // may not always have transaction associated
+  transactionHash    String?
 
   @@unique([routingId, channelAddressId])
   @@map(name: "transfer")
