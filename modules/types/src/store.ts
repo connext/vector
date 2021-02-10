@@ -4,6 +4,7 @@ import { WithdrawCommitmentJson } from "./transferDefinitions/withdraw";
 import { FullTransferState, FullChannelState } from "./channel";
 import { Address } from "./basic";
 import { ChannelDispute, TransferDispute } from "./dispute";
+import { GetTransfersFilterOpts } from "./schemas/engine";
 
 export interface IVectorStore {
   // Store management methods
@@ -25,6 +26,7 @@ export interface IVectorStore {
   // create the merkle root
   getActiveTransfers(channelAddress: string): Promise<FullTransferState[]>;
   getTransferState(transferId: string): Promise<FullTransferState | undefined>;
+  getTransfers(filterOpts?: GetTransfersFilterOpts): Promise<FullTransferState[]>;
 
   // Setters
   saveChannelState(channelState: FullChannelState, transfer?: FullTransferState): Promise<void>;

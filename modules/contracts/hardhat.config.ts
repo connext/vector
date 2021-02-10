@@ -2,6 +2,8 @@ import "@nomiclabs/hardhat-waffle";
 import "hardhat-deploy";
 import "hardhat-deploy-ethers";
 import "hardhat-typechain";
+import "@nomiclabs/hardhat-etherscan";
+
 import { HardhatUserConfig } from "hardhat/types";
 
 import * as packageJson from "./package.json";
@@ -38,6 +40,9 @@ const config: HardhatUserConfig = {
     alice: { default: 1 },
     bob: { default: 2 },
     rando: { default: 3 },
+  },
+  etherscan: {
+    apiKey: process.env.API_KEY || "",
   },
   networks: {
     hardhat: {
@@ -89,10 +94,15 @@ const config: HardhatUserConfig = {
       chainId: 80001,
       url: urlOverride || "https://rpc-mumbai.matic.today",
     },
-    arbitrum: {
+    arbitrumtest: {
       accounts: { mnemonic },
-      chainId: 152709604825713,
-      url: urlOverride || "https://kovan2.arbitrum.io/rpc",
+      chainId: 79377087078960,
+      url: urlOverride || "https://kovan3.arbitrum.io/rpc",
+    },
+    xdai: {
+      accounts: { mnemonic },
+      chainId: 100,
+      url: urlOverride || "http://localhost:8545",
     },
   },
 };

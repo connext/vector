@@ -6,6 +6,7 @@ import {
   FullChannelState,
 } from "@connext/vector-types";
 import { defaultAbiCoder } from "@ethersproject/abi";
+import { getAddress } from "@ethersproject/address";
 import { keccak256 as solidityKeccak256 } from "@ethersproject/solidity";
 
 export const hashBalance = (balance: Balance): string =>
@@ -34,9 +35,17 @@ export const getBalanceForAssetId = (
   assetId: string,
   participant: "alice" | "bob",
 ): string => {
-  const assetIdx = channel.assetIds.findIndex((a) => a === assetId);
+  const assetIdx = channel.assetIds.findIndex((a) => getAddress(a) === getAddress(assetId));
   if (assetIdx === -1) {
     return "0";
   }
   return channel.balances[assetIdx].amount[participant === "alice" ? 0 : 1];
+};
+
+export const getParticipant = (channel: FullChannelState, publicIdentifier: string): "alice" | "bob" | undefined => {
+  const iAmAlice = publicIdentifier.toLowerCase() === channel.aliceIdentifier.toLowerCase();
+  if (!iAmAlice && publicIdentifier.toLowerCase() !== channel.bobIdentifier.toLowerCase()) {
+    return undefined;
+  }
+  return iAmAlice ? "alice" : "bob";
 };

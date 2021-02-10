@@ -12,6 +12,7 @@ import {
   TFullTransferState,
   TFullChannelState,
   TChainId,
+  AllowedSwapSchema,
 } from "./basic";
 
 ////////////////////////////////////////
@@ -34,6 +35,21 @@ const BasicTransferServerResponseSchema = {
     channelAddress: TAddress,
     transferId: TBytes32,
     routingId: Type.Optional(TBytes32),
+  }),
+};
+
+// GET ROUTER CONFIG
+const GetRouterConfigParamsSchema = Type.Intersect([
+  EngineParams.GetRouterConfigSchema,
+  Type.Object({
+    publicIdentifier: TPublicIdentifier,
+  }),
+]);
+
+const GetRouterConfigResponseSchema = {
+  200: Type.Object({
+    supportedChains: Type.Array(TChainId),
+    allowedSwaps: Type.Array(AllowedSwapSchema),
   }),
 };
 
@@ -79,6 +95,13 @@ const GetTransferStateParamsSchema = Type.Intersect([
 
 const GetTransferStateResponseSchema = {
   200: Type.Union([Type.Undefined(), TFullTransferState]),
+};
+
+// GET TRANSFERS
+const GetTransfersParamsSchema = Type.Object({ publicIdentifier: TPublicIdentifier });
+
+const GetTransfersResponseSchema = {
+  200: Type.Array(TFullTransferState),
 };
 
 // GET CHANNEL STATE
@@ -316,6 +339,19 @@ const PostAdminResponseSchema = {
   }),
 };
 
+// RETRY TRANSACTION
+const PostAdminRetryWithdrawTransactionBodySchema = Type.Object({
+  adminToken: Type.String(),
+  transferId: TBytes32,
+});
+
+const PostAdminRetryWithdrawTransactionResponseSchema = {
+  200: Type.Object({
+    transferId: TBytes32,
+    transactionHash: Type.String(),
+  }),
+};
+
 //////////////////
 /// Dispute Methods
 
@@ -382,6 +418,9 @@ const PostSendIsAliveResponseSchema = {
 // Namespace exports
 // eslint-disable-next-line @typescript-eslint/no-namespace
 export namespace NodeParams {
+  export const GetRouterConfigSchema = GetRouterConfigParamsSchema;
+  export type GetRouterConfig = Static<typeof GetRouterConfigParamsSchema>;
+
   export const GetTransferStateByRoutingIdSchema = GetTransferStateByRoutingIdParamsSchema;
   export type GetTransferStateByRoutingId = Static<typeof GetTransferStateByRoutingIdParamsSchema>;
 
@@ -390,6 +429,9 @@ export namespace NodeParams {
 
   export const GetTransferStateSchema = GetTransferStateParamsSchema;
   export type GetTransferState = Static<typeof GetTransferStateParamsSchema>;
+
+  export const GetTransfersSchema = GetTransfersParamsSchema;
+  export type GetTransfers = Static<typeof GetTransfersParamsSchema>;
 
   export const GetActiveTransfersByChannelAddressSchema = GetActiveTransfersByChannelAddressParamsSchema;
   export type GetActiveTransfersByChannelAddress = Static<typeof GetActiveTransfersByChannelAddressParamsSchema>;
@@ -468,10 +510,16 @@ export namespace NodeParams {
 
   export const SendIsAliveSchema = PostSendIsAliveBodySchema;
   export type SendIsAlive = Static<typeof SendIsAliveSchema>;
+
+  export const RetryWithdrawTransactionSchema = PostAdminRetryWithdrawTransactionBodySchema;
+  export type RetryWithdrawTransaction = Static<typeof RetryWithdrawTransactionSchema>;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-namespace
 export namespace NodeResponses {
+  export const GetRouterConfigSchema = GetRouterConfigResponseSchema;
+  export type GetRouterConfig = Static<typeof GetRouterConfigResponseSchema["200"]>;
+
   export const GetTransferStateByRoutingIdSchema = GetTransferStateByRoutingIdResponseSchema;
   export type GetTransferStateByRoutingId = Static<typeof GetTransferStateByRoutingIdResponseSchema["200"]>;
 
@@ -480,6 +528,9 @@ export namespace NodeResponses {
 
   export const GetTransferStateSchema = GetTransferStateResponseSchema;
   export type GetTransferState = Static<typeof GetTransferStateResponseSchema>;
+
+  export const GetTransfersSchema = GetTransfersResponseSchema;
+  export type GetTransfers = Static<typeof GetTransfersResponseSchema>;
 
   export const GetActiveTransfersByChannelAddressSchema = GetActiveTransfersByChannelAddressResponseSchema;
   export type GetActiveTransfersByChannelAddress = Static<
@@ -563,4 +614,7 @@ export namespace NodeResponses {
 
   export const SendIsAliveSchema = PostSendIsAliveResponseSchema;
   export type SendIsAlive = Static<typeof PostSendIsAliveResponseSchema["200"]>;
+
+  export const RetryWithdrawTransactionSchema = PostAdminRetryWithdrawTransactionResponseSchema;
+  export type RetryWithdrawTransaction = Static<typeof PostAdminRetryWithdrawTransactionResponseSchema["200"]>;
 }

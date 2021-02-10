@@ -15,6 +15,7 @@ import {
   StoredTransactionStatus,
   ChannelDispute,
   TransferDispute,
+  GetTransfersFilterOpts,
 } from "@connext/vector-types";
 import { getRandomBytes32, getSignerAddressFromPublicIdentifier } from "@connext/vector-utils";
 import { BigNumber } from "@ethersproject/bignumber";
@@ -390,12 +391,12 @@ export class PrismaStore implements IServerNodeStore {
       channelAddress: entity.channelAddressId,
       alice: entity.channel!.participantA,
       bob: entity.channel!.participantB,
-      recipient: initialState.balance.to[0],
+      recipient: entity.toA, // balance = [toA, toB]
       assetId: entity.createUpdate!.assetId,
-      amount: BigNumber.from(initialState.balance.amount[0]).sub(initialState.fee).toString(),
+      amount: BigNumber.from(entity.amountA).sub(initialState.fee).toString(),
       nonce: initialState.nonce,
-      callData: initialState.callTo,
-      callTo: initialState.callData,
+      callData: initialState.callData,
+      callTo: initialState.callTo,
     };
   }
 
@@ -961,6 +962,48 @@ export class PrismaStore implements IServerNodeStore {
     }
 
     return convertTransferEntityToFullTransferState(transfer);
+  }
+
+  async getTransfers(filterOpts?: GetTransfersFilterOpts): Promise<FullTransferState[]> {
+    const filterQuery = [];
+    if (filterOpts?.channelAddress) {
+      filterQuery.push({ channelAddressId: filterOpts.channelAddress });
+    }
+
+    // start and end
+    if (filterOpts?.startDate && filterOpts.endDate) {
+      filterQuery.push({ createdAt: { gte: filterOpts.startDate, lte: filterOpts.endDate } });
+    } else if (filterOpts?.startDate) {
+      filterQuery.push({ createdAt: { gte: filterOpts.startDate } });
+    } else if (filterOpts?.endDate) {
+      filterQuery.push({ createdAt: { lte: filterOpts.endDate } });
+    }
+
+    if (filterOpts?.active) {
+      filterQuery.push({ channelAddress: filterOpts.channelAddress });
+    }
+
+    if (filterOpts?.routingId) {
+      filterQuery.push({ routingId: filterOpts.routingId });
+    }
+
+    const transfers = await this.prisma.transfer.findMany({
+      where: filterOpts ? { OR: filterQuery } : undefined,
+      include: {
+        channel: true,
+        createUpdate: true,
+        resolveUpdate: true,
+      },
+    });
+
+    for (const transfer of transfers) {
+      if (!transfer.channel) {
+        const channel = await this.prisma.channel.findUnique({ where: { channelAddress: transfer.channelAddressId } });
+        transfer.channel = channel;
+      }
+    }
+
+    return transfers.map(convertTransferEntityToFullTransferState);
   }
 
   async getTransfersByRoutingId(routingId: string): Promise<FullTransferState[]> {

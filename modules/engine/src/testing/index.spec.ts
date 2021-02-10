@@ -1,5 +1,5 @@
 import { VectorChainService } from "@connext/vector-contracts";
-import { Result, EngineParams, IEngineStore } from "@connext/vector-types";
+import { Result, EngineParams, IEngineStore, IVectorChainService } from "@connext/vector-types";
 import {
   expect,
   getRandomChannelSigner,
@@ -36,10 +36,14 @@ describe("VectorEngine", () => {
   const invalidAddress = "abc";
 
   let storeService: IEngineStore;
+  let chainService: Sinon.SinonStubbedInstance<VectorChainService>;
   beforeEach(() => {
     storeService = Sinon.createStubInstance(MemoryStoreService, {
       getChannelStates: Promise.resolve([]),
     });
+    chainService = Sinon.createStubInstance(VectorChainService);
+
+    chainService.getChainProviders.returns(Result.ok(env.chainProviders));
   });
 
   afterEach(() => Sinon.restore());
@@ -50,7 +54,7 @@ describe("VectorEngine", () => {
       Sinon.createStubInstance(MemoryLockService),
       storeService,
       getRandomChannelSigner(),
-      Sinon.createStubInstance(VectorChainService),
+      chainService as IVectorChainService,
       chainAddresses,
       log,
       false,
@@ -64,7 +68,7 @@ describe("VectorEngine", () => {
       Sinon.createStubInstance(MemoryLockService),
       storeService,
       getRandomChannelSigner(),
-      Sinon.createStubInstance(VectorChainService),
+      chainService as IVectorChainService,
       chainAddresses,
       log,
       false,
@@ -153,7 +157,7 @@ describe("VectorEngine", () => {
           Sinon.createStubInstance(MemoryLockService),
           storeService,
           getRandomChannelSigner(),
-          Sinon.createStubInstance(VectorChainService),
+          chainService as IVectorChainService,
           chainAddresses,
           log,
           false,
@@ -191,7 +195,7 @@ describe("VectorEngine", () => {
             Sinon.createStubInstance(MemoryLockService),
             storeService,
             getRandomChannelSigner(),
-            Sinon.createStubInstance(VectorChainService),
+            chainService as IVectorChainService,
             chainAddresses,
             log,
             false,
@@ -219,6 +223,16 @@ describe("VectorEngine", () => {
         return `should have required property '${param}'`;
       };
       const paramsTests = [
+        {
+          name: "chan_getRouterConfig missing parameter routerIdentifier",
+          overrides: { id: 1, jsonrpc: "2.0", method: "chan_getRouterConfig", params: { routerIdentifier: undefined } },
+          error: missingParam("routerIdentifier"),
+        },
+        {
+          name: "chan_getRouterConfig malformed parameter routerIdentifier",
+          overrides: { id: 1, jsonrpc: "2.0", method: "chan_getRouterConfig", params: { routerIdentifier: "fail" } },
+          error: 'should match pattern "^vector([a-zA-Z0-9]{50})$"',
+        },
         {
           name: "chan_signUtilityMessage missing parameter message",
           overrides: { id: 1, jsonrpc: "2.0", method: "chan_signUtilityMessage", params: { message: undefined } },
@@ -807,7 +821,7 @@ describe("VectorEngine", () => {
             Sinon.createStubInstance(MemoryLockService),
             storeService,
             getRandomChannelSigner(),
-            Sinon.createStubInstance(VectorChainService),
+            chainService as IVectorChainService,
             chainAddresses,
             log,
             false,

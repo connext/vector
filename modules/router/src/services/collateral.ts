@@ -4,9 +4,10 @@ import {
   Result,
   NodeResponses,
   IVectorChainReader,
-  VectorError,
+  jsonifyError,
 } from "@connext/vector-types";
-import { getBalanceForAssetId, getRandomBytes32 } from "@connext/vector-utils";
+import { getBalanceForAssetId, getRandomBytes32, getParticipant } from "@connext/vector-utils";
+import { getAddress } from "@ethersproject/address";
 import { BigNumber } from "@ethersproject/bignumber";
 import { BaseLogger } from "pino";
 
@@ -28,14 +29,30 @@ export const justInTimeCollateral = async (
   logger: BaseLogger,
   transferAmount: string,
 ): Promise<Result<undefined | NodeResponses.Deposit, CollateralError>> => {
+  const method = "justInTimeCollateral";
+  const methodId = getRandomBytes32();
+  logger.info({ method, methodId, channelAddress: channel.channelAddress, assetId, transferAmount }, "Method started");
   // If there is sufficient balance in the channel to handle the transfer
   // amount, no need for collateralization
-  const myBalance = getBalanceForAssetId(
-    channel,
-    assetId,
-    publicIdentifier === channel.aliceIdentifier ? "alice" : "bob",
-  );
+  const participant = getParticipant(channel, publicIdentifier);
+  if (!participant) {
+    return Result.fail(
+      new CollateralError(
+        CollateralError.reasons.NotInChannel,
+        channel.channelAddress,
+        assetId,
+        {} as any,
+        transferAmount,
+        { publicIdentifier, alice: channel.aliceIdentifier, bob: channel.bobIdentifier },
+      ),
+    );
+  }
+  const myBalance = getBalanceForAssetId(channel, assetId, participant);
   if (BigNumber.from(myBalance).gte(transferAmount)) {
+    logger.info(
+      { method, methodId, channelAddress: channel.channelAddress, balance: myBalance.toString(), transferAmount },
+      "Balance is sufficient, not collateralizing",
+    );
     return Result.ok(undefined);
   }
 
@@ -50,7 +67,7 @@ export const justInTimeCollateral = async (
         {} as any,
         undefined,
         {
-          profileError: VectorError.jsonify(profileRes.getError()!),
+          profileError: jsonifyError(profileRes.getError()!),
           transferAmount,
         },
       ),
@@ -58,7 +75,7 @@ export const justInTimeCollateral = async (
   }
   const profile = profileRes.getValue();
   const target = BigNumber.from(profile.target);
-  return requestCollateral(
+  const res = await requestCollateral(
     channel,
     assetId,
     publicIdentifier,
@@ -67,6 +84,8 @@ export const justInTimeCollateral = async (
     logger,
     BigNumber.from(transferAmount).add(target).toString(),
   );
+  logger.info({ method, methodId }, "Method complete");
+  return res;
 };
 
 /**
@@ -81,12 +100,15 @@ export const adjustCollateral = async (
   chainReader: IVectorChainReader,
   logger: BaseLogger,
 ): Promise<Result<undefined | NodeResponses.Withdraw | NodeResponses.Deposit, CollateralError>> => {
+  const method = "adjustCollateral";
+  const methodId = getRandomBytes32();
+  logger.debug({ method, methodId, channelAddress, assetId }, "Method started");
   // Get channel
   const channelRes = await node.getStateChannel({ publicIdentifier, channelAddress });
   if (channelRes.isError || !channelRes.getValue()) {
     return Result.fail(
       new CollateralError(CollateralError.reasons.ChannelNotFound, channelAddress, assetId, {} as any, undefined, {
-        getChannelError: VectorError.jsonify(channelRes.getError()!),
+        getChannelError: jsonifyError(channelRes.getError()!),
       }),
     );
   }
@@ -103,7 +125,7 @@ export const adjustCollateral = async (
         {} as any,
         undefined,
         {
-          profileError: VectorError.jsonify(profileRes.getError()!),
+          profileError: jsonifyError(profileRes.getError()!),
         },
       ),
     );
@@ -114,17 +136,37 @@ export const adjustCollateral = async (
   const reclaimThreshold = BigNumber.from(profile.reclaimThreshold);
 
   // Get channel balance
-  const iAmAlice = publicIdentifier === channel.aliceIdentifier;
-  const myBalance = BigNumber.from(getBalanceForAssetId(channel, assetId, iAmAlice ? "alice" : "bob"));
+  const participant = getParticipant(channel, publicIdentifier);
+  if (!participant) {
+    return Result.fail(
+      new CollateralError(CollateralError.reasons.NotInChannel, channel.channelAddress, assetId, profile, undefined, {
+        publicIdentifier,
+        alice: channel.aliceIdentifier,
+        bob: channel.bobIdentifier,
+      }),
+    );
+  }
+  const myBalance = BigNumber.from(getBalanceForAssetId(channel, assetId, participant));
 
   // Establish needed action
   if (myBalance.gt(collateralizeThreshold) && myBalance.lte(reclaimThreshold)) {
     // Channel balance is within reason, nothing to do
-    logger.debug({ myBalance, assetId, channel: channel.channelAddress }, "No collateral actions needed");
+    logger.info({ myBalance: myBalance.toString(), assetId, channelAddress }, "No collateral actions needed");
     return Result.ok(undefined);
   }
 
   if (myBalance.lte(collateralizeThreshold)) {
+    logger.info(
+      {
+        method,
+        methodId,
+        channelAddress,
+        assetId,
+        myBalance: myBalance.toString(),
+        collateralizeThreshold: profile.collateralizeThreshold,
+      },
+      "Adding collateral",
+    );
     // Must collateralize
     return requestCollateral(channel, assetId, publicIdentifier, node, chainReader, logger);
   }
@@ -142,16 +184,17 @@ export const adjustCollateral = async (
     assetId,
     channelAddress: channel.channelAddress,
     amount: reclaimable.toString(),
-    recipient: iAmAlice ? channel.alice : channel.bob,
+    recipient: participant === "alice" ? channel.alice : channel.bob,
   });
   if (!withdrawRes.isError) {
+    logger.info({ method, methodId }, "Method complete");
     return withdrawRes as Result<NodeResponses.Withdraw>;
   }
 
   const withdrawalErr = withdrawRes.getError();
   return Result.fail(
     new CollateralError(CollateralError.reasons.UnableToReclaim, channel.channelAddress, assetId, profile, undefined, {
-      withdrawError: VectorError.jsonify(withdrawalErr!),
+      withdrawError: jsonifyError(withdrawalErr!),
     }),
   );
 };
@@ -172,7 +215,7 @@ export const requestCollateral = async (
 ): Promise<Result<undefined | NodeResponses.Deposit, CollateralError>> => {
   const method = "requestCollateral";
   const methodId = getRandomBytes32();
-  logger.debug({ method, methodId, assetId, publicIdentifier, channel }, "Started");
+  logger.debug({ method, methodId, assetId, publicIdentifier, channel }, "Method started");
   const profileRes = getRebalanceProfile(channel.networkContext.chainId, assetId);
   if (profileRes.isError) {
     return Result.fail(
@@ -183,7 +226,7 @@ export const requestCollateral = async (
         {} as any,
         requestedAmount,
         {
-          profileError: VectorError.jsonify(profileRes.getError()!),
+          profileError: jsonifyError(profileRes.getError()!),
         },
       ),
     );
@@ -192,21 +235,36 @@ export const requestCollateral = async (
 
   const target = BigNumber.from(requestedAmount ?? profile.target);
 
-  logger.info({ target: target.toString(), channel: channel.channelAddress, assetId }, "Collateral target calculated");
+  logger.info(
+    { method, methodId, target: target.toString(), channel: channel.channelAddress, assetId },
+    "Collateral target calculated",
+  );
 
-  const iAmAlice = publicIdentifier === channel.aliceIdentifier;
+  const participant = getParticipant(channel, publicIdentifier);
+  if (!participant) {
+    return Result.fail(
+      new CollateralError(CollateralError.reasons.NotInChannel, channel.channelAddress, assetId, profile, undefined, {
+        publicIdentifier,
+        alice: channel.aliceIdentifier,
+        bob: channel.bobIdentifier,
+      }),
+    );
+  }
 
-  const assetIdx = channel.assetIds.findIndex((assetId: string) => assetId === assetId);
-  const myBalance = BigNumber.from(getBalanceForAssetId(channel, assetId, iAmAlice ? "alice" : "bob"));
+  const assetIdx = channel.assetIds.findIndex((assetId: string) => getAddress(assetId) === getAddress(assetId));
+  const myBalance = BigNumber.from(getBalanceForAssetId(channel, assetId, participant));
 
   if (myBalance.gte(target)) {
     logger.info(
-      { balance: channel.balances[assetIdx], target: target.toString() },
+      { method, methodId, balance: myBalance.toString(), target: target.toString() },
       "Current balance is sufficient, not collateralizing",
     );
     return Result.ok(undefined);
   }
-  logger.info({ target: target.toString(), myBalance: myBalance.toString() }, "Adding collateral to channel");
+  logger.info(
+    { method, methodId, target: target.toString(), myBalance: myBalance.toString() },
+    "Adding collateral to channel",
+  );
 
   const providers = chainReader.getHydratedProviders();
   if (providers.isError) {
@@ -241,9 +299,10 @@ export const requestCollateral = async (
 
   // Check if a tx has already been sent, but has not been reconciled
   // Get the total deposits vs. processed deposits
-  const totalDeposited = iAmAlice
-    ? await chainReader.getTotalDepositedA(channel.channelAddress, channel.networkContext.chainId, assetId)
-    : await chainReader.getTotalDepositedB(channel.channelAddress, channel.networkContext.chainId, assetId);
+  const totalDeposited =
+    participant === "alice"
+      ? await chainReader.getTotalDepositedA(channel.channelAddress, channel.networkContext.chainId, assetId)
+      : await chainReader.getTotalDepositedB(channel.channelAddress, channel.networkContext.chainId, assetId);
   if (totalDeposited.isError) {
     return Result.fail(
       new CollateralError(
@@ -253,19 +312,27 @@ export const requestCollateral = async (
         profile,
         requestedAmount,
         {
-          chainError: VectorError.jsonify(totalDeposited.getError()!),
+          chainError: jsonifyError(totalDeposited.getError()!),
         },
       ),
     );
   }
-  const processed = iAmAlice ? channel.processedDepositsA[assetIdx] : channel.processedDepositsB[assetIdx];
+  const processed =
+    participant === "alice" ? channel.processedDepositsA[assetIdx] : channel.processedDepositsB[assetIdx];
   const amountToDeposit = BigNumber.from(target).sub(myBalance);
   const reconcilable = totalDeposited.getValue().sub(processed ?? "0");
   if (reconcilable.lt(amountToDeposit)) {
     // Deposit needed
     logger.info(
-      { amountToDeposit: amountToDeposit.toString(), target: target.toString() },
-      "Deposit amount calculated, submitting deposit tx",
+      {
+        method,
+        methodId,
+        amountToDeposit: amountToDeposit.toString(),
+        target: target.toString(),
+        channelAddress: channel.channelAddress,
+        assetId,
+      },
+      "Deposit calculated, submitting tx",
     );
     const txRes = await node.sendDepositTx({
       amount: amountToDeposit.toString(),
@@ -283,7 +350,7 @@ export const requestCollateral = async (
           profile,
           requestedAmount,
           {
-            error: VectorError.jsonify(txRes.getError()!),
+            error: jsonifyError(txRes.getError()!),
             amountToDeposit: amountToDeposit.toString(),
           },
         ),
@@ -291,16 +358,40 @@ export const requestCollateral = async (
     }
 
     const tx = txRes.getValue();
-    logger.info({ txHash: tx.txHash }, "Submitted deposit tx");
+    logger.info({ method, methodId, txHash: tx.txHash }, "Submitted deposit tx");
     const receipt = await provider.waitForTransaction(tx.txHash);
-    logger.info({ txHash: tx.txHash, logs: receipt.logs }, "Tx mined");
+    if (receipt.status === 0) {
+      return Result.fail(
+        new CollateralError(
+          CollateralError.reasons.UnableToCollateralize,
+          channel.channelAddress,
+          assetId,
+          profile,
+          requestedAmount,
+          {
+            receipt,
+            error: "Tx reverted",
+          },
+        ),
+      );
+    }
+    logger.info({ method, methodId, txHash: tx.txHash }, "Tx mined");
+    logger.debug({ method, methodId, txHash: tx.txHash, logs: receipt.logs }, "Tx mined");
   } else {
     logger.info(
       {
-        processed: processed.toString(),
+        method,
+        methodId,
+        assetId,
+        channelAddress: channel.channelAddress,
+        processed,
+        balance: myBalance.toString(),
+        totalDeposited: totalDeposited.getValue().toString(),
         amountToDeposit: amountToDeposit.toString(),
         reconcilable: reconcilable.toString(),
         target: target.toString(),
+        participant,
+        assetIdx,
       },
       "Owed onchain funds are sufficient",
     );
@@ -311,9 +402,52 @@ export const requestCollateral = async (
     publicIdentifier,
     channelAddress: channel.channelAddress,
   };
-  logger.info({ balance: channel.balances[assetIdx], target: target.toString() }, "Reconciling onchain funds");
+  logger.info(
+    { method, methodId, balance: myBalance.toString(), target: target.toString() },
+    "Reconciling onchain funds",
+  );
+
+  // check that funds actually made it into the channel
+  // hard error here if not so that the sender can know that the transfer
+  // will not properly get forwarded
+  // TODO: make depositRes include full channel state
   const depositRes = await node.reconcileDeposit(params);
   if (!depositRes.isError) {
+    const postReconcile = await node.getStateChannel({ channelAddress: channel.channelAddress });
+    if (postReconcile.isError) {
+      return Result.fail(
+        new CollateralError(
+          CollateralError.reasons.UnableToCollateralize,
+          channel.channelAddress,
+          assetId,
+          profile,
+          requestedAmount,
+          {
+            message: "Could not getStateChannel after reconcile",
+            nodeError: jsonifyError(postReconcile.getError()!),
+          },
+        ),
+      );
+    }
+    const myBalance = BigNumber.from(
+      getBalanceForAssetId(postReconcile.getValue() as FullChannelState, assetId, participant),
+    );
+    if (myBalance.lt(target)) {
+      return Result.fail(
+        new CollateralError(
+          CollateralError.reasons.UnableToCollateralize,
+          channel.channelAddress,
+          assetId,
+          profile,
+          requestedAmount,
+          {
+            message: "After reconcile, balance was not present in channel",
+            channel: postReconcile.getValue(),
+          },
+        ),
+      );
+    }
+    logger.info({ method, methodId, myBalance: myBalance.toString() }, "Method complete");
     return depositRes as Result<NodeResponses.Deposit>;
   }
   const error = depositRes.getError()!;
@@ -325,7 +459,7 @@ export const requestCollateral = async (
       profile,
       requestedAmount,
       {
-        nodeError: VectorError.jsonify(error),
+        nodeError: jsonifyError(error),
       },
     ),
   );

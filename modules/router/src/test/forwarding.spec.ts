@@ -92,7 +92,7 @@ describe(testName, () => {
         alice: signerAddress,
       });
 
-      const idx = senderChannel.assetIds.findIndex((a) => a === senderTransfer.assetId);
+      const idx = senderChannel.assetIds.findIndex((a: any) => a === senderTransfer.assetId);
 
       const event: ConditionalTransferCreatedPayload = {
         aliceIdentifier: senderChannel.aliceIdentifier,
@@ -198,7 +198,7 @@ describe(testName, () => {
       senderCancelled = true,
       senderResolveFailed = false,
     ) => {
-      const error = result.getError();
+      const error = result.getError()!;
       expect(error).to.be.ok;
       expect(result.isError).to.be.true;
       expect(error.message).to.be.eq(errorReason);

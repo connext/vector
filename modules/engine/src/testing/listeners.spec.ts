@@ -19,6 +19,7 @@ import {
   WithdrawResolverEncoding,
   RegisteredTransfer,
   TransferNames,
+  IVectorChainService,
 } from "@connext/vector-types";
 import {
   getTestLoggers,
@@ -43,7 +44,7 @@ import { BigNumber } from "@ethersproject/bignumber";
 import { hexlify } from "@ethersproject/bytes";
 import { randomBytes } from "@ethersproject/random";
 
-import { setupEngineListeners } from "../listeners";
+import { resolveExistingWithdrawals, setupEngineListeners } from "../listeners";
 import { getEngineEvtContainer } from "../utils";
 
 import { env } from "./env";
@@ -293,7 +294,7 @@ describe(testName, () => {
       // Setup the listeners
       await setupEngineListeners(
         container,
-        chainService,
+        chainService as IVectorChainService,
         vector,
         messaging,
         signer,
@@ -312,7 +313,7 @@ describe(testName, () => {
       );
 
       // Post to the evt
-      evt.post({ updatedChannelState });
+      evt.post({ updatedChannelState, updatedTransfer: transfer, updatedTransfers: [transfer] });
 
       // Get the emitted event
       const emitted = await createdEvent;
@@ -410,7 +411,7 @@ describe(testName, () => {
       // Setup the listeners
       await setupEngineListeners(
         container,
-        chainService,
+        chainService as IVectorChainService,
         vector,
         messaging,
         signer,
@@ -429,7 +430,7 @@ describe(testName, () => {
       );
 
       // Post to the evt
-      evt.post({ updatedChannelState });
+      evt.post({ updatedChannelState, updatedTransfer: transfer });
 
       // Get the emitted event
       const emitted = await resolvedEvent;
@@ -484,6 +485,41 @@ describe(testName, () => {
 
     it("should properly respond to resolve event with alice withdrawing eth (bob, alice stores + submits)", async () => {
       await runWithdrawalResolveTest();
+    });
+
+    it("resolveExistingWithdrawals should work", async () => {
+      const initiator = getRandomChannelSigner();
+      const responder = getRandomChannelSigner();
+      const { commitment, resolver, transfer } = await getWithdrawalCommitment(initiator, responder);
+      const channel = createTestChannelStateWithSigners([initiator, responder], UpdateType.deposit, {
+        channelAddress: commitment.channelAddress,
+        networkContext: { chainId },
+        latestUpdate: { details: transfer.transferId } as any,
+      });
+
+      // create unresolved withdrawal transfer states
+      vector.getActiveTransfers.resolves([transfer]);
+      store.getTransferState.resolves(transfer);
+      chainService.getRegisteredTransferByName.resolves(Result.ok(withdrawRegisteredInfo));
+      vector.resolve.resolves(Result.ok(channel));
+
+      await resolveExistingWithdrawals(
+        channel,
+        responder,
+        store,
+        vector,
+        chainAddresses,
+        chainService as IVectorChainService,
+        getEngineEvtContainer(),
+        log,
+      );
+
+      expect(vector.resolve.getCall(0).args[0]).to.containSubset({
+        transferResolver: resolver,
+        transferId: transfer.transferId,
+        channelAddress: channel.channelAddress,
+        meta: transfer.meta,
+      });
     });
   });
 });

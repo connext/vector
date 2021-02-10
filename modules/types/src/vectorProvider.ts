@@ -6,6 +6,7 @@ import { RegisteredTransfer } from "./transferDefinitions";
 export const ChannelRpcMethods = {
   chan_signUtilityMessage: "chan_signUtilityMessage",
   chan_getConfig: "chan_getConfig",
+  chan_getRouterConfig: "chan_getRouterConfig",
   chan_getStatus: "chan_getStatus",
   chan_getChannelState: "chan_getChannelState",
   chan_getChannelStateByParticipants: "chan_getChannelStateByParticipants",
@@ -15,6 +16,7 @@ export const ChannelRpcMethods = {
   chan_getActiveTransfers: "chan_getActiveTransfers",
   chan_getRegisteredTransfers: "chan_getRegisteredTransfers",
   chan_getTransferState: "chan_getTransferState",
+  chan_getTransfers: "chan_getTransfers",
   chan_setup: "chan_setup",
   chan_sendIsAlive: "chan_sendIsAlive",
   chan_requestSetup: "chan_requestSetup",
@@ -39,6 +41,7 @@ export type ChannelRpcMethod = typeof ChannelRpcMethods[keyof typeof ChannelRpcM
 export type ChannelRpcMethodsPayloadMap = {
   [ChannelRpcMethods.chan_signUtilityMessage]: EngineParams.SignUtilityMessage;
   [ChannelRpcMethods.chan_getConfig]: {};
+  [ChannelRpcMethods.chan_getRouterConfig]: EngineParams.GetRouterConfig;
   [ChannelRpcMethods.chan_getStatus]: {};
   [ChannelRpcMethods.chan_sendIsAlive]: EngineParams.SendIsAlive;
   [ChannelRpcMethods.chan_getChannelState]: EngineParams.GetChannelState;
@@ -47,6 +50,7 @@ export type ChannelRpcMethodsPayloadMap = {
   [ChannelRpcMethods.chan_getTransferStatesByRoutingId]: EngineParams.GetTransferStatesByRoutingId;
   [ChannelRpcMethods.chan_getActiveTransfers]: EngineParams.GetActiveTransfers;
   [ChannelRpcMethods.chan_getTransferState]: EngineParams.GetTransferState;
+  [ChannelRpcMethods.chan_getTransfers]: EngineParams.GetTransfers;
   [ChannelRpcMethods.chan_getRegisteredTransfers]: EngineParams.GetRegisteredTransfers;
   [ChannelRpcMethods.chan_getChannelStates]: {};
   [ChannelRpcMethods.chan_setup]: EngineParams.Setup;
@@ -74,6 +78,7 @@ export type ChannelRpcMethodsPayloadMap = {
 export type ChannelRpcMethodsResponsesMap = {
   [ChannelRpcMethods.chan_signUtilityMessage]: string;
   [ChannelRpcMethods.chan_getConfig]: NodeResponses.GetConfig;
+  [ChannelRpcMethods.chan_getRouterConfig]: NodeResponses.GetRouterConfig;
   [ChannelRpcMethods.chan_getStatus]: NodeResponses.GetStatus;
   [ChannelRpcMethods.chan_sendIsAlive]: NodeResponses.SendIsAlive;
   [ChannelRpcMethods.chan_getChannelState]: FullChannelState | undefined;
@@ -82,6 +87,7 @@ export type ChannelRpcMethodsResponsesMap = {
   [ChannelRpcMethods.chan_getTransferStateByRoutingId]: FullTransferState | undefined;
   [ChannelRpcMethods.chan_getTransferStatesByRoutingId]: FullTransferState[];
   [ChannelRpcMethods.chan_getActiveTransfers]: FullTransferState[];
+  [ChannelRpcMethods.chan_getTransfers]: FullTransferState[];
   [ChannelRpcMethods.chan_getTransferState]: FullTransferState | undefined;
   [ChannelRpcMethods.chan_getRegisteredTransfers]: RegisteredTransfer[];
   [ChannelRpcMethods.chan_setup]: FullChannelState;

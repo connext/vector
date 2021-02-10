@@ -1,10 +1,11 @@
-import { TransactionResponse } from "@ethersproject/abstract-provider";
+import { TransactionRequest, TransactionResponse } from "@ethersproject/abstract-provider";
 import { BigNumber, BigNumberish } from "@ethersproject/bignumber";
 
 import { Address, HexString } from "./basic";
 import { Balance, FullChannelState, FullTransferState } from "./channel";
 import { ChannelDispute } from "./dispute";
 import { Result, Values, VectorError } from "./error";
+import { TransactionEvent, TransactionEventMap } from "./event";
 import { ChainProviders, HydratedProviders } from "./network";
 import { RegisteredTransfer, TransferName, TransferState } from "./transferDefinitions";
 
@@ -41,6 +42,7 @@ export class ChainError extends VectorError {
     NotInitialState: "Transfer must be disputed with initial state",
     MultisigDeployed: "Multisig already deployed",
     TransferNotFound: "Transfer is not included in active transfers",
+    TxReverted: "Transaction reverted on chain",
   };
 
   // Errors you would see from trying to send a transaction, and
@@ -59,6 +61,24 @@ export class ChainError extends VectorError {
     this.canRetry = Object.values(ChainError.retryableTxErrors).includes(this.message);
   }
 }
+
+export type ChainInfo = {
+  name: string;
+  chainId: number;
+  shortName: string;
+  chain: string;
+  network: string;
+  networkId: number;
+  nativeCurrency: {
+    name: string;
+    symbol: string;
+    decimals: number;
+  };
+  assetId: { [assetId: string]: string };
+  rpc: string[];
+  faucets: string[];
+  infoURL: string;
+};
 
 export type MinimalTransaction = {
   to: Address;
@@ -131,6 +151,10 @@ export interface IVectorChainReader {
 
   getBlockNumber(chainId: number): Promise<Result<number, ChainError>>;
 
+  getGasPrice(chainId: number): Promise<Result<BigNumber, ChainError>>;
+
+  estimateGas(chainId: number, transaction: TransactionRequest): Promise<Result<BigNumber, ChainError>>;
+
   getTokenAllowance(
     tokenAddress: string,
     owner: string,
@@ -169,6 +193,7 @@ export interface IVectorChainService extends IVectorChainReader {
   ): Promise<Result<TransactionResponse, ChainError>>;
   sendDeployChannelTx(
     channelState: FullChannelState,
+    gasPrice: BigNumber,
     deposit?: { amount: string; assetId: string }, // Included IFF createChannelAndDepositAlice
   ): Promise<Result<TransactionResponse, ChainError>>;
 
@@ -180,4 +205,20 @@ export interface IVectorChainService extends IVectorChainReader {
     activeTransfers: FullTransferState[],
   ): Promise<Result<TransactionResponse, ChainError>>;
   sendDefundTransferTx(transferState: FullTransferState): Promise<Result<TransactionResponse, ChainError>>;
+  on<T extends TransactionEvent>(
+    event: T,
+    callback: (payload: TransactionEventMap[T]) => void | Promise<void>,
+    filter?: (payload: TransactionEventMap[T]) => boolean,
+  ): void;
+  once<T extends TransactionEvent>(
+    event: T,
+    callback: (payload: TransactionEventMap[T]) => void | Promise<void>,
+    filter?: (payload: TransactionEventMap[T]) => boolean,
+  ): void;
+  off<T extends TransactionEvent>(event?: T): void;
+  waitFor<T extends TransactionEvent>(
+    event: T,
+    timeout: number,
+    filter?: (payload: TransactionEventMap[T]) => boolean,
+  ): Promise<TransactionEventMap[T]>;
 }

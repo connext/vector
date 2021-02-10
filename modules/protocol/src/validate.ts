@@ -21,10 +21,10 @@ import {
   TSetupUpdateDetails,
   TDepositUpdateDetails,
   TResolveUpdateDetails,
-  VectorError,
+  jsonifyError,
 } from "@connext/vector-types";
 import { getSignerAddressFromPublicIdentifier, getTransferId } from "@connext/vector-utils";
-import { isAddress } from "@ethersproject/address";
+import { isAddress, getAddress } from "@ethersproject/address";
 import { BigNumber } from "@ethersproject/bignumber";
 import { BaseLogger } from "pino";
 
@@ -104,7 +104,7 @@ export async function validateUpdateParams<T extends UpdateType = any>(
       if (calculated.isError) {
         return handleError(ValidationError.reasons.ChainServiceFailure, {
           chainServiceMethod: "getChannelAddress",
-          chainServiceError: VectorError.jsonify(calculated.getError()!),
+          chainServiceError: jsonifyError(calculated.getError()!),
         });
       }
       if (channelAddress !== calculated.getValue()) {
@@ -166,7 +166,7 @@ export async function validateUpdateParams<T extends UpdateType = any>(
       }
 
       // Verify the assetId is in the channel (and get index)
-      const assetIdx = previousState!.assetIds.findIndex((a) => a === assetId);
+      const assetIdx = previousState!.assetIds.findIndex((a) => getAddress(a) === getAddress(assetId));
       if (assetIdx < 0) {
         return handleError(ValidationError.reasons.AssetNotFound);
       }
@@ -220,7 +220,7 @@ export async function validateUpdateParams<T extends UpdateType = any>(
       if (validRes.isError) {
         return handleError(ValidationError.reasons.ChainServiceFailure, {
           chainServiceMethod: "create",
-          chainServiceError: VectorError.jsonify(validRes.getError()!),
+          chainServiceError: jsonifyError(validRes.getError()!),
         });
       }
       if (!validRes.getValue()) {
@@ -441,7 +441,7 @@ export async function validateAndApplyInboundUpdate<T extends UpdateType = any>(
             update,
             previousState,
             {
-              chainServiceError: VectorError.jsonify(transferBalanceResult.getError()!),
+              chainServiceError: jsonifyError(transferBalanceResult.getError()!),
             },
           ),
         );

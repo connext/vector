@@ -18,9 +18,9 @@ import {
   UpdateType,
   TChannelUpdate,
   ProtocolError,
-  VectorError,
+  jsonifyError,
 } from "@connext/vector-types";
-import { getCreate2MultisigAddress } from "@connext/vector-utils";
+import { getCreate2MultisigAddress, getRandomBytes32 } from "@connext/vector-utils";
 import { Evt } from "evt";
 import pino from "pino";
 
@@ -112,7 +112,7 @@ export class Vector implements IVectorProtocol {
       this.logger.error({
         method: "lockedOperation",
         variable: "outboundRes",
-        error: VectorError.jsonify(outboundRes.getError()!),
+        error: jsonifyError(outboundRes.getError()!),
       });
       return outboundRes as Result<any, OutboundChannelUpdateError>;
     }
@@ -130,8 +130,11 @@ export class Vector implements IVectorProtocol {
   private async executeUpdate(
     params: UpdateParams<any>,
   ): Promise<Result<FullChannelState, OutboundChannelUpdateError>> {
+    const method = "executeUpdate";
+    const methodId = getRandomBytes32();
     this.logger.debug({
-      method: "executeUpdate",
+      method,
+      methodId,
       step: "start",
       params,
       channelAddress: params.channelAddress,
@@ -169,8 +172,8 @@ export class Vector implements IVectorProtocol {
     } catch (e) {
       return Result.fail(
         new OutboundChannelUpdateError(OutboundChannelUpdateError.reasons.ReleaseLockFailed, params, channel, {
-          lockError: e.message,
           outboundResult: outboundRes.toJson(),
+          lockError: jsonifyError(e),
         }),
       );
     }
@@ -195,11 +198,12 @@ export class Vector implements IVectorProtocol {
           return;
         }
         const method = "onReceiveProtocolMessage";
-        this.logger.debug({ method }, "Received message");
+        const methodId = getRandomBytes32();
+        this.logger.debug({ method, methodId }, "Method start");
 
         if (msg.isError) {
           this.logger.error(
-            { method, error: msg.getError()?.message },
+            { method, methodId, error: msg.getError()?.toJson() },
             "Error received from counterparty's initial message, this shouldn't happen",
           );
           return;
@@ -210,13 +214,13 @@ export class Vector implements IVectorProtocol {
         // Verify that the message has the correct structure
         const keys = Object.keys(received);
         if (!keys.includes("update") || !keys.includes("previousUpdate")) {
-          this.logger.warn({ method, received: Object.keys(received) }, "Message malformed");
+          this.logger.warn({ method, methodId, received: Object.keys(received) }, "Message malformed");
           return;
         }
         const receivedError = this.validateParamSchema(received.update, TChannelUpdate);
         if (receivedError) {
           this.logger.warn(
-            { method, update: received.update, error: receivedError },
+            { method, methodId, update: received.update, error: jsonifyError(receivedError) },
             "Received malformed proposed update",
           );
           return;
@@ -225,14 +229,14 @@ export class Vector implements IVectorProtocol {
         const previousError = this.validateParamSchema(received.previousUpdate, TChannelUpdate);
         if (previousError && received.previousUpdate) {
           this.logger.warn(
-            { method, update: received.previousUpdate, error: previousError },
+            { method, methodId, update: received.previousUpdate, error: jsonifyError(previousError) },
             "Received malformed previous update",
           );
           return;
         }
 
         if (received.update.fromIdentifier === this.publicIdentifier) {
-          this.logger.debug({ method }, "Received update from ourselves, doing nothing");
+          this.logger.debug({ method, methodId }, "Received update from ourselves, doing nothing");
           return;
         }
 
@@ -249,7 +253,10 @@ export class Vector implements IVectorProtocol {
           this.logger,
         );
         if (inboundRes.isError) {
-          this.logger.warn({ error: VectorError.jsonify(inboundRes.getError()!) }, "Failed to apply inbound update");
+          this.logger.warn(
+            { method, methodId, error: jsonifyError(inboundRes.getError()!) },
+            "Failed to apply inbound update",
+          );
           return;
         }
 
@@ -258,8 +265,9 @@ export class Vector implements IVectorProtocol {
         this.evts[ProtocolEventName.CHANNEL_UPDATE_EVENT].post({
           updatedChannelState: updatedChannel,
           updatedTransfers: updatedActiveTransfers,
-          updatedTransfer: updatedTransfer,
+          updatedTransfer,
         });
+        this.logger.debug({ method, methodId }, "Method complete");
       },
     );
 
@@ -267,6 +275,12 @@ export class Vector implements IVectorProtocol {
     // TODO: skipping this, if it works, consider just not awaiting the promise so the rest of startup can continue
     if (!this.skipCheckIn) {
       const channels = await this.storeService.getChannelStates();
+      const providers = this.chainReader.getChainProviders();
+      if (providers.isError) {
+        this.logger.error({ ...providers.getError() }, "Error getting chain providers");
+        return this;
+      }
+      const supportedChains = Object.keys(providers.getValue()).map((chain) => parseInt(chain));
 
       // Handle disputes
       // First check on current dispute status of all channels onchain
@@ -275,6 +289,13 @@ export class Vector implements IVectorProtocol {
       // TODO: is there a better way to do this?
       await Promise.all(
         channels.map(async (channel) => {
+          if (!supportedChains.includes(channel.networkContext.chainId)) {
+            this.logger.debug(
+              { chainId: channel.networkContext.chainId, supportedChains },
+              "Channel chain not supported, skipping",
+            );
+            return;
+          }
           const disputeRes = await this.chainReader.getChannelDispute(
             channel.channelAddress,
             channel.networkContext.chainId,
@@ -332,10 +353,13 @@ export class Vector implements IVectorProtocol {
   // create this transfer, is the channel in dispute, etc.)
 
   public async setup(params: ProtocolParams.Setup): Promise<Result<FullChannelState, OutboundChannelUpdateError>> {
+    const method = "setup";
+    const methodId = getRandomBytes32();
+    this.logger.debug({ method, methodId }, "Method start");
     // Validate all parameters
     const error = this.validateParamSchema(params, ProtocolParams.SetupSchema);
     if (error) {
-      this.logger.error({ method: "setup", params, error });
+      this.logger.error({ method, methodId, params, error: jsonifyError(error) });
       return Result.fail(error);
     }
 
@@ -367,11 +391,23 @@ export class Vector implements IVectorProtocol {
       type: UpdateType.setup,
     };
 
-    return this.executeUpdate(updateParams);
+    const returnVal = await this.executeUpdate(updateParams);
+    this.logger.debug(
+      {
+        result: returnVal.isError ? jsonifyError(returnVal.getError()!) : returnVal.getValue(),
+        method,
+        methodId,
+      },
+      "Method complete",
+    );
+    return returnVal;
   }
 
   // Adds a deposit that has *already occurred* onchain into the multisig
   public async deposit(params: ProtocolParams.Deposit): Promise<Result<FullChannelState, OutboundChannelUpdateError>> {
+    const method = "deposit";
+    const methodId = getRandomBytes32();
+    this.logger.debug({ method, methodId }, "Method start");
     // Validate all input
     const error = this.validateParamSchema(params, ProtocolParams.DepositSchema);
     if (error) {
@@ -385,10 +421,22 @@ export class Vector implements IVectorProtocol {
       details: params,
     };
 
-    return this.executeUpdate(updateParams);
+    const returnVal = await this.executeUpdate(updateParams);
+    this.logger.debug(
+      {
+        result: returnVal.isError ? jsonifyError(returnVal.getError()!) : returnVal.getValue(),
+        method,
+        methodId,
+      },
+      "Method complete",
+    );
+    return returnVal;
   }
 
   public async create(params: ProtocolParams.Create): Promise<Result<FullChannelState, OutboundChannelUpdateError>> {
+    const method = "create";
+    const methodId = getRandomBytes32();
+    this.logger.debug({ method, methodId }, "Method start");
     // Validate all input
     const error = this.validateParamSchema(params, ProtocolParams.CreateSchema);
     if (error) {
@@ -402,10 +450,22 @@ export class Vector implements IVectorProtocol {
       details: params,
     };
 
-    return this.executeUpdate(updateParams);
+    const returnVal = await this.executeUpdate(updateParams);
+    this.logger.debug(
+      {
+        result: returnVal.isError ? jsonifyError(returnVal.getError()!) : returnVal.getValue(),
+        method,
+        methodId,
+      },
+      "Method complete",
+    );
+    return returnVal;
   }
 
   public async resolve(params: ProtocolParams.Resolve): Promise<Result<FullChannelState, OutboundChannelUpdateError>> {
+    const method = "resolve";
+    const methodId = getRandomBytes32();
+    this.logger.debug({ method, methodId }, "Method start");
     // Validate all input
     const error = this.validateParamSchema(params, ProtocolParams.ResolveSchema);
     if (error) {
@@ -419,7 +479,16 @@ export class Vector implements IVectorProtocol {
       details: params,
     };
 
-    return this.executeUpdate(updateParams);
+    const returnVal = await this.executeUpdate(updateParams);
+    this.logger.debug(
+      {
+        result: returnVal.isError ? jsonifyError(returnVal.getError()!) : returnVal.getValue(),
+        method,
+        methodId,
+      },
+      "Method complete",
+    );
+    return returnVal;
   }
 
   ///////////////////////////////////

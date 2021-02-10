@@ -2,6 +2,171 @@
 
 ## Next Release
 
+## 0.1.15-beta.10
+
+- \[router\] Improve router dashboards
+- \[contracts\] Add xdai deployment
+
+## 0.1.15-beta.9
+
+- \[router\] Add router dashboards
+
+## 0.1.15-beta.8
+
+- \[types\] Remove unique constraint from `TransferEncodingSchema`
+
+## 0.1.15-beta.7
+
+- \[ops\] Fix github actions.
+
+## 0.1.15-beta.6
+
+- \[node, router\] Prisma upgrade.
+
+## 0.1.15-beta.5
+
+- \[contracts\] Fix token approval bug
+
+## 0.1.15-beta.4
+
+- \[iframe\] Improve error parsing
+
+## 0.1.15-beta.3
+
+- \[node\] Expose `getTransfers` method.
+
+## 0.1.15-beta.2
+
+- \[utils\] Create util for determining which participant
+- \[all\] Don't use pino-pretty in prod mode
+
+## 0.1.15-beta.1
+
+- \[router\] Do not forward if deposit balance is not present in channel
+- \[router\] Fix start script to pass mnemonic secret into router
+
+## 0.1.15-beta.0
+
+- \[utils\] Don't use `instanceof` operator
+
+## 0.1.14
+
+- \[server-node\] Fix withdrawal commitment store bugs
+- \[server-node\] Fix error handling (always use `jsonifyError`)
+
+## 0.1.13
+
+- \[router\] Hotfix for gas price query errors
+- \[router\] Admin endpoint to retry withdrawal txs
+
+## 0.1.13-beta.0
+
+- \[all\] Update packages that were flagged by `npm audit`
+
+## 0.1.12
+
+- \[all\] Update packages that were flagged by `npm audit`
+
+## 0.1.11
+
+- \[all\] Update packages that were flagged by `npm audit`
+
+## 0.1.10
+
+- \[utils\] Pass in `chainId` when creating providers
+
+## 0.1.9
+
+- \[engine\] Fix deposit reconciliation race condition evaluation
+- \[contracts\] Use `gasNow` to get mainnet gas price over ethers
+
+## 0.1.8
+
+- \[node\] Add `getTransfers` endpoint with filtering capabilities.
+- \[router\] Add router dashboard with signer address balance monitoring.
+
+## 0.1.8-beta.6
+
+- \[protocol\] Fix non-checksummed addresses
+
+## 0.1.8-beta.5
+
+- \[iframe\] Allows connect on iframe to be called multiple times (i.e. with different chainProviders)
+- \[engine\] Only updates disputes/sends isAlive messages if chain is supported
+- \[browser-node\] Changes store prefix to be signer-specific, doesn't delete stores on start if signer key !== locally stored key
+- \[browser-node\] Removes crossChainTransfer from browser-node
+
+## 0.1.8-beta.4
+
+- \[contracts\] Add `drip` task to hardhat
+- \[engine\] Ensure created withdrawals are resolved on startup
+
+## 0.1.8-beta.3
+
+- \[messaging\] Fix for loop in message retry code
+
+## 0.1.8-beta.2
+
+- \[messaging\] Fix for loop in message retry code
+
+## 0.1.8-beta.1
+
+- \[protocol\] Remove retrying on protocol messages
+- \[protocol\] Hard error for lock release
+
+(Kids -- don't debug on prod)
+
+## 0.1.8-beta.0
+
+- \[protocol\] Retry sending messages
+- \[protocol\] Do not throw error if lock is not released
+- \[messaging\] Add retry logic
+
+## 0.1.7
+
+- \[router\] Update status of processed stored updates
+
+## 0.1.6
+
+- \[browser-node\] Save crossChainTransfer error state
+
+## 0.1.5
+
+- \[browser-node\] Fix bug in `crossChainTransferStore` key
+
+## 0.1.4
+
+- \[contracts\] Fix bug in `chainService`
+
+## 0.1.3
+
+- \[browser-node\] Remove from storage if transfer is cancelled.
+- \[browser-node\] Register listener for sender cancellations once
+- \[browser-node\] Don't hang on `crossChainTransfer` if sender-side transfer cancelled
+- \[router\] Handle unverified (sent a single-signed) updates for transfer forwarding on check-in (using `reconcileDeposit` for state consensus)
+- \[contracts\] Improvements with `gasPrice` and `gasLimit` in chain servce
+
+## 0.1.3-beta.1
+
+- \[browser-node\] Remove from storage if transfer is cancelled.
+
+## 0.1.2
+
+- \[router\] Add NATS client
+- \[browser-node, server-node\] Add methods to get router config
+- \[browser-node\] Verify swap supported before `crossChainTransfer`
+- \[router\] Hotfix `toString()` undefined
+- \[ops\] Add LogDNA tag support to router config
+
+## 0.1.1
+
+- \[all\] Improve logging
+- \[contracts\] Add etherscan verification plugin
+- \[router\] Correctly reclaim from the sender's channel
+- \[contracts\] Check if channel is deployed right before deploying
+- \[router\] Checksum config assetIds
+- \[engine\] Checksum user input assetIds
+
 ## 0.1.0
 
 - \[all\] Mainnet release :tada:

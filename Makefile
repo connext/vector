@@ -209,6 +209,7 @@ watch-browser-node: browser-node
 	bash ops/test-unit.sh browser-node watch
 
 test-router: router-js
+	bash ops/start-messaging.sh
 	bash ops/test-unit.sh router test
 watch-router: engine
 	bash ops/test-unit.sh router watch
@@ -307,7 +308,6 @@ browser-node: engine $(shell find modules/browser-node $(find_options))
 	$(log_start)
 	$(docker_run) "cd modules/browser-node && npm run build && touch src/index.ts"
 	$(log_finish) && mv -f $(totalTime) .flags/$@
-
 
 auth: auth-img
 auth-js: utils $(shell find modules/auth $(find_options))

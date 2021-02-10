@@ -21,6 +21,10 @@ import {
 // from the rpc, converts them to proper protocol parameters,
 // and returns the protocol response.
 
+const GetRouterConfigParamsSchema = Type.Object({
+  routerIdentifier: TPublicIdentifier,
+});
+
 // Get transfer state by resolver id params
 const GetTransferStateByRoutingIdParamsSchema = Type.Object({
   channelAddress: TAddress,
@@ -52,6 +56,20 @@ const GetActiveTransfersParamsSchema = Type.Object({
 // Returns the transfer associated with the transferID
 const GetTransferStateParamsSchema = Type.Object({
   transferId: TBytes32,
+});
+
+// Returns transfers optionally filtered
+export const GetTransfersFilterOptsSchema = Type.Object({
+  channelAddress: Type.Optional(TAddress),
+  startDate: Type.Optional(Type.Any()), // no date type
+  endDate: Type.Optional(Type.Any()), // no date type
+  active: Type.Optional(Type.Boolean()),
+  routingId: Type.Optional(TBytes32),
+});
+export type GetTransfersFilterOpts = Static<typeof GetTransfersFilterOptsSchema>;
+
+const GetTransfersParamsSchema = Type.Object({
+  filterOpts: Type.Optional(GetTransfersFilterOptsSchema),
 });
 
 // Returns all registered transfer info
@@ -170,6 +188,9 @@ export namespace EngineParams {
   export const RpcRequestSchema = RpcRequestEngineParamsSchema;
   export type RpcRequest = Static<typeof RpcRequestEngineParamsSchema>;
 
+  export const GetRouterConfigSchema = GetRouterConfigParamsSchema;
+  export type GetRouterConfig = Static<typeof GetRouterConfigParamsSchema>;
+
   export const SignUtilityMessageSchema = SignUtilityMessageParamsSchema;
   export type SignUtilityMessage = Static<typeof SignUtilityMessageParamsSchema>;
 
@@ -196,6 +217,9 @@ export namespace EngineParams {
 
   export const GetTransferStateSchema = GetTransferStateParamsSchema;
   export type GetTransferState = Static<typeof GetTransferStateParamsSchema>;
+
+  export const GetTransfersSchema = GetTransfersParamsSchema;
+  export type GetTransfers = Static<typeof GetTransfersParamsSchema>;
 
   export const GetRegisteredTransfersSchema = GetRegisteredTransfersParamsSchema;
   export type GetRegisteredTransfers = Static<typeof GetRegisteredTransfersParamsSchema>;

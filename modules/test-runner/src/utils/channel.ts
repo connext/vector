@@ -1,4 +1,4 @@
-import { delay, expect, getBalanceForAssetId, getRandomBytes32 } from "@connext/vector-utils";
+import { delay, expect, getBalanceForAssetId, getRandomBytes32, getParticipant } from "@connext/vector-utils";
 import {
   DEFAULT_CHANNEL_TIMEOUT,
   EngineEvents,
@@ -57,7 +57,10 @@ export const requestCollateral = async (
   const channelRes = await requester.getStateChannel({ channelAddress });
   const channel = channelRes.getValue()! as FullChannelState;
 
-  const counterpartyAliceOrBob = counterparty.publicIdentifier === channel.aliceIdentifier ? "alice" : "bob";
+  const counterpartyAliceOrBob = getParticipant(channel, counterparty.publicIdentifier);
+  if (!counterpartyAliceOrBob) {
+    throw new Error("Invalid participant");
+  }
   const counterpartyBefore = getBalanceForAssetId(channel, assetId, counterpartyAliceOrBob);
 
   const collateralRes = await requester.requestCollateral({
@@ -109,7 +112,10 @@ export const deposit = async (
   const channelRes = await depositor.getStateChannel({ channelAddress });
   const channel = channelRes.getValue()! as FullChannelState;
 
-  const depositorAliceOrBob = depositor.publicIdentifier === channel.aliceIdentifier ? "alice" : "bob";
+  const depositorAliceOrBob = getParticipant(channel, depositor.publicIdentifier);
+  if (!depositorAliceOrBob) {
+    throw new Error("Invalid participant");
+  }
   const depositorBefore = getBalanceForAssetId(channel, assetId, depositorAliceOrBob);
 
   if (depositorAliceOrBob === "alice") {
@@ -262,19 +268,6 @@ export const withdraw = async (
   const preWithdrawMultisig = await getOnchainBalance(assetId, preWithdrawChannel.channelAddress, provider);
   const preWithdrawRecipient = await getOnchainBalance(assetId, withdrawRecipient, provider);
 
-  // // TODO: wait for these?
-  // withdrawer.on(EngineEvents.WITHDRAWAL_CREATED, (data) => {
-  //   console.log("EngineEvents.WITHDRAWAL_CREATED ===> data: ", JSON.stringify(data, null, 2));
-  // });
-
-  // withdrawer.on(EngineEvents.WITHDRAWAL_RECONCILED, (data) => {
-  //   console.log("EngineEvents.WITHDRAWAL_RECONCILED ===> data: ", JSON.stringify(data, null, 2));
-  // });
-
-  // withdrawer.on(EngineEvents.WITHDRAWAL_RESOLVED, (data) => {
-  //   console.log("EngineEvents.WITHDRAWAL_RESOLVED ===> data: ", JSON.stringify(data, null, 2));
-  // });
-
   // Perform withdrawal
   const withdrawalRes = await withdrawer.withdraw({
     publicIdentifier: withdrawer.publicIdentifier,
@@ -297,7 +290,8 @@ export const withdraw = async (
 
   // Verify balance changes
   expect(BigNumber.from(preWithdrawCarol).sub(amount.add(fee))).to.be.eq(postWithdrawBalance);
-  expect(postWithdrawMultisig).to.be.eq(BigNumber.from(preWithdrawMultisig).sub(amount));
+  // using gte here because roger could collateralize
+  expect(postWithdrawMultisig.gte(BigNumber.from(preWithdrawMultisig).sub(amount))).to.be.true;
   if (withdrawerAliceOrBob === "alice") {
     // use "above" because Alice sends withdrawal for Bob
     // TODO: calculate gas

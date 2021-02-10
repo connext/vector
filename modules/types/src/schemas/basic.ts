@@ -39,6 +39,15 @@ export const TNetworkContext = Type.Intersect([
   }),
 ]);
 
+export const AllowedSwapSchema = Type.Object({
+  fromChainId: TChainId,
+  toChainId: TChainId,
+  fromAssetId: TAddress,
+  toAssetId: TAddress,
+  priceType: Type.Union([Type.Literal("hardcoded")]),
+  hardcodedRate: TDecimalString,
+});
+
 ////////////////////////////////////////
 //////// Transfer types
 // NOTE: The schemas of the transfer states could be validated using the
@@ -49,7 +58,7 @@ export const TNetworkContext = Type.Intersect([
 // to support generic transfer types (since no schemas have to be updated)
 export const TransferStateSchema = Type.Dict(Type.Any());
 export const TransferResolverSchema = Type.Any(); //Type.Dict(Type.Any());
-export const TransferEncodingSchema = Type.Array(Type.String(), { maxItems: 2, minItems: 2, uniqueItems: true });
+export const TransferEncodingSchema = Type.Array(Type.String(), { maxItems: 2, minItems: 2 });
 export const TransferNameSchema = Type.String();
 
 export const TFullTransferState = Type.Object({

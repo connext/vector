@@ -120,20 +120,39 @@ deployments.mumbai = mumbaiDeployment;
 deployments["80001"] = mumbaiDeployment;
 
 ////////////////////////////////////////
-// 152709604825713 - arbitrum
-import * as arbitrumChannelFactory from "../deployments/arbitrum/ChannelFactory.json";
-import * as arbitrumChannelMastercopy from "../deployments/arbitrum/ChannelMastercopy.json";
-import * as arbitrumHashlockTransfer from "../deployments/arbitrum/HashlockTransfer.json";
-import * as arbitrumTestToken from "../deployments/arbitrum/TestToken.json";
-import * as arbitrumTransferRegistry from "../deployments/arbitrum/TransferRegistry.json";
-import * as arbitrumWithdraw from "../deployments/arbitrum/Withdraw.json";
-const arbitrumDeployment = {
-  ChannelFactory: arbitrumChannelFactory,
-  ChannelMastercopy: arbitrumChannelMastercopy,
-  HashlockTransfer: arbitrumHashlockTransfer,
-  TestToken: arbitrumTestToken,
-  TransferRegistry: arbitrumTransferRegistry,
-  Withdraw: arbitrumWithdraw,
+// 79377087078960 - arbitrumtest
+import * as arbitrumtestChannelFactory from "../deployments/arbitrumtest/ChannelFactory.json";
+import * as arbitrumtestChannelMastercopy from "../deployments/arbitrumtest/ChannelMastercopy.json";
+import * as arbitrumtestHashlockTransfer from "../deployments/arbitrumtest/HashlockTransfer.json";
+import * as arbitrumtestTestToken from "../deployments/arbitrumtest/TestToken.json";
+import * as arbitrumtestTransferRegistry from "../deployments/arbitrumtest/TransferRegistry.json";
+import * as arbitrumtestWithdraw from "../deployments/arbitrumtest/Withdraw.json";
+const arbitrumtestDeployment = {
+  ChannelFactory: arbitrumtestChannelFactory,
+  ChannelMastercopy: arbitrumtestChannelMastercopy,
+  HashlockTransfer: arbitrumtestHashlockTransfer,
+  TestToken: arbitrumtestTestToken,
+  TransferRegistry: arbitrumtestTransferRegistry,
+  Withdraw: arbitrumtestWithdraw,
 };
-deployments.arbitrum = arbitrumDeployment;
-deployments["152709604825713"] = arbitrumDeployment;
+deployments.arbitrumtest = arbitrumtestDeployment;
+deployments["79377087078960"] = arbitrumtestDeployment;
+
+////////////////////////////////////////
+// 100 - xdai
+import * as xdaiChannelFactory from "../deployments/xdai/ChannelFactory.json";
+import * as xdaiChannelMastercopy from "../deployments/xdai/ChannelMastercopy.json";
+import * as xdaiHashlockTransfer from "../deployments/xdai/HashlockTransfer.json";
+import * as xdaiTestToken from "../deployments/xdai/TestToken.json";
+import * as xdaiTransferRegistry from "../deployments/xdai/TransferRegistry.json";
+import * as xdaiWithdraw from "../deployments/xdai/Withdraw.json";
+const xdaiDeployment = {
+  ChannelFactory: xdaiChannelFactory,
+  ChannelMastercopy: xdaiChannelMastercopy,
+  HashlockTransfer: xdaiHashlockTransfer,
+  TestToken: xdaiTestToken,
+  TransferRegistry: xdaiTransferRegistry,
+  Withdraw: xdaiWithdraw,
+};
+deployments.xdai = xdaiDeployment;
+deployments["100"] = xdaiDeployment;

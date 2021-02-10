@@ -7,9 +7,9 @@ import {
   getRandomBytes32,
   constructRpcRequest,
 } from "@connext/vector-utils";
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { constants } from "ethers";
-import { Col, Divider, Row, Statistic, Input, Typography, Table, Form, Button, List, Select, Tabs, Switch } from "antd";
+import { Col, Divider, Row, Statistic, Input, Typography, Table, Form, Button, List, Select, Tabs } from "antd";
 import { CopyToClipboard } from "react-copy-to-clipboard";
 import { EngineEvents, FullChannelState, TransferNames } from "@connext/vector-types";
 
@@ -37,11 +37,6 @@ function App() {
   const [transferForm] = Form.useForm();
   const [signMessageForm] = Form.useForm();
 
-  useEffect(() => {
-    const effect = async () => {};
-    effect();
-  }, []);
-
   const connectNode = async (
     iframeSrc: string,
     supportedChains: number[],
@@ -49,11 +44,15 @@ function App() {
   ): Promise<BrowserNode> => {
     try {
       setConnectLoading(true);
+      const chainProviders = {};
+      supportedChains.forEach((chain) => {
+        chainProviders[chain] = config.chainProviders[chain];
+      });
       const client = new BrowserNode({
         supportedChains,
         iframeSrc,
         routerPublicIdentifier,
-        chainProviders: config.chainProviders,
+        chainProviders,
       });
       await client.init();
       const channelsRes = await client.getStateChannels();
@@ -62,14 +61,16 @@ function App() {
         return;
       }
       const channelAddresses = channelsRes.getValue();
-      const _channels = await Promise.all(
-        channelAddresses.map(async (c) => {
-          const channelRes = await client.getStateChannel({ channelAddress: c });
-          console.log("Channel found in store:", channelRes.getValue());
-          const channelVal = channelRes.getValue() as FullChannelState;
-          return channelVal;
-        }),
-      );
+      const _channels = (
+        await Promise.all(
+          channelAddresses.map(async (c) => {
+            const channelRes = await client.getStateChannel({ channelAddress: c });
+            console.log("Channel found in store:", channelRes.getValue());
+            const channelVal = channelRes.getValue() as FullChannelState;
+            return channelVal;
+          }),
+        )
+      ).filter((chan) => supportedChains.includes(chan.networkContext.chainId));
       if (_channels.length > 0) {
         setChannels(_channels);
         setSelectedChannel(_channels[0]);
@@ -113,6 +114,32 @@ function App() {
     } finally {
       setConnectLoading(false);
     }
+  };
+
+  const reconnectNode = async (
+    supportedChains: number[],
+    iframeSrc = "http://localhost:3030",
+    routerPublicIdentifier = "vector8Uz1BdpA9hV5uTm6QUv5jj1PsUyCH8m8ciA94voCzsxVmrBRor",
+  ) => {
+    setConnectLoading(true);
+    try {
+      const chainProviders = {};
+      supportedChains.forEach((chainId) => {
+        chainProviders[chainId.toString()] = config.chainProviders[chainId.toString()];
+      });
+      console.error("creating new browser node on", supportedChains, "with providers", chainProviders);
+      const client = new BrowserNode({
+        supportedChains,
+        iframeSrc,
+        routerPublicIdentifier,
+        chainProviders,
+      });
+      await client.init();
+      setNode(client);
+    } catch (e) {
+      setConnectError(e.message);
+    }
+    setConnectLoading(false);
   };
 
   const updateChannel = async (node: BrowserNode, channelAddress: string) => {
@@ -195,32 +222,6 @@ function App() {
     setTransferLoading(false);
   };
 
-  const crossChainTransfer = async (
-    amount: string,
-    fromAssetId: string,
-    fromChainId: number,
-    toAssetId: string,
-    toChainId: number,
-    withdrawalAddress: string,
-  ) => {
-    setTransferLoading(true);
-    try {
-      await node.crossChainTransfer({
-        amount,
-        fromAssetId,
-        fromChainId,
-        toAssetId,
-        toChainId,
-        reconcileDeposit: true,
-        withdrawalAddress,
-      });
-      console.log(`Cross chain transfer complete!`);
-    } catch (e) {
-      console.error("Error cross chain transferring", e);
-    }
-    setTransferLoading(false);
-  };
-
   const withdraw = async (assetId: string, amount: string, recipient: string) => {
     setWithdrawLoading(true);
     const requestRes = await node.withdraw({
@@ -243,7 +244,6 @@ function App() {
       console.error("Error withdrawing", requestRes.getError());
       return requestRes.getError().message;
     }
-    console.log("requestRes.getValue(): ", requestRes.getValue());
     return requestRes.getValue().signedMessage;
   };
 
@@ -275,6 +275,64 @@ function App() {
                   </List.Item>
                 )}
               />
+            </Col>
+            <Col span={18}>
+              <Form
+                layout="horizontal"
+                name="reconnect"
+                wrapperCol={{ span: 18 }}
+                labelCol={{ span: 6 }}
+                onFinish={(vals) => {
+                  const iframe = showCustomIframe ? vals.customIframe : vals.iframeSrc;
+                  console.log("Connecting to iframe at: ", iframe);
+                  reconnectNode(
+                    vals.supportedChains.split(",").map((x: string) => parseInt(x.trim())),
+                    iframe,
+                    vals.routerPublicIdentifier,
+                  );
+                }}
+                initialValues={{
+                  iframeSrc: "http://localhost:3030",
+                  routerPublicIdentifier: "vector8Uz1BdpA9hV5uTm6QUv5jj1PsUyCH8m8ciA94voCzsxVmrBRor",
+                  supportedChains: "1337,1338",
+                }}
+              >
+                <Form.Item label="IFrame Src" name="iframeSrc">
+                  <Select
+                    onChange={(event) => {
+                      if (event === "custom") {
+                        setShowCustomIframe(true);
+                      } else {
+                        setShowCustomIframe(false);
+                      }
+                    }}
+                  >
+                    <Select.Option value="http://localhost:3030">http://localhost:3030</Select.Option>
+                    <Select.Option value="https://wallet.connext.network">https://wallet.connext.network</Select.Option>
+                    <Select.Option value="custom">Custom</Select.Option>
+                  </Select>
+                </Form.Item>
+
+                {showCustomIframe && (
+                  <Form.Item label="Custom Iframe URL" name="customIframe">
+                    <Input />
+                  </Form.Item>
+                )}
+
+                <Form.Item name="routerPublicIdentifier" label="Router Public Identifier">
+                  <Input placeholder="vector..." />
+                </Form.Item>
+
+                <Form.Item name="supportedChains" label="Supported Chains">
+                  <Input placeholder="Chain Ids (domma-separated)" />
+                </Form.Item>
+
+                <Form.Item wrapperCol={{ offset: 8, span: 16 }}>
+                  <Button type="primary" htmlType="submit" loading={connectLoading}>
+                    Reconnect To Iframe
+                  </Button>
+                </Form.Item>
+              </Form>
             </Col>
           </>
         ) : connectError ? (
@@ -562,83 +620,6 @@ function App() {
                     </Form.Item>
                   </Form>
                 </Tabs.TabPane>
-                <Tabs.TabPane tab="Cross-Chain Transfer" key="CrossChainTransfer">
-                  <Form
-                    layout="horizontal"
-                    labelCol={{ span: 6 }}
-                    wrapperCol={{ span: 18 }}
-                    name="crossChainTransfer"
-                    onFinish={async (values) => {
-                      console.log("values.numLoops: ", values.numLoops);
-                      for (let index = 0; index < values.numLoops; index++) {
-                        console.log(`=====> START TRANSFER ${index}`);
-                        await crossChainTransfer(
-                          values.amount,
-                          values.fromAssetId,
-                          values.fromChainId,
-                          values.toAssetId,
-                          values.toChainId,
-                          values.withdrawalAddress,
-                        );
-                        console.log(`=====> FINISHED TRANSFER ${index}`);
-                      }
-                    }}
-                    initialValues={{
-                      fromAssetId: constants.AddressZero,
-                      toAssetId: constants.AddressZero,
-                    }}
-                    onFinishFailed={onFinishFailed}
-                    form={transferForm}
-                  >
-                    <Form.Item label="Amount" name="amount">
-                      <Input placeholder="Amount in Wei" />
-                    </Form.Item>
-
-                    <Form.Item label="From Asset ID" name="fromAssetId">
-                      <Input />
-                    </Form.Item>
-
-                    <Form.Item label="From Chain ID" name="fromChainId">
-                      <Select defaultActiveFirstOption={true}>
-                        {Array.from(new Set(channels.map((channel) => channel.networkContext.chainId))).map((chain) => (
-                          <Select.Option value={chain} key={chain}>
-                            {chain}
-                          </Select.Option>
-                        ))}
-                      </Select>
-                    </Form.Item>
-
-                    <Form.Item label="To Asset ID" name="toAssetId">
-                      <Input />
-                    </Form.Item>
-
-                    <Form.Item label="To Chain ID" name="toChainId">
-                      <Select defaultActiveFirstOption={true}>
-                        {Array.from(new Set(channels.map((channel) => channel.networkContext.chainId))).map(
-                          (chainId) => (
-                            <Select.Option value={chainId} key={chainId}>
-                              {chainId}
-                            </Select.Option>
-                          ),
-                        )}
-                      </Select>
-                    </Form.Item>
-
-                    <Form.Item label="Withdrawal Address" name="withdrawalAddress">
-                      <Input placeholder="0x..." />
-                    </Form.Item>
-
-                    <Form.Item label="Number of Loops" name="numLoops">
-                      <Input />
-                    </Form.Item>
-
-                    <Form.Item wrapperCol={{ offset: 6 }}>
-                      <Button type="primary" htmlType="submit" loading={transferLoading}>
-                        Transfer
-                      </Button>
-                    </Form.Item>
-                  </Form>
-                </Tabs.TabPane>
               </Tabs>
             </Col>
           </Row>
@@ -713,7 +694,6 @@ function App() {
                 name="signMessage"
                 onFinish={async (values) => {
                   const signedMessage = await signMessage(values.message);
-                  console.log("signedMessage: ", signedMessage);
                   signMessageForm.setFieldsValue({ signedMessage });
                 }}
                 onFinishFailed={onFinishFailed}

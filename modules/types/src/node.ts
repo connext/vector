@@ -1,6 +1,6 @@
 import { EngineEvent, EngineEventMap } from "./engine";
 import { NodeError, Result } from "./error";
-import { NodeParams, NodeResponses } from "./schemas";
+import { GetTransfersFilterOpts, NodeParams, NodeResponses } from "./schemas";
 
 // NOTE: This interface will also wrap server nodes that support a default
 // publicIdentifier (i.e. use a default index). This means that the interface
@@ -16,6 +16,10 @@ export interface INodeService {
   signerAddress: string;
 
   getStatus(): Promise<Result<NodeResponses.GetStatus, NodeError>>;
+
+  getRouterConfig(
+    params: OptionalPublicIdentifier<NodeParams.GetRouterConfig>,
+  ): Promise<Result<NodeResponses.GetRouterConfig, NodeError>>;
 
   getStateChannelByParticipants(
     params: OptionalPublicIdentifier<NodeParams.GetChannelStateByParticipants>,
@@ -44,6 +48,13 @@ export interface INodeService {
   getActiveTransfers(
     params: OptionalPublicIdentifier<NodeParams.GetActiveTransfersByChannelAddress>,
   ): Promise<Result<NodeResponses.GetActiveTransfersByChannelAddress, NodeError>>;
+
+  getTransfers(
+    params: OptionalPublicIdentifier<
+      NodeParams.GetTransfers &
+        Omit<GetTransfersFilterOpts, "startDate" | "endDate"> & { startDate: Date; endDate: Date } // in the client, use Date type
+    >,
+  ): Promise<Result<NodeResponses.GetTransfers, NodeError>>;
 
   getRegisteredTransfers(
     params: OptionalPublicIdentifier<NodeParams.GetRegisteredTransfers>,

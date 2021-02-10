@@ -14,6 +14,12 @@ then
   export VECTOR_PG_PASSWORD
 fi
 
+if [[ -z "$VECTOR_MNEMONIC" && -n "$VECTOR_MNEMONIC_FILE" ]]
+then
+  VECTOR_MNEMONIC="$(cat "$VECTOR_MNEMONIC_FILE")"
+  export VECTOR_MNEMONIC
+fi
+
 if [[ -n $VECTOR_DATABASE_URL ]]
 then
   echo "Using provided database url env var"
@@ -25,12 +31,16 @@ elif [[ -n $VECTOR_PG_HOST ]]
 then
   echo "Using configured Postgres store at $VECTOR_PG_HOST"
   export VECTOR_DATABASE_URL="postgresql://$VECTOR_PG_USERNAME:$VECTOR_PG_PASSWORD@${VECTOR_PG_HOST}:$VECTOR_PG_PORT/$VECTOR_PG_DATABASE"
+  schema="prisma-postgres/schema.prisma"
+  cp prisma-postgres/schema.prisma dist/schema.prisma
 
 else
   sqlite_file=${VECTOR_SQLITE_FILE:-/tmp/store.sqlite}
   echo "Using SQLite store at $sqlite_file"
   touch "$sqlite_file"
   export VECTOR_DATABASE_URL="sqlite://$sqlite_file"
+  schema="prisma-sqlite/schema.prisma"
+  cp prisma-sqlite/schema.prisma dist/schema.prisma
 fi
 echo "VECTOR_DATABASE_URL: $VECTOR_DATABASE_URL"
 
@@ -49,7 +59,7 @@ fi
 
 echo "Running database migration"
 prisma --version
-prisma migrate up --experimental
+prisma migrate deploy --preview-feature --schema "$schema"
 
 # TODO: this doesn't work with single container mode
 # echo "Starting database UI"
@@ -59,7 +69,7 @@ if [[ "$VECTOR_PROD" == "true" ]]
 then
   echo "Starting router in prod-mode"
   export NODE_ENV=production
-  node --no-deprecation dist/bundle.js | pino-pretty &
+  node --no-deprecation dist/bundle.js &
 
 else
   echo "Starting router in dev-mode"

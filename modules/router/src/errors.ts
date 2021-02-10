@@ -14,6 +14,7 @@ export class CollateralError extends RouterError {
   static readonly reasons = {
     ChannelNotFound: "Channel not found",
     CouldNotGetOnchainDeposits: "Unable to get total deposited onchain",
+    NotInChannel: "Router is not found in channel",
     ProviderNotFound: "Provider not found",
     UnableToGetRebalanceProfile: "Could not get rebalance profile",
     TargetHigherThanThreshold: "Specified target is higher than reclaim threshold",
@@ -101,7 +102,13 @@ export class ForwardTransferCreationError extends RouterError {
   ) {
     super(
       message,
-      { routingId, senderChannel, senderTransfer, receiverChannel, ...context },
+      {
+        routingId,
+        senderChannel,
+        senderTransfer,
+        receiverChannel,
+        ...context,
+      },
       ForwardTransferCreationError.type,
     );
   }
@@ -141,6 +148,7 @@ export class CheckInError extends RouterError {
 
   static readonly reasons = {
     CouldNotGetChannel: "Could not get channel, or not found",
+    TasksFailed: "Router couldn't complete all check-in tasks",
     UpdatesFailed: "Could not forward all updates",
   } as const;
 

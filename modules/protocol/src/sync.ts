@@ -12,8 +12,9 @@ import {
   FullTransferState,
   IExternalValidation,
   MessagingError,
-  VectorError,
+  jsonifyError,
 } from "@connext/vector-types";
+import { getRandomBytes32, LOCK_TTL } from "@connext/vector-utils";
 import pino from "pino";
 
 import { InboundChannelUpdateError, OutboundChannelUpdateError } from "./errors";
@@ -39,6 +40,8 @@ export async function outbound(
   >
 > {
   const method = "outbound";
+  const methodId = getRandomBytes32();
+  logger.debug({ method, methodId }, "Method start");
 
   // First, pull all information out from the store
   const storeRes = await extractContextFromStore(storeService, params.channelAddress);
@@ -66,10 +69,7 @@ export async function outbound(
     logger,
   );
   if (updateRes.isError) {
-    logger.warn(
-      { error: updateRes.getError()?.message, context: updateRes.getError()?.context },
-      "Failed to apply proposed update",
-    );
+    logger.warn({ method, methodId, error: jsonifyError(updateRes.getError()!) }, "Failed to apply proposed update");
     return Result.fail(updateRes.getError()!);
   }
 
@@ -86,8 +86,13 @@ export async function outbound(
   );
 
   // Send and wait for response
-  logger.debug({ method, to: update.toIdentifier, type: update.type }, "Sending protocol message");
-  let counterpartyResult = await messagingService.sendProtocolMessage(update, previousState?.latestUpdate);
+  logger.debug({ method, methodId, to: update.toIdentifier, type: update.type }, "Sending protocol message");
+  let counterpartyResult = await messagingService.sendProtocolMessage(
+    update,
+    previousState?.latestUpdate,
+    // LOCK_TTL / 10,
+    // 5,
+  );
 
   // IFF the result failed because the update is stale, our channel is behind
   // so we should try to sync the channel and resend the update
@@ -96,8 +101,9 @@ export async function outbound(
     logger.warn(
       {
         method,
-        update: update.nonce,
-        counterparty: (error as InboundChannelUpdateError).context.update.nonce,
+        methodId,
+        proposed: update.nonce,
+        error: jsonifyError(error),
       },
       `Behind, syncing and retrying`,
     );
@@ -116,7 +122,7 @@ export async function outbound(
     );
     if (syncedResult.isError) {
       // Failed to sync channel, throw the error
-      logger.error({ method, error: syncedResult.getError() }, "Error syncing channel");
+      logger.error({ method, methodId, error: jsonifyError(syncedResult.getError()!) }, "Error syncing channel");
       return Result.fail(syncedResult.getError()!);
     }
 
@@ -137,7 +143,7 @@ export async function outbound(
   // original error. Either way, we do not want to handle it
   if (error) {
     // Error is for some other reason, do not retry update.
-    logger.error({ method, error }, "Error receiving response, will not save state!");
+    logger.error({ method, methodId, error: jsonifyError(error) }, "Error receiving response, will not save state!");
     return Result.fail(
       new OutboundChannelUpdateError(
         error.message === MessagingError.reasons.Timeout
@@ -146,13 +152,13 @@ export async function outbound(
         params,
         previousState,
         {
-          counterpartyError: VectorError.jsonify(error),
+          counterpartyError: jsonifyError(error),
         },
       ),
     );
   }
 
-  logger.debug({ method, to: update.toIdentifier, type: update.type }, "Received protocol response");
+  logger.debug({ method, methodId, to: update.toIdentifier, type: update.type }, "Received protocol response");
 
   const { update: counterpartyUpdate } = counterpartyResult.getValue();
 
@@ -171,12 +177,13 @@ export async function outbound(
       previousState,
       { recoveryError: sigRes.getError()?.message },
     );
-    logger.error({ method, error: error.message }, "Error receiving response, will not save state!");
+    logger.error({ method, error: jsonifyError(error) }, "Error receiving response, will not save state!");
     return Result.fail(error);
   }
 
   try {
     await storeService.saveChannelState({ ...updatedChannel, latestUpdate: counterpartyUpdate }, updatedTransfer);
+    logger.debug({ method, methodId }, "Method complete");
     return Result.ok({
       updatedChannel: { ...updatedChannel, latestUpdate: counterpartyUpdate },
       updatedTransfers: updatedActiveTransfers,
@@ -216,6 +223,9 @@ export async function inbound(
     InboundChannelUpdateError
   >
 > {
+  const method = "inbound";
+  const methodId = getRandomBytes32();
+  logger.debug({ method, methodId }, "Method start");
   // Create a helper to handle errors so the message is sent
   // properly to the counterparty
   const returnError = async (
@@ -225,7 +235,7 @@ export async function inbound(
     context: any = {},
   ): Promise<Result<never, InboundChannelUpdateError>> => {
     logger.error(
-      { method: "inbound", channel: update.channelAddress, error: reason, context },
+      { method, methodId, channel: update.channelAddress, error: reason, context },
       "Error responding to channel update",
     );
     const error = new InboundChannelUpdateError(reason, prevUpdate, state, context);
@@ -399,6 +409,16 @@ const syncStateAndRecreateUpdate = async (
   // parameters.
 
   const counterpartyUpdate = receivedError.context.update;
+  if (!counterpartyUpdate) {
+    return Result.fail(
+      new OutboundChannelUpdateError(
+        OutboundChannelUpdateError.reasons.NoUpdateToSync,
+        attemptedParams,
+        previousState,
+        { receivedError: jsonifyError(receivedError) },
+      ),
+    );
+  }
 
   // make sure you *can* sync
   const diff = counterpartyUpdate.nonce - (previousState?.nonce ?? 0);

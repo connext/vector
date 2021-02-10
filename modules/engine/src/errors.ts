@@ -101,6 +101,7 @@ export class ParameterConversionError extends EngineError {
     CannotSendToSelf: "An initiator cannot be a receiver on the same chain",
     CouldNotSignWithdrawal: "Failed to sign withdrawal commitment",
     FailedToGetRegisteredTransfer: "Could not get transfer registry information",
+    WithdrawToZero: "Cannot withdraw to AddressZero",
   } as const;
 
   constructor(
@@ -126,6 +127,7 @@ export class RpcError extends EngineError {
     InvalidMethod: "Rpc method is invalid",
     ParamConversionFailed: "Failed to convert engine ",
     ProtocolMethodFailed: "Failed to execute protocol method",
+    SignerNotInChannel: "Signer is not in channel",
     StoreMethodFailed: "Failed to execute store method",
     TransferNotFound: "Transfer not found",
     UtilitySigningFailed: "Failed to sign utility message",

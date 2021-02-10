@@ -14,14 +14,18 @@
 @rogerPublicIdentifier = vector8Uz1BdpA9hV5uTm6QUv5jj1PsUyCH8m8ciA94voCzsxVmrBRor
 @chainId = 1337
 
-@nodeUrl = {{daveUrl}}
-@nodePublicIdentifier = {{davePublicIdentifier}}
-@counterpartyPublicIdentifier = {{rogerPublicIdentifier}}
-@channel = {{daveRogerChannel}}
+@nodeUrl = {{carolUrl}}
+@nodePublicIdentifier = {{carolPublicIdentifier}}
+@counterpartyPublicIdentifier = {{carolPublicIdentifier}}
+@channel = {{carolRogerChannel}}
 
 ##############
 ### GET CONFIG
 GET {{nodeUrl}}/config
+
+##############
+### GET ROUTER CONFIG
+GET {{nodeUrl}}/{{nodePublicIdentifier}}/router/config/{{rogerPublicIdentifier}}
 
 ##############
 ### GET STATUS
@@ -47,6 +51,17 @@ Content-Type: application/json
 {
   "adminToken": "{{adminToken}}"
 }
+
+####################
+### RETRY WITHDRAWAL
+POST {{nodeUrl}}/withdraw/retry
+Content-Type: application/json
+
+{
+  "adminToken": "{{adminToken}}",
+  "transferId": "0xe9c2f1f4efb9a9f55fcce0be95f1fe16c0ec9e49a68a706c52c1dec4d92e81d0"
+}
+
 
 ##############
 ### CREATE NODE

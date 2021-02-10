@@ -45,6 +45,7 @@ mnemonic=$(getConfig mnemonic)
 production=$(getConfig production)
 public_port=$(getConfig port)
 logdna_key=$(getConfig logDnaKey)
+logdna_tags=$(getConfig logDnaTags)
 
 chain_providers=$(echo "$config" | jq '.chainProviders' | tr -d '\n\r ')
 default_providers=$(jq '.chainProviders' "$root/ops/config/node.default.json" | tr -d '\n\r ')
@@ -234,11 +235,18 @@ fi
 bash "$root/ops/pull-images.sh" "$router_image_name" > /dev/null
 
 # Add whichever secrets we're using to the router's service config
-if [[ -n "$db_secret" ]]
+if [[ -n "$db_secret" || -n "$mnemonic_secret" ]]
 then
   router_image="$router_image
-    secrets:
+    secrets:"
+  if [[ -n "$db_secret" ]]
+  then router_image="$router_image
       - '$db_secret'"
+  fi
+  if [[ -n "$mnemonic_secret" ]]
+  then router_image="$router_image
+      - '$mnemonic_secret'"
+  fi
 fi
 
 ####################
@@ -269,6 +277,7 @@ prometheus_services="prometheus:
       - --config.file=/etc/prometheus/prometheus.yml
     volumes:
       - $root/ops/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - 'prometheus:/prometheus'
 
   cadvisor:
     $common
@@ -297,6 +306,7 @@ logdna_service="logdna:
     image: '$logdna_image'
     environment:
       LOGDNA_KEY: '$logdna_key'
+      TAGS: '$logdna_tags'
     volumes:
       - '/var/run/docker.sock:/var/run/docker.sock'"
 
@@ -352,6 +362,7 @@ volumes:
   certs:
   database_node:
   database_router:
+  prometheus:
 
 services:
 
@@ -385,6 +396,8 @@ services:
       VECTOR_PG_PASSWORD_FILE: '$pg_password_file'
       VECTOR_PG_PORT: '5432'
       VECTOR_PG_USERNAME: '$pg_user'
+      VECTOR_MNEMONIC: '$eth_mnemonic'
+      VECTOR_MNEMONIC_FILE: '$eth_mnemonic_file'
 
   database-node:
     $common

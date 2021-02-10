@@ -28,30 +28,6 @@ export class BrowserNodeError extends NodeError {
   }
 }
 
-export class CrossChainTransferError extends NodeError {
-  static readonly type = "CrossChainTransferError";
-
-  static readonly reasons = {
-    MissingReceiverChannel: "Missing channel on receiver chain",
-    MissingSenderChannel: "Missing channel on sender chain",
-    MissingWithdrawalAmount: "Withdrawal amount not specified",
-    MultinodeProhibitted: "Cannot configure multiple nodes for browser",
-    ReceiverEventMissed: "Failed to get receiver event",
-  } as const;
-
-  readonly context: BrowserNodeErrorContext;
-
-  constructor(
-    public readonly msg: Values<typeof CrossChainTransferError.reasons>,
-    publicIdentifier: string,
-    // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
-    params: any,
-    context: any = {},
-  ) {
-    super(msg, { params, publicIdentifier, ...context }, CrossChainTransferError.type);
-  }
-}
-
 type LockErrorContext = NodeErrorContext & {
   lockName: string;
   lockValue?: string;
