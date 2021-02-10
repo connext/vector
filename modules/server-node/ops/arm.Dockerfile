@@ -11,19 +11,17 @@ WORKDIR /root
 
 COPY ./prisma-binaries-armv8/ /prisma-arm64/
 COPY package.json package.json
-COPY schema.prisma schema.prisma
 
 RUN chmod +x /prisma-arm64/* ;\
     curl https://raw.githubusercontent.com/vishnubob/wait-for-it/ed77b63706ea721766a62ff22d3a251d8b4a6a30/wait-for-it.sh > /bin/wait-for ;\
     chmod +x /bin/wait-for
 
-RUN npm install --production ;\
-    prisma --version
-
-RUN prisma generate
+RUN npm install --production
 
 COPY ops ops
-COPY migrations migrations
+COPY prisma-postgres prisma-postgres
+COPY prisma-sqlite prisma-sqlite
 COPY dist dist
+COPY dist/generated/db-client /.prisma/client
 
 ENTRYPOINT ["bash", "ops/entry.sh"]
