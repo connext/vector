@@ -1,5 +1,11 @@
 import { BrowserNode } from "@connext/vector-browser-node";
-import { ChannelRpcMethod, ChannelRpcMethodsResponsesMap, EngineParams, jsonifyError } from "@connext/vector-types";
+import {
+  ChainAddresses,
+  ChannelRpcMethod,
+  ChannelRpcMethodsResponsesMap,
+  EngineParams,
+  jsonifyError,
+} from "@connext/vector-types";
 import { ChannelSigner, constructRpcRequest, safeJsonParse } from "@connext/vector-utils";
 import { hexlify } from "@ethersproject/bytes";
 import { entropyToMnemonic } from "@ethersproject/hdnode";
@@ -26,7 +32,11 @@ export default class ConnextManager {
     }
   }
 
-  private async initNode(chainProviders: { [chainId: number]: string }): Promise<BrowserNode> {
+  private async initNode(
+    chainProviders: { [chainId: number]: string },
+    chainAddresses?: ChainAddresses,
+    messagingUrl?: string,
+  ): Promise<BrowserNode> {
     // store entropy in local storage
     if (!localStorage) {
       throw new Error("localStorage not available in this window, please enable cross-site cookies and try again.");
@@ -51,10 +61,10 @@ export default class ConnextManager {
 
     this.browserNode = await BrowserNode.connect({
       signer,
-      chainAddresses: config.chainAddresses,
+      chainAddresses: chainAddresses ?? config.chainAddresses,
       chainProviders,
       logger: pino(),
-      messagingUrl: config.messagingUrl,
+      messagingUrl: messagingUrl ?? config.messagingUrl,
       authUrl: config.authUrl,
       natsUrl: config.natsUrl,
     });
