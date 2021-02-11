@@ -65,6 +65,7 @@ export const GetTransfersFilterOptsSchema = Type.Object({
   endDate: Type.Optional(Type.Any()), // no date type
   active: Type.Optional(Type.Boolean()),
   routingId: Type.Optional(TBytes32),
+  transferDefinition: Type.Optional(TAddress),
 });
 export type GetTransfersFilterOpts = Static<typeof GetTransfersFilterOptsSchema>;
 

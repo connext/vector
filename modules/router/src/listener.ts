@@ -7,6 +7,7 @@ import {
   IVectorChainReader,
   jsonifyError,
   Result,
+  ConditionalTransferResolvedPayload,
 } from "@connext/vector-types";
 import { getBalanceForAssetId, getParticipant, getRandomBytes32 } from "@connext/vector-utils";
 import Ajv from "ajv";
@@ -185,7 +186,7 @@ export async function setupListeners(
   // Set up listener to handle transfer resolution
   nodeService.on(
     EngineEvents.CONDITIONAL_TRANSFER_RESOLVED,
-    async (data: ConditionalTransferCreatedPayload) => {
+    async (data: ConditionalTransferResolvedPayload) => {
       const res = await forwardTransferResolution(
         data,
         routerPublicIdentifier,
@@ -195,7 +196,6 @@ export async function setupListeners(
         logger,
       );
       if (res.isError) {
-        const amount = BigNumber.from(data.transfer.balance.amount[0]).add(data.transfer.balance.amount[1]);
         failedTransfer.inc({
           assetId: data.transfer.assetId,
           chainId: data.transfer.chainId,
