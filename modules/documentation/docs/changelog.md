@@ -2,6 +2,10 @@
 
 ## Next Release
 
+- \[contracts\] Add `transactionHash` to withdrawal commitment
+- \[store\] Add `transferDefinition` to filter options on `getTransfers`
+- \[store\] Add `getWithdrawalCommitmentByTransactionHash` method
+
 ## 0.1.15-beta.10
 
 - \[router\] Improve router dashboards
