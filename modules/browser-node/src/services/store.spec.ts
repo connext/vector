@@ -1,4 +1,10 @@
-import { Balance, ResolveUpdateDetails, StoredTransactionStatus, TransactionReason } from "@connext/vector-types";
+import {
+  Balance,
+  ResolveUpdateDetails,
+  StoredTransactionStatus,
+  TransactionReason,
+  WithdrawCommitmentJson,
+} from "@connext/vector-types";
 import {
   createTestChannelState,
   mkBytes32,
@@ -12,6 +18,8 @@ import {
   mkAddress,
   getTestLoggers,
   delay,
+  getRandomChannelSigner,
+  mkSig,
 } from "@connext/vector-utils";
 import indexedDB from "fake-indexeddb";
 import IDBKeyRange from "fake-indexeddb/lib/FDBKeyRange";
@@ -392,6 +400,40 @@ describe(name, () => {
       expect(retrieved).to.be.deep.include(c1);
       expect(retrieved).to.be.deep.include(c2);
       expect(retrieved.length).to.be.eq(2);
+    });
+  });
+
+  describe.only("getWithdrawalCommitment / getWithdrawalCommitmentByTransactionHash / saveWithdrawalCommitment", () => {
+    const alice = getRandomChannelSigner();
+    const bob = getRandomChannelSigner();
+    const transferId = getRandomBytes32();
+    const commitment: WithdrawCommitmentJson = {
+      channelAddress: mkAddress("0xcc"),
+      amount: "10",
+      alice: alice.address,
+      bob: bob.address,
+      assetId: mkAddress(),
+      aliceSignature: mkSig("0xaaa"),
+      bobSignature: mkSig("0xbbb"),
+      recipient: mkAddress("0xrrr"),
+      nonce: "12",
+      callData: "0x",
+      callTo: mkAddress(),
+      transactionHash: mkHash("0xttt"),
+    };
+
+    beforeEach(async () => {
+      await store.saveWithdrawalCommitment(transferId, commitment);
+    });
+
+    it("getWithdrawalCommitment should work", async () => {
+      expect(await store.getWithdrawalCommitment(transferId)).to.be.deep.eq(commitment);
+    });
+
+    it("getWithdrawalCommitmentByTransactionHash should work", async () => {
+      expect(await store.getWithdrawalCommitmentByTransactionHash(commitment.transactionHash!)).to.be.deep.eq(
+        commitment,
+      );
     });
   });
 
