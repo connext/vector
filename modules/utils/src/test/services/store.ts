@@ -13,6 +13,9 @@ import {
 import { TransactionReceipt, TransactionResponse } from "@ethersproject/abstract-provider";
 
 export class MemoryStoreService implements IEngineStore {
+  getWithdrawalCommitmentByTransactionHash(transactionHash: string): Promise<WithdrawCommitmentJson> {
+    throw new Error("Method not implemented.");
+  }
   saveChannelDispute(
     channel: FullChannelState,
     channelDispute: ChannelDispute,
