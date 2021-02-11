@@ -1,10 +1,13 @@
 import {
   Balance,
+  ChannelUpdate,
   EngineEvent,
   EngineEvents,
   ResolveUpdateDetails,
   StoredTransactionStatus,
   TransactionReason,
+  UpdateType,
+  WithdrawCommitmentJson,
 } from "@connext/vector-types";
 import {
   createTestChannelState,
@@ -17,6 +20,9 @@ import {
   createTestTxResponse,
   mkAddress,
   mkPublicIdentifier,
+  createTestChannelUpdate,
+  mkSig,
+  getRandomChannelSigner,
 } from "@connext/vector-utils";
 import { delay } from "ts-nats/lib/util";
 
@@ -395,6 +401,101 @@ describe("store", () => {
       expect(retrieved).to.be.deep.include(c1);
       expect(retrieved).to.be.deep.include(c2);
       expect(retrieved.length).to.be.eq(2);
+    });
+  });
+
+  describe("getWithdrawalCommitment / getWithdrawalCommitmentByTransactionHash / saveWithdrawalCommitment", () => {
+    let resolveUpdate: ChannelUpdate<"resolve">;
+    let createUpdate: ChannelUpdate<"create">;
+    const alice = getRandomChannelSigner();
+    const bob = getRandomChannelSigner();
+    const transferId = getRandomBytes32();
+    const commitment: WithdrawCommitmentJson = {
+      channelAddress: mkAddress("0xcc"),
+      amount: "10",
+      alice: alice.address,
+      bob: bob.address,
+      assetId: mkAddress(),
+      aliceSignature: mkSig("0xaaa"),
+      bobSignature: mkSig("0xbbb"),
+      recipient: mkAddress("0xrrr"),
+      nonce: "12",
+      callData: "0x",
+      callTo: mkAddress(),
+      transactionHash: mkHash("0xttt"),
+    };
+
+    beforeEach(async () => {
+      resolveUpdate = createTestChannelUpdate(UpdateType.resolve, {
+        channelAddress: commitment.channelAddress,
+        details: {
+          transferId,
+          transferResolver: { responderSignature: commitment.bobSignature },
+          meta: { transactionHash: commitment.transactionHash },
+        },
+        fromIdentifier: bob.publicIdentifier,
+        toIdentifier: alice.publicIdentifier,
+        assetId: commitment.assetId,
+        nonce: 5,
+      });
+
+      createUpdate = createTestChannelUpdate(UpdateType.create, {
+        channelAddress: commitment.channelAddress,
+        details: {
+          transferId,
+          balance: { amount: [commitment.amount, "0"], to: [commitment.recipient, bob.address] },
+          transferInitialState: {
+            initiatorSignature: commitment.aliceSignature,
+            initiator: commitment.alice,
+            responder: commitment.bob,
+            nonce: commitment.nonce,
+            callTo: commitment.callTo,
+            callData: commitment.callData,
+            fee: "0",
+          },
+        },
+        fromIdentifier: alice.publicIdentifier,
+        toIdentifier: bob.publicIdentifier,
+        assetId: commitment.assetId,
+        nonce: 4,
+      });
+
+      const { channel: createChannel, transfer } = createTestChannelState(UpdateType.create, {
+        channelAddress: commitment.channelAddress,
+        alice: commitment.alice,
+        bob: commitment.bob,
+        aliceIdentifier: alice.publicIdentifier,
+        bobIdentifier: bob.publicIdentifier,
+        latestUpdate: { ...createUpdate },
+      });
+      await store.saveChannelState(createChannel, { ...transfer, balance: createUpdate.balance });
+
+      const resolveChannel = createTestChannelState(UpdateType.resolve, {
+        channelAddress: commitment.channelAddress,
+        alice: commitment.alice,
+        bob: commitment.bob,
+        aliceIdentifier: alice.publicIdentifier,
+        bobIdentifier: bob.publicIdentifier,
+        latestUpdate: { ...resolveUpdate },
+      }).channel;
+      await store.saveChannelState(
+        { ...resolveChannel, latestUpdate: resolveUpdate },
+        {
+          ...transfer,
+          transferResolver: { responderSignature: commitment.bobSignature },
+          balance: createUpdate.balance,
+        },
+      );
+    });
+
+    it("getWithdrawalCommitment should work", async () => {
+      expect(await store.getWithdrawalCommitment(transferId)).to.be.deep.eq(commitment);
+    });
+
+    it("getWithdrawalCommitmentByTransactionHash should work", async () => {
+      expect(
+        await store.getWithdrawalCommitmentByTransactionHash(resolveUpdate.details.meta.transactionHash),
+      ).to.be.deep.eq(commitment);
     });
   });
 

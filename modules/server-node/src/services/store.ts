@@ -233,6 +233,33 @@ const convertTransferEntityToFullTransferState = (
   return fullTransfer;
 };
 
+const convertEntitiesToWithdrawalCommitment = (
+  resolveEntity: Update,
+  createEntity: Update,
+  channel: Channel,
+): WithdrawCommitmentJson => {
+  const initialState = JSON.parse(createEntity!.transferInitialState ?? "{}");
+  const resolver = JSON.parse(resolveEntity.transferResolver ?? "{}");
+  const resolveMeta = JSON.parse(resolveEntity.meta ?? "{}");
+
+  const aliceIsInitiator = channel.participantA === getSignerAddressFromPublicIdentifier(createEntity!.fromIdentifier);
+
+  return {
+    aliceSignature: aliceIsInitiator ? initialState.initiatorSignature : resolver.responderSignature,
+    bobSignature: aliceIsInitiator ? resolver.responderSignature : initialState.initiatorSignature,
+    channelAddress: resolveEntity.channelAddressId,
+    alice: channel.participantA,
+    bob: channel.participantB,
+    recipient: createEntity.transferToA!, // balance = [toA, toB]
+    assetId: createEntity.assetId,
+    amount: BigNumber.from(createEntity.transferAmountA).sub(initialState.fee).toString(),
+    nonce: initialState.nonce,
+    callData: initialState.callData,
+    callTo: initialState.callTo,
+    transactionHash: resolveMeta.transactionHash ?? undefined,
+  };
+};
+
 export class PrismaStore implements IServerNodeStore {
   public prisma: PrismaClient;
 
@@ -369,17 +396,52 @@ export class PrismaStore implements IServerNodeStore {
     });
   }
 
+  async getWithdrawalCommitmentByTransactionHash(transactionHash: string): Promise<WithdrawCommitmentJson | undefined> {
+    const resolveEntity = await this.prisma.update.findFirst({
+      where: {
+        type: UpdateType.resolve,
+        meta: {
+          contains: transactionHash,
+        },
+      },
+      include: { channel: true, resolvedTransfer: true },
+    });
+    if (!resolveEntity) {
+      return undefined;
+    }
+
+    // must also have the create update
+    const createEntity = await this.prisma.update.findUnique({
+      where: {
+        channelAddressId_nonce: {
+          nonce: resolveEntity.resolvedTransfer!.createUpdateNonce!,
+          channelAddressId: resolveEntity.channelAddressId,
+        },
+      },
+      include: { createdTransfer: true },
+    });
+
+    const channel =
+      resolveEntity.channel ??
+      (await this.prisma.channel.findUnique({
+        where: { channelAddress: resolveEntity.channelAddressId },
+      }));
+
+    if (!channel) {
+      throw new Error("Could not retrieve channel for withdraw commitment");
+    }
+
+    return convertEntitiesToWithdrawalCommitment(resolveEntity, createEntity!, channel);
+  }
+
   async getWithdrawalCommitment(transferId: string): Promise<WithdrawCommitmentJson | undefined> {
     const entity = await this.prisma.transfer.findUnique({
       where: { transferId },
-      include: { channel: true, createUpdate: true, resolveUpdate: true, transaction: true },
+      include: { channel: true, createUpdate: true, resolveUpdate: true },
     });
     if (!entity) {
       return undefined;
     }
-
-    const initialState = JSON.parse(entity.createUpdate?.transferInitialState ?? "{}");
-    const resolver = JSON.parse(entity.resolveUpdate?.transferResolver ?? "{}");
 
     // if there is not an attached channel, the transfer has been resolved
     // so grab channel
@@ -393,44 +455,12 @@ export class PrismaStore implements IServerNodeStore {
       throw new Error("Could not retrieve channel for withdraw commitment");
     }
 
-    // TODO: will this return invalid jsons if the transfer is resolved
-    const aliceIsInitiator =
-      channel.participantA === getSignerAddressFromPublicIdentifier(entity.createUpdate!.fromIdentifier);
-
-    return {
-      aliceSignature: aliceIsInitiator ? initialState.initiatorSignature : resolver.responderSignature,
-      bobSignature: aliceIsInitiator ? resolver.responderSignature : initialState.initiatorSignature,
-      channelAddress: entity.channelAddressId,
-      alice: channel.participantA,
-      bob: channel.participantB,
-      recipient: entity.toA, // balance = [toA, toB]
-      assetId: entity.createUpdate!.assetId,
-      amount: BigNumber.from(entity.amountA).sub(initialState.fee).toString(),
-      nonce: initialState.nonce,
-      callData: initialState.callData,
-      callTo: initialState.callTo,
-      transactionHash: entity.transactionHash ?? undefined,
-    };
+    return convertEntitiesToWithdrawalCommitment(entity.resolveUpdate!, entity.createUpdate!, channel);
   }
 
-  async saveWithdrawalCommitment(transferId: string, withdrawCommitment: WithdrawCommitmentJson): Promise<void> {
-    // if there is not a transaction hash on the commitment, do nothing
-    if (!withdrawCommitment.transactionHash) {
-      return;
-    }
-
-    // otherwise associate with a transaction
-    await this.prisma.transfer.update({
-      where: {
-        transferId,
-      },
-      data: {
-        transaction: {
-          connect: { transactionHash: withdrawCommitment.transactionHash },
-        },
-      },
-    });
-    return;
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  saveWithdrawalCommitment(transferId: string, withdrawCommitment: WithdrawCommitmentJson): Promise<void> {
+    return Promise.resolve();
   }
 
   async registerSubscription<T extends EngineEvent>(publicIdentifier: string, event: T, url: string): Promise<void> {
