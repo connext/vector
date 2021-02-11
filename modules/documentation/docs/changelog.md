@@ -2,6 +2,14 @@
 
 ## Next Release
 
+## 0.1.15-beta.11
+
+- \[iframe\] Allow `chainAddresses` and `messagingUrl` to be passed into iframe's node creation
+## 0.1.15-beta.10
+
+- \[router\] Improve router dashboards
+- \[contracts\] Add xdai deployment
+
 ## 0.1.15-beta.9
 
 - \[router\] Add router dashboards

@@ -62,6 +62,24 @@ export class ChainError extends VectorError {
   }
 }
 
+export type ChainInfo = {
+  name: string;
+  chainId: number;
+  shortName: string;
+  chain: string;
+  network: string;
+  networkId: number;
+  nativeCurrency: {
+    name: string;
+    symbol: string;
+    decimals: number;
+  };
+  assetId: { [assetId: string]: string };
+  rpc: string[];
+  faucets: string[];
+  infoURL: string;
+};
+
 export type MinimalTransaction = {
   to: Address;
   value: BigNumberish;
