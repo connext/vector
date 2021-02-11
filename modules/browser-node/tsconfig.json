@@ -9,6 +9,7 @@
     "strict": true,
     "target": "es6"
   },
+  "sourceMap": true,
   "exclude": ["dist", "node_modules"],
   "include": ["src/**/*.ts"]
 }

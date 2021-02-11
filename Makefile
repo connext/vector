@@ -304,9 +304,14 @@ engine: utils protocol $(shell find modules/engine $(find_options))
 	$(docker_run) "cd modules/engine && npm run build"
 	$(log_finish) && mv -f $(totalTime) .flags/$@
 
-browser-node: engine $(shell find modules/browser-node $(find_options))
+browser-node: browser-node-bundle
+browser-node-js: engine $(shell find modules/browser-node $(find_options))
 	$(log_start)
 	$(docker_run) "cd modules/browser-node && npm run build && touch src/index.ts"
+	$(log_finish) && mv -f $(totalTime) .flags/$@
+browser-node-bundle: browser-node-js $(shell find modules/browser-node $(find_options))
+	$(log_start)
+	$(docker_run) "cd modules/browser-node && npm run build-bundle && touch src/index.ts"
 	$(log_finish) && mv -f $(totalTime) .flags/$@
 
 auth: auth-img
