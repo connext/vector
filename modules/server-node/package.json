@@ -29,13 +29,12 @@
     "merkletreejs": "0.2.9",
     "pg": "8.5.1",
     "pino": "6.7.0",
-    "prisma": "2.16.0",
+    "prisma": "2.16.1",
     "regenerator-runtime": "0.13.7",
     "sqlite3": "5.0.1",
     "ts-nats": "1.2.15"
   },
   "devDependencies": {
-    "prisma": "2.16.1",
     "@types/chai": "4.2.14",
     "@types/chai-as-promised": "7.1.3",
     "@types/mocha": "8.0.3",
