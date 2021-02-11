@@ -20,7 +20,6 @@ import {
 import { getRandomBytes32, getSignerAddressFromPublicIdentifier } from "@connext/vector-utils";
 import { BigNumber } from "@ethersproject/bignumber";
 import { TransactionResponse, TransactionReceipt } from "@ethersproject/providers";
-import { TransferWhereInput } from "@prisma/client";
 
 import { config } from "../config";
 import {
