@@ -1,5 +1,4 @@
 const path = require("path");
-const CopyPlugin = require("copy-webpack-plugin");
 
 module.exports = {
   mode: "development",
@@ -8,15 +7,12 @@ module.exports = {
 
   entry: path.join(__dirname, "../src/index.ts"),
 
-  externals: {
-    ".prisma/client": "commonjs2 .prisma/client",
-    "@prisma/client": "commonjs2 @prisma/client",
-    "pg-native": "commonjs2 pg-native",
-    sqlite3: "commonjs2 sqlite3",
-  },
-
   node: {
+    crypto: true,
     fs: "empty",
+    net: "empty",
+    express: "empty",
+    tls: "empty",
   },
 
   resolve: {
