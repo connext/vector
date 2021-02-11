@@ -53,6 +53,8 @@ function App() {
         iframeSrc,
         routerPublicIdentifier,
         chainProviders,
+        chainAddresses: config.chainAddresses,
+        messagingUrl: config.messagingUrl,
       });
       await client.init();
       const channelsRes = await client.getStateChannels();
