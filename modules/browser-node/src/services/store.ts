@@ -295,6 +295,10 @@ export class BrowserStore implements IEngineStore, IChainServiceStore {
       collection = collection.filter((transfer) => transfer.routingId === filterOpts.routingId);
     }
 
+    if (filterOpts?.transferDefinition) {
+      collection = collection.filter((transfer) => transfer.transferDefinition === filterOpts.transferDefinition);
+    }
+
     const transfers = await collection.toArray();
     return transfers.map(storedTransferToTransferState);
   }

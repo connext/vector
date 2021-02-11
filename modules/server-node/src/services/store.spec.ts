@@ -265,7 +265,7 @@ describe("store", () => {
         {
           channelAddress: channel1,
         },
-        { transferId: mkHash("0x123"), meta: { routingId: mkHash("0x123") } },
+        { transferId: mkHash("0x123"), transferDefinition: mkAddress("0xabc"), meta: { routingId: mkHash("0x123") } },
       );
       await store.saveChannelState(transfer1State.channel, transfer1State.transfer);
 
@@ -341,6 +341,12 @@ describe("store", () => {
         ...transfer2Create.transfer,
         transferResolver: transfer2Resolve.transfer.transferResolver,
       });
+
+      const definitionFiltered = await store.getTransfers({
+        transferDefinition: transfer1State.transfer.transferDefinition,
+      });
+      expect(definitionFiltered.length).to.be.eq(1);
+      expect(definitionFiltered[0]).to.be.deep.eq(transfer1State.transfer);
     });
   });
 

@@ -20,6 +20,7 @@ import {
 import { getRandomBytes32, getSignerAddressFromPublicIdentifier } from "@connext/vector-utils";
 import { BigNumber } from "@ethersproject/bignumber";
 import { TransactionResponse, TransactionReceipt } from "@ethersproject/providers";
+import { TransferWhereInput } from "@prisma/client";
 
 import { config } from "../config";
 import {
@@ -1021,7 +1022,7 @@ export class PrismaStore implements IServerNodeStore {
   }
 
   async getTransfers(filterOpts?: GetTransfersFilterOpts): Promise<FullTransferState[]> {
-    const filterQuery = [];
+    const filterQuery: Prisma.TransferWhereInput[] = [];
     if (filterOpts?.channelAddress) {
       filterQuery.push({ channelAddressId: filterOpts.channelAddress });
     }
@@ -1041,6 +1042,10 @@ export class PrismaStore implements IServerNodeStore {
 
     if (filterOpts?.routingId) {
       filterQuery.push({ routingId: filterOpts.routingId });
+    }
+
+    if (filterOpts?.transferDefinition) {
+      filterQuery.push({ createUpdate: { transferDefinition: filterOpts.transferDefinition } });
     }
 
     const transfers = await this.prisma.transfer.findMany({
