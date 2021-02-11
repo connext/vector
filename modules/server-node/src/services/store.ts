@@ -1049,7 +1049,7 @@ export class PrismaStore implements IServerNodeStore {
     }
 
     const transfers = await this.prisma.transfer.findMany({
-      where: filterOpts ? { OR: filterQuery } : undefined,
+      where: filterOpts ? { AND: filterQuery } : undefined,
       include: {
         channel: true,
         createUpdate: true,
