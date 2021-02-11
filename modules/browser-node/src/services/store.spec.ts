@@ -403,7 +403,7 @@ describe(name, () => {
     });
   });
 
-  describe.only("getWithdrawalCommitment / getWithdrawalCommitmentByTransactionHash / saveWithdrawalCommitment", () => {
+  describe("getWithdrawalCommitment / getWithdrawalCommitmentByTransactionHash / saveWithdrawalCommitment", () => {
     const alice = getRandomChannelSigner();
     const bob = getRandomChannelSigner();
     const transferId = getRandomBytes32();
