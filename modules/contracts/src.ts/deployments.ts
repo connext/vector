@@ -156,3 +156,22 @@ const xdaiDeployment = {
 };
 deployments.xdai = xdaiDeployment;
 deployments["100"] = xdaiDeployment;
+
+////////////////////////////////////////
+// 97 - bsc testnet
+import * as bsctestnetChannelFactory from "../deployments/bsctestnet/ChannelFactory.json";
+import * as bsctestnetChannelMastercopy from "../deployments/bsctestnet/ChannelMastercopy.json";
+import * as bsctestnetHashlockTransfer from "../deployments/bsctestnet/HashlockTransfer.json";
+import * as bsctestnetTestToken from "../deployments/bsctestnet/TestToken.json";
+import * as bsctestnetTransferRegistry from "../deployments/bsctestnet/TransferRegistry.json";
+import * as bsctestnetWithdraw from "../deployments/bsctestnet/Withdraw.json";
+const bsctestnetDeployment = {
+  ChannelFactory: bsctestnetChannelFactory,
+  ChannelMastercopy: bsctestnetChannelMastercopy,
+  HashlockTransfer: bsctestnetHashlockTransfer,
+  TestToken: bsctestnetTestToken,
+  TransferRegistry: bsctestnetTransferRegistry,
+  Withdraw: bsctestnetWithdraw,
+};
+deployments.bsctestnet = bsctestnetDeployment;
+deployments["97"] = bsctestnetDeployment;

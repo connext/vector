@@ -2,7 +2,17 @@
 
 ## Next Release
 
+
 - \[ops\] Add persistent storage for Grafana
+
+
+## 0.1.15-beta.12
+
+- \[contracts\] Deploy contracts to BSC testnet
+
+## 0.1.15-beta.11
+
+- \[iframe\] Allow `chainAddresses` and `messagingUrl` to be passed into iframe's node creation
 
 ## 0.1.15-beta.10
 
