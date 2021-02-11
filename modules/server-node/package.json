@@ -10,7 +10,8 @@
     "build-bundle": "webpack --config ops/webpack.config.js",
     "start": "prisma migrate dev --preview-feature --schema prisma-sqlite/schema.prisma && node dist/index.js",
     "test": "bash ops/test.sh",
-    "migration:generate": "prisma migrate dev --create-only --preview-feature --schema prisma-sqlite/schema.prisma"
+    "migration:generate:postgres": "prisma migrate dev --create-only --preview-feature --schema prisma-postgres/schema.prisma",
+    "migration:generate:sqlite": "prisma migrate dev --create-only --preview-feature --schema prisma-sqlite/schema.prisma"
   },
   "dependencies": {
     "@connext/vector-contracts": "0.1.15-beta.12",

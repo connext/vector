@@ -28,7 +28,7 @@ import { createNode, deleteNodes, getChainService, getNode, getNodes } from "./h
 import { ServerNodeError } from "./helpers/errors";
 
 const configuredIdentifier = getPublicIdentifierFromPublicKey(Wallet.fromMnemonic(config.mnemonic).publicKey);
-export const logger = pino({ name: configuredIdentifier });
+export const logger = pino({ name: configuredIdentifier, level: config.logLevel ?? "info" });
 logger.info({ config }, "Loaded config from environment");
 const server = fastify({ logger, pluginTimeout: 300_000, disableRequestLogging: config.logLevel !== "debug" });
 server.register(fastifyCors, {
