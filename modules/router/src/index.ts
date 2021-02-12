@@ -28,6 +28,8 @@ import { config } from "./config";
 import { IRouter, Router } from "./router";
 import { PrismaStore } from "./services/store";
 import { NatsRouterMessagingService } from "./services/messaging";
+import { startAutoRebalanceTask } from "./autoRebalance";
+import { wallet } from "./metrics";
 
 const routerPort = 8000;
 const routerBase = `http://router:${routerPort}`;
@@ -126,10 +128,8 @@ server.addHook("onReady", async () => {
     0,
     true,
   );
-  const chainService = new VectorChainReader(
-    hydrateProviders(config.chainProviders),
-    logger.child({ module: "RouterChainReader" }),
-  );
+  const hydratedProviders = hydrateProviders(config.chainProviders);
+  const chainService = new VectorChainReader(hydratedProviders, logger.child({ module: "RouterChainReader" }));
 
   router = await Router.connect(
     nodeService.publicIdentifier,
@@ -140,6 +140,8 @@ server.addHook("onReady", async () => {
     messagingService,
     logger,
   );
+
+  startAutoRebalanceTask(1_800_000, logger, wallet, chainService, hydratedProviders);
 });
 
 server.get("/ping", async () => {
