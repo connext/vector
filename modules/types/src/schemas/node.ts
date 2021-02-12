@@ -355,15 +355,16 @@ const PostAdminRetryWithdrawTransactionResponseSchema = {
 // SUBMIT UNSUBMITTED WITHDRAWALS
 const PostAdminSubmitWithdrawalsBodySchema = Type.Object({
   adminToken: Type.String(),
-  publicIdentifier: TPublicIdentifier,
 });
 
 const PostAdminSubmitWithdrawalsResponseSchema = {
-  200: Type.Array(
-    Type.Object({
-      transactionHash: Type.String(),
-      transferId: TBytes32,
-    }),
+  200: Type.Dict(
+    Type.Array(
+      Type.Object({
+        transactionHash: Type.String(),
+        transferId: TBytes32,
+      }),
+    ),
   ),
 };
 

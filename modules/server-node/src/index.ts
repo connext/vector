@@ -999,17 +999,19 @@ server.post<{ Body: NodeParams.SubmitWithdrawals }>(
         .status(401)
         .send(new ServerNodeError(ServerNodeError.reasons.Unauthorized, "", request.body).toJson());
     }
-    const chainService = getChainService(request.body.publicIdentifier);
-    if (!chainService) {
-      return reply
-        .status(404)
-        .send(new ServerNodeError(ServerNodeError.reasons.ChainServiceNotFound, "", request.body).toJson());
-    }
-
     try {
-      // gather all unsubmitted withdrawal commitments for all channels
+      const nodes = getNodes();
       const channels = await store.getChannelStates();
-      const results = await submitUnsubmittedWithdrawals(channels, chainService, store);
+      const results: { [identifer: string]: { transactionHash: string; transferId: string }[] } = {};
+      for (const node of nodes) {
+        // gather all unsubmitted withdrawal commitments for all channels
+        const nodeChannels = channels.filter(
+          (chan) =>
+            chan.bobIdentifier === node.node.publicIdentifier || chan.aliceIdentifier === node.node.publicIdentifier,
+        );
+        const nodeResults = await submitUnsubmittedWithdrawals(nodeChannels, node.chainService, store);
+        results[node.node.publicIdentifier] = nodeResults;
+      }
       return reply.status(200).send(results);
     } catch (e) {
       return reply.status(500).send(jsonifyError(e));
