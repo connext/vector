@@ -16,18 +16,17 @@ import {
   jsonifyError,
   GetTransfersFilterOpts,
   GetTransfersFilterOptsSchema,
-  WithdrawCommitmentJson,
 } from "@connext/vector-types";
 import { constructRpcRequest, getPublicIdentifierFromPublicKey, hydrateProviders } from "@connext/vector-utils";
 import { WithdrawCommitment } from "@connext/vector-contracts";
 import { Static, Type } from "@sinclair/typebox";
-import { HashZero } from "@ethersproject/constants";
 import { Wallet } from "@ethersproject/wallet";
 
 import { PrismaStore } from "./services/store";
 import { config } from "./config";
 import { createNode, deleteNodes, getChainService, getNode, getNodes } from "./helpers/nodes";
 import { ServerNodeError } from "./helpers/errors";
+import { submitUnsubmittedWithdrawals, submitMainnetWithdrawalsIfNeeded } from "./helpers/withdrawal";
 
 const configuredIdentifier = getPublicIdentifierFromPublicKey(Wallet.fromMnemonic(config.mnemonic).publicKey);
 export const logger = pino({ name: configuredIdentifier, level: config.logLevel ?? "info" });
@@ -57,6 +56,17 @@ server.addHook("onReady", async () => {
     logger.info({ node: nodeIndex }, "Rehydrating persisted node");
     await createNode(nodeIndex.index, store, storedMnemonic, config.skipCheckIn ?? false);
   }
+
+  // Add setInterval handler to submit withdrawals if gas is low enough
+  // or if they are more than a week old (check every 30min)
+  setInterval(
+    () =>
+      submitMainnetWithdrawalsIfNeeded(
+        persistedNodes.map((node) => node.publicIdentifier),
+        store,
+      ),
+    30 * 60 * 1000,
+  );
 });
 
 server.get("/ping", async () => {
@@ -999,49 +1009,8 @@ server.post<{ Body: NodeParams.SubmitWithdrawals }>(
     try {
       // gather all unsubmitted withdrawal commitments for all channels
       const channels = await store.getChannelStates();
-      const unsubmitted: (WithdrawCommitmentJson & { transferId: string })[] = [];
-      await Promise.all(
-        channels.map(async (channel) => {
-          const forChannel = await store.getUnsubmittedWithdrawals(channel.channelAddress);
-          if (forChannel.length === 0) {
-            return;
-          }
-          unsubmitted.push(...forChannel);
-        }),
-      );
-
-      // submit to chain
-      const transactions = [];
-      for (const record of unsubmitted) {
-        const { transferId, ...json } = record;
-        const commitment = await WithdrawCommitment.fromJson(json);
-        const channel = channels.find((c) => c.channelAddress === commitment.channelAddress);
-        const response = await chainService.sendWithdrawTx(channel!, commitment.getSignedTransaction());
-        let transactionHash = HashZero;
-        if (response.isError) {
-          // TODO: if error is CMC ALREADY_SUBMITTED, store HashZero
-          const error = response.getError()!;
-          if (!error.message.includes("CMCWithdraw: ALREADY_EXECUTED")) {
-            logger.error(
-              {
-                channelAddress: channel?.channelAddress,
-                publicIdentifier: request.body.publicIdentifier,
-                commitment: json,
-                error: jsonifyError(error),
-              },
-              "Failed to submit withdrawal",
-            );
-            continue;
-          }
-        } else {
-          transactionHash = response.getValue().hash;
-        }
-
-        transactions.push({ transactionHash, transferId });
-        commitment.addTransaction(transactionHash);
-        await store.saveWithdrawalCommitment(transferId, commitment.toJson());
-      }
-      return reply.status(200).send(transactions);
+      const results = await submitUnsubmittedWithdrawals(channels, chainService, store);
+      return reply.status(200).send(results);
     } catch (e) {
       return reply.status(500).send(jsonifyError(e));
     }
