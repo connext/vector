@@ -16,10 +16,12 @@ import {
   jsonifyError,
   GetTransfersFilterOpts,
   GetTransfersFilterOptsSchema,
+  WithdrawCommitmentJson,
 } from "@connext/vector-types";
 import { constructRpcRequest, getPublicIdentifierFromPublicKey, hydrateProviders } from "@connext/vector-utils";
 import { WithdrawCommitment } from "@connext/vector-contracts";
 import { Static, Type } from "@sinclair/typebox";
+import { HashZero } from "@ethersproject/constants";
 import { Wallet } from "@ethersproject/wallet";
 
 import { PrismaStore } from "./services/store";
@@ -969,6 +971,79 @@ server.post<{ Body: NodeParams.Admin }>(
           storeError: e.message,
         }).toJson(),
       );
+    }
+  },
+);
+
+server.post<{ Body: NodeParams.SubmitWithdrawals }>(
+  "/withdraw/submit",
+  {
+    schema: {
+      body: NodeParams.SubmitWithdrawalsSchema,
+      response: NodeResponses.SubmitWithdrawalsSchema,
+    },
+  },
+  async (request, reply) => {
+    if (request.body.adminToken !== config.adminToken) {
+      return reply
+        .status(401)
+        .send(new ServerNodeError(ServerNodeError.reasons.Unauthorized, "", request.body).toJson());
+    }
+    const chainService = getChainService(request.body.publicIdentifier);
+    if (!chainService) {
+      return reply
+        .status(404)
+        .send(new ServerNodeError(ServerNodeError.reasons.ChainServiceNotFound, "", request.body).toJson());
+    }
+
+    try {
+      // gather all unsubmitted withdrawal commitments for all channels
+      const channels = await store.getChannelStates();
+      const unsubmitted: (WithdrawCommitmentJson & { transferId: string })[] = [];
+      await Promise.all(
+        channels.map(async (channel) => {
+          const forChannel = await store.getUnsubmittedWithdrawals(channel.channelAddress);
+          if (forChannel.length === 0) {
+            return;
+          }
+          unsubmitted.push(...forChannel);
+        }),
+      );
+
+      // submit to chain
+      const transactions = [];
+      for (const record of unsubmitted) {
+        const { transferId, ...json } = record;
+        const commitment = await WithdrawCommitment.fromJson(json);
+        const channel = channels.find((c) => c.channelAddress === commitment.channelAddress);
+        const response = await chainService.sendWithdrawTx(channel!, commitment.getSignedTransaction());
+        let transactionHash = HashZero;
+        if (response.isError) {
+          // TODO: if error is CMC ALREADY_SUBMITTED, store HashZero
+          const error = response.getError()!;
+          if (!error.message.includes("CMCWithdraw: ALREADY_EXECUTED")) {
+            logger.error(
+              {
+                channelAddress: channel?.channelAddress,
+                publicIdentifier: request.body.publicIdentifier,
+                commitment: json,
+                error: jsonifyError(error),
+              },
+              "Failed to submit withdrawal",
+            );
+            continue;
+          }
+        } else {
+          transactionHash = response.getValue().hash;
+        }
+
+        transactions.push({ transactionHash, transferId });
+        commitment.addTransaction(transactionHash);
+        await store.saveWithdrawalCommitment(transferId, commitment.toJson());
+      }
+      return reply.status(200).send(transactions);
+    } catch (e) {
+      return reply.status(500).send(jsonifyError(e));
     }
   },
 );
