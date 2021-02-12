@@ -473,7 +473,7 @@ export class PrismaStore implements IServerNodeStore {
   // a transaction hash
   async getUnsubmittedWithdrawals(
     channelAddress: string,
-  ): Promise<(WithdrawCommitmentJson & { transferId: string })[]> {
+  ): Promise<{ commitment: WithdrawCommitmentJson; transfer: FullTransferState }[]> {
     const entities = await this.prisma.transfer.findMany({
       where: {
         channelAddressId: channelAddress,
@@ -491,8 +491,8 @@ export class PrismaStore implements IServerNodeStore {
 
     return entities.map((e) => {
       return {
-        ...convertEntitiesToWithdrawalCommitment(e.resolveUpdate!, e.createUpdate!, e.channel!),
-        transferId: e.transferId,
+        commitment: convertEntitiesToWithdrawalCommitment(e.resolveUpdate!, e.createUpdate!, e.channel!),
+        transfer: convertTransferEntityToFullTransferState(e),
       };
     });
   }
