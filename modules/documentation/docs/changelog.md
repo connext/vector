@@ -2,11 +2,11 @@
 
 ## Next Release
 
-
 - \[ops\] Add persistent storage for Grafana
 - \[contracts\] Add `transactionHash` to withdrawal commitment
 - \[store\] Add `transferDefinition` to filter options on `getTransfers`
 - \[store\] Add `getWithdrawalCommitmentByTransactionHash` method
+- \[types\] Add `createdAt`/`resolvedAt` to `FullTransferState.meta` + make transfer meta types generic
 
 ## 0.1.15-beta.12
 
