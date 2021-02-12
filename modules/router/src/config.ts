@@ -42,6 +42,7 @@ const dbUrl = process.env.VECTOR_DATABASE_URL;
 let vectorConfig: VectorRouterConfig;
 
 const mnemonicEnv = process.env.VECTOR_MNEMONIC;
+console.log("mnemonicEnv: ", mnemonicEnv);
 try {
   vectorConfig = JSON.parse(process.env.VECTOR_CONFIG!);
 } catch (e) {

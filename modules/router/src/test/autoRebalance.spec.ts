@@ -1,51 +1,35 @@
 import { VectorChainReader } from "@connext/vector-contracts";
-import {
-  createTestChannelState,
-  expect,
-  getRandomBytes32,
-  mkAddress,
-  RestServerNodeService,
-  mkPublicIdentifier,
-  getTestLoggers,
-} from "@connext/vector-utils";
+import { expect, getTestLoggers, mkAddress, mkBytes32 } from "@connext/vector-utils";
 import Sinon from "sinon";
+import { AllowedSwap, Result } from "@connext/vector-types";
+import { Wallet } from "@ethersproject/wallet";
+import { JsonRpcProvider } from "@ethersproject/providers";
 import { BigNumber } from "@ethersproject/bignumber";
-import { AddressZero } from "@ethersproject/constants";
-import { Result, UpdateType } from "@connext/vector-types";
 import { parseEther } from "@ethersproject/units";
+import moxios from "moxios";
 
+import { rebalanceIfNeeded } from "../autoRebalance";
 import { config } from "../config";
-import * as configService from "../services/config";
+
+console.log("config: ", config);
 
 const testName = "Auto Rebalance";
+console.log("testName: ", testName);
 const { log } = getTestLoggers(testName, config.logLevel as any);
-const chainId = parseInt(Object.keys(config.chainProviders)[0]);
-
+console.log();
 describe(testName, () => {
-  let node: Sinon.SinonStubbedInstance<RestServerNodeService>;
   let chainReader: Sinon.SinonStubbedInstance<VectorChainReader>;
-  let getRebalanceProfile: Sinon.SinonStub;
-
-  const ethProfile = config.rebalanceProfiles.find((p) => p.chainId === chainId && p.assetId === AddressZero)!;
-  const routerPublicIdentifier = mkPublicIdentifier("vectorRRR");
+  let wallet: Sinon.SinonStubbedInstance<Wallet>;
+  let hydratedProviders: { [chainId: number]: Sinon.SinonStubbedInstance<JsonRpcProvider> };
 
   beforeEach(async () => {
-    node = Sinon.createStubInstance(RestServerNodeService);
-    node.conditionalTransfer.resolves(Result.ok({} as any));
-    node.sendDepositTx.resolves(Result.ok({ txHash: getRandomBytes32() }));
-    node.reconcileDeposit.resolves(Result.ok({ channelAddress: mkAddress() }));
+    wallet = Sinon.createStubInstance(Wallet);
 
     chainReader = Sinon.createStubInstance(VectorChainReader);
-    chainReader.getTotalDepositedA.resolves(Result.ok(BigNumber.from(0)));
-    chainReader.getTotalDepositedB.resolves(Result.ok(BigNumber.from(0)));
-    chainReader.getHydratedProviders.returns(
-      Result.ok({
-        [1337]: { waitForTransaction: () => Promise.resolve({ logs: [] }) } as any,
-      }),
-    );
-
-    getRebalanceProfile = Sinon.stub(configService, "getRebalanceProfile");
-    getRebalanceProfile.returns(Result.ok(ethProfile));
+    hydratedProviders = {
+      1337: Sinon.createStubInstance(JsonRpcProvider),
+      1338: Sinon.createStubInstance(JsonRpcProvider),
+    };
   });
 
   afterEach(() => {
@@ -54,11 +38,81 @@ describe(testName, () => {
   });
 
   it("should not rebalance if threshold is within", async () => {
-    const { channel } = createTestChannelState(UpdateType.deposit, {
-      alice: mkAddress("0xaaa"),
-      aliceIdentifier: routerPublicIdentifier,
-      assetIds: [AddressZero],
-      balances: [{ to: [mkAddress("0xaaa"), mkAddress("0xbbb")], amount: [transferAmount.mul(3).toString(), "0"] }],
+    chainReader.getOnchainBalance.onFirstCall().resolves(Result.ok(BigNumber.from(parseEther("100"))));
+    chainReader.getOnchainBalance.onSecondCall().resolves(Result.ok(BigNumber.from(parseEther("100"))));
+    const swap: AllowedSwap = {
+      fromAssetId: "0x9FBDa871d559710256a2502A2517b794B482Db40",
+      fromChainId: 1337,
+      hardcodedRate: "1",
+      priceType: "hardcoded",
+      toAssetId: "0x9FBDa871d559710256a2502A2517b794B482Db40",
+      toChainId: 1338,
+      rebalanceThresholdPct: 20,
+      rebalancerUrl: "http://example.com",
+    };
+    const result = await rebalanceIfNeeded(swap, log, wallet, chainReader as any, hydratedProviders);
+    expect(result.getError()).to.not.be.ok;
+    expect(result.getValue()).to.deep.eq({});
+  });
+
+  it("should not rebalance if to chain is higher balance", async () => {
+    chainReader.getOnchainBalance.onFirstCall().resolves(Result.ok(BigNumber.from(parseEther("100"))));
+    chainReader.getOnchainBalance.onSecondCall().resolves(Result.ok(BigNumber.from(parseEther("150"))));
+    const swap: AllowedSwap = {
+      fromAssetId: "0x9FBDa871d559710256a2502A2517b794B482Db40",
+      fromChainId: 1337,
+      hardcodedRate: "1",
+      priceType: "hardcoded",
+      toAssetId: "0x9FBDa871d559710256a2502A2517b794B482Db40",
+      toChainId: 1338,
+      rebalanceThresholdPct: 20,
+      rebalancerUrl: "http://example.com",
+    };
+    const result = await rebalanceIfNeeded(swap, log, wallet, chainReader as any, hydratedProviders);
+    expect(result.getError()).to.not.be.ok;
+    expect(result.getValue()).to.deep.eq({});
+  });
+
+  it.only("should rebalance", async () => {
+    // TODO: mock axios not working
+    moxios.stubRequest("/approval", {
+      status: 200,
+      responseText: JSON.stringify({ transaction: { to: mkAddress("0xa"), data: "0xdeadbeef" } }),
     });
+
+    moxios.stubRequest("/rebalance", {
+      status: 200,
+      responseText: JSON.stringify({ transaction: { to: mkAddress("0xa"), data: "0xdeadbeef" } }),
+    });
+
+    // const onFulfilled = Sinon.spy();
+    // moxios.wait(function () {
+    //   console.log("onFulfilled.getCall(0).args[0].data: ", onFulfilled.getCall(0).args[0].data);
+    // });
+    const hash = mkBytes32("0xa");
+    chainReader.getOnchainBalance.onFirstCall().resolves(Result.ok(BigNumber.from(parseEther("175"))));
+    chainReader.getOnchainBalance.onSecondCall().resolves(Result.ok(BigNumber.from(parseEther("100"))));
+    wallet.connect.returns(wallet);
+    wallet.sendTransaction.resolves({
+      hash,
+      wait: () =>
+        Promise.resolve({
+          transactionHash: hash,
+        } as any),
+    } as any);
+    const swap: AllowedSwap = {
+      fromAssetId: "0x9FBDa871d559710256a2502A2517b794B482Db40",
+      fromChainId: 1337,
+      hardcodedRate: "1",
+      priceType: "hardcoded",
+      toAssetId: "0x9FBDa871d559710256a2502A2517b794B482Db40",
+      toChainId: 1338,
+      rebalanceThresholdPct: 20,
+      rebalancerUrl: "http://example.com",
+    };
+    const result = await rebalanceIfNeeded(swap, log, wallet, chainReader as any, hydratedProviders);
+    console.log("result: ", result.getError()?.toJson());
+    expect(result.getError()).to.not.be.ok;
+    expect(result.getValue()).to.deep.eq({});
   });
 });

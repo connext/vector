@@ -1,4 +1,4 @@
-import { VectorChainService } from "@connext/vector-contracts";
+import { VectorChainReader } from "@connext/vector-contracts";
 import { AllowedSwap, HydratedProviders, jsonifyError, Result } from "@connext/vector-types";
 import { getRandomBytes32 } from "@connext/vector-utils";
 import { AddressZero } from "@ethersproject/constants";
@@ -17,7 +17,7 @@ export const startAutoRebalanceTask = (
   interval: number,
   logger: BaseLogger,
   wallet: Wallet,
-  chainService: VectorChainService,
+  chainService: VectorChainReader,
   hydratedProviders: HydratedProviders,
 ): void => {
   if (interval < MIN_INTERVAL) {
@@ -37,7 +37,7 @@ export const rebalanceIfNeeded = async (
   swap: AllowedSwap,
   logger: BaseLogger,
   wallet: Wallet,
-  chainService: VectorChainService,
+  chainService: VectorChainReader,
   hydratedProviders: HydratedProviders,
 ): Promise<Result<{ txHash?: string }, AutoRebalanceServiceError>> => {
   const method = "rebalanceIfNeeded";
@@ -51,6 +51,7 @@ export const rebalanceIfNeeded = async (
   const rebalanceThreshold = swap.rebalanceThresholdPct ? swap.rebalanceThresholdPct : DEFAULT_REBALANCE_THRESHOLD;
 
   const fromAssetBalance = await chainService.getOnchainBalance(swap.fromAssetId, wallet.address, swap.fromChainId);
+  console.log("fromAssetBalance: ", fromAssetBalance);
   if (fromAssetBalance.isError) {
     return Result.fail(
       new AutoRebalanceServiceError(
@@ -68,6 +69,7 @@ export const rebalanceIfNeeded = async (
   );
 
   const toAssetBalance = await chainService.getOnchainBalance(swap.toAssetId, wallet.address, swap.toChainId);
+  console.log("toAssetBalance: ", toAssetBalance);
   if (toAssetBalance.isError) {
     return Result.fail(
       new AutoRebalanceServiceError(
@@ -86,7 +88,8 @@ export const rebalanceIfNeeded = async (
 
   // should be within 1/2 of total balance + threshold
   const totalBalance = fromAssetBalanceNumber + toAssetBalanceNumber;
-  const threshold = (totalBalance / 2) * (rebalanceThreshold / 100);
+  console.log("totalBalance: ", totalBalance);
+  const threshold = (totalBalance / 2) * (1 + rebalanceThreshold / 100);
 
   logger.info({
     method,
@@ -119,6 +122,7 @@ export const rebalanceIfNeeded = async (
           },
           "Approval required, sending request",
         );
+        console.log('swap.rebalancerUrl + "/approval": ', swap.rebalancerUrl + "/approval");
         const approveRes = await axios.post(swap.rebalancerUrl + "/approval");
         logger.info(
           {
