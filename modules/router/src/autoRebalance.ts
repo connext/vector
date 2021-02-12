@@ -2,13 +2,14 @@ import { VectorChainReader } from "@connext/vector-contracts";
 import { AllowedSwap, HydratedProviders, jsonifyError, Result } from "@connext/vector-types";
 import { getRandomBytes32 } from "@connext/vector-utils";
 import { AddressZero } from "@ethersproject/constants";
+import { parseUnits } from "@ethersproject/units";
 import { Wallet } from "@ethersproject/wallet";
 import axios from "axios";
 import { BaseLogger } from "pino";
 
 import { config } from "./config";
 import { AutoRebalanceServiceError } from "./errors";
-import { parseBalanceToNumber } from "./metrics";
+import { parseBalanceToNumber, rebalancedTokens } from "./metrics";
 
 const DEFAULT_REBALANCE_THRESHOLD = 20;
 const MIN_INTERVAL = 1_800_000;
@@ -103,6 +104,10 @@ export const rebalanceIfNeeded = async (
 
   if (fromAssetBalanceNumber > threshold) {
     const amountToSendNumber = fromAssetBalanceNumber - threshold;
+    const amountToSend = parseUnits(
+      amountToSendNumber.toString(),
+      rebalancedTokens[swap.fromChainId][swap.fromAssetId].decimals!,
+    );
     // rebalance required
     logger.info(
       {
@@ -122,8 +127,12 @@ export const rebalanceIfNeeded = async (
           },
           "Approval required, sending request",
         );
-        console.log('swap.rebalancerUrl + "/approval": ', swap.rebalancerUrl + "/approval");
-        const approveRes = await axios.post(swap.rebalancerUrl + "/approval");
+        const approveRes = await axios.post(swap.rebalancerUrl, {
+          amount: amountToSend,
+          assetId: swap.fromAssetId,
+          signer: wallet.address,
+          type: "approve",
+        });
         logger.info(
           {
             method,
@@ -134,7 +143,7 @@ export const rebalanceIfNeeded = async (
           "Approval request complete",
         );
         if (approveRes.data.transaction) {
-          const transaction = JSON.parse(approveRes.data.transaction);
+          const transaction = approveRes.data.transaction;
           logger.info(
             {
               method,
@@ -215,7 +224,7 @@ export const rebalanceIfNeeded = async (
         );
       }
 
-      const transaction = JSON.parse(rebalanceRes.data.transaction);
+      const transaction = rebalanceRes.data.transaction;
       logger.info(
         {
           method,

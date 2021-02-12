@@ -6,10 +6,11 @@ import { Wallet } from "@ethersproject/wallet";
 import { JsonRpcProvider } from "@ethersproject/providers";
 import { BigNumber } from "@ethersproject/bignumber";
 import { parseEther } from "@ethersproject/units";
-import moxios from "moxios";
+import axios from "axios";
 
 import { rebalanceIfNeeded } from "../autoRebalance";
 import { config } from "../config";
+import { hydrated } from "../metrics";
 
 console.log("config: ", config);
 
@@ -21,6 +22,7 @@ describe(testName, () => {
   let chainReader: Sinon.SinonStubbedInstance<VectorChainReader>;
   let wallet: Sinon.SinonStubbedInstance<Wallet>;
   let hydratedProviders: { [chainId: number]: Sinon.SinonStubbedInstance<JsonRpcProvider> };
+  let mockAxios: Sinon.SinonStubbedInstance<any>;
 
   beforeEach(async () => {
     wallet = Sinon.createStubInstance(Wallet);
@@ -30,6 +32,8 @@ describe(testName, () => {
       1337: Sinon.createStubInstance(JsonRpcProvider),
       1338: Sinon.createStubInstance(JsonRpcProvider),
     };
+
+    mockAxios = Sinon.stub(axios, "post");
   });
 
   afterEach(() => {
@@ -73,22 +77,12 @@ describe(testName, () => {
     expect(result.getValue()).to.deep.eq({});
   });
 
-  it.only("should rebalance", async () => {
-    // TODO: mock axios not working
-    moxios.stubRequest("/approval", {
-      status: 200,
-      responseText: JSON.stringify({ transaction: { to: mkAddress("0xa"), data: "0xdeadbeef" } }),
+  it("should rebalance", async () => {
+    const transaction = { transaction: { to: mkAddress("0xa"), data: "0xdeadbeef" } };
+    mockAxios.resolves({
+      data: transaction,
     });
 
-    moxios.stubRequest("/rebalance", {
-      status: 200,
-      responseText: JSON.stringify({ transaction: { to: mkAddress("0xa"), data: "0xdeadbeef" } }),
-    });
-
-    // const onFulfilled = Sinon.spy();
-    // moxios.wait(function () {
-    //   console.log("onFulfilled.getCall(0).args[0].data: ", onFulfilled.getCall(0).args[0].data);
-    // });
     const hash = mkBytes32("0xa");
     chainReader.getOnchainBalance.onFirstCall().resolves(Result.ok(BigNumber.from(parseEther("175"))));
     chainReader.getOnchainBalance.onSecondCall().resolves(Result.ok(BigNumber.from(parseEther("100"))));
@@ -111,8 +105,19 @@ describe(testName, () => {
       rebalancerUrl: "http://example.com",
     };
     const result = await rebalanceIfNeeded(swap, log, wallet, chainReader as any, hydratedProviders);
-    console.log("result: ", result.getError()?.toJson());
     expect(result.getError()).to.not.be.ok;
-    expect(result.getValue()).to.deep.eq({});
+    expect(result.getValue()).to.deep.eq({
+      txHash: hash,
+    });
+    wallet.sendTransaction.getCall(0);
+    wallet.sendTransaction.getCall(1);
+    expect(wallet.sendTransaction.getCall(0).args[0]).to.deep.eq({
+      ...transaction.transaction,
+      value: 0,
+    });
+    expect(wallet.sendTransaction.getCall(1).args[0]).to.deep.eq({
+      ...transaction.transaction,
+      value: 0,
+    });
   });
 });
