@@ -397,41 +397,25 @@ export class PrismaStore implements IServerNodeStore {
   }
 
   async getWithdrawalCommitmentByTransactionHash(transactionHash: string): Promise<WithdrawCommitmentJson | undefined> {
-    const resolveEntity = await this.prisma.update.findFirst({
-      where: {
-        type: UpdateType.resolve,
-        meta: {
-          contains: transactionHash,
-        },
-      },
-      include: { channel: true, resolvedTransfer: true },
+    const entity = await this.prisma.transfer.findUnique({
+      where: { onchainTransactionId: transactionHash },
+      include: { channel: true, createUpdate: true, resolveUpdate: true },
     });
-    if (!resolveEntity) {
+    if (!entity) {
       return undefined;
     }
 
-    // must also have the create update
-    const createEntity = await this.prisma.update.findUnique({
-      where: {
-        channelAddressId_nonce: {
-          nonce: resolveEntity.resolvedTransfer!.createUpdateNonce!,
-          channelAddressId: resolveEntity.channelAddressId,
-        },
-      },
-      include: { createdTransfer: true },
-    });
-
     const channel =
-      resolveEntity.channel ??
+      entity.channel ??
       (await this.prisma.channel.findUnique({
-        where: { channelAddress: resolveEntity.channelAddressId },
+        where: { channelAddress: entity.channelAddressId },
       }));
 
     if (!channel) {
       throw new Error("Could not retrieve channel for withdraw commitment");
     }
 
-    return convertEntitiesToWithdrawalCommitment(resolveEntity, createEntity!, channel);
+    return convertEntitiesToWithdrawalCommitment(entity.resolveUpdate!, entity.createUpdate!, channel);
   }
 
   async getWithdrawalCommitment(transferId: string): Promise<WithdrawCommitmentJson | undefined> {
@@ -458,9 +442,59 @@ export class PrismaStore implements IServerNodeStore {
     return convertEntitiesToWithdrawalCommitment(entity.resolveUpdate!, entity.createUpdate!, channel);
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  saveWithdrawalCommitment(transferId: string, withdrawCommitment: WithdrawCommitmentJson): Promise<void> {
-    return Promise.resolve();
+  async saveWithdrawalCommitment(transferId: string, withdrawCommitment: WithdrawCommitmentJson): Promise<void> {
+    if (!withdrawCommitment.transactionHash) {
+      return;
+    }
+    const record = await this.prisma.onchainTransaction.findUnique({
+      where: { transactionHash: withdrawCommitment.transactionHash },
+    });
+    if (!record) {
+      // Did not submit transaction ourselves, no record to connect
+      // This is the case for server-node bobs
+      await this.prisma.transfer.update({
+        where: { transferId },
+        data: { onchainTransactionId: withdrawCommitment.transactionHash },
+      });
+      return;
+    }
+    await this.prisma.transfer.update({
+      where: { transferId },
+      data: {
+        onchainTransactionId: withdrawCommitment.transactionHash,
+        onchainTransaction: { connect: { transactionHash: withdrawCommitment.transactionHash } },
+      },
+    });
+    return;
+  }
+
+  // NOTE: this does not exist on the browser node, only on the server node
+  // This will pull *all* unsubmitted withdrawals that are not associated with
+  // a transaction hash
+  async getUnsubmittedWithdrawals(
+    channelAddress: string,
+  ): Promise<(WithdrawCommitmentJson & { transferId: string })[]> {
+    const entities = await this.prisma.transfer.findMany({
+      where: {
+        channelAddressId: channelAddress,
+        AND: { onchainTransactionId: null, resolveUpdateChannelAddressId: channelAddress },
+      },
+      include: { channel: true, createUpdate: true, resolveUpdate: true },
+    });
+
+    for (const transfer of entities) {
+      if (!transfer.channel) {
+        const channel = await this.prisma.channel.findUnique({ where: { channelAddress: transfer.channelAddressId } });
+        transfer.channel = channel;
+      }
+    }
+
+    return entities.map((e) => {
+      return {
+        ...convertEntitiesToWithdrawalCommitment(e.resolveUpdate!, e.createUpdate!, e.channel!),
+        transferId: e.transferId,
+      };
+    });
   }
 
   async registerSubscription<T extends EngineEvent>(publicIdentifier: string, event: T, url: string): Promise<void> {
