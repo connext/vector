@@ -1,5 +1,5 @@
 import { VectorChainService } from "@connext/vector-contracts";
-import { AllowedSwap, jsonifyError, Result } from "@connext/vector-types";
+import { AllowedSwap, HydratedProviders, jsonifyError, Result } from "@connext/vector-types";
 import { getRandomBytes32 } from "@connext/vector-utils";
 import { AddressZero } from "@ethersproject/constants";
 import { Wallet } from "@ethersproject/wallet";
@@ -8,7 +8,7 @@ import { BaseLogger } from "pino";
 
 import { config } from "./config";
 import { AutoRebalanceServiceError } from "./errors";
-import { hydrated, parseBalanceToNumber } from "./metrics";
+import { parseBalanceToNumber } from "./metrics";
 
 const DEFAULT_REBALANCE_THRESHOLD = 20;
 const MIN_INTERVAL = 1_800_000;
@@ -18,13 +18,14 @@ export const startAutoRebalanceTask = (
   logger: BaseLogger,
   wallet: Wallet,
   chainService: VectorChainService,
+  hydratedProviders: HydratedProviders,
 ): void => {
   if (interval < MIN_INTERVAL) {
     throw new Error(`Interval ${interval} must be at least ${MIN_INTERVAL}`);
   }
   setInterval(() => {
     config.allowedSwaps.map(async (swap) => {
-      const rebalanced = await rebalanceIfNeeded(swap, logger, wallet, chainService);
+      const rebalanced = await rebalanceIfNeeded(swap, logger, wallet, chainService, hydratedProviders);
       if (rebalanced.isError) {
         logger.error({ swap, error: jsonifyError(rebalanced.getError()!) }, "Error auto rebalancing");
       }
@@ -37,6 +38,7 @@ export const rebalanceIfNeeded = async (
   logger: BaseLogger,
   wallet: Wallet,
   chainService: VectorChainService,
+  hydratedProviders: HydratedProviders,
 ): Promise<Result<{ txHash?: string }, AutoRebalanceServiceError>> => {
   const method = "rebalanceIfNeeded";
   const methodId = getRandomBytes32();
@@ -45,7 +47,7 @@ export const rebalanceIfNeeded = async (
     return Result.ok({});
   }
   logger.info({ method, intervalId: methodId, swap }, "Checking if rebalance is needed");
-  const fromProvider = hydrated[swap.fromChainId];
+  const fromProvider = hydratedProviders[swap.fromChainId];
   const rebalanceThreshold = swap.rebalanceThresholdPct ? swap.rebalanceThresholdPct : DEFAULT_REBALANCE_THRESHOLD;
 
   const fromAssetBalance = await chainService.getOnchainBalance(swap.fromAssetId, wallet.address, swap.fromChainId);
