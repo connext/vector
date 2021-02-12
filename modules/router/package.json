@@ -23,6 +23,7 @@
     "@ethersproject/contracts": "5.0.8",
     "@ethersproject/providers": "5.0.15",
     "@ethersproject/units": "5.0.8",
+    "@ethersproject/wallet": "5.0.9",
     "@prisma/client": "2.16.1",
     "@sinclair/typebox": "0.12.7",
     "ajv": "6.12.6",

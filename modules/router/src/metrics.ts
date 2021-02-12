@@ -4,7 +4,7 @@ import { BigNumberish } from "@ethersproject/bignumber";
 import { AddressZero } from "@ethersproject/constants";
 import { Contract } from "@ethersproject/contracts";
 import { formatEther, formatUnits } from "@ethersproject/units";
-import { Wallet } from "ethers";
+import { Wallet } from "@ethersproject/wallet";
 import { Counter, Gauge } from "prom-client";
 
 import { config } from "./config";
@@ -15,8 +15,9 @@ import { config } from "./config";
 
 //////////////////////////
 ///// Helpers/Utils
-const signerAddress = Wallet.fromMnemonic(config.mnemonic).address;
-const hydrated: HydratedProviders = hydrateProviders(config.chainProviders);
+export const wallet = Wallet.fromMnemonic(config.mnemonic);
+export const signerAddress = wallet.address;
+export const hydrated: HydratedProviders = hydrateProviders(config.chainProviders);
 export const rebalancedTokens: {
   [chainId: string]: {
     [assetId: string]: {
