@@ -452,7 +452,10 @@ export async function setupListeners(
     const supportedChains = Object.keys(chainProviders)
       .map((x) => parseInt(x))
       .filter((x) => !!x);
-    await messagingService.respondToRouterConfigMessage(inbox, Result.ok({ supportedChains, allowedSwaps }));
+    await messagingService.respondToRouterConfigMessage(
+      inbox,
+      Result.ok({ supportedChains, allowedSwaps, timestamp: Date.now() }),
+    );
     logger.debug({ method, methodId }, "Method complete");
   });
 
