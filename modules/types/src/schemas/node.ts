@@ -50,7 +50,6 @@ const GetRouterConfigResponseSchema = {
   200: Type.Object({
     supportedChains: Type.Array(TChainId),
     allowedSwaps: Type.Array(AllowedSwapSchema),
-    timestamp: Type.Number(),
   }),
 };
 
