@@ -25,6 +25,13 @@ export const TBalance = Type.Object({
 });
 
 export const TBasicMeta = Type.Optional(Type.Dict(Type.Any()));
+export const TTransferMeta = Type.Intersect([
+  Type.Object({
+    createdAt: Type.Number(),
+    resolvedAt: Type.Optional(Type.Number()),
+  }),
+  Type.Dict(Type.Any()),
+]);
 
 export const TContractAddresses = Type.Object({
   channelFactoryAddress: TAddress,
@@ -77,7 +84,7 @@ export const TFullTransferState = Type.Object({
   transferEncodings: TransferEncodingSchema, // Initial state encoding, resolver encoding
   transferState: TransferStateSchema,
   transferResolver: Type.Optional(TransferResolverSchema), // undefined iff not resolved
-  meta: TBasicMeta,
+  meta: TTransferMeta,
   channelNonce: Type.Integer({ minimum: 1 }),
   initiatorIdentifier: TPublicIdentifier,
   responderIdentifier: TPublicIdentifier,
