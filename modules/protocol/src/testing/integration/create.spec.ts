@@ -57,7 +57,7 @@ describe(testName, () => {
 
   const runTest = async (channel: any, transfer: any): Promise<void> => {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { transferResolver, ...sanitized } = transfer;
+    const { transferResolver, meta, ...sanitized } = transfer;
 
     expect(await alice.getChannelState(channel.channelAddress)).to.containSubset(channel);
     expect(await alice.getTransferState(transfer.transferId)).to.containSubset(sanitized);
@@ -76,7 +76,10 @@ describe(testName, () => {
     const [_, aliceEvent, bobEvent] = await Promise.all([runTest(channel, transfer), alicePromise, bobPromise]);
 
     expect(aliceEvent.updatedTransfers?.length).to.eq(1);
-    expect(aliceEvent).to.deep.eq(bobEvent);
+    expect(aliceEvent.updatedChannelState).to.deep.eq(bobEvent.updatedChannelState);
+    const { meta, ...sanitized } = aliceEvent.updatedTransfer!;
+    expect(bobEvent.updatedTransfer).to.containSubset(sanitized);
+    expect(bobEvent.updatedTransfers).to.containSubset([sanitized]);
   });
 
   it("should create an eth transfer from bob -> alice", async () => {
