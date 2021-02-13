@@ -1,0 +1,54 @@
+# Derived from:
+# https://medium.com/swlh/using-github-actions-to-build-arm-based-docker-images-413a8d498ee
+# How to get an image's sha digest:
+# https://github.com/moby/moby/issues/17670#issuecomment-206361685
+
+name: ARM
+on: push
+
+jobs:
+  build-arm64:
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Set up convenient env vars
+        uses: FranzDiebold/github-env-vars-action@v2
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v1
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+      - name: Login to DockerHub
+        uses: docker/login-action@v1
+        with:
+          username: ${{ secrets.DOCKER_USER }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - name: Set up Python 3.9
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.9'
+          architecture: 'x64'
+      - name: Make
+        run: make
+      - name: Build ARM and push
+        env:
+          DOCKER_CLI_EXPERIMENTAL: enabled
+          LOCAL_DEFAULT_IMAGE: vector_node:${{ env.CI_SHA_SHORT }}
+          REMOTE_ARM_IMAGE: connextproject/vector_node_arm:${{ env.CI_SHA_SHORT }}
+          REMOTE_DEFAULT_IMAGE: connextproject/vector_node:${{ env.CI_SHA_SHORT }}
+          REGISTRY: connextproject
+        run: |
+          echo "docker buildx-ing ARM image with tag: ${REMOTE_ARM_IMAGE}_arm"
+          docker buildx build --platform=linux/arm64 --tag ${REMOTE_ARM_IMAGE}_arm --file modules/server-node/ops/arm.Dockerfile --output type=image,push=true modules/server-node
+          echo "pushing ${REMOTE_DEFAULT_IMAGE}_default to get digest"
+          docker tag ${LOCAL_DEFAULT_IMAGE} ${REMOTE_DEFAULT_IMAGE}_default
+          default_digest=$(docker push ${REMOTE_DEFAULT_IMAGE}_default | grep sha | cut -d ' ' -f 3)
+          echo "pushing ${REMOTE_ARM_IMAGE}_arm to get digest"
+          docker pull ${REMOTE_ARM_IMAGE}_arm
+          arm_digest=$(docker push ${REMOTE_ARM_IMAGE}_arm | grep sha | cut -d ' ' -f 3)
+          echo "creating manifest from ${REGISTRY}/vector_node@${default_digest} AND ${REGISTRY}/vector_node_arm@${arm_digest}"
+          docker manifest create ${REMOTE_DEFAULT_IMAGE} --amend ${REGISTRY}/vector_node@${default_digest} --amend ${REGISTRY}/vector_node_arm@${arm_digest}
+          echo "pushing manifest ${REMOTE_DEFAULT_IMAGE}"
+          docker manifest push ${REMOTE_DEFAULT_IMAGE}

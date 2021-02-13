@@ -88,6 +88,10 @@ class VectorIndexedDBDatabase extends Dexie {
           });
       });
 
+    this.version(3).stores({
+      withdrawCommitment: "transferId,transactionHash",
+    });
+
     this.channels = this.table("channels");
     this.transfers = this.table("transfers");
     this.transactions = this.table("transactions");
@@ -291,6 +295,10 @@ export class BrowserStore implements IEngineStore, IChainServiceStore {
       collection = collection.filter((transfer) => transfer.routingId === filterOpts.routingId);
     }
 
+    if (filterOpts?.transferDefinition) {
+      collection = collection.filter((transfer) => transfer.transferDefinition === filterOpts.transferDefinition);
+    }
+
     const transfers = await collection.toArray();
     return transfers.map(storedTransferToTransferState);
   }
@@ -360,6 +368,19 @@ export class BrowserStore implements IEngineStore, IChainServiceStore {
 
   async getWithdrawalCommitment(transferId: string): Promise<WithdrawCommitmentJson | undefined> {
     const w = await this.db.withdrawCommitment.get(transferId);
-    return w;
+    if (!w) {
+      return w;
+    }
+    const { transferId: t, ...commitment } = w;
+    return commitment;
+  }
+
+  async getWithdrawalCommitmentByTransactionHash(transactionHash: string): Promise<WithdrawCommitmentJson | undefined> {
+    const w = await this.db.withdrawCommitment.get({ transactionHash });
+    if (!w) {
+      return w;
+    }
+    const { transferId, ...commitment } = w;
+    return commitment;
   }
 }

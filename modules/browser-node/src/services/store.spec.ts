@@ -1,4 +1,10 @@
-import { Balance, ResolveUpdateDetails, StoredTransactionStatus, TransactionReason } from "@connext/vector-types";
+import {
+  Balance,
+  ResolveUpdateDetails,
+  StoredTransactionStatus,
+  TransactionReason,
+  WithdrawCommitmentJson,
+} from "@connext/vector-types";
 import {
   createTestChannelState,
   mkBytes32,
@@ -12,6 +18,8 @@ import {
   mkAddress,
   getTestLoggers,
   delay,
+  getRandomChannelSigner,
+  mkSig,
 } from "@connext/vector-utils";
 import indexedDB from "fake-indexeddb";
 import IDBKeyRange from "fake-indexeddb/lib/FDBKeyRange";
@@ -256,7 +264,7 @@ describe(name, () => {
         {
           channelAddress: channel1,
         },
-        { transferId: mkHash("0x123"), meta: { routingId: mkHash("0x123") } },
+        { transferId: mkHash("0x123"), transferDefinition: mkAddress("0xabc"), meta: { routingId: mkHash("0x123") } },
       );
       await store.saveChannelState(transfer1State.channel, transfer1State.transfer);
 
@@ -332,6 +340,12 @@ describe(name, () => {
         ...transfer2Create.transfer,
         transferResolver: transfer2Resolve.transfer.transferResolver,
       });
+
+      const definitionFiltered = await store.getTransfers({
+        transferDefinition: transfer1State.transfer.transferDefinition,
+      });
+      expect(definitionFiltered.length).to.be.eq(1);
+      expect(definitionFiltered[0]).to.be.deep.eq(transfer1State.transfer);
     });
   });
 
@@ -392,6 +406,40 @@ describe(name, () => {
       expect(retrieved).to.be.deep.include(c1);
       expect(retrieved).to.be.deep.include(c2);
       expect(retrieved.length).to.be.eq(2);
+    });
+  });
+
+  describe("getWithdrawalCommitment / getWithdrawalCommitmentByTransactionHash / saveWithdrawalCommitment", () => {
+    const alice = getRandomChannelSigner();
+    const bob = getRandomChannelSigner();
+    const transferId = getRandomBytes32();
+    const commitment: WithdrawCommitmentJson = {
+      channelAddress: mkAddress("0xcc"),
+      amount: "10",
+      alice: alice.address,
+      bob: bob.address,
+      assetId: mkAddress(),
+      aliceSignature: mkSig("0xaaa"),
+      bobSignature: mkSig("0xbbb"),
+      recipient: mkAddress("0xrrr"),
+      nonce: "12",
+      callData: "0x",
+      callTo: mkAddress(),
+      transactionHash: mkHash("0xttt"),
+    };
+
+    beforeEach(async () => {
+      await store.saveWithdrawalCommitment(transferId, commitment);
+    });
+
+    it("getWithdrawalCommitment should work", async () => {
+      expect(await store.getWithdrawalCommitment(transferId)).to.be.deep.eq(commitment);
+    });
+
+    it("getWithdrawalCommitmentByTransactionHash should work", async () => {
+      expect(await store.getWithdrawalCommitmentByTransactionHash(commitment.transactionHash!)).to.be.deep.eq(
+        commitment,
+      );
     });
   });
 

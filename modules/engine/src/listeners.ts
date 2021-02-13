@@ -629,10 +629,16 @@ async function handleWithdrawalTransferCreation(
   if (!isWithdrawRes.getValue()) {
     return;
   }
-  const transfer = await store.getTransferState(
-    (event.updatedChannelState as FullChannelState<typeof UpdateType.create>).latestUpdate.details.transferId,
+  await resolveWithdrawal(
+    event.updatedChannelState,
+    event.updatedTransfer!,
+    vector,
+    evts,
+    store,
+    signer,
+    chainService,
+    logger,
   );
-  await resolveWithdrawal(event.updatedChannelState, transfer!, vector, evts, store, signer, chainService, logger);
 }
 
 async function handleWithdrawalTransferResolution(
@@ -675,24 +681,23 @@ async function handleWithdrawalTransferResolution(
   logger.info({ method, channelAddress, transferId, methodId }, "Started");
 
   // Get the withdrawal amount
-  const transfer = (await store.getTransferState(transferId)) as FullTransferState;
-  if (!transfer) {
+  if (!event.updatedTransfer) {
     logger.warn({ method, transferId, channelAddress }, "Could not find transfer for withdrawal resolution");
     return;
   }
 
-  const withdrawalAmount = transfer.balance.amount
+  const withdrawalAmount = event.updatedTransfer.balance.amount
     .reduce((prev, curr) => prev.add(curr), BigNumber.from(0))
-    .sub(transfer.transferState.fee);
+    .sub(event.updatedTransfer.transferState.fee);
 
   logger.info(
     {
       method,
       methodId,
       withdrawalAmount: withdrawalAmount.toString(),
-      initiator: transfer.initiator,
-      responder: transfer.responder,
-      fee: transfer.transferState.fee,
+      initiator: event.updatedTransfer.initiator,
+      responder: event.updatedTransfer.responder,
+      fee: event.updatedTransfer.transferState.fee,
     },
     "Withdrawal info",
   );
@@ -704,21 +709,21 @@ async function handleWithdrawalTransferResolution(
     bobIdentifier,
     assetId,
     amount: withdrawalAmount.toString(),
-    fee: transfer.transferState.fee,
-    recipient: transfer.balance.to[0],
+    fee: event.updatedTransfer.transferState.fee,
+    recipient: event.updatedTransfer.balance.to[0],
     channelBalance: balances[assetIdx],
     channelAddress,
-    transfer,
-    callTo: transfer.transferState.callTo,
-    callData: transfer.transferState.callData,
+    transfer: event.updatedTransfer,
+    callTo: event.updatedTransfer.transferState.callTo,
+    callData: event.updatedTransfer.transferState.callData,
   };
   evts[EngineEvents.WITHDRAWAL_RESOLVED].post(payload);
 
   // If it is not from counterparty, do not respond
   if (fromIdentifier === signer.publicIdentifier) {
-    logger.info(
+    logger.debug(
       { method, methodId, withdrawalAmount: withdrawalAmount.toString(), assetId },
-      "Our own withdrawal, no need to do anything",
+      "Our own resolution, no need to do anything",
     );
     return;
   }
@@ -730,18 +735,18 @@ async function handleWithdrawalTransferResolution(
     channelAddress,
     alice,
     bob,
-    transfer.balance.to[0],
+    event.updatedTransfer.balance.to[0],
     assetId,
     withdrawalAmount.toString(),
-    transfer.transferState.nonce,
+    event.updatedTransfer.transferState.nonce,
+    event.updatedTransfer.transferState.callTo,
+    event.updatedTransfer.transferState.callData,
+    meta?.transactionHash ?? undefined,
   );
   await commitment.addSignatures(
-    transfer.transferState.initiatorSignature,
-    transfer.transferResolver!.responderSignature,
+    event.updatedTransfer.transferState.initiatorSignature,
+    event.updatedTransfer.transferResolver!.responderSignature,
   );
-
-  // Store the double signed commitment
-  await store.saveWithdrawalCommitment(transferId, commitment.toJson());
 
   // Try to submit the transaction to chain IFF you are alice
   // Otherwise, alice should have submitted the tx (hash is in meta)
@@ -754,8 +759,10 @@ async function handleWithdrawalTransferResolution(
       channelAddress,
       transferId,
       transactionHash: meta?.transactionHash,
-      meta: transfer.meta,
+      meta: event.updatedTransfer.meta,
     });
+    // Store the double signed commitment
+    await store.saveWithdrawalCommitment(transferId, commitment.toJson());
     logger.info({ method, methodId, withdrawalAmount: withdrawalAmount.toString(), assetId }, "Completed");
     return;
   }
@@ -767,14 +774,18 @@ async function handleWithdrawalTransferResolution(
   );
 
   if (withdrawalResponse.isError) {
+    // Store the double signed commitment
+    await store.saveWithdrawalCommitment(transferId, commitment.toJson());
     logger.warn(
       { method, error: withdrawalResponse.getError()!.message, channelAddress, transferId },
       "Failed to submit withdraw",
     );
     return;
   }
+  const tx = withdrawalResponse.getValue();
+  commitment.addTransaction(tx.hash);
+  await store.saveWithdrawalCommitment(transferId, commitment.toJson());
 
-  const tx = withdrawalResponse.getValue()!;
   // alice submitted her own withdrawal, post to evt
   evts[WITHDRAWAL_RECONCILED_EVENT].post({
     aliceIdentifier,
@@ -893,14 +904,11 @@ export const resolveWithdrawal = async (
   const responderSignature = await signer.signMessage(commitment.hashToSign());
   await commitment.addSignatures(initiatorSignature, responderSignature);
 
-  // Store the double signed commitment
-  await store.saveWithdrawalCommitment(transfer.transferId, commitment.toJson());
-
   // Assume that only alice will try to submit the withdrawal to chain.
   // Alice may or may not charge a fee for this service, and both parties
   // are welcome to submit the commitment if the other party does not.
 
-  // NOTE: if bob is the withdrawal creator and alice has charged a fee
+  // TODO: if bob is the withdrawal creator and alice has charged a fee
   // for submitting the withdrawal, bob will refuse to sign the resolve
   // update until the transaction is properly submitted onchain (enforced
   // via injected validation)
@@ -931,14 +939,18 @@ export const resolveWithdrawal = async (
       logger.warn({ error: withdrawalResponse.getError()!.message, method }, "Failed to submit tx");
     }
   }
+  commitment.addTransaction(transactionHash);
+  // Store the double signed commitment
+  await store.saveWithdrawalCommitment(transfer.transferId, commitment.toJson());
 
   // Resolve withdrawal from counterparty
   // See note above re: fees + injected validation
+  const meta = { transactionHash, ...(transfer.meta ?? {}) };
   const resolveRes = await vector.resolve({
     transferResolver: { responderSignature },
     transferId: transfer.transferId,
     channelAddress,
-    meta: { transactionHash, ...(transfer.meta ?? {}) },
+    meta,
   });
 
   // Handle the error

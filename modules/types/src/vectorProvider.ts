@@ -1,4 +1,4 @@
-import { FullTransferState, FullChannelState } from "./channel";
+import { FullTransferState, FullChannelState, ChainAddresses } from "./channel";
 import { ChainProviders } from "./network";
 import { EngineParams, NodeResponses } from "./schemas";
 import { RegisteredTransfer } from "./transferDefinitions";
@@ -63,7 +63,12 @@ export type ChannelRpcMethodsPayloadMap = {
   [ChannelRpcMethods.chan_withdraw]: EngineParams.Withdraw;
   [ChannelRpcMethods.chan_subscribe]: { event: string; once: boolean };
   [ChannelRpcMethods.chan_unsubscribeAll]: {};
-  [ChannelRpcMethods.connext_authenticate]: { signature?: string; chainProviders: ChainProviders };
+  [ChannelRpcMethods.connext_authenticate]: {
+    signature?: string;
+    chainProviders: ChainProviders;
+    chainAddresses?: ChainAddresses;
+    messagingUrl?: string;
+  };
   [ChannelRpcMethods.chan_dispute]: EngineParams.DisputeChannel;
   [ChannelRpcMethods.chan_defund]: EngineParams.DefundChannel;
   [ChannelRpcMethods.chan_disputeTransfer]: EngineParams.DisputeTransfer;

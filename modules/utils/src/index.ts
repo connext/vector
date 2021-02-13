@@ -1,5 +1,6 @@
 export * from "./bigNumbers";
 export * from "./chainId";
+export * from "./chainInfo";
 export * from "./channel";
 export * from "./channelSigner";
 export * from "./comparisons";
