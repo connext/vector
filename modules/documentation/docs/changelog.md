@@ -2,6 +2,8 @@
 
 ## Next Release
 
+## 0.1.15-beta.13
+
 - \[ops\] Add persistent storage for Grafana
 - \[contracts\] Add `transactionHash` to withdrawal commitment
 - \[store\] Add `transferDefinition` to filter options on `getTransfers`
