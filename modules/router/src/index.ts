@@ -29,8 +29,10 @@ import { IRouter, Router } from "./router";
 import { PrismaStore } from "./services/store";
 import { NatsRouterMessagingService } from "./services/messaging";
 
-const routerPort = 8000;
-const routerBase = `http://router:${routerPort}`;
+const routerListenPort    = process.env.VECTOR_ROUTER_PORT    || 8000;
+const routerListenAddress = process.env.VECTOR_ROUTER_ADDRESS || "router";
+const routerHost          = process.env.VECTOR_ROUTER_HOST    || `${routerListenAddress}:${routerListenPort}`
+const routerBase = `http://${routerHost}`;
 const isAlivePath = "/is-alive";
 const setupPath = "/setup";
 const conditionalTransferCreatedPath = "/conditional-transfer-created";
@@ -225,7 +227,7 @@ server.post(transactionFailedPath, async (request, response) => {
   return response.status(200).send({ message: "success" });
 });
 
-server.listen(routerPort, "0.0.0.0", (err, address) => {
+server.listen(routerListenPort, routerListenAddress, (err, address) => {
   if (err) {
     console.error(err);
     process.exit(1);

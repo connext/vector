@@ -1084,7 +1084,9 @@ server.post<{ Params: { chainId: string }; Body: JsonRpcRequest }>(
   },
 );
 
-server.listen(8000, "0.0.0.0", (err, address) => {
+const listenPort    = process.env.VECTOR_NODE_PORT    || 8000;
+const listenAddress = process.env.VECTOR_NODE_ADDRESS || "0.0.0.0";
+server.listen(listenPort, listenAddress, (err, address) => {
   if (err) {
     logger.error(err);
     process.exit(1);
