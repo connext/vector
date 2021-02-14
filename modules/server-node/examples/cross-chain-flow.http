@@ -1,0 +1,122 @@
+##############
+### GET CONFIG
+### Get signer addresses of all nodes
+### Fund roger signer address with 80001 base asset (Matic)
+GET {{nodeUrl}}/config
+
+##############
+### GET CHANNEL
+### Helpful to see channel statuses throughout
+GET {{nodeUrl}}/{{nodePublicIdentifier}}/channels/{{channel}}
+
+##############
+### CREATE NODE CAROL
+POST {{carolUrl}}/node
+Content-Type: application/json
+
+{
+  "index": 0
+}
+
+##############
+### CREATE NODE DAVE
+POST {{daveUrl}}/node
+Content-Type: application/json
+
+{
+  "index": 0
+}
+
+##############
+### Setup Channel CAROL
+POST {{carolUrl}}/setup
+Content-Type: application/json
+
+{
+  "counterpartyIdentifier": "{{rogerPublicIdentifier}}",
+  "publicIdentifier": "{{carolPublicIdentifier}}",
+  "chainId": 5,
+  "timeout": "100000"
+}
+
+##############
+### Setup Channel DAVE
+POST {{daveUrl}}/setup
+Content-Type: application/json
+
+{
+  "counterpartyIdentifier": "{{rogerPublicIdentifier}}",
+  "publicIdentifier": "{{davePublicIdentifier}}",
+  "chainId": 5,
+  "timeout": "100000"
+}
+
+##############
+### Reconcile Deposit - AFTER ONCHAIN TX TO CAROL CHANNEL ADDRESS
+POST {{carolUrl}}/deposit
+Content-Type: application/json
+
+{
+  "channelAddress": "{{carolRogerChannel}}",
+  "assetId": "0x0000000000000000000000000000000000000000",
+  "publicIdentifier": "{{carolPublicIdentifier}}"
+}
+
+##############
+### Create Cross-Chain Transfer - Example preImage
+POST {{carolUrl}}/transfers/create
+Content-Type: application/json
+
+{
+  "type": "HashlockTransfer",
+  "publicIdentifier": "{{carolPublicIdentifier}}",
+  "channelAddress": "{{carolRogerChannel}}",
+  "amount": "100",
+  "assetId": "0xbd69fC70FA1c3AED524Bb4E82Adc5fcCFFcD79Fa",
+  "details": {
+    "lockHash": "0x7783846bebe64b2dbf16ca981d27a73ada4bc6976e5be3ef92f0057af8368ce1",
+    "expiry": "0"
+  },
+  "recipient": "{{davePublicIdentifier}}",
+  "recipientChainId": 80001,
+  "recipientChainId": 5,
+  "meta": {
+    "requireOnline": true
+  },
+  "timeout": "48000"
+}
+
+##############
+### Get Active Transfers on DAVE - Note Transfer ID
+GET {{daveUrl}}/{{davePublicIdentifier}}/channels/{{daveRogerChannel}}/active-transfers
+
+##############
+### Resolve Cross-Chain Transfer Using TransferId
+POST {{daveUrl}}/transfers/resolve
+Content-Type: application/json
+
+{
+  "publicIdentifier": "{{davePublicIdentifier}}",
+  "channelAddress": "{{daveRogerChannel}}",
+  "transferId": "{{transferId}}",
+  "transferResolver": {
+    "preImage": "0x95e02c8389826c723217d30761cfac3e7bd76e6e4c2aa523213a6ddc67029e95"
+  }
+}
+
+##############
+### DAVE withdraw
+POST {{daveUrl}}/withdraw
+Content-Type: application/json
+
+{
+  "publicIdentifier": "{{davePublicIdentifier}}",
+  "channelAddress": "{{daveRogerChannel}}",
+  "amount": "100",
+  "assetId": "0xfe4F5145f6e09952a5ba9e956ED0C25e3Fa4c7F1",
+  "recipient": "{{onChainAddress}}",
+  "fee": "0",
+  "meta": {
+    "hello": "world"
+  }
+}
