@@ -12,8 +12,11 @@ modules/browser-node-test-ui/config-node.json
 **/dist/**
 **/node_modules/**
 **/tsconfig.tsbuildinfo
-*.docker-compose.yml
-docker-compose.yml
+.messaging.docker-compose.yml
+.router.docker-compose.yml
+.trio.docker-compose.yml
+.duet.docker-compose.yml
+.chains.docker-compose.yml
 modules/*/package-lock.json
 config-prod.json
 

@@ -1,0 +1,308 @@
+version: '3.4'
+
+networks:
+  vector:
+    external: true
+
+services:
+
+  carol:
+    networks:
+      - 'vector'
+    logging:
+      driver: 'json-file'
+      options:
+          max-size: '100m'
+    image: 'vector_node:latest'
+    tmpfs: /tmp
+    environment:
+      VECTOR_PROD: 'true'
+      VECTOR_CONFIG: '{
+  "adminToken": "cxt1234",
+  "chainProviders": {
+    "5": "https://goerli.infura.io/v3/",
+    "80001": "https://rpc-mumbai.matic.today"
+  },
+  "logLevel": "info",
+  "messagingUrl": "https://messaging.connext.network",
+  "production": true,
+  "allowedSwaps": [
+    {
+      "fromChainId": 5,
+      "toChainId": 80001,
+      "fromAssetId": "0x0000000000000000000000000000000000000000",
+      "toAssetId": "0x0000000000000000000000000000000000000000",
+      "priceType": "hardcoded",
+      "hardcodedRate": "1"
+    },
+    {
+      "fromChainId": 5,
+      "toChainId": 8001,
+      "fromAssetId": "0xbd69fC70FA1c3AED524Bb4E82Adc5fcCFFcD79Fa",
+      "toAssetId": "0xfe4F5145f6e09952a5ba9e956ED0C25e3Fa4c7F1",
+      "priceType": "hardcoded",
+      "hardcodedRate": "1"
+    }
+  ],
+  "rebalanceProfiles": [
+    {
+      "chainId": 5,
+      "assetId": "0x0000000000000000000000000000000000000000",
+      "reclaimThreshold": "1",
+      "target": "0",
+      "collateralizeThreshold": "0"
+    },
+    {
+      "chainId": 8001,
+      "assetId": "0x0000000000000000000000000000000000000000",
+      "reclaimThreshold": "1",
+      "target": "0",
+      "collateralizeThreshold": "0"
+    },
+    {
+      "chainId": 5,
+      "assetId": "0xbd69fC70FA1c3AED524Bb4E82Adc5fcCFFcD79Fa",
+      "reclaimThreshold": "1",
+      "target": "0",
+      "collateralizeThreshold": "0"
+    },
+    {
+      "chainId": 80001,
+      "assetId": "0xfe4F5145f6e09952a5ba9e956ED0C25e3Fa4c7F1",
+      "reclaimThreshold": "1",
+      "target": "0",
+      "collateralizeThreshold": "0"
+    }
+  ],
+  "nodeUrl": "http://roger:8000"
+}'
+      VECTOR_MNEMONIC: 'owner warrior discover outer physical intact secret goose all photo napkin fall'
+    ports:
+      - '8005:8000'
+      - '5555:5555'
+
+  dave:
+    networks:
+      - 'vector'
+    logging:
+      driver: 'json-file'
+      options:
+          max-size: '100m'
+    image: 'vector_node:latest'
+    tmpfs: /tmp
+    environment:
+      VECTOR_PROD: 'true'
+      VECTOR_CONFIG: '{
+  "adminToken": "cxt1234",
+  "chainProviders": {
+    "5": "https://goerli.infura.io/v3/",
+    "80001": "https://rpc-mumbai.matic.today"
+  },
+  "logLevel": "info",
+  "messagingUrl": "https://messaging.connext.network",
+  "production": true,
+  "allowedSwaps": [
+    {
+      "fromChainId": 5,
+      "toChainId": 80001,
+      "fromAssetId": "0x0000000000000000000000000000000000000000",
+      "toAssetId": "0x0000000000000000000000000000000000000000",
+      "priceType": "hardcoded",
+      "hardcodedRate": "1"
+    },
+    {
+      "fromChainId": 5,
+      "toChainId": 8001,
+      "fromAssetId": "0xbd69fC70FA1c3AED524Bb4E82Adc5fcCFFcD79Fa",
+      "toAssetId": "0xfe4F5145f6e09952a5ba9e956ED0C25e3Fa4c7F1",
+      "priceType": "hardcoded",
+      "hardcodedRate": "1"
+    }
+  ],
+  "rebalanceProfiles": [
+    {
+      "chainId": 5,
+      "assetId": "0x0000000000000000000000000000000000000000",
+      "reclaimThreshold": "1",
+      "target": "0",
+      "collateralizeThreshold": "0"
+    },
+    {
+      "chainId": 8001,
+      "assetId": "0x0000000000000000000000000000000000000000",
+      "reclaimThreshold": "1",
+      "target": "0",
+      "collateralizeThreshold": "0"
+    },
+    {
+      "chainId": 5,
+      "assetId": "0xbd69fC70FA1c3AED524Bb4E82Adc5fcCFFcD79Fa",
+      "reclaimThreshold": "1",
+      "target": "0",
+      "collateralizeThreshold": "0"
+    },
+    {
+      "chainId": 80001,
+      "assetId": "0xfe4F5145f6e09952a5ba9e956ED0C25e3Fa4c7F1",
+      "reclaimThreshold": "1",
+      "target": "0",
+      "collateralizeThreshold": "0"
+    }
+  ],
+  "nodeUrl": "http://roger:8000"
+}'
+      VECTOR_MNEMONIC: 'woman benefit lawn ignore glove marriage crumble roast tool area cool payment'
+    ports:
+      - '8006:8000'
+      - '5556:5555'
+
+  roger:
+    networks:
+      - 'vector'
+    logging:
+      driver: 'json-file'
+      options:
+          max-size: '100m'
+    image: 'vector_node:latest'
+    tmpfs: /tmp
+    environment:
+      VECTOR_PROD: 'true'
+      VECTOR_CONFIG: '{
+  "adminToken": "cxt1234",
+  "chainProviders": {
+    "5": "https://goerli.infura.io/v3/",
+    "80001": "https://rpc-mumbai.matic.today"
+  },
+  "logLevel": "info",
+  "messagingUrl": "https://messaging.connext.network",
+  "production": true,
+  "allowedSwaps": [
+    {
+      "fromChainId": 5,
+      "toChainId": 80001,
+      "fromAssetId": "0x0000000000000000000000000000000000000000",
+      "toAssetId": "0x0000000000000000000000000000000000000000",
+      "priceType": "hardcoded",
+      "hardcodedRate": "1"
+    },
+    {
+      "fromChainId": 5,
+      "toChainId": 8001,
+      "fromAssetId": "0xbd69fC70FA1c3AED524Bb4E82Adc5fcCFFcD79Fa",
+      "toAssetId": "0xfe4F5145f6e09952a5ba9e956ED0C25e3Fa4c7F1",
+      "priceType": "hardcoded",
+      "hardcodedRate": "1"
+    }
+  ],
+  "rebalanceProfiles": [
+    {
+      "chainId": 5,
+      "assetId": "0x0000000000000000000000000000000000000000",
+      "reclaimThreshold": "1",
+      "target": "0",
+      "collateralizeThreshold": "0"
+    },
+    {
+      "chainId": 8001,
+      "assetId": "0x0000000000000000000000000000000000000000",
+      "reclaimThreshold": "1",
+      "target": "0",
+      "collateralizeThreshold": "0"
+    },
+    {
+      "chainId": 5,
+      "assetId": "0xbd69fC70FA1c3AED524Bb4E82Adc5fcCFFcD79Fa",
+      "reclaimThreshold": "1",
+      "target": "0",
+      "collateralizeThreshold": "0"
+    },
+    {
+      "chainId": 80001,
+      "assetId": "0xfe4F5145f6e09952a5ba9e956ED0C25e3Fa4c7F1",
+      "reclaimThreshold": "1",
+      "target": "0",
+      "collateralizeThreshold": "0"
+    }
+  ],
+  "nodeUrl": "http://roger:8000"
+}'
+      VECTOR_MNEMONIC: 'spice notable wealth rail voyage depth barely thumb skill rug panel blush'
+    ports:
+      - '8007:8000'
+      - '5557:5555'
+
+  router:
+    networks:
+      - 'vector'
+    logging:
+      driver: 'json-file'
+      options:
+          max-size: '100m'
+    image: 'vector_router:latest'
+    ports:
+      - '8009:8000'
+    environment:
+      VECTOR_PROD: 'true'
+      VECTOR_CONFIG: '{
+  "adminToken": "cxt1234",
+  "chainProviders": {
+    "5": "https://goerli.infura.io/v3/",
+    "80001": "https://rpc-mumbai.matic.today"
+  },
+  "logLevel": "info",
+  "messagingUrl": "https://messaging.connext.network",
+  "production": true,
+  "allowedSwaps": [
+    {
+      "fromChainId": 5,
+      "toChainId": 80001,
+      "fromAssetId": "0x0000000000000000000000000000000000000000",
+      "toAssetId": "0x0000000000000000000000000000000000000000",
+      "priceType": "hardcoded",
+      "hardcodedRate": "1"
+    },
+    {
+      "fromChainId": 5,
+      "toChainId": 8001,
+      "fromAssetId": "0xbd69fC70FA1c3AED524Bb4E82Adc5fcCFFcD79Fa",
+      "toAssetId": "0xfe4F5145f6e09952a5ba9e956ED0C25e3Fa4c7F1",
+      "priceType": "hardcoded",
+      "hardcodedRate": "1"
+    }
+  ],
+  "rebalanceProfiles": [
+    {
+      "chainId": 5,
+      "assetId": "0x0000000000000000000000000000000000000000",
+      "reclaimThreshold": "1",
+      "target": "0",
+      "collateralizeThreshold": "0"
+    },
+    {
+      "chainId": 8001,
+      "assetId": "0x0000000000000000000000000000000000000000",
+      "reclaimThreshold": "1",
+      "target": "0",
+      "collateralizeThreshold": "0"
+    },
+    {
+      "chainId": 5,
+      "assetId": "0xbd69fC70FA1c3AED524Bb4E82Adc5fcCFFcD79Fa",
+      "reclaimThreshold": "1",
+      "target": "0",
+      "collateralizeThreshold": "0"
+    },
+    {
+      "chainId": 80001,
+      "assetId": "0xfe4F5145f6e09952a5ba9e956ED0C25e3Fa4c7F1",
+      "reclaimThreshold": "1",
+      "target": "0",
+      "collateralizeThreshold": "0"
+    }
+  ],
+  "nodeUrl": "http://roger:8000"
+}'
+      VECTOR_NODE_URL: 'http://roger:8000'
+      VECTOR_PORT: '8000'
+      VECTOR_MNEMONIC: 'spice notable wealth rail voyage depth barely thumb skill rug panel blush'
+
