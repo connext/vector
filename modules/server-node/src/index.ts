@@ -26,6 +26,7 @@ import { PrismaStore } from "./services/store";
 import { config } from "./config";
 import { createNode, deleteNodes, getChainService, getNode, getNodes } from "./helpers/nodes";
 import { ServerNodeError } from "./helpers/errors";
+import { submitUnsubmittedWithdrawals } from "./helpers/withdrawal";
 
 const configuredIdentifier = getPublicIdentifierFromPublicKey(Wallet.fromMnemonic(config.mnemonic).publicKey);
 export const logger = pino({ name: configuredIdentifier, level: config.logLevel ?? "info" });
@@ -969,6 +970,40 @@ server.post<{ Body: NodeParams.Admin }>(
           storeError: e.message,
         }).toJson(),
       );
+    }
+  },
+);
+
+server.post<{ Body: NodeParams.SubmitWithdrawals }>(
+  "/withdraw/submit",
+  {
+    schema: {
+      body: NodeParams.SubmitWithdrawalsSchema,
+      response: NodeResponses.SubmitWithdrawalsSchema,
+    },
+  },
+  async (request, reply) => {
+    if (request.body.adminToken !== config.adminToken) {
+      return reply
+        .status(401)
+        .send(new ServerNodeError(ServerNodeError.reasons.Unauthorized, "", request.body).toJson());
+    }
+    try {
+      const nodes = getNodes();
+      const channels = await store.getChannelStates();
+      const results: { [identifer: string]: { transactionHash: string; transferId: string }[] } = {};
+      for (const node of nodes) {
+        // gather all unsubmitted withdrawal commitments for all channels
+        const nodeChannels = channels.filter(
+          (chan) =>
+            chan.bobIdentifier === node.node.publicIdentifier || chan.aliceIdentifier === node.node.publicIdentifier,
+        );
+        const nodeResults = await submitUnsubmittedWithdrawals(nodeChannels, node.chainService, store);
+        results[node.node.publicIdentifier] = nodeResults;
+      }
+      return reply.status(200).send(results);
+    } catch (e) {
+      return reply.status(500).send(jsonifyError(e));
     }
   },
 );

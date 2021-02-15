@@ -35,6 +35,7 @@ import {
   createTestChannelState,
   mkHash,
   MemoryMessagingService,
+  PartialFullChannelState,
 } from "@connext/vector-utils";
 import { Vector } from "@connext/vector-protocol";
 import { Evt } from "evt";
@@ -376,6 +377,7 @@ describe(testName, () => {
       signer: IChannelSigner = bob,
       withdrawer: IChannelSigner = alice,
       withdrawalRecipient: Address = alice.address,
+      channelOverrides: PartialFullChannelState<typeof UpdateType.resolve> = {},
     ) => {
       // Create the withdrawal data
       // Responder is always the withdrawer's counterparty
@@ -402,6 +404,7 @@ describe(testName, () => {
         networkContext: {
           chainId,
         },
+        ...channelOverrides,
       });
 
       // Set the store to return the resolved transfer
@@ -462,7 +465,9 @@ describe(testName, () => {
       }
 
       // Verify the transaction submission was correctly executed
-      expect(chainService.sendWithdrawTx.callCount).to.be.eq(isWithdrawer && signer.address === alice.address ? 1 : 0);
+      expect(chainService.sendWithdrawTx.callCount).to.be.eq(
+        isWithdrawer && signer.address === alice.address && updatedChannelState.networkContext.chainId !== 1 ? 1 : 0,
+      );
       if (chainService.sendWithdrawTx.callCount) {
         const [channelState, minTx] = chainService.sendWithdrawTx.args[0];
         expect(channelState).to.be.deep.eq(updatedChannelState);
@@ -485,6 +490,10 @@ describe(testName, () => {
 
     it("should properly respond to resolve event with alice withdrawing eth (bob, alice stores + submits)", async () => {
       await runWithdrawalResolveTest();
+    });
+
+    it("should not submit withdrawals to chain IFF alice is withdrawing on mainnet", async () => {
+      await runWithdrawalResolveTest(undefined, undefined, undefined, { networkContext: { chainId: 1 } });
     });
 
     it("resolveExistingWithdrawals should work", async () => {
