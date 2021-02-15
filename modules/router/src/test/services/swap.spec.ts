@@ -6,7 +6,7 @@ import { SwapError } from "../../errors";
 
 describe("swap.ts", () => {
   describe("getSwappedAmount", () => {
-    it("should fail if it cannot find a swap or an inverted swap", () => {
+    it("should fail if it cannot find a swap", () => {
       const fromAmount = "25";
       const fromAssetId = config.allowedSwaps[0].fromAssetId;
       const fromChainId = config.allowedSwaps[0].fromChainId;
@@ -37,20 +37,6 @@ describe("swap.ts", () => {
       const res = getSwappedAmount(fromAmount, fromAssetId, fromChainId, toAssetId, toChainId);
       expect(res.getError()).to.be.undefined;
       expect(res.getValue()).to.be.deep.eq(calculateExchangeAmount(fromAmount, config.allowedSwaps[0].hardcodedRate));
-    });
-
-    it("should work if inverted + hardcoded rate", () => {
-      const fromAmount = "25";
-      const fromAssetId = config.allowedSwaps[0].toAssetId;
-      const fromChainId = config.allowedSwaps[0].toChainId;
-      const toAssetId = config.allowedSwaps[0].fromAssetId;
-      const toChainId = config.allowedSwaps[0].fromChainId;
-
-      const res = getSwappedAmount(fromAmount, fromAssetId, fromChainId, toAssetId, toChainId);
-      expect(res.getError()).to.be.undefined;
-      expect(res.getValue()).to.be.deep.eq(
-        calculateExchangeAmount(fromAmount, inverse(config.allowedSwaps[0].hardcodedRate)),
-      );
     });
   });
 });
