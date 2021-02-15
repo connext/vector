@@ -25,13 +25,25 @@ export const startAutoRebalanceTask = (
     throw new Error(`Interval ${interval} must be at least ${MIN_INTERVAL}`);
   }
   setInterval(() => {
-    config.allowedSwaps.map(async (swap) => {
-      const rebalanced = await rebalanceIfNeeded(swap, logger, wallet, chainService, hydratedProviders);
-      if (rebalanced.isError) {
-        logger.error({ swap, error: jsonifyError(rebalanced.getError()!) }, "Error auto rebalancing");
-      }
-    });
+    autoRebalanceTask(logger, wallet, chainService, hydratedProviders);
   }, interval);
+};
+
+export const autoRebalanceTask = async (
+  logger: BaseLogger,
+  wallet: Wallet,
+  chainService: VectorChainReader,
+  hydratedProviders: HydratedProviders,
+): Promise<void> => {
+  const method = "rebalanceIfNeeded";
+  const methodId = getRandomBytes32();
+  logger.info({ method, methodId, allowedSwaps: config.allowedSwaps }, "Start task");
+  config.allowedSwaps.map(async (swap) => {
+    const rebalanced = await rebalanceIfNeeded(swap, logger, wallet, chainService, hydratedProviders);
+    if (rebalanced.isError) {
+      logger.error({ swap, error: jsonifyError(rebalanced.getError()!) }, "Error auto rebalancing");
+    }
+  });
 };
 
 export const rebalanceIfNeeded = async (
@@ -89,15 +101,18 @@ export const rebalanceIfNeeded = async (
   const totalBalance = fromAssetBalanceNumber + toAssetBalanceNumber;
   const threshold = (totalBalance / 2) * (1 + rebalanceThreshold / 100);
 
-  logger.info({
-    method,
-    intervalId: methodId,
-    fromAssetBalanceNumber,
-    toAssetBalanceNumber,
-    rebalanceThreshold,
-    totalBalance,
-    threshold,
-  });
+  logger.info(
+    {
+      method,
+      intervalId: methodId,
+      fromAssetBalanceNumber,
+      toAssetBalanceNumber,
+      rebalanceThreshold,
+      totalBalance,
+      threshold,
+    },
+    "Calculated numbers",
+  );
 
   if (fromAssetBalanceNumber > threshold) {
     const amountToSendNumber = fromAssetBalanceNumber - threshold;
@@ -124,7 +139,7 @@ export const rebalanceIfNeeded = async (
           },
           "Approval required, sending request",
         );
-        const approveRes = await axios.post(swap.rebalancerUrl, {
+        const approveRes = await axios.post(`${swap.rebalancerUrl}/approval`, {
           amount: amountToSend,
           assetId: swap.fromAssetId,
           signer: wallet.address,
@@ -200,7 +215,7 @@ export const rebalanceIfNeeded = async (
         },
         "Sending rebalance request",
       );
-      const rebalanceRes = await axios.post(swap.rebalancerUrl + "/rebalance");
+      const rebalanceRes = await axios.post(`${swap.rebalancerUrl}/execute`);
       logger.info(
         {
           method,
