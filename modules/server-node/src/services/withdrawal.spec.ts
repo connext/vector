@@ -183,7 +183,7 @@ describe(testName, () => {
     });
   });
 
-  describe.only("submitMainnetWithdrawalsIfNeeded", () => {
+  describe("submitMainnetWithdrawalsIfNeeded", () => {
     it("should fail if it cannot get the channels from store", async () => {
       store.getChannelStates.rejects(new Error("fail"));
 
