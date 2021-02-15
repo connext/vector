@@ -2,9 +2,14 @@
 
 ## Next Release
 
+- \[server-node\] Hold withdrawals as alice on mainnet
+- \[server-node\] Add admin endpoint to resubmit all withdrawals
+- \[server-node\] Submit withdrawals when gas price is low or commitments are > 1 week old
+
 ## 0.1.15-beta.15
 
 - \[router\] Fix bug in auto-rebalance
+
 ## 0.1.15-beta.14
 
 - \[router\] Add auto-rebalance service for Matic deposit
