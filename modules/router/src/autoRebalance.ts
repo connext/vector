@@ -52,7 +52,6 @@ export const rebalanceIfNeeded = async (
   const rebalanceThreshold = swap.rebalanceThresholdPct ? swap.rebalanceThresholdPct : DEFAULT_REBALANCE_THRESHOLD;
 
   const fromAssetBalance = await chainService.getOnchainBalance(swap.fromAssetId, wallet.address, swap.fromChainId);
-  console.log("fromAssetBalance: ", fromAssetBalance);
   if (fromAssetBalance.isError) {
     return Result.fail(
       new AutoRebalanceServiceError(
@@ -70,7 +69,6 @@ export const rebalanceIfNeeded = async (
   );
 
   const toAssetBalance = await chainService.getOnchainBalance(swap.toAssetId, wallet.address, swap.toChainId);
-  console.log("toAssetBalance: ", toAssetBalance);
   if (toAssetBalance.isError) {
     return Result.fail(
       new AutoRebalanceServiceError(
@@ -89,7 +87,6 @@ export const rebalanceIfNeeded = async (
 
   // should be within 1/2 of total balance + threshold
   const totalBalance = fromAssetBalanceNumber + toAssetBalanceNumber;
-  console.log("totalBalance: ", totalBalance);
   const threshold = (totalBalance / 2) * (1 + rebalanceThreshold / 100);
 
   logger.info({

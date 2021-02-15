@@ -10,14 +10,9 @@ import axios from "axios";
 
 import { rebalanceIfNeeded } from "../autoRebalance";
 import { config } from "../config";
-import { hydrated } from "../metrics";
-
-console.log("config: ", config);
 
 const testName = "Auto Rebalance";
-console.log("testName: ", testName);
 const { log } = getTestLoggers(testName, config.logLevel as any);
-console.log();
 describe(testName, () => {
   let chainReader: Sinon.SinonStubbedInstance<VectorChainReader>;
   let wallet: Sinon.SinonStubbedInstance<Wallet>;

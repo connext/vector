@@ -294,11 +294,8 @@ export class NatsBasicMessagingService implements IBasicMessaging {
     // FIXME: apparently we don't know how to write for loops
     // let result: Result<R>;
     const result = await this.sendMessage(data, subjectSuffix, to, from, timeout, method);
-    // console.log(">>>>>> sendMessageWithRetries", numRetries);
     // for (let attempt = 0; attempt++; attempt < numRetries + 1) {
-    //   console.log(">>>>>> sendMessageWithRetries sending attempt", attempt, numRetries);
     //   result = await this.sendMessage(data, subjectSuffix, to, from, timeout, method);
-    //   console.log(">>>>>> sendMessageWithRetries sent", result);
     //   if (result.isError && result.getError()!.message === MessagingError.reasons.Timeout) {
     //     this.log.warn({ attempt, numRetries }, "Message timed out, retrying");
     //     // wait a bit
