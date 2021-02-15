@@ -14,10 +14,10 @@
     "migration:generate:sqlite": "prisma migrate dev --create-only --preview-feature --schema prisma-sqlite/schema.prisma"
   },
   "dependencies": {
-    "@connext/vector-contracts": "0.1.15-beta.15",
-    "@connext/vector-engine": "0.1.15-beta.15",
-    "@connext/vector-types": "0.1.15-beta.15",
-    "@connext/vector-utils": "0.1.15-beta.15",
+    "@connext/vector-contracts": "0.1.15-beta.16",
+    "@connext/vector-engine": "0.1.15-beta.16",
+    "@connext/vector-types": "0.1.15-beta.16",
+    "@connext/vector-utils": "0.1.15-beta.16",
     "@ethersproject/wallet": "5.0.9",
     "@prisma/client": "2.16.1",
     "@sinclair/typebox": "0.12.7",
