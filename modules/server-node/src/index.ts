@@ -26,7 +26,7 @@ import { PrismaStore } from "./services/store";
 import { config } from "./config";
 import { createNode, deleteNodes, getChainService, getNode, getNodes } from "./helpers/nodes";
 import { ServerNodeError } from "./helpers/errors";
-import { submitUnsubmittedWithdrawals, submitMainnetWithdrawalsIfNeeded } from "./helpers/withdrawal";
+import { submitUnsubmittedWithdrawals } from "./helpers/withdrawal";
 
 const configuredIdentifier = getPublicIdentifierFromPublicKey(Wallet.fromMnemonic(config.mnemonic).publicKey);
 export const logger = pino({ name: configuredIdentifier, level: config.logLevel ?? "info" });
@@ -56,17 +56,6 @@ server.addHook("onReady", async () => {
     logger.info({ node: nodeIndex }, "Rehydrating persisted node");
     await createNode(nodeIndex.index, store, storedMnemonic, config.skipCheckIn ?? false);
   }
-
-  // Add setInterval handler to submit withdrawals if gas is low enough
-  // or if they are more than a week old (check every 30min)
-  setInterval(
-    () =>
-      submitMainnetWithdrawalsIfNeeded(
-        persistedNodes.map((node) => node.publicIdentifier),
-        store,
-      ),
-    30 * 60 * 1000,
-  );
 });
 
 server.get("/ping", async () => {
