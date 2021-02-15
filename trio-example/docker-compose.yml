@@ -2,7 +2,7 @@ version: '3.4'
 
 networks:
   vector:
-    external: true
+    external: false
 
 services:
 
@@ -13,7 +13,7 @@ services:
       driver: 'json-file'
       options:
           max-size: '100m'
-    image: 'vector_node:latest'
+    image: 'connextproject/vector_node:latest'
     tmpfs: /tmp
     environment:
       VECTOR_PROD: 'true'
@@ -88,7 +88,7 @@ services:
       driver: 'json-file'
       options:
           max-size: '100m'
-    image: 'vector_node:latest'
+    image: 'connextproject/vector_node:latest'
     tmpfs: /tmp
     environment:
       VECTOR_PROD: 'true'
@@ -163,7 +163,7 @@ services:
       driver: 'json-file'
       options:
           max-size: '100m'
-    image: 'vector_node:latest'
+    image: 'connextproject/vector_node:latest'
     tmpfs: /tmp
     environment:
       VECTOR_PROD: 'true'
@@ -238,7 +238,7 @@ services:
       driver: 'json-file'
       options:
           max-size: '100m'
-    image: 'vector_router:latest'
+    image: 'connextproject/vector_router:latest'
     ports:
       - '8009:8000'
     environment:
