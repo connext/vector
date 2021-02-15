@@ -492,6 +492,7 @@ describe("store", () => {
           balance: createUpdate.balance,
         },
       );
+      await store.saveWithdrawalCommitment(transferId, commitment);
     });
 
     it("getWithdrawalCommitment should work", async () => {
