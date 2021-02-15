@@ -40,6 +40,24 @@ Object.entries(hydrated).forEach(async ([chainId, provider]) => {
   });
 });
 
+export const getDecimals = async (chainId: string, assetId: string): Promise<number> => {
+  if (assetId === AddressZero) {
+    return 18;
+  }
+  const { decimals: _decimals, contract } = rebalancedTokens[chainId][assetId];
+  if (_decimals) {
+    return _decimals;
+  }
+  let decimals = 18;
+  try {
+    decimals = await contract.decimals();
+  } catch (e) {
+    // default to 18
+  }
+  rebalancedTokens[chainId][assetId].decimals = decimals;
+  return decimals;
+};
+
 export const parseBalanceToNumber = async (
   toFormat: BigNumberish,
   chainId: string,
@@ -48,16 +66,7 @@ export const parseBalanceToNumber = async (
   if (assetId === AddressZero) {
     return parseFloat(formatEther(toFormat));
   }
-  const { decimals: _decimals, contract } = rebalancedTokens[chainId][assetId];
-  let decimals = 18;
-  if (!_decimals) {
-    try {
-      decimals = await contract.decimals();
-    } catch (e) {
-      // default to 18
-    }
-    rebalancedTokens[chainId][assetId].decimals = decimals;
-  }
+  const decimals = await getDecimals(chainId, assetId);
   return parseFloat(formatUnits(toFormat, decimals));
 };
 
