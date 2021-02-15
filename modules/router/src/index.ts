@@ -33,6 +33,7 @@ const routerListenPort    = process.env.VECTOR_ROUTER_PORT    || 8000;
 const routerListenAddress = process.env.VECTOR_ROUTER_ADDRESS || "router";
 const routerHost          = process.env.VECTOR_ROUTER_HOST    || `${routerListenAddress}:${routerListenPort}`
 const routerBase = `http://${routerHost}`;
+const nodeUrl = process.env.VECTOR_NODE_URL || config.nodeUrl;
 const isAlivePath = "/is-alive";
 const setupPath = "/setup";
 const conditionalTransferCreatedPath = "/conditional-transfer-created";
@@ -122,7 +123,7 @@ server.addHook("onReady", async () => {
     messagingUrl: config.messagingUrl,
   });
   const nodeService = await RestServerNodeService.connect(
-    config.nodeUrl,
+    nodeUrl,
     logger.child({ module: "RouterNodeService" }),
     evts,
     0,
