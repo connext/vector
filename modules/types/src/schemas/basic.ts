@@ -53,7 +53,10 @@ export const AllowedSwapSchema = Type.Object({
   toAssetId: TAddress,
   priceType: Type.Union([Type.Literal("hardcoded")]),
   hardcodedRate: TDecimalString,
+  rebalancerUrl: Type.Optional(Type.String({ format: "uri" })),
+  rebalanceThresholdPct: Type.Optional(Type.Number({ minimum: 0, maximum: 100 })),
 });
+export type AllowedSwap = Static<typeof AllowedSwapSchema>;
 
 ////////////////////////////////////////
 //////// Transfer types
