@@ -16,6 +16,7 @@ import {
   jsonifyError,
   GetTransfersFilterOpts,
   GetTransfersFilterOptsSchema,
+  VectorErrorJson,
 } from "@connext/vector-types";
 import { constructRpcRequest, getPublicIdentifierFromPublicKey, hydrateProviders } from "@connext/vector-utils";
 import { WithdrawCommitment } from "@connext/vector-contracts";
@@ -26,7 +27,11 @@ import { PrismaStore } from "./services/store";
 import { config } from "./config";
 import { createNode, deleteNodes, getChainService, getNode, getNodes } from "./helpers/nodes";
 import { ServerNodeError } from "./helpers/errors";
-import { submitUnsubmittedWithdrawals } from "./helpers/withdrawal";
+import {
+  ResubmitWithdrawalResult,
+  startWithdrawalSubmissionTask,
+  submitUnsubmittedWithdrawals,
+} from "./services/withdrawal";
 
 const configuredIdentifier = getPublicIdentifierFromPublicKey(Wallet.fromMnemonic(config.mnemonic).publicKey);
 export const logger = pino({ name: configuredIdentifier, level: config.logLevel ?? "info" });
@@ -56,6 +61,10 @@ server.addHook("onReady", async () => {
     logger.info({ node: nodeIndex }, "Rehydrating persisted node");
     await createNode(nodeIndex.index, store, storedMnemonic, config.skipCheckIn ?? false);
   }
+
+  // submit all withdrawals older than a week or any mainnet withdrawals when
+  // gas price is low
+  startWithdrawalSubmissionTask(store);
 });
 
 server.get("/ping", async () => {
@@ -991,15 +1000,14 @@ server.post<{ Body: NodeParams.SubmitWithdrawals }>(
     try {
       const nodes = getNodes();
       const channels = await store.getChannelStates();
-      const results: { [identifer: string]: { transactionHash: string; transferId: string }[] } = {};
+      const results: { [identifer: string]: ResubmitWithdrawalResult[] | VectorErrorJson } = {};
       for (const node of nodes) {
         // gather all unsubmitted withdrawal commitments for all channels
-        const nodeChannels = channels.filter(
-          (chan) =>
-            chan.bobIdentifier === node.node.publicIdentifier || chan.aliceIdentifier === node.node.publicIdentifier,
-        );
-        const nodeResults = await submitUnsubmittedWithdrawals(nodeChannels, node.chainService, store);
-        results[node.node.publicIdentifier] = nodeResults;
+        const nodeChannels = channels.filter((chan) => chan.aliceIdentifier === node.node.publicIdentifier);
+        const nodeResults = await submitUnsubmittedWithdrawals(nodeChannels, store);
+        results[node.node.publicIdentifier] = nodeResults.isError
+          ? jsonifyError(nodeResults.getError()!)
+          : nodeResults.getValue();
       }
       return reply.status(200).send(results);
     } catch (e) {
