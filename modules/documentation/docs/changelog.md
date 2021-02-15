@@ -2,6 +2,9 @@
 
 ## Next Release
 
+## 0.1.15-beta.15
+
+- \[router\] Fix bug in auto-rebalance
 ## 0.1.15-beta.14
 
 - \[router\] Add auto-rebalance service for Matic deposit
