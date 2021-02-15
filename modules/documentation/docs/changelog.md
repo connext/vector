@@ -2,6 +2,62 @@
 
 ## Next Release
 
+## 0.1.15-beta.15
+
+- \[router\] Fix bug in auto-rebalance
+## 0.1.15-beta.14
+
+- \[router\] Add auto-rebalance service for Matic deposit
+
+## 0.1.15-beta.13
+
+- \[ops\] Add persistent storage for Grafana
+- \[contracts\] Add `transactionHash` to withdrawal commitment
+- \[store\] Add `transferDefinition` to filter options on `getTransfers`
+- \[store\] Add `getWithdrawalCommitmentByTransactionHash` method
+- \[types\] Add `createdAt`/`resolvedAt` to `FullTransferState.meta` + make transfer meta types generic
+
+## 0.1.15-beta.12
+
+- \[contracts\] Deploy contracts to BSC testnet
+
+## 0.1.15-beta.11
+
+- \[iframe\] Allow `chainAddresses` and `messagingUrl` to be passed into iframe's node creation
+
+## 0.1.15-beta.10
+
+- \[router\] Improve router dashboards
+- \[contracts\] Add xdai deployment
+
+## 0.1.15-beta.9
+
+- \[router\] Add router dashboards
+
+## 0.1.15-beta.8
+
+- \[types\] Remove unique constraint from `TransferEncodingSchema`
+
+## 0.1.15-beta.7
+
+- \[ops\] Fix github actions.
+
+## 0.1.15-beta.6
+
+- \[node, router\] Prisma upgrade.
+
+## 0.1.15-beta.5
+
+- \[contracts\] Fix token approval bug
+
+## 0.1.15-beta.4
+
+- \[iframe\] Improve error parsing
+
+## 0.1.15-beta.3
+
+- \[node\] Expose `getTransfers` method.
+
 ## 0.1.15-beta.2
 
 - \[utils\] Create util for determining which participant

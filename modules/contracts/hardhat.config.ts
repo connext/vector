@@ -99,6 +99,16 @@ const config: HardhatUserConfig = {
       chainId: 79377087078960,
       url: urlOverride || "https://kovan3.arbitrum.io/rpc",
     },
+    xdai: {
+      accounts: { mnemonic },
+      chainId: 100,
+      url: urlOverride || "http://localhost:8545",
+    },
+    bsctestnet: {
+      accounts: { mnemonic },
+      chainId: 97,
+      url: urlOverride || "https://data-seed-prebsc-1-s1.binance.org:8545/",
+    },
   },
 };
 

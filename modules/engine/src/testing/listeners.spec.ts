@@ -19,6 +19,7 @@ import {
   WithdrawResolverEncoding,
   RegisteredTransfer,
   TransferNames,
+  IVectorChainService,
 } from "@connext/vector-types";
 import {
   getTestLoggers,
@@ -293,7 +294,7 @@ describe(testName, () => {
       // Setup the listeners
       await setupEngineListeners(
         container,
-        chainService,
+        chainService as IVectorChainService,
         vector,
         messaging,
         signer,
@@ -410,7 +411,7 @@ describe(testName, () => {
       // Setup the listeners
       await setupEngineListeners(
         container,
-        chainService,
+        chainService as IVectorChainService,
         vector,
         messaging,
         signer,
@@ -429,7 +430,7 @@ describe(testName, () => {
       );
 
       // Post to the evt
-      evt.post({ updatedChannelState, updatedTransfer: transfer });
+      evt.post({ updatedChannelState, updatedTransfer: { ...transfer, transferResolver: resolver } });
 
       // Get the emitted event
       const emitted = await resolvedEvent;
@@ -508,7 +509,7 @@ describe(testName, () => {
         store,
         vector,
         chainAddresses,
-        chainService,
+        chainService as IVectorChainService,
         getEngineEvtContainer(),
         log,
       );

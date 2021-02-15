@@ -1,0 +1,195 @@
+[
+    {
+        "name": "",
+        "chainId": 0,
+        "shortName": "",
+        "chain": "",
+        "network": "",
+        "networkId": 0,
+        "nativeCurrency": {
+            "name": "",
+            "symbol": "",
+            "decimals": 18
+        },
+        "assetId": {},
+        "rpc": [],
+        "faucets": [],
+        "infoURL": ""
+    },
+    {
+        "name": "Ethereum Mainnet",
+        "chainId": 1,
+        "shortName": "eth",
+        "chain": "ETH",
+        "network": "mainnet",
+        "networkId": 1,
+        "nativeCurrency": {
+            "name": "Ether",
+            "symbol": "ETH",
+            "decimals": 18
+        },
+        "assetId": {
+            "0x0000000000000000000000000000000000000000": "ETH",
+            "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48": "USDC",
+            "0x7D1AfA7B718fb893dB30A3aBc0Cfc608AaCfeBB0": "MATIC",
+            "0x0F5D2fB29fb7d3CFeE444a200298f468908cC942": "MANA",
+            "0x6B175474E89094C44Da98b954EedeAC495271d0F": "DAI"
+        },
+        "rpc": [
+            "https://mainnet.infura.io/v3/${INFURA_API_KEY}",
+            "wss://mainnet.infura.io/ws/v3/${INFURA_API_KEY}",
+            "https://api.mycryptoapi.com/eth",
+            "https://cloudflare-eth.com"
+        ],
+        "faucets": [],
+        "infoURL": "https://ethereum.org"
+    },
+    {
+        "name": "Matic Mainnet",
+        "chainId": 137,
+        "shortName": "matic",
+        "chain": "Matic",
+        "network": "mainnet",
+        "networkId": 137,
+        "nativeCurrency": {
+            "name": "Matic",
+            "symbol": "MATIC",
+            "decimals": 18
+        },
+        "assetId": {
+            "0x0000000000000000000000000000000000001010": "MATIC",
+            "0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174": "USDC",
+            "0xA1c57f48F0Deb89f569dFbE6E2B7f46D33606fD4": "MANA",
+            "0x8f3Cf7ad23Cd3CaDbD9735AFf958023239c6A063": "DAI"
+        },
+        "rpc": [
+            "https://rpc-mainnet.matic.network",
+            "wss://ws-mainnet.matic.network"
+        ],
+        "faucets": [],
+        "infoURL": "https://matic.network/"
+    },
+    {
+        "name": "Matic Testnet Mumbai",
+        "chainId": 80001,
+        "shortName": "maticmum",
+        "chain": "Matic",
+        "network": "testnet",
+        "networkId": 80001,
+        "nativeCurrency": {
+            "name": "Matic",
+            "symbol": "tMATIC",
+            "decimals": 18
+        },
+        "assetId": {
+            "0x0000000000000000000000000000000000001010": "MATIC"
+        },
+        "rpc": [
+            "https://rpc-mumbai.matic.today",
+            "wss://ws-mumbai.matic.today"
+        ],
+        "faucets": [
+            "https://faucet.matic.network/"
+        ],
+        "infoURL": "https://matic.network/"
+    },
+    {
+        "name": "Ethereum Testnet Kovan",
+        "chainId": 42,
+        "shortName": "kov",
+        "chain": "ETH",
+        "network": "kovan",
+        "networkId": 42,
+        "nativeCurrency": {
+            "name": "Kovan Ether",
+            "symbol": "KOV",
+            "decimals": 18
+        },
+        "assetId": {
+            "0x0000000000000000000000000000000000000000": "ETH"
+        },
+        "rpc": [
+            "https://kovan.poa.network",
+            "http://kovan.poa.network:8545",
+            "https://kovan.infura.io/v3/${INFURA_API_KEY}",
+            "wss://kovan.infura.io/ws/v3/${INFURA_API_KEY}",
+            "ws://kovan.poa.network:8546"
+        ],
+        "faucets": [
+            "https://faucet.kovan.network",
+            "https://gitter.im/kovan-testnet/faucet"
+        ],
+        "infoURL": "https://kovan-testnet.github.io/website"
+    },
+    {
+        "name": "Ethereum Testnet Görli",
+        "chainId": 5,
+        "shortName": "gor",
+        "chain": "ETH",
+        "network": "goerli",
+        "networkId": 5,
+        "nativeCurrency": {
+            "name": "Görli Ether",
+            "symbol": "GOR",
+            "decimals": 18
+        },
+        "assetId": {
+            "0x0000000000000000000000000000000000000000": "ETH"
+        },
+        "rpc": [
+            "https://rpc.goerli.mudit.blog/",
+            "https://rpc.slock.it/goerli ",
+            "https://goerli.prylabs.net/"
+        ],
+        "faucets": [
+            "https://goerli-faucet.slock.it/?address=${ADDRESS}",
+            "https://faucet.goerli.mudit.blog"
+        ],
+        "infoURL": "https://goerli.net/#about"
+    },
+    {
+        "name": "Ethereum Testnet Rinkeby",
+        "chainId": 4,
+        "shortName": "rin",
+        "chain": "ETH",
+        "network": "rinkeby",
+        "networkId": 4,
+        "nativeCurrency": {
+            "name": "Rinkeby Ether",
+            "symbol": "RIN",
+            "decimals": 18
+        },
+        "assetId": {
+            "0x0000000000000000000000000000000000000000": "ETH"
+        },
+        "rpc": [
+            "https://rinkeby.infura.io/v3/${INFURA_API_KEY}",
+            "wss://rinkeby.infura.io/ws/v3/${INFURA_API_KEY}"
+        ],
+        "faucets": [
+            "https://faucet.rinkeby.io"
+        ],
+        "infoURL": "https://www.rinkeby.io"
+    },
+    {
+        "name": "Arbitrum Testnet V3",
+        "chainId": 79377087078960,
+        "shortName": "ArbTV3",
+        "chain": "Arb",
+        "network": "arbitrum",
+        "networkId": 79377087078960,
+        "nativeCurrency": {
+            "name": "Arbitrum Ether",
+            "symbol": "tETH",
+            "decimals": 18
+        },
+        "assetId": {
+            "0x0000000000000000000000000000000000000000": "ETH"
+        },
+        "rpc": [
+            "https://kovan3.arbitrum.io/rpc"
+        ],
+        "faucets": [],
+        "infoURL": ""
+    }
+]

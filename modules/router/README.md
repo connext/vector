@@ -2,6 +2,18 @@
 
 Router is an automated module that allows a `server-node` to act as an intermediary in hopped transactions between different peers in a network. For now, nodes that have the router enabled, i.e. `routing nodes` can only forward transfers to non-routing peers. Eventually, this routing module can be expanded to allow routing nodes to route value to other routing nodes, thereby creating a fully-decentralized state channel network.
 
+# Database Migrations
+
+## Baseline Inital Migration
+
+This step needs to be done one time on production DBs due to DB tooling change.
+
+- Run `make dls` and observe router image crashing.
+- Run `bash ops/logs.sh router` and make note of a log that says something similar to `VECTOR_DATABASE_URL: postgresql://vector:e9ecd9758ba79cceb9757d83c180e3eb28b15d1643643ca7de160121cf78c049@database-router:5432/vector`.
+- Run `docker run --network vector -it --entrypoint /bin/bash vector_router:98d3e880 -s` to connect a new router container without the crashing entry.
+- Run `VECTOR_DATABASE_URL=postgresql://vector:e9ecd9758ba79cceb9757d83c180e3eb28b15d1643643ca7de160121cf78c049@database-router:5432/vector npx prisma migrate resolve --preview-feature --applied 20210208123402_init --schema prisma-postgres/schema.prisma` to baseline the migration. Substitute your database URL from step 2.
+- Run `make restart-router`.
+
 ## Developing and Running Tests
 
 In `~/vector` (root), run:

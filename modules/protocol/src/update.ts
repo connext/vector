@@ -162,7 +162,7 @@ export function applyUpdate<T extends UpdateType>(
         transferResolver: undefined,
         initiator,
         responder: initiator === previousState!.alice ? previousState!.bob : previousState!.alice,
-        meta,
+        meta: { ...(meta ?? {}), createdAt: Date.now() },
         inDispute: false,
         channelNonce: previousState!.nonce,
         initiatorIdentifier: update.fromIdentifier,
@@ -196,6 +196,7 @@ export function applyUpdate<T extends UpdateType>(
         meta: {
           ...(transfer.meta ?? {}),
           ...(meta ?? {}),
+          resolvedAt: Date.now(),
         },
       };
       return Result.ok({
@@ -485,7 +486,7 @@ async function generateCreateUpdate(
     transferResolver: undefined,
     initiator: getSignerAddressFromPublicIdentifier(initiatorIdentifier),
     responder: signer.publicIdentifier === initiatorIdentifier ? counterpartyAddr : signer.address,
-    meta,
+    meta: { ...(meta ?? {}), createdAt: Date.now() },
     inDispute: false,
     channelNonce: state.nonce,
     initiatorIdentifier,
@@ -508,7 +509,7 @@ async function generateCreateUpdate(
       transferEncodings: [stateEncoding, resolverEncoding],
       merkleProofData: proof!,
       merkleRoot: root,
-      meta,
+      meta: { ...(meta ?? {}), createdAt: Date.now() },
     },
   };
   return Result.ok(unsigned);

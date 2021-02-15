@@ -4,14 +4,7 @@ import { WithdrawCommitmentJson } from "./transferDefinitions/withdraw";
 import { FullTransferState, FullChannelState } from "./channel";
 import { Address } from "./basic";
 import { ChannelDispute, TransferDispute } from "./dispute";
-
-export type GetTransfersFilterOpts = {
-  channelAddress?: string;
-  startDate?: Date;
-  endDate?: Date;
-  active?: boolean;
-  routingId?: string;
-};
+import { GetTransfersFilterOpts } from "./schemas/engine";
 
 export interface IVectorStore {
   // Store management methods
@@ -131,6 +124,7 @@ export interface IChainServiceStore {
 export interface IEngineStore extends IVectorStore, IChainServiceStore {
   // Getters
   getWithdrawalCommitment(transferId: string): Promise<WithdrawCommitmentJson | undefined>;
+  getWithdrawalCommitmentByTransactionHash(transactionHash: string): Promise<WithdrawCommitmentJson | undefined>;
 
   // NOTE: The engine does *not* care about the routingId (it is stored
   // in the meta of transfer objects), only the router module does.

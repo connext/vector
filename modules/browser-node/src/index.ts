@@ -16,6 +16,7 @@ import {
   EngineParams,
   FullChannelState,
   DEFAULT_CHANNEL_TIMEOUT,
+  GetTransfersFilterOpts,
 } from "@connext/vector-types";
 import { constructRpcRequest, hydrateProviders, NatsMessagingService } from "@connext/vector-utils";
 import pino, { BaseLogger } from "pino";
@@ -46,6 +47,8 @@ export class BrowserNode implements INodeService {
   private routerPublicIdentifier?: string;
   private iframeSrc?: string;
   private chainProviders: ChainProviders = {};
+  private chainAddresses?: ChainAddresses;
+  private messagingUrl?: string;
 
   constructor(params: {
     logger?: pino.BaseLogger;
@@ -53,12 +56,16 @@ export class BrowserNode implements INodeService {
     supportedChains?: number[];
     iframeSrc?: string;
     chainProviders: ChainProviders;
+    messagingUrl?: string;
+    chainAddresses?: ChainAddresses;
   }) {
     this.logger = params.logger || pino();
     this.routerPublicIdentifier = params.routerPublicIdentifier;
     this.supportedChains = params.supportedChains || [];
     this.iframeSrc = params.iframeSrc;
     this.chainProviders = params.chainProviders;
+    this.chainAddresses = params.chainAddresses;
+    this.messagingUrl = params.messagingUrl;
   }
 
   // method for signer-based connections
@@ -148,7 +155,11 @@ export class BrowserNode implements INodeService {
       src: iframeSrc,
       id: "connext-iframe",
     });
-    const rpc = constructRpcRequest("connext_authenticate", { chainProviders: this.chainProviders });
+    const rpc = constructRpcRequest("connext_authenticate", {
+      chainProviders: this.chainProviders,
+      chainAddresses: this.chainAddresses,
+      messagingUrl: this.messagingUrl,
+    });
     const auth = await this.channelProvider.send(rpc);
     this.logger.info({ method, response: auth }, "Received response from auth method");
     const [nodeConfig] = await this.getConfig();
@@ -308,6 +319,29 @@ export class BrowserNode implements INodeService {
   ): Promise<Result<NodeResponses.GetActiveTransfersByChannelAddress, BrowserNodeError>> {
     try {
       const rpc = constructRpcRequest<"chan_getActiveTransfers">(ChannelRpcMethods.chan_getActiveTransfers, params);
+      const res = await this.channelProvider!.send(rpc);
+      return Result.ok(res);
+    } catch (e) {
+      return Result.fail(e);
+    }
+  }
+
+  async getTransfers(
+    params: OptionalPublicIdentifier<
+      NodeParams.GetTransfers &
+        Omit<GetTransfersFilterOpts, "startDate" | "endDate"> & { startDate: Date; endDate: Date } // in the client, use Date type
+    >,
+  ): Promise<Result<NodeResponses.GetActiveTransfersByChannelAddress, BrowserNodeError>> {
+    try {
+      const rpc = constructRpcRequest<"chan_getTransfers">(ChannelRpcMethods.chan_getTransfers, {
+        filterOpts: {
+          active: params.active,
+          channelAddress: params.channelAddress,
+          endDate: params.endDate,
+          routingId: params.routingId,
+          startDate: params.startDate,
+        },
+      });
       const res = await this.channelProvider!.send(rpc);
       return Result.ok(res);
     } catch (e) {

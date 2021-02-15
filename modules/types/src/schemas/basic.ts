@@ -25,6 +25,13 @@ export const TBalance = Type.Object({
 });
 
 export const TBasicMeta = Type.Optional(Type.Dict(Type.Any()));
+export const TTransferMeta = Type.Intersect([
+  Type.Object({
+    createdAt: Type.Number(),
+    resolvedAt: Type.Optional(Type.Number()),
+  }),
+  Type.Dict(Type.Any()),
+]);
 
 export const TContractAddresses = Type.Object({
   channelFactoryAddress: TAddress,
@@ -46,7 +53,10 @@ export const AllowedSwapSchema = Type.Object({
   toAssetId: TAddress,
   priceType: Type.Union([Type.Literal("hardcoded")]),
   hardcodedRate: TDecimalString,
+  rebalancerUrl: Type.Optional(Type.String({ format: "uri" })),
+  rebalanceThresholdPct: Type.Optional(Type.Number({ minimum: 0, maximum: 100 })),
 });
+export type AllowedSwap = Static<typeof AllowedSwapSchema>;
 
 ////////////////////////////////////////
 //////// Transfer types
@@ -58,7 +68,7 @@ export const AllowedSwapSchema = Type.Object({
 // to support generic transfer types (since no schemas have to be updated)
 export const TransferStateSchema = Type.Dict(Type.Any());
 export const TransferResolverSchema = Type.Any(); //Type.Dict(Type.Any());
-export const TransferEncodingSchema = Type.Array(Type.String(), { maxItems: 2, minItems: 2, uniqueItems: true });
+export const TransferEncodingSchema = Type.Array(Type.String(), { maxItems: 2, minItems: 2 });
 export const TransferNameSchema = Type.String();
 
 export const TFullTransferState = Type.Object({
@@ -77,7 +87,7 @@ export const TFullTransferState = Type.Object({
   transferEncodings: TransferEncodingSchema, // Initial state encoding, resolver encoding
   transferState: TransferStateSchema,
   transferResolver: Type.Optional(TransferResolverSchema), // undefined iff not resolved
-  meta: TBasicMeta,
+  meta: TTransferMeta,
   channelNonce: Type.Integer({ minimum: 1 }),
   initiatorIdentifier: TPublicIdentifier,
   responderIdentifier: TPublicIdentifier,

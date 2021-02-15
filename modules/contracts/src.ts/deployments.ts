@@ -137,3 +137,41 @@ const arbitrumtestDeployment = {
 };
 deployments.arbitrumtest = arbitrumtestDeployment;
 deployments["79377087078960"] = arbitrumtestDeployment;
+
+////////////////////////////////////////
+// 100 - xdai
+import * as xdaiChannelFactory from "../deployments/xdai/ChannelFactory.json";
+import * as xdaiChannelMastercopy from "../deployments/xdai/ChannelMastercopy.json";
+import * as xdaiHashlockTransfer from "../deployments/xdai/HashlockTransfer.json";
+import * as xdaiTestToken from "../deployments/xdai/TestToken.json";
+import * as xdaiTransferRegistry from "../deployments/xdai/TransferRegistry.json";
+import * as xdaiWithdraw from "../deployments/xdai/Withdraw.json";
+const xdaiDeployment = {
+  ChannelFactory: xdaiChannelFactory,
+  ChannelMastercopy: xdaiChannelMastercopy,
+  HashlockTransfer: xdaiHashlockTransfer,
+  TestToken: xdaiTestToken,
+  TransferRegistry: xdaiTransferRegistry,
+  Withdraw: xdaiWithdraw,
+};
+deployments.xdai = xdaiDeployment;
+deployments["100"] = xdaiDeployment;
+
+////////////////////////////////////////
+// 97 - bsc testnet
+import * as bsctestnetChannelFactory from "../deployments/bsctestnet/ChannelFactory.json";
+import * as bsctestnetChannelMastercopy from "../deployments/bsctestnet/ChannelMastercopy.json";
+import * as bsctestnetHashlockTransfer from "../deployments/bsctestnet/HashlockTransfer.json";
+import * as bsctestnetTestToken from "../deployments/bsctestnet/TestToken.json";
+import * as bsctestnetTransferRegistry from "../deployments/bsctestnet/TransferRegistry.json";
+import * as bsctestnetWithdraw from "../deployments/bsctestnet/Withdraw.json";
+const bsctestnetDeployment = {
+  ChannelFactory: bsctestnetChannelFactory,
+  ChannelMastercopy: bsctestnetChannelMastercopy,
+  HashlockTransfer: bsctestnetHashlockTransfer,
+  TestToken: bsctestnetTestToken,
+  TransferRegistry: bsctestnetTransferRegistry,
+  Withdraw: bsctestnetWithdraw,
+};
+deployments.bsctestnet = bsctestnetDeployment;
+deployments["97"] = bsctestnetDeployment;

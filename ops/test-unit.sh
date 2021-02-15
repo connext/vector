@@ -89,6 +89,7 @@ docker run \
   --env="CHAIN_PROVIDERS=$CHAIN_PROVIDERS" \
   --env="LOG_LEVEL=${LOG_LEVEL:-silent}" \
   --env="SUGAR_DADDY=$eth_mnemonic" \
+  --env="VECTOR_MNEMONIC=$eth_mnemonic" \
   --env="VECTOR_CONFIG=$config" \
   --env "VECTOR_MNEMONIC=$eth_mnemonic" \
   --name="${project}_test_$unit" \

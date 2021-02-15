@@ -14,6 +14,8 @@ import {
   TPublicIdentifier,
   FullChannelState,
   jsonifyError,
+  GetTransfersFilterOpts,
+  GetTransfersFilterOptsSchema,
 } from "@connext/vector-types";
 import { constructRpcRequest, getPublicIdentifierFromPublicKey, hydrateProviders } from "@connext/vector-utils";
 import { WithdrawCommitment } from "@connext/vector-contracts";
@@ -26,7 +28,7 @@ import { createNode, deleteNodes, getChainService, getNode, getNodes } from "./h
 import { ServerNodeError } from "./helpers/errors";
 
 const configuredIdentifier = getPublicIdentifierFromPublicKey(Wallet.fromMnemonic(config.mnemonic).publicKey);
-export const logger = pino({ name: configuredIdentifier });
+export const logger = pino({ name: configuredIdentifier, level: config.logLevel ?? "info" });
 logger.info({ config }, "Loaded config from environment");
 const server = fastify({ logger, pluginTimeout: 300_000, disableRequestLogging: config.logLevel !== "debug" });
 server.register(fastifyCors, {
@@ -233,6 +235,40 @@ server.get<{ Params: NodeParams.GetTransferState }>(
             ),
           );
       }
+      return reply.status(200).send(res);
+    } catch (e) {
+      logger.error({ error: jsonifyError(e) });
+      return reply.status(500).send(jsonifyError(e));
+    }
+  },
+);
+
+server.get<{ Params: NodeParams.GetTransfers; Querystring: GetTransfersFilterOpts }>(
+  "/:publicIdentifier/transfers",
+  { schema: { params: NodeParams.GetTransfersSchema, querystring: GetTransfersFilterOptsSchema } },
+  async (request, reply) => {
+    const engine = getNode(request.params.publicIdentifier);
+    if (!engine) {
+      return reply
+        .status(400)
+        .send(
+          jsonifyError(
+            new ServerNodeError(ServerNodeError.reasons.NodeNotFound, request.params.publicIdentifier, request.params),
+          ),
+        );
+    }
+
+    // take input as timestamps, convert to JS date object
+    const query: GetTransfersFilterOpts = {
+      ...request.query,
+      startDate: request.query.startDate ? new Date(request.query.startDate) : undefined,
+      endDate: request.query.endDate ? new Date(request.query.endDate) : undefined,
+    };
+    const params = constructRpcRequest(ChannelRpcMethods.chan_getTransfers, {
+      filterOpts: query,
+    });
+    try {
+      const res = await engine.request<"chan_getTransfers">(params);
       return reply.status(200).send(res);
     } catch (e) {
       logger.error({ error: jsonifyError(e) });

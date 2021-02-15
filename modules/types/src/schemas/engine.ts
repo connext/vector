@@ -58,6 +58,21 @@ const GetTransferStateParamsSchema = Type.Object({
   transferId: TBytes32,
 });
 
+// Returns transfers optionally filtered
+export const GetTransfersFilterOptsSchema = Type.Object({
+  channelAddress: Type.Optional(TAddress),
+  startDate: Type.Optional(Type.Any()), // no date type
+  endDate: Type.Optional(Type.Any()), // no date type
+  active: Type.Optional(Type.Boolean()),
+  routingId: Type.Optional(TBytes32),
+  transferDefinition: Type.Optional(TAddress),
+});
+export type GetTransfersFilterOpts = Static<typeof GetTransfersFilterOptsSchema>;
+
+const GetTransfersParamsSchema = Type.Object({
+  filterOpts: Type.Optional(GetTransfersFilterOptsSchema),
+});
+
 // Returns all registered transfer info
 const GetRegisteredTransfersParamsSchema = Type.Object({
   chainId: TChainId,
@@ -203,6 +218,9 @@ export namespace EngineParams {
 
   export const GetTransferStateSchema = GetTransferStateParamsSchema;
   export type GetTransferState = Static<typeof GetTransferStateParamsSchema>;
+
+  export const GetTransfersSchema = GetTransfersParamsSchema;
+  export type GetTransfers = Static<typeof GetTransfersParamsSchema>;
 
   export const GetRegisteredTransfersSchema = GetRegisteredTransfersParamsSchema;
   export type GetRegisteredTransfers = Static<typeof GetRegisteredTransfersParamsSchema>;

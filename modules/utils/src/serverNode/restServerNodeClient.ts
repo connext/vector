@@ -6,6 +6,7 @@ import {
   NodeParams,
   NodeResponses,
   OptionalPublicIdentifier,
+  GetTransfersFilterOpts,
 } from "@connext/vector-types";
 import Ajv from "ajv";
 import Axios from "axios";
@@ -235,6 +236,30 @@ export class RestServerNodeClient implements INodeClient {
     );
   }
 
+  async getTransfers(
+    params: OptionalPublicIdentifier<
+      NodeParams.GetTransfers &
+        Omit<GetTransfersFilterOpts, "startDate" | "endDate"> & { startDate: Date; endDate: Date } // in the client, use Date type
+    >,
+  ): Promise<Result<NodeResponses.GetTransfers, ServerNodeServiceError>> {
+    const queryString = [
+      params.active ? `active=${params.active}` : undefined,
+      params.channelAddress ? `channelAddress=${params.channelAddress}` : undefined,
+      params.routingId ? `routingId=${params.routingId}` : undefined,
+      params.startDate ? `startDate=${Date.parse(params.startDate.toString())}` : undefined,
+      params.endDate ? `endDate=${Date.parse(params.endDate.toString())}` : undefined,
+    ]
+      .filter((x) => !!x)
+      .join("&");
+
+    return this.executeHttpRequest(
+      `${params.publicIdentifier ?? this.publicIdentifier}/transfers?${queryString}`,
+      "get",
+      params,
+      NodeParams.GetActiveTransfersByChannelAddressSchema,
+    );
+  }
+
   async getStateChannelByParticipants(
     params: OptionalPublicIdentifier<NodeParams.GetChannelStateByParticipants>,
   ): Promise<Result<NodeResponses.GetChannelStateByParticipants, ServerNodeServiceError>> {
@@ -390,7 +415,9 @@ export class RestServerNodeClient implements INodeClient {
       .pipe(ctx)
       .pipe((data: EngineEventMap[T]) => {
         const filtered = filter(data);
-        return filtered && (data.aliceIdentifier === pubId || data.bobIdentifier === pubId);
+        const toStrip = data as any;
+        const pubIds = [toStrip.publicIdentifier, toStrip.bobIdentifier, toStrip.aliceIdentifier].filter((x) => !!x);
+        return filtered && pubIds.includes(pubId);
       })
       .attachOnce(callback);
   }
@@ -421,7 +448,9 @@ export class RestServerNodeClient implements INodeClient {
       .pipe(ctx)
       .pipe((data: EngineEventMap[T]) => {
         const filtered = filter(data);
-        return filtered && (data.aliceIdentifier === pubId || data.bobIdentifier === pubId);
+        const toStrip = data as any;
+        const pubIds = [toStrip.publicIdentifier, toStrip.bobIdentifier, toStrip.aliceIdentifier].filter((x) => !!x);
+        return filtered && pubIds.includes(pubId);
       })
       .attach(callback);
   }
@@ -452,7 +481,9 @@ export class RestServerNodeClient implements INodeClient {
       .pipe(ctx)
       .pipe((data: EngineEventMap[T]) => {
         const filtered = filter(data);
-        return filtered && (data.aliceIdentifier === pubId || data.bobIdentifier === pubId);
+        const toStrip = data as any;
+        const pubIds = [toStrip.publicIdentifier, toStrip.bobIdentifier, toStrip.aliceIdentifier].filter((x) => !!x);
+        return filtered && pubIds.includes(pubId);
       })
       .waitFor(timeout) as Promise<EngineEventMap[T]>;
   }

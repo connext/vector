@@ -53,7 +53,7 @@ import { sendIsAlive } from "./isAlive";
 
 export const ajv = new Ajv();
 
-export type EngineEvtContainer = { [K in keyof EngineEventMap]: Evt<EngineEventMap[K]> };
+export type EngineEvtContainer = { [K in EngineEvent]: Evt<EngineEventMap[K]> };
 
 export class VectorEngine implements IVectorEngine {
   // Setup event container to emit events from vector
@@ -326,6 +326,33 @@ export class VectorEngine implements IVectorEngine {
       return Result.fail(
         new RpcError(RpcError.reasons.StoreMethodFailed, params.channelAddress, this.publicIdentifier, {
           storeMethod: "getActiveTransfers",
+          storeError: e.message,
+        }),
+      );
+    }
+  }
+
+  private async getTransfers(
+    params: EngineParams.GetTransfers,
+  ): Promise<Result<ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_getTransfers], EngineError>> {
+    const validate = ajv.compile(EngineParams.GetTransfersSchema);
+    const valid = validate(params);
+    if (!valid) {
+      return Result.fail(
+        new RpcError(RpcError.reasons.InvalidParams, "", this.publicIdentifier, {
+          invalidParamsError: validate.errors?.map((e) => e.message).join(","),
+          invalidParams: params,
+        }),
+      );
+    }
+
+    try {
+      const transfers = await this.store.getTransfers(params);
+      return Result.ok(transfers);
+    } catch (e) {
+      return Result.fail(
+        new RpcError(RpcError.reasons.StoreMethodFailed, "", this.publicIdentifier, {
+          storeMethod: "getTransfers",
           storeError: e.message,
         }),
       );

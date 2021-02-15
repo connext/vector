@@ -133,32 +133,6 @@ jobs:
           docker service logs --tail 200 trio_carol
           docker service logs --tail 200 trio_dave
 
-  node:
-    runs-on: ubuntu-20.04
-    steps:
-      - uses: actions/checkout@v1
-      - run: make pull-latest
-      - run: make node
-      - run: make start-node
-      - run: make test-node
-      - name: Print logs
-        if: failure()
-        run: docker service logs --tail 200 node_node
-
-  routing-node:
-    runs-on: ubuntu-20.04
-    steps:
-      - uses: actions/checkout@v1
-      - run: make pull-latest
-      - run: make router
-      - run: make start-router
-      - run: make test-routing-node
-      - name: Print logs
-        if: failure()
-        run: |
-          docker service logs --tail 200 router_node
-          docker service logs --tail 200 router_router
-
   messaging-prod:
     runs-on: ubuntu-20.04
     needs: [build]
@@ -189,7 +163,7 @@ jobs:
   deploy-messaging:
     env:
       DOMAINNAME: messaging.connext.network
-    needs: [ssh, utils, contracts, protocol, engine, server-node, browser-node, router, messaging, duet, trio, node, routing-node, messaging-prod, routing-node-prod]
+    needs: [ssh, utils, contracts, protocol, engine, server-node, browser-node, router, messaging, duet, trio, messaging-prod, routing-node-prod]
     runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v1
@@ -209,7 +183,7 @@ jobs:
     env:
       DOMAINNAME: testnet-vector.connext.network
       MESSAGING_URL: https://messaging.connext.network
-    needs: [ssh, utils, contracts, protocol, engine, server-node, browser-node, router, messaging, duet, trio, node, routing-node, messaging-prod, routing-node-prod]
+    needs: [ssh, utils, contracts, protocol, engine, server-node, browser-node, router, messaging, duet, trio, messaging-prod, routing-node-prod]
     runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v1

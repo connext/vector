@@ -277,6 +277,7 @@ prometheus_services="prometheus:
       - --config.file=/etc/prometheus/prometheus.yml
     volumes:
       - $root/ops/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus:/prometheus
 
   cadvisor:
     $common
@@ -290,15 +291,16 @@ prometheus_services="prometheus:
       - /var/lib/docker/:/var/lib/docker:ro"
 
 grafana_service="grafana:
-    image: '$grafana_image'
+    image: $grafana_image
     $common
     networks:
-      - '$project'
+      - $project
     ports:
-      - '3008:3000'
+      - 3008:3000
     volumes:
-      - '$root/ops/grafana/grafana:/etc/grafana'
-      - '$root/ops/grafana/dashboards:/etc/dashboards'"
+      - $root/ops/grafana/grafana:/etc/grafana
+      - $root/ops/grafana/dashboards:/etc/dashboards
+      - grafana:/var/lib/grafana"
 
 logdna_service="logdna:
     $common
@@ -316,7 +318,7 @@ logdna_service="logdna:
 if [ "$production" == "true" ] && [ -n "$logdna_key" ]
 then
   observability_services="$logdna_service
-  
+
   $prometheus_services
 
   $grafana_service"
@@ -361,6 +363,8 @@ volumes:
   certs:
   database_node:
   database_router:
+  prometheus:
+  grafana:
 
 services:
 

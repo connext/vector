@@ -102,7 +102,13 @@ export class ForwardTransferCreationError extends RouterError {
   ) {
     super(
       message,
-      { routingId, senderChannel, senderTransfer, receiverChannel, ...context },
+      {
+        routingId,
+        senderChannel,
+        senderTransfer,
+        receiverChannel,
+        ...context,
+      },
       ForwardTransferCreationError.type,
     );
   }
@@ -173,5 +179,30 @@ export class ConfigServiceError extends RouterError {
     context: any = {},
   ) {
     super(message, { chainId, assetId, ...context }, ConfigServiceError.type);
+  }
+}
+
+export type AutoRebalanceServiceErrorContext = RouterErrorContext & {
+  chainId: number;
+  assetId: string;
+};
+export class AutoRebalanceServiceError extends RouterError {
+  static readonly type = "AutoRebalanceServiceError";
+
+  static readonly reasons = {
+    CouldNotGetAssetBalance: "Could not get asset balance",
+    CouldNotCompleteApproval: "Could not complete approval",
+    CouldNotCompleteRebalance: "Could not complete rebalance",
+  } as const;
+
+  readonly context: AutoRebalanceServiceErrorContext;
+
+  constructor(
+    public readonly message: Values<typeof AutoRebalanceServiceError.reasons>,
+    chainId: number,
+    assetId: string,
+    context: any = {},
+  ) {
+    super(message, { chainId, assetId, ...context }, AutoRebalanceServiceError.type);
   }
 }

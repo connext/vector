@@ -3,6 +3,7 @@ import { Balance, FullTransferState } from "./channel";
 import { EngineParams } from "./schemas";
 import { TransferName } from "./transferDefinitions";
 import { ChannelRpcMethod, ChannelRpcMethodsResponsesMap } from "./vectorProvider";
+import { TransactionEvent, TransactionEventMap, TransactionEvents } from "./event";
 
 ///////////////////////////////////
 ////// Engine transfer types
@@ -119,9 +120,10 @@ export const EngineEvents = {
   [WITHDRAWAL_CREATED_EVENT]: WITHDRAWAL_CREATED_EVENT,
   [WITHDRAWAL_RESOLVED_EVENT]: WITHDRAWAL_RESOLVED_EVENT,
   [WITHDRAWAL_RECONCILED_EVENT]: WITHDRAWAL_RECONCILED_EVENT,
+  ...TransactionEvents,
 } as const;
 export type EngineEvent = typeof EngineEvents[keyof typeof EngineEvents];
-export interface EngineEventMap {
+export interface EngineEventMap extends TransactionEventMap {
   [IS_ALIVE_EVENT]: IsAlivePayload;
   [SETUP_EVENT]: SetupPayload;
   [CONDITIONAL_TRANSFER_CREATED_EVENT]: ConditionalTransferCreatedPayload;
@@ -133,6 +135,16 @@ export interface EngineEventMap {
   [WITHDRAWAL_CREATED_EVENT]: WithdrawalCreatedPayload;
   [WITHDRAWAL_RESOLVED_EVENT]: WithdrawalResolvedPayload;
   [WITHDRAWAL_RECONCILED_EVENT]: WithdrawalReconciledPayload;
+  // Add public identifiers to transaction events
+  [TransactionEvents.TRANSACTION_SUBMITTED]: TransactionEventMap[typeof TransactionEvents.TRANSACTION_SUBMITTED] & {
+    publicIdentifier: string;
+  };
+  [TransactionEvents.TRANSACTION_MINED]: TransactionEventMap[typeof TransactionEvents.TRANSACTION_MINED] & {
+    publicIdentifier: string;
+  };
+  [TransactionEvents.TRANSACTION_FAILED]: TransactionEventMap[typeof TransactionEvents.TRANSACTION_FAILED] & {
+    publicIdentifier: string;
+  };
 }
 
 ///////////////////////////////////
