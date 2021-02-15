@@ -3,6 +3,7 @@ import { ChainInfo, ERC20Abi } from "@connext/vector-types";
 import { JsonRpcProvider } from "@ethersproject/providers";
 import { Contract } from "@ethersproject/contracts";
 import { AddressZero } from "@ethersproject/constants";
+
 import chains from "./chains.json";
 
 export const CHAIN_INFO_URL = "https://chainid.network/chains.json";
@@ -12,7 +13,6 @@ export const getChainInfo = async (chainId: number): Promise<ChainInfo> => {
   try {
     chain = chains.find((info: ChainInfo) => info.chainId === chainId);
     if (chain.chainId === 0) {
-      console.log("fetching ChainInfo");
       const chainInfo: ChainInfo[] = await fetchJson(CHAIN_INFO_URL);
       chain = chainInfo!.find((info) => info.chainId === chainId);
     }
@@ -31,8 +31,8 @@ export const getAssetName = (chainId: number, assetId: string): string => {
   }
 };
 
-export const getAssetDecimals = async (assetId: string, ethProvider: JsonRpcProvider) => {
-  let decimals: number = 18;
+export const getAssetDecimals = async (assetId: string, ethProvider: JsonRpcProvider): Promise<number> => {
+  let decimals = 18;
   if (assetId !== AddressZero) {
     try {
       const token = new Contract(assetId, ERC20Abi, ethProvider);

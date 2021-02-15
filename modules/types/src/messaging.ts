@@ -1,7 +1,7 @@
 import { ChannelUpdate, FullChannelState, FullTransferState } from "./channel";
 import { EngineError, NodeError, MessagingError, ProtocolError, Result, RouterError, VectorError } from "./error";
 import { LockInformation } from "./lock";
-import { EngineParams } from "./schemas";
+import { AllowedSwap, EngineParams } from "./schemas";
 
 export type CheckInInfo = { channelAddress: string };
 export type CheckInResponse = {
@@ -11,14 +11,6 @@ export type CheckInResponse = {
   channelAddress: string;
 };
 
-export type AllowedSwap = {
-  fromChainId: number;
-  toChainId: number;
-  fromAssetId: string;
-  toAssetId: string;
-  priceType: "hardcoded";
-  hardcodedRate: string;
-};
 export type RouterConfigResponse = {
   supportedChains: number[];
   allowedSwaps: AllowedSwap[];

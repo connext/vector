@@ -1,39 +1,28 @@
 import { Result } from "@connext/vector-types";
-import { calculateExchangeAmount, inverse } from "@connext/vector-utils";
+import { calculateExchangeWad } from "@connext/vector-utils";
 import { getAddress } from "@ethersproject/address";
+import { BigNumber } from "@ethersproject/bignumber";
 
 import { config } from "../config";
 import { SwapError } from "../errors";
+import { getDecimals } from "../metrics";
 
-export const getSwappedAmount = (
+export const getSwappedAmount = async (
   fromAmount: string,
   fromAssetId: string,
   fromChainId: number,
   toAssetId: string,
   toChainId: number,
-): Result<string, SwapError> => {
+): Promise<Result<string, SwapError>> => {
   const fromAsset = getAddress(fromAssetId);
   const toAsset = getAddress(toAssetId);
-  let swap = config.allowedSwaps.find(
+  const swap = config.allowedSwaps.find(
     (s) =>
       s.fromAssetId === fromAsset &&
       s.fromChainId === fromChainId &&
       s.toAssetId === toAsset &&
       s.toChainId === toChainId,
   );
-
-  let invert = false;
-  if (!swap) {
-    // search other way around swap
-    swap = config.allowedSwaps.find(
-      (s) =>
-        s.toAssetId === fromAsset &&
-        s.toChainId === fromChainId &&
-        s.fromAssetId === toAsset &&
-        s.fromChainId === toChainId,
-    );
-    invert = true;
-  }
 
   // couldnt find both ways
   if (!swap) {
@@ -42,13 +31,11 @@ export const getSwappedAmount = (
     );
   }
 
-  // TODO: decimals
   if (swap.hardcodedRate) {
-    if (invert) {
-      return Result.ok(calculateExchangeAmount(fromAmount, inverse(swap.hardcodedRate)));
-    } else {
-      return Result.ok(calculateExchangeAmount(fromAmount, swap.hardcodedRate));
-    }
+    const fromDecimals = await getDecimals(swap.fromChainId.toString(), swap.fromAssetId);
+    const toDecimals = await getDecimals(swap.toChainId.toString(), swap.toAssetId);
+    const exchange = calculateExchangeWad(BigNumber.from(fromAmount), fromDecimals, swap.hardcodedRate, toDecimals);
+    return Result.ok(exchange.toString());
   }
   return Result.fail(
     new SwapError(SwapError.reasons.SwapNotHardcoded, fromAmount, fromAssetId, fromChainId, toAssetId, toChainId),

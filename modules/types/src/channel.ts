@@ -9,6 +9,13 @@ export type ContextualAddress = {
   chainId: number;
 };
 
+export type BasicMeta = any;
+
+export type TransferMeta = BasicMeta & {
+  createdAt: number;
+  resolvedAt?: number;
+};
+
 // Method params
 export type SetupParams = {
   counterpartyIdentifier: string;
@@ -30,7 +37,7 @@ export type CreateTransferParams = {
   transferDefinition: string;
   transferInitialState: TransferState;
   timeout: string;
-  meta?: any;
+  meta?: BasicMeta;
 };
 
 export type ResolveTransferParams = {
@@ -132,13 +139,13 @@ export interface CoreTransferState {
   initialStateHash: string;
 }
 
-export type FullTransferState = CoreTransferState & {
+export type FullTransferState<M extends TransferMeta = any> = CoreTransferState & {
   channelFactoryAddress: string; // networkContext? TODO: remove
   chainId: number;
   transferEncodings: string[]; // Initial state encoding, resolver encoding
   transferState: any;
   transferResolver?: any; // undefined iff not resolved
-  meta?: any;
+  meta: M; // meta req. values assigned in protocol
   inDispute: boolean;
   channelNonce: number;
   initiatorIdentifier: string;
@@ -198,7 +205,7 @@ export type CreateUpdateDetails = {
   transferEncodings: string[]; // Included for `applyUpdate`
   merkleProofData: string[];
   merkleRoot: string;
-  meta?: any;
+  meta?: BasicMeta;
 };
 
 // NOTE: proof data can be reconstructed, do we need to pass it around?
@@ -208,17 +215,17 @@ export type ResolveUpdateDetails = {
   transferDefinition: Address;
   transferResolver: TransferResolver;
   merkleRoot: string;
-  meta?: any;
+  meta?: BasicMeta;
 };
 
 export type DepositUpdateDetails = {
   totalDepositsAlice: string;
   totalDepositsBob: string;
-  meta?: any;
+  meta?: BasicMeta;
 };
 
 export type SetupUpdateDetails = {
   timeout: string;
   networkContext: NetworkContext;
-  meta?: any;
+  meta?: BasicMeta;
 };
