@@ -1,9 +1,18 @@
 import { VectorChainReader } from "@connext/vector-contracts";
-import { AllowedSwap, HydratedProviders, jsonifyError, Result } from "@connext/vector-types";
+import {
+  AllowedSwap,
+  HydratedProviders,
+  jsonifyError,
+  Result,
+  TAddress,
+  TBytes32,
+  TIntegerString,
+} from "@connext/vector-types";
 import { getRandomBytes32 } from "@connext/vector-utils";
 import { AddressZero } from "@ethersproject/constants";
 import { parseUnits } from "@ethersproject/units";
 import { Wallet } from "@ethersproject/wallet";
+import { Type, Static } from "@sinclair/typebox";
 import axios from "axios";
 import { BaseLogger } from "pino";
 
@@ -13,6 +22,19 @@ import { parseBalanceToNumber, rebalancedTokens } from "./metrics";
 
 const DEFAULT_REBALANCE_THRESHOLD = 20;
 const MIN_INTERVAL = 1_800_000;
+
+// copied from chain-rebalancer-fastify
+export const RebalanceParamsSchema = Type.Object({
+  amount: TIntegerString,
+  assetId: TAddress,
+  signer: TAddress,
+  txHash: Type.Optional(TBytes32),
+  fromProvider: Type.String({ format: "uri" }),
+  toProvider: Type.String({ format: "uri" }),
+  fromChainId: Type.Number(),
+  toChainId: Type.Number(),
+});
+export type RebalanceParams = Static<typeof RebalanceParamsSchema>;
 
 export const startAutoRebalanceTask = (
   interval: number,
@@ -130,6 +152,7 @@ export const rebalanceIfNeeded = async (
       "Rebalance required",
     );
 
+    // approve ERC20
     if (swap.fromAssetId !== AddressZero) {
       try {
         logger.info(
@@ -140,11 +163,14 @@ export const rebalanceIfNeeded = async (
           "Approval required, sending request",
         );
         const approveRes = await axios.post(`${swap.rebalancerUrl}/approval`, {
-          amount: amountToSend,
+          amount: amountToSend.toString(),
           assetId: swap.fromAssetId,
+          fromProvider: config.chainProviders[swap.fromChainId],
+          fromChainId: swap.toChainId,
+          toProvider: config.chainProviders[swap.toChainId],
+          toChainId: swap.toChainId,
           signer: wallet.address,
-          type: "approve",
-        });
+        } as RebalanceParams);
         logger.info(
           {
             method,
@@ -207,6 +233,8 @@ export const rebalanceIfNeeded = async (
         );
       }
     }
+
+    // execute rebalance
     try {
       logger.info(
         {
@@ -215,7 +243,15 @@ export const rebalanceIfNeeded = async (
         },
         "Sending rebalance request",
       );
-      const rebalanceRes = await axios.post(`${swap.rebalancerUrl}/execute`);
+      const rebalanceRes = await axios.post(`${swap.rebalancerUrl}/execute`, {
+        amount: amountToSend.toString(),
+        assetId: swap.fromAssetId,
+        fromProvider: config.chainProviders[swap.fromChainId],
+        fromChainId: swap.toChainId,
+        toProvider: config.chainProviders[swap.toChainId],
+        toChainId: swap.toChainId,
+        signer: wallet.address,
+      } as RebalanceParams);
       logger.info(
         {
           method,
