@@ -2,6 +2,8 @@
 
 ## Next Release
 
+## 0.1.15-beta.16
+
 - \[server-node\] Hold withdrawals as alice on mainnet
 - \[server-node\] Add admin endpoint to resubmit all withdrawals
 - \[server-node\] Submit withdrawals when gas price is low or commitments are > 1 week old
