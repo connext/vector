@@ -2,6 +2,10 @@
 
 ## Next Release
 
+## 0.1.15-beta.14
+
+- \[router\] Add auto-rebalance service for Matic deposit
+
 ## 0.1.15-beta.13
 
 - \[ops\] Add persistent storage for Grafana
