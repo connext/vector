@@ -1,11 +1,12 @@
 import { Result } from "@connext/vector-types";
-import { calculateExchangeAmount } from "@connext/vector-utils";
+import { calculateExchangeWad } from "@connext/vector-utils";
 import { getAddress } from "@ethersproject/address";
 
 import { config } from "../config";
 import { SwapError } from "../errors";
+import { getDecimals } from "../metrics";
 
-export const getSwappedAmount = (
+export const getSwappedAmount = async (
   fromAmount: string,
   fromAssetId: string,
   fromChainId: number,
@@ -29,9 +30,11 @@ export const getSwappedAmount = (
     );
   }
 
-  // TODO: decimals
   if (swap.hardcodedRate) {
-    return Result.ok(calculateExchangeAmount(fromAmount, swap.hardcodedRate));
+    const fromDecimals = await getDecimals(swap.fromChainId, swap.fromAssetId);
+    const toDecimals = await getDecimals(swap.toChainId, swap.toAssetId);
+    const exchange = calculateExchangeWad(fromAmount, fromDecimals, swap.hardcodedRate, toDecimals);
+    return Result.ok(exchange.toString());
   }
   return Result.fail(
     new SwapError(SwapError.reasons.SwapNotHardcoded, fromAmount, fromAssetId, fromChainId, toAssetId, toChainId),
