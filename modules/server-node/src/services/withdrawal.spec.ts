@@ -20,7 +20,7 @@ import { submitMainnetWithdrawalsIfNeeded, submitUnsubmittedWithdrawals, submitW
 
 const testName = "Node withdrawal submission";
 
-describe.only(testName, () => {
+describe(testName, () => {
   // declare mocks
   let getChainServiceStub: Sinon.SinonStub;
   let chainService: Sinon.SinonStubbedInstance<VectorChainService>;
