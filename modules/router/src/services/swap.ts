@@ -1,5 +1,5 @@
 import { Result } from "@connext/vector-types";
-import { calculateExchangeAmount, inverse } from "@connext/vector-utils";
+import { calculateExchangeAmount } from "@connext/vector-utils";
 import { getAddress } from "@ethersproject/address";
 
 import { config } from "../config";
