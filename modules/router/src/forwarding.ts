@@ -216,7 +216,13 @@ export async function forwardTransferCreation(
       },
       "Detected inflight swap",
     );
-    const swapRes = getSwappedAmount(senderAmount, senderAssetId, senderChainId, recipientAssetId, recipientChainId);
+    const swapRes = await getSwappedAmount(
+      senderAmount,
+      senderAssetId,
+      senderChainId,
+      recipientAssetId,
+      recipientChainId,
+    );
     if (swapRes.isError) {
       return cancelSenderTransferAndReturnError(
         routingId,

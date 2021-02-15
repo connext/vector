@@ -1,6 +1,7 @@
 import { Result } from "@connext/vector-types";
 import { calculateExchangeWad } from "@connext/vector-utils";
 import { getAddress } from "@ethersproject/address";
+import { BigNumber } from "@ethersproject/bignumber";
 
 import { config } from "../config";
 import { SwapError } from "../errors";
@@ -12,7 +13,7 @@ export const getSwappedAmount = async (
   fromChainId: number,
   toAssetId: string,
   toChainId: number,
-): Result<string, SwapError> => {
+): Promise<Result<string, SwapError>> => {
   const fromAsset = getAddress(fromAssetId);
   const toAsset = getAddress(toAssetId);
   const swap = config.allowedSwaps.find(
@@ -31,9 +32,9 @@ export const getSwappedAmount = async (
   }
 
   if (swap.hardcodedRate) {
-    const fromDecimals = await getDecimals(swap.fromChainId, swap.fromAssetId);
-    const toDecimals = await getDecimals(swap.toChainId, swap.toAssetId);
-    const exchange = calculateExchangeWad(fromAmount, fromDecimals, swap.hardcodedRate, toDecimals);
+    const fromDecimals = await getDecimals(swap.fromChainId.toString(), swap.fromAssetId);
+    const toDecimals = await getDecimals(swap.toChainId.toString(), swap.toAssetId);
+    const exchange = calculateExchangeWad(BigNumber.from(fromAmount), fromDecimals, swap.hardcodedRate, toDecimals);
     return Result.ok(exchange.toString());
   }
   return Result.fail(
