@@ -61,7 +61,7 @@ const getUnsubmittedWithdrawals = async (
   return Result.ok(unsubmitted);
 };
 
-const submitWithdrawalToChain = async (
+export const submitWithdrawalToChain = async (
   channel: FullChannelState,
   record: { commitment: WithdrawCommitmentJson; transfer: FullTransferState },
   store: PrismaStore,
@@ -101,17 +101,24 @@ const submitWithdrawalToChain = async (
       { transferId: transfer.transferId, channelAddress: channel.channelAddress, commitment: json },
       "Previously submitted",
     );
-    return Result.ok({
-      transactionHash: HashZero,
-      channelAddress: channel.channelAddress,
-      transferId: record.transfer.transferId,
-    });
   }
 
   // submission was successful, update commitment with hash
-  const transactionHash = response.getValue().hash;
+  const transactionHash = response.isError ? HashZero : response.getValue().hash;
   commitment.addTransaction(transactionHash);
-  await store.saveWithdrawalCommitment(transfer.transferId, commitment.toJson());
+  try {
+    await store.saveWithdrawalCommitment(transfer.transferId, commitment.toJson());
+  } catch (e) {
+    return Result.fail(
+      new ResubmitWithdrawalError(
+        ResubmitWithdrawalError.reasons.SavingCommitmentFailed,
+        channel.aliceIdentifier,
+        channel.channelAddress,
+        record.transfer.transferId,
+        { storeError: jsonifyError(e) },
+      ),
+    );
+  }
 
   return Result.ok({ transactionHash, transferId: transfer.transferId, channelAddress: channel.channelAddress });
 };
@@ -154,14 +161,12 @@ export const submitUnsubmittedWithdrawals = async (
       );
       continue;
     }
+    console.log("***** submission result", submissionResult);
     const { transactionHash, transferId, channelAddress } = submissionResult.getValue();
     results.push(submissionResult.getValue());
     logger.info({ method, methodId, transactionHash, transferId, channelAddress }, "Submitted withdrawal to chain");
   }
-  logger.info(
-    { successfulSubmissions: results.length, totalSubmissions: unsubmitted.length - results.length },
-    "Submitted withdrawals",
-  );
+  logger.info({ successfulSubmissions: results.length, totalSubmissions: unsubmitted.length }, "Submitted withdrawals");
   logger.debug({ method, methodId }, "Method complete");
   return Result.ok(results);
 };

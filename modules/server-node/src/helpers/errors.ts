@@ -77,6 +77,7 @@ export class ResubmitWithdrawalError extends NodeError {
     CouldNotGetChannels: "Failed to get channels from store",
     CouldNotGetCommitments: "Failed to get unsubmitted withdrawals",
     CouldNotGetGasPrice: "Failed to get mainnet gas price",
+    SavingCommitmentFailed: "Failed to save withdrawal commitment",
     SubmissionFailed: "Failed to submit withdrawal onchain",
   } as const;
 
