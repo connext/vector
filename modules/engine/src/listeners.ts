@@ -767,7 +767,21 @@ async function handleWithdrawalTransferResolution(
     return;
   }
 
-  // Submit withdrawal to chain
+  // Here, alice is handling her own resolved withdrawals
+
+  // If it is mainnet, alice should hold the withdrawals and submit them
+  // at a lower gas price.
+  // NOTE: The logic to hold withdrawals until gas price is lower exists in
+  // the server-node ONLY. This makes the implicit assumption that browser-nodes
+  // will *NOT* be alice. This is safe because this assumption is also made
+  // on setup when the browser-node will always `requestSetup`
+  if (event.updatedChannelState.networkContext.chainId === 1) {
+    await store.saveWithdrawalCommitment(transferId, commitment.toJson());
+    logger.debug({ method, channel: event.updatedChannelState.channelAddress }, "Holding mainnet withdrawal");
+    return;
+  }
+
+  // Submit withdrawal to chain IFF not mainnet
   const withdrawalResponse = await chainService.sendWithdrawTx(
     event.updatedChannelState,
     commitment.getSignedTransaction(),

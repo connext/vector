@@ -4,7 +4,7 @@ import { BigNumberish } from "@ethersproject/bignumber";
 import { AddressZero } from "@ethersproject/constants";
 import { Contract } from "@ethersproject/contracts";
 import { formatEther, formatUnits } from "@ethersproject/units";
-import { Wallet } from "ethers";
+import { Wallet } from "@ethersproject/wallet";
 import { Counter, Gauge } from "prom-client";
 
 import { config } from "./config";
@@ -15,8 +15,9 @@ import { config } from "./config";
 
 //////////////////////////
 ///// Helpers/Utils
-const signerAddress = Wallet.fromMnemonic(config.mnemonic).address;
-const hydrated: HydratedProviders = hydrateProviders(config.chainProviders);
+export const wallet = Wallet.fromMnemonic(config.mnemonic);
+export const signerAddress = wallet.address;
+export const hydrated: HydratedProviders = hydrateProviders(config.chainProviders);
 export const rebalancedTokens: {
   [chainId: string]: {
     [assetId: string]: {
@@ -39,6 +40,24 @@ Object.entries(hydrated).forEach(async ([chainId, provider]) => {
   });
 });
 
+export const getDecimals = async (chainId: string, assetId: string): Promise<number> => {
+  if (assetId === AddressZero) {
+    return 18;
+  }
+  const { decimals: _decimals, contract } = rebalancedTokens[chainId][assetId];
+  if (_decimals) {
+    return _decimals;
+  }
+  let decimals = 18;
+  try {
+    decimals = await contract.decimals();
+  } catch (e) {
+    // default to 18
+  }
+  rebalancedTokens[chainId][assetId].decimals = decimals;
+  return decimals;
+};
+
 export const parseBalanceToNumber = async (
   toFormat: BigNumberish,
   chainId: string,
@@ -47,16 +66,7 @@ export const parseBalanceToNumber = async (
   if (assetId === AddressZero) {
     return parseFloat(formatEther(toFormat));
   }
-  const { decimals: _decimals, contract } = rebalancedTokens[chainId][assetId];
-  let decimals = 18;
-  if (!_decimals) {
-    try {
-      decimals = await contract.decimals();
-    } catch (e) {
-      // default to 18
-    }
-    rebalancedTokens[chainId][assetId].decimals = decimals;
-  }
+  const decimals = await getDecimals(chainId, assetId);
   return parseFloat(formatUnits(toFormat, decimals));
 };
 

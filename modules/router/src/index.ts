@@ -28,6 +28,8 @@ import { config } from "./config";
 import { IRouter, Router } from "./router";
 import { PrismaStore } from "./services/store";
 import { NatsRouterMessagingService } from "./services/messaging";
+import { autoRebalanceTask, startAutoRebalanceTask } from "./autoRebalance";
+import { wallet } from "./metrics";
 
 const routerPort = 8000;
 const routerBase = `http://router:${routerPort}`;
@@ -109,26 +111,21 @@ collectDefaultMetrics({ prefix: "router_" });
 
 let router: IRouter;
 const store = new PrismaStore();
-
-// create gauge to store balance for each rebalanced asset and each native asset for the signer address
-// TODO: maybe want to look into an API rather than blowing up our eth providers? although its not that many calls
+const hydratedProviders = hydrateProviders(config.chainProviders);
+const chainService = new VectorChainReader(hydratedProviders, logger.child({ module: "RouterChainReader" }));
+const messagingService = new NatsRouterMessagingService({
+  signer,
+  logger: logger.child({ module: "NatsRouterMessagingService" }),
+  messagingUrl: config.messagingUrl,
+});
 
 server.addHook("onReady", async () => {
-  const messagingService = new NatsRouterMessagingService({
-    signer,
-    logger: logger.child({ module: "NatsRouterMessagingService" }),
-    messagingUrl: config.messagingUrl,
-  });
   const nodeService = await RestServerNodeService.connect(
     config.nodeUrl,
     logger.child({ module: "RouterNodeService" }),
     evts,
     0,
     true,
-  );
-  const chainService = new VectorChainReader(
-    hydrateProviders(config.chainProviders),
-    logger.child({ module: "RouterChainReader" }),
   );
 
   router = await Router.connect(
@@ -140,6 +137,10 @@ server.addHook("onReady", async () => {
     messagingService,
     logger,
   );
+
+  if (config.autoRebalanceInterval) {
+    startAutoRebalanceTask(config.autoRebalanceInterval, logger, wallet, chainService, hydratedProviders);
+  }
 });
 
 server.get("/ping", async () => {
@@ -153,6 +154,15 @@ server.get("/metrics", async (request, response) => {
   const res = await register.metrics();
   return response.status(200).send(res);
 });
+
+// ADMIN FUNCTIONS
+
+server.post("/auto-rebalance", async (request, response) => {
+  await autoRebalanceTask(logger, wallet, chainService, hydratedProviders);
+  return response.status(200).send({ message: "success" });
+});
+
+// EVENT HANDLERS
 
 server.post(isAlivePath, async (request, response) => {
   evts[EngineEvents.IS_ALIVE].evt!.post(request.body as IsAlivePayload);

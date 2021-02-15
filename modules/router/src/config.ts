@@ -35,6 +35,7 @@ const VectorRouterConfigSchema = Type.Object({
   messagingUrl: Type.Optional(TUrl),
   rebalanceProfiles: Type.Array(RebalanceProfileSchema),
   mnemonic: Type.Optional(Type.String()),
+  autoRebalanceInterval: Type.Optional(Type.Number({ minimum: 1_800_000 })),
 });
 
 type VectorRouterConfig = Static<typeof VectorRouterConfigSchema>;
