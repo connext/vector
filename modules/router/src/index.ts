@@ -102,7 +102,7 @@ const evts: EventCallbackConfig = {
 const signer = new ChannelSigner(Wallet.fromMnemonic(config.mnemonic).privateKey);
 
 const logger = pino({ name: signer.publicIdentifier });
-logger.info({ config }, "Loaded config from environment");
+logger.info("Loaded config from environment");
 const server = fastify({ logger, pluginTimeout: 300_000, disableRequestLogging: config.logLevel !== "debug" });
 
 collectDefaultMetrics({ prefix: "router_" });
