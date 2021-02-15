@@ -72,7 +72,10 @@ describe(testName, () => {
 
     const aliceEvent = await alicePromise;
     const bobEvent = await bobPromise;
-    expect(aliceEvent).to.deep.eq(bobEvent);
+    expect(aliceEvent.updatedChannelState).to.be.deep.eq(bobEvent.updatedChannelState);
+    const { meta, ...aliceSanitized } = aliceEvent.updatedTransfer!;
+    expect(bobEvent.updatedTransfer).to.containSubset(aliceSanitized);
+    expect(bobEvent.updatedTransfers).to.not.containSubset([aliceSanitized]);
     expect(aliceEvent.updatedTransfer!.transferResolver.preImage).to.be.a("string");
   };
 
@@ -83,7 +86,10 @@ describe(testName, () => {
 
     const aliceEvent = await alicePromise;
     const bobEvent = await bobPromise;
-    expect(aliceEvent).to.deep.eq(bobEvent);
+    expect(aliceEvent.updatedChannelState).to.be.deep.eq(bobEvent.updatedChannelState);
+    const { meta, ...aliceSanitized } = aliceEvent.updatedTransfer!;
+    expect(bobEvent.updatedTransfer).to.containSubset(aliceSanitized);
+    expect(bobEvent.updatedTransfers).to.not.containSubset([aliceSanitized]);
     expect(aliceEvent.updatedTransfer!.transferResolver.preImage).to.be.a("string");
   };
 

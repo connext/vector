@@ -4,8 +4,6 @@ import Ajv from "ajv";
 
 const ajv = new Ajv();
 
-// console.log(`Starting node in env: ${JSON.stringify(vectorEnv, null, 2)}`);
-
 const mnemonicEnv = process.env.VECTOR_MNEMONIC;
 const dbUrl = process.env.VECTOR_DATABASE_URL;
 let vectorConfig: VectorNodeConfig;
@@ -30,27 +28,26 @@ for (const chainId of Object.keys(vectorConfig.chainProviders)) {
     vectorConfig.chainAddresses[chainId] = {} as any;
   }
   if (
-    !vectorConfig.chainAddresses[chainId].channelFactoryAddress
-    && deployments[chainId] && deployments[chainId].ChannelFactory
+    !vectorConfig.chainAddresses[chainId].channelFactoryAddress &&
+    deployments[chainId] &&
+    deployments[chainId].ChannelFactory
   ) {
-    vectorConfig.chainAddresses[chainId].channelFactoryAddress =
-      deployments[chainId].ChannelFactory.address;
+    vectorConfig.chainAddresses[chainId].channelFactoryAddress = deployments[chainId].ChannelFactory.address;
   }
   if (
-    !vectorConfig.chainAddresses[chainId].transferRegistryAddress
-    && deployments[chainId] && deployments[chainId].TransferRegistry
+    !vectorConfig.chainAddresses[chainId].transferRegistryAddress &&
+    deployments[chainId] &&
+    deployments[chainId].TransferRegistry
   ) {
-    vectorConfig.chainAddresses[chainId].transferRegistryAddress =
-      deployments[chainId].TransferRegistry.address;
+    vectorConfig.chainAddresses[chainId].transferRegistryAddress = deployments[chainId].TransferRegistry.address;
   }
-
 }
 
 const validate = ajv.compile(VectorNodeConfigSchema);
 const valid = validate(vectorConfig);
 
 if (!valid) {
-  throw new Error(validate.errors?.map(err => err.message).join(","));
+  throw new Error(validate.errors?.map((err) => err.message).join(","));
 }
 
 const mnemonic = mnemonicEnv || vectorConfig.mnemonic;
