@@ -357,14 +357,25 @@ const PostAdminSubmitWithdrawalsBodySchema = Type.Object({
   adminToken: Type.String(),
 });
 
+// returns an object keyed on public identifiers with either
+// an error json or a successful submission result
 const PostAdminSubmitWithdrawalsResponseSchema = {
   200: Type.Dict(
-    Type.Array(
+    Type.Union([
+      Type.Array(
+        Type.Object({
+          transactionHash: Type.String(),
+          transferId: TBytes32,
+          channelAddress: TAddress,
+        }),
+      ),
       Type.Object({
-        transactionHash: Type.String(),
-        transferId: TBytes32,
+        message: Type.String(),
+        type: Type.String(),
+        context: Type.Dict(Type.Any()),
+        stack: Type.String(),
       }),
-    ),
+    ]),
   ),
 };
 
