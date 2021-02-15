@@ -159,6 +159,14 @@ export const rebalanceIfNeeded = async (
           {
             method,
             intervalId: methodId,
+            amount: amountToSend.toString(),
+            assetId: swap.fromAssetId,
+            fromProvider: config.chainProviders[swap.fromChainId],
+            fromChainId: swap.toChainId,
+            toProvider: config.chainProviders[swap.toChainId],
+            toChainId: swap.toChainId,
+            signer: wallet.address,
+            url: `${swap.rebalancerUrl}/approval`,
           },
           "Approval required, sending request",
         );
@@ -240,6 +248,14 @@ export const rebalanceIfNeeded = async (
         {
           method,
           intervalId: methodId,
+          amount: amountToSend.toString(),
+          assetId: swap.fromAssetId,
+          fromProvider: config.chainProviders[swap.fromChainId],
+          fromChainId: swap.toChainId,
+          toProvider: config.chainProviders[swap.toChainId],
+          toChainId: swap.toChainId,
+          signer: wallet.address,
+          url: `${swap.rebalancerUrl}/approval`,
         },
         "Sending rebalance request",
       );
