@@ -2,6 +2,9 @@
 
 ## Next Release
 
+## 0.1.15-beta.21
+
+- \[router\] Fix auto-rebalancing bug
 ## 0.1.15-beta.20
 
 - \[router\] Don't create 0 valued withdrawals
