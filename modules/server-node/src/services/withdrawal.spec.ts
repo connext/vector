@@ -30,6 +30,7 @@ describe(testName, () => {
   const alice = getRandomChannelSigner();
   const bob = getRandomChannelSigner();
   const transferId = getRandomBytes32();
+  const transferDefinition = mkAddress("0xdef");
   const channelAddress = mkAddress("0xccc");
   const transactionHash = mkHash("0xttt");
 
@@ -62,7 +63,7 @@ describe(testName, () => {
         channelAddress,
         networkContext: { chainId: 1 },
       },
-      { transferId, meta: {} },
+      { transferId, transferDefinition, meta: {} },
     );
     return { channel, transfer, commitment: commitment.toJson() };
   };
@@ -74,6 +75,7 @@ describe(testName, () => {
 
     // default all mocks to be ok
     chainService.sendWithdrawTx.resolves(Result.ok({ hash: transactionHash }) as any);
+    chainService.getRegisteredTransferByName.resolves(Result.ok({ definition: transferDefinition }) as any);
     store.saveWithdrawalCommitment.resolves();
     getChainServiceStub.returns(chainService);
   });

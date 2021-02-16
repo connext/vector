@@ -4,6 +4,7 @@ import {
   FullTransferState,
   jsonifyError,
   Result,
+  TransferNames,
   WithdrawCommitmentJson,
 } from "@connext/vector-types";
 import { getRandomBytes32 } from "@connext/vector-utils";
@@ -44,17 +45,46 @@ const getUnsubmittedWithdrawals = async (
   // gather all unsubmitted withdrawal commitments for all channels
   const unsubmitted: { commitment: WithdrawCommitmentJson; transfer: FullTransferState }[] = [];
   try {
-    await Promise.all(
-      channels.map(async (channel) => {
-        const forChannel = await store.getUnsubmittedWithdrawals(channel.channelAddress);
-        if (forChannel.length === 0) {
-          return;
-        }
-        unsubmitted.push(...forChannel);
-      }),
-    );
+    for (const channel of channels) {
+      const chainService = getChainService(channel.aliceIdentifier) ?? getChainService(channel.bobIdentifier);
+      if (!chainService) {
+        return Result.fail(
+          new ResubmitWithdrawalError(
+            ResubmitWithdrawalError.reasons.ChainServiceNotFound,
+            "",
+            channel.channelAddress,
+            "",
+            { aliceIdentifier: channel.aliceIdentifier, bobIdentifier: channel.bobIdentifier },
+          ),
+        );
+      }
+      const withdrawalDefinition = await chainService.getRegisteredTransferByName(
+        TransferNames.Withdraw,
+        channel.networkContext.transferRegistryAddress,
+        channel.networkContext.chainId,
+      );
+      if (withdrawalDefinition.isError) {
+        return Result.fail(
+          new ResubmitWithdrawalError(
+            ResubmitWithdrawalError.reasons.WithdrawalDefinitionNotFound,
+            channel.aliceIdentifier,
+            channel.channelAddress,
+            "",
+            { registryError: jsonifyError(withdrawalDefinition.getError()!) },
+          ),
+        );
+      }
+      const forChannel = await store.getUnsubmittedWithdrawals(
+        channel.channelAddress,
+        withdrawalDefinition.getValue().definition,
+      );
+      if (forChannel.length === 0) {
+        continue;
+      }
+      unsubmitted.push(...forChannel);
+    }
   } catch (e) {
-    logger.error({ method, methodId }, "Failed to get unsubmitted withdrawals");
+    logger.error({ method, methodId, error: jsonifyError(e) }, "Failed to get unsubmitted withdrawals");
     return Result.fail(
       new ResubmitWithdrawalError(ResubmitWithdrawalError.reasons.CouldNotGetCommitments, "", "", "", {
         error: jsonifyError(e),

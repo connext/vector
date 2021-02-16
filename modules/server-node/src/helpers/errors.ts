@@ -79,6 +79,7 @@ export class ResubmitWithdrawalError extends NodeError {
     CouldNotGetGasPrice: "Failed to get mainnet gas price",
     SavingCommitmentFailed: "Failed to save withdrawal commitment",
     SubmissionFailed: "Failed to submit withdrawal onchain",
+    WithdrawalDefinitionNotFound: "Failed to retrieve withdrawal definition from registry",
   } as const;
 
   readonly context: ResubmitWithdrawalErrorContext;
