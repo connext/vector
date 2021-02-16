@@ -118,7 +118,7 @@ model Transfer {
   // transactions for withdrawals
   // has onchainTransactionId always if withdrawal
   // has OnchainTransaction relation IFF we submitted (and have tx record)
-  onchainTransactionId  String? @unique
+  onchainTransactionId  String?
   transactionHash       String?
   onchainTransaction    OnchainTransaction? @relation(name: "Transaction", fields: [transactionHash], references: [transactionHash])
 

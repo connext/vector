@@ -397,7 +397,10 @@ export class PrismaStore implements IServerNodeStore {
   }
 
   async getWithdrawalCommitmentByTransactionHash(transactionHash: string): Promise<WithdrawCommitmentJson | undefined> {
-    const entity = await this.prisma.transfer.findUnique({
+    // use findFirst instead of findUnique. should be unique but
+    // HashZero is used if the transaction was already submitted and we
+    // have no record
+    const entity = await this.prisma.transfer.findFirst({
       where: { onchainTransactionId: transactionHash },
       include: { channel: true, createUpdate: true, resolveUpdate: true },
     });
