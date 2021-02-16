@@ -7,7 +7,7 @@ import { ChannelDispute } from "./dispute";
 import { Result, Values, VectorError } from "./error";
 import { TransactionEvent, TransactionEventMap } from "./event";
 import { ChainProviders, HydratedProviders } from "./network";
-import { RegisteredTransfer, TransferName, TransferState } from "./transferDefinitions";
+import { RegisteredTransfer, TransferName, TransferState, WithdrawCommitmentJson } from "./transferDefinitions";
 
 export const ERC20Abi = [
   // Read-Only Functions
@@ -177,6 +177,12 @@ export interface IVectorChainReader {
       ChainError
     >
   >;
+
+  getWithdrawalTransactionRecord(
+    withdrawData: WithdrawCommitmentJson,
+    channelAddress: string,
+    chainId: number,
+  ): Promise<Result<boolean, ChainError>>;
 }
 
 export interface IVectorChainService extends IVectorChainReader {

@@ -159,6 +159,14 @@ export const rebalanceIfNeeded = async (
           {
             method,
             intervalId: methodId,
+            amount: amountToSend.toString(),
+            assetId: swap.fromAssetId,
+            fromProvider: config.chainProviders[swap.fromChainId],
+            fromChainId: swap.fromChainId,
+            toProvider: config.chainProviders[swap.toChainId],
+            toChainId: swap.toChainId,
+            signer: wallet.address,
+            url: `${swap.rebalancerUrl}/approval`,
           },
           "Approval required, sending request",
         );
@@ -166,7 +174,7 @@ export const rebalanceIfNeeded = async (
           amount: amountToSend.toString(),
           assetId: swap.fromAssetId,
           fromProvider: config.chainProviders[swap.fromChainId],
-          fromChainId: swap.toChainId,
+          fromChainId: swap.fromChainId,
           toProvider: config.chainProviders[swap.toChainId],
           toChainId: swap.toChainId,
           signer: wallet.address,
@@ -184,6 +192,7 @@ export const rebalanceIfNeeded = async (
           const transaction = approveRes.data.transaction;
           logger.info(
             {
+              transaction,
               method,
               intervalId: methodId,
             },
@@ -240,6 +249,14 @@ export const rebalanceIfNeeded = async (
         {
           method,
           intervalId: methodId,
+          amount: amountToSend.toString(),
+          assetId: swap.fromAssetId,
+          fromProvider: config.chainProviders[swap.fromChainId],
+          fromChainId: swap.fromChainId,
+          toProvider: config.chainProviders[swap.toChainId],
+          toChainId: swap.toChainId,
+          signer: wallet.address,
+          url: `${swap.rebalancerUrl}/approval`,
         },
         "Sending rebalance request",
       );
@@ -247,7 +264,7 @@ export const rebalanceIfNeeded = async (
         amount: amountToSend.toString(),
         assetId: swap.fromAssetId,
         fromProvider: config.chainProviders[swap.fromChainId],
-        fromChainId: swap.toChainId,
+        fromChainId: swap.fromChainId,
         toProvider: config.chainProviders[swap.toChainId],
         toChainId: swap.toChainId,
         signer: wallet.address,

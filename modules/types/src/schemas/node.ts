@@ -336,7 +336,7 @@ const PostAdminResponseSchema = {
   }),
 };
 
-// RETRY TRANSACTION
+// RETRY SUBMITTING WITHDRAWAL TRANSACTION
 const PostAdminRetryWithdrawTransactionBodySchema = Type.Object({
   adminToken: Type.String(),
   transferId: TBytes32,
@@ -347,6 +347,33 @@ const PostAdminRetryWithdrawTransactionResponseSchema = {
     transferId: TBytes32,
     transactionHash: Type.String(),
   }),
+};
+
+// SUBMIT UNSUBMITTED WITHDRAWALS
+const PostAdminSubmitWithdrawalsBodySchema = Type.Object({
+  adminToken: Type.String(),
+});
+
+// returns an object keyed on public identifiers with either
+// an error json or a successful submission result
+const PostAdminSubmitWithdrawalsResponseSchema = {
+  200: Type.Dict(
+    Type.Union([
+      Type.Array(
+        Type.Object({
+          transactionHash: Type.String(),
+          transferId: TBytes32,
+          channelAddress: TAddress,
+        }),
+      ),
+      Type.Object({
+        message: Type.String(),
+        type: Type.String(),
+        context: Type.Dict(Type.Any()),
+        stack: Type.String(),
+      }),
+    ]),
+  ),
 };
 
 //////////////////
@@ -510,6 +537,9 @@ export namespace NodeParams {
 
   export const RetryWithdrawTransactionSchema = PostAdminRetryWithdrawTransactionBodySchema;
   export type RetryWithdrawTransaction = Static<typeof RetryWithdrawTransactionSchema>;
+
+  export const SubmitWithdrawalsSchema = PostAdminSubmitWithdrawalsBodySchema;
+  export type SubmitWithdrawals = Static<typeof SubmitWithdrawalsSchema>;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-namespace
@@ -614,4 +644,7 @@ export namespace NodeResponses {
 
   export const RetryWithdrawTransactionSchema = PostAdminRetryWithdrawTransactionResponseSchema;
   export type RetryWithdrawTransaction = Static<typeof PostAdminRetryWithdrawTransactionResponseSchema["200"]>;
+
+  export const SubmitWithdrawalsSchema = PostAdminSubmitWithdrawalsResponseSchema;
+  export type SubmitWithdrawals = Static<typeof PostAdminSubmitWithdrawalsResponseSchema["200"]>;
 }

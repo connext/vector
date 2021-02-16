@@ -14,6 +14,7 @@ import {
   ChannelDispute,
   TransferState,
   HydratedProviders,
+  WithdrawCommitmentJson,
 } from "@connext/vector-types";
 import axios from "axios";
 import { encodeBalance, encodeTransferResolver, encodeTransferState } from "@connext/vector-utils";
@@ -524,6 +525,32 @@ export class EthereumChainReader implements IVectorChainReader {
       return Result.fail(e);
     }
     return Result.ok(onchainBalance);
+  }
+
+  async getWithdrawalTransactionRecord(
+    withdrawData: WithdrawCommitmentJson,
+    channelAddress: string,
+    chainId: number,
+  ): Promise<Result<boolean, ChainError>> {
+    const provider = this.chainProviders[chainId];
+    if (!provider) {
+      return Result.fail(new ChainError(ChainError.reasons.ProviderNotFound));
+    }
+    const channel = new Contract(channelAddress, VectorChannel.abi, provider);
+    try {
+      const record = await channel.getWithdrawalTransactionRecord({
+        channelAddress,
+        assetId: withdrawData.assetId,
+        recipient: withdrawData.recipient,
+        amount: withdrawData.amount,
+        nonce: withdrawData.nonce,
+        callTo: withdrawData.callTo,
+        callData: withdrawData.callData,
+      });
+      return Result.ok(record);
+    } catch (e) {
+      return Result.fail(e);
+    }
   }
 
   private tryEvm(encodedFunctionData: string, bytecode: string): Result<Uint8Array, Error> {
