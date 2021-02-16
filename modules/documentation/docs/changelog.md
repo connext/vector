@@ -2,6 +2,10 @@
 
 ## Next Release
 
+## 0.1.15-beta.18
+
+- \[server-node\] Remove unique condition for `onchainTransactionId`
+
 ## 0.1.15-beta.17
 
 - \[server-node\] Filter transfers by definition when getting unsubmitted withdrawals
