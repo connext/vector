@@ -176,8 +176,9 @@ jobs:
             git checkout --force prod;
             git reset --hard $GITHUB_SHA;
             make restart-messaging;
-            docker container prune -f;
-            docker image ls -q | xargs docker image rm || true;
+            echo "===== Cleaning docker system";
+            docker system prune -f;
+            docker system prune -af;
           '
   deploy-testnet:
     env:
@@ -196,6 +197,7 @@ jobs:
             git checkout --force prod;
             git reset --hard $GITHUB_SHA;
             make restart;
-            docker container prune -f;
-            docker image ls -q | xargs docker image rm || true;
+            echo "===== Cleaning docker system";
+            docker system prune -f;
+            docker system prune -af;
           '

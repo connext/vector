@@ -444,6 +444,13 @@ do
     then echo "Timed out waiting for $public_url to respond.." && exit
     else sleep 2
     fi
-  else echo "Good Morning!" && exit;
+  else
+    echo ""
+    echo "===== Cleaning docker system"
+    docker system prune -f
+    docker system prune -af
+    echo ""
+    echo "Good Morning!"
+    exit;
   fi
 done
