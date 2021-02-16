@@ -206,3 +206,15 @@ export class AutoRebalanceServiceError extends RouterError {
     super(message, { chainId, assetId, ...context }, AutoRebalanceServiceError.type);
   }
 }
+
+export class ServerError extends RouterError {
+  static readonly type = "ServerError";
+
+  static readonly reasons = {
+    Unauthorized: "Unauthorized",
+  } as const;
+
+  constructor(public readonly message: Values<typeof ServerError.reasons>, context: any = {}) {
+    super(message, context, ServerError.type);
+  }
+}

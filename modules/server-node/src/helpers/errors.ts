@@ -60,5 +60,39 @@ export class ServerNodeLockError extends NodeError {
     context: any = {},
   ) {
     super(msg, { ...context, lockName, lockValue }, ServerNodeLockError.type);
+    this.context = { lockName, lockValue, ...context };
+  }
+}
+
+type ResubmitWithdrawalErrorContext = {
+  channelAddress: string;
+  publicIdentifier: string;
+  transferId: string;
+};
+export class ResubmitWithdrawalError extends NodeError {
+  static readonly type = "ResubmitWithdrawalError";
+
+  static readonly reasons = {
+    ChainServiceNotFound: "Could not find chain service",
+    CouldNotCheckSubmissionStatus: "Failed to check withdrawal submission status onchain",
+    CouldNotGetChannels: "Failed to get channels from store",
+    CouldNotGetCommitments: "Failed to get unsubmitted withdrawals",
+    CouldNotGetGasPrice: "Failed to get mainnet gas price",
+    SavingCommitmentFailed: "Failed to save withdrawal commitment",
+    SubmissionFailed: "Failed to submit withdrawal onchain",
+    WithdrawalDefinitionNotFound: "Failed to retrieve withdrawal definition from registry",
+  } as const;
+
+  readonly context: ResubmitWithdrawalErrorContext;
+
+  constructor(
+    public readonly msg: Values<typeof ResubmitWithdrawalError.reasons>,
+    publicIdentifier: string,
+    channelAddress: string,
+    transferId: string,
+    context: any = {},
+  ) {
+    super(msg, { channelAddress, publicIdentifier, transferId, ...context }, ServerNodeError.type);
+    this.context = { channelAddress, publicIdentifier, transferId, ...context };
   }
 }

@@ -115,6 +115,13 @@ model Transfer {
   createUpdate  Update? @relation(name: "CreatedTransfer", fields: [createUpdateChannelAddressId, createUpdateNonce], references: [channelAddressId, nonce])
   resolveUpdate Update? @relation(name: "ResolvedTransfer", fields: [resolveUpdateChannelAddressId, resolveUpdateNonce], references: [channelAddressId, nonce])
 
+  // transactions for withdrawals
+  // has onchainTransactionId always if withdrawal
+  // has OnchainTransaction relation IFF we submitted (and have tx record)
+  onchainTransactionId  String?
+  transactionHash       String?
+  onchainTransaction    OnchainTransaction? @relation(name: "Transaction", fields: [transactionHash], references: [transactionHash])
+
   // balance
   amountA String
   amountB String

@@ -2,9 +2,37 @@
 
 ## Next Release
 
+## 0.1.15-beta.21
+
+- \[router\] Fix auto-rebalancing bug
+## 0.1.15-beta.20
+
+- \[router\] Don't create 0 valued withdrawals
+- \[server-node\] Ignore no-op withdrawals
+
+## 0.1.15-beta.19
+
+- \[server-node\] Query chain instead of using error message
+
+## 0.1.15-beta.18
+
+- \[server-node\] Remove unique condition for `onchainTransactionId`
+
+## 0.1.15-beta.17
+
+- \[server-node\] Filter transfers by definition when getting unsubmitted withdrawals
+- \[server-node\] Improve logging for admin endpoint
+
+## 0.1.15-beta.16
+
+- \[server-node\] Hold withdrawals as alice on mainnet
+- \[server-node\] Add admin endpoint to resubmit all withdrawals
+- \[server-node\] Submit withdrawals when gas price is low or commitments are > 1 week old
+
 ## 0.1.15-beta.15
 
 - \[router\] Fix bug in auto-rebalance
+
 ## 0.1.15-beta.14
 
 - \[router\] Add auto-rebalance service for Matic deposit
