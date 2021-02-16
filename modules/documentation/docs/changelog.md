@@ -2,6 +2,8 @@
 
 ## Next Release
 
+- \[router\] Don't create 0 valued withdrawals
+
 ## 0.1.15-beta.19
 
 - \[server-node\] Query chain instead of using error message
