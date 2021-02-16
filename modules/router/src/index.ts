@@ -20,6 +20,7 @@ import {
   TransactionMinedPayload,
   TransactionFailedPayload,
   SetupPayload,
+  NodeParams,
 } from "@connext/vector-types";
 import { collectDefaultMetrics, register } from "prom-client";
 import { Wallet } from "ethers";
@@ -30,6 +31,7 @@ import { PrismaStore } from "./services/store";
 import { NatsRouterMessagingService } from "./services/messaging";
 import { autoRebalanceTask, startAutoRebalanceTask } from "./autoRebalance";
 import { wallet } from "./metrics";
+import { ServerError } from "./errors";
 
 const routerPort = 8000;
 const routerBase = `http://router:${routerPort}`;
@@ -156,11 +158,18 @@ server.get("/metrics", async (request, response) => {
 });
 
 // ADMIN FUNCTIONS
+server.post<{ Body: NodeParams.Admin }>(
+  "/auto-rebalance",
+  { schema: { body: NodeParams.AdminSchema } },
+  async (request, response) => {
+    if (request.body.adminToken !== config.adminToken) {
+      return response.status(401).send(new ServerError(ServerError.reasons.Unauthorized, request.body).toJson());
+    }
 
-server.post("/auto-rebalance", async (request, response) => {
-  await autoRebalanceTask(logger, wallet, chainService, hydratedProviders);
-  return response.status(200).send({ message: "success" });
-});
+    await autoRebalanceTask(logger, wallet, chainService, hydratedProviders);
+    return response.status(200).send({ message: "success" });
+  },
+);
 
 // EVENT HANDLERS
 
