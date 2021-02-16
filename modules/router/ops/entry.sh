@@ -42,7 +42,6 @@ else
   schema="prisma-sqlite/schema.prisma"
   cp prisma-sqlite/schema.prisma dist/schema.prisma
 fi
-echo "VECTOR_DATABASE_URL: $VECTOR_DATABASE_URL"
 
 ########################################
 # Wait for dependencies to wake up
