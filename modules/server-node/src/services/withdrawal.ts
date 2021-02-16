@@ -4,6 +4,7 @@ import {
   FullTransferState,
   jsonifyError,
   Result,
+  TransferNames,
   WithdrawCommitmentJson,
 } from "@connext/vector-types";
 import { getRandomBytes32 } from "@connext/vector-utils";
@@ -38,26 +39,59 @@ const getUnsubmittedWithdrawals = async (
   channels: FullChannelState[],
   store: PrismaStore,
 ): Promise<Result<{ commitment: WithdrawCommitmentJson; transfer: FullTransferState }[], ResubmitWithdrawalError>> => {
+  const method = "getUnsubmittedWithdrawals";
+  const methodId = getRandomBytes32();
+  logger.debug({ method, methodId }, "Method started");
   // gather all unsubmitted withdrawal commitments for all channels
   const unsubmitted: { commitment: WithdrawCommitmentJson; transfer: FullTransferState }[] = [];
   try {
-    await Promise.all(
-      channels.map(async (channel) => {
-        const forChannel = await store.getUnsubmittedWithdrawals(channel.channelAddress);
-        if (forChannel.length === 0) {
-          return;
-        }
-        unsubmitted.push(...forChannel);
-      }),
-    );
+    for (const channel of channels) {
+      const chainService = getChainService(channel.aliceIdentifier) ?? getChainService(channel.bobIdentifier);
+      if (!chainService) {
+        return Result.fail(
+          new ResubmitWithdrawalError(
+            ResubmitWithdrawalError.reasons.ChainServiceNotFound,
+            "",
+            channel.channelAddress,
+            "",
+            { aliceIdentifier: channel.aliceIdentifier, bobIdentifier: channel.bobIdentifier },
+          ),
+        );
+      }
+      const withdrawalDefinition = await chainService.getRegisteredTransferByName(
+        TransferNames.Withdraw,
+        channel.networkContext.transferRegistryAddress,
+        channel.networkContext.chainId,
+      );
+      if (withdrawalDefinition.isError) {
+        return Result.fail(
+          new ResubmitWithdrawalError(
+            ResubmitWithdrawalError.reasons.WithdrawalDefinitionNotFound,
+            channel.aliceIdentifier,
+            channel.channelAddress,
+            "",
+            { registryError: jsonifyError(withdrawalDefinition.getError()!) },
+          ),
+        );
+      }
+      const forChannel = await store.getUnsubmittedWithdrawals(
+        channel.channelAddress,
+        withdrawalDefinition.getValue().definition,
+      );
+      if (forChannel.length === 0) {
+        continue;
+      }
+      unsubmitted.push(...forChannel);
+    }
   } catch (e) {
+    logger.error({ method, methodId, error: jsonifyError(e) }, "Failed to get unsubmitted withdrawals");
     return Result.fail(
       new ResubmitWithdrawalError(ResubmitWithdrawalError.reasons.CouldNotGetCommitments, "", "", "", {
         error: jsonifyError(e),
       }),
     );
   }
-
+  logger.debug({ method, methodId }, "Method complete");
   return Result.ok(unsubmitted);
 };
 
@@ -66,6 +100,9 @@ export const submitWithdrawalToChain = async (
   record: { commitment: WithdrawCommitmentJson; transfer: FullTransferState },
   store: PrismaStore,
 ): Promise<Result<ResubmitWithdrawalResult, ResubmitWithdrawalError>> => {
+  const method = "submitWithdrawalToChain";
+  const methodId = getRandomBytes32();
+  logger.debug({ method, methodId, channel, record }, "Method started");
   // Get chain service
   const chainService = getChainService(channel.aliceIdentifier);
   if (!chainService) {
@@ -105,6 +142,7 @@ export const submitWithdrawalToChain = async (
 
   // submission was successful, update commitment with hash
   const transactionHash = response.isError ? HashZero : response.getValue().hash;
+  logger.info({ transactionHash, channelAddress: channel.channelAddress }, "Submitted withdrawal to chain");
   commitment.addTransaction(transactionHash);
   try {
     await store.saveWithdrawalCommitment(transfer.transferId, commitment.toJson());
@@ -120,6 +158,7 @@ export const submitWithdrawalToChain = async (
     );
   }
 
+  logger.debug({ method, methodId }, "Method complete");
   return Result.ok({ transactionHash, transferId: transfer.transferId, channelAddress: channel.channelAddress });
 };
 
@@ -161,7 +200,6 @@ export const submitUnsubmittedWithdrawals = async (
       );
       continue;
     }
-    console.log("***** submission result", submissionResult);
     const { transactionHash, transferId, channelAddress } = submissionResult.getValue();
     results.push(submissionResult.getValue());
     logger.info({ method, methodId, transactionHash, transferId, channelAddress }, "Submitted withdrawal to chain");

@@ -1005,6 +1005,17 @@ server.post<{ Body: NodeParams.SubmitWithdrawals }>(
         // gather all unsubmitted withdrawal commitments for all channels
         const nodeChannels = channels.filter((chan) => chan.aliceIdentifier === node.node.publicIdentifier);
         const nodeResults = await submitUnsubmittedWithdrawals(nodeChannels, store);
+        if (nodeResults.isError) {
+          logger.error(
+            { error: jsonifyError(nodeResults.getError()!), publicIdentifier: node.node.publicIdentifier },
+            "Failed to submit withdrawals",
+          );
+        } else {
+          logger.info(
+            { results: nodeResults.getValue(), publicIdentifier: node.node.publicIdentifier },
+            "Submitted withdrawals",
+          );
+        }
         results[node.node.publicIdentifier] = nodeResults.isError
           ? jsonifyError(nodeResults.getError()!)
           : nodeResults.getValue();

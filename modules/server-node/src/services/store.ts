@@ -234,20 +234,20 @@ const convertTransferEntityToFullTransferState = (
 };
 
 const convertEntitiesToWithdrawalCommitment = (
-  resolveEntity: Update,
+  resolveEntity: Update | null,
   createEntity: Update,
   channel: Channel,
 ): WithdrawCommitmentJson => {
-  const initialState = JSON.parse(createEntity!.transferInitialState ?? "{}");
-  const resolver = JSON.parse(resolveEntity.transferResolver ?? "{}");
-  const resolveMeta = JSON.parse(resolveEntity.meta ?? "{}");
+  const initialState = JSON.parse(createEntity.transferInitialState ?? "{}");
+  const resolver = JSON.parse(resolveEntity?.transferResolver ?? "{}");
+  const resolveMeta = JSON.parse(resolveEntity?.meta ?? "{}");
 
   const aliceIsInitiator = channel.participantA === getSignerAddressFromPublicIdentifier(createEntity!.fromIdentifier);
 
   return {
     aliceSignature: aliceIsInitiator ? initialState.initiatorSignature : resolver.responderSignature,
     bobSignature: aliceIsInitiator ? resolver.responderSignature : initialState.initiatorSignature,
-    channelAddress: resolveEntity.channelAddressId,
+    channelAddress: channel.channelAddress,
     alice: channel.participantA,
     bob: channel.participantB,
     recipient: createEntity.transferToA!, // balance = [toA, toB]
@@ -473,11 +473,16 @@ export class PrismaStore implements IServerNodeStore {
   // a transaction hash
   async getUnsubmittedWithdrawals(
     channelAddress: string,
+    withdrawalDefinition: string,
   ): Promise<{ commitment: WithdrawCommitmentJson; transfer: FullTransferState }[]> {
     const entities = await this.prisma.transfer.findMany({
       where: {
         channelAddressId: channelAddress,
-        AND: { onchainTransactionId: null, resolveUpdateChannelAddressId: channelAddress },
+        AND: {
+          onchainTransactionId: null,
+          resolveUpdateChannelAddressId: channelAddress,
+          createUpdate: { transferDefinition: withdrawalDefinition },
+        },
       },
       include: { channel: true, createUpdate: true, resolveUpdate: true },
     });
@@ -491,7 +496,7 @@ export class PrismaStore implements IServerNodeStore {
 
     return entities.map((e) => {
       return {
-        commitment: convertEntitiesToWithdrawalCommitment(e.resolveUpdate!, e.createUpdate!, e.channel!),
+        commitment: convertEntitiesToWithdrawalCommitment(e.resolveUpdate, e.createUpdate!, e.channel!),
         transfer: convertTransferEntityToFullTransferState(e),
       };
     });
