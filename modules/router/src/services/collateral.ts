@@ -173,6 +173,10 @@ export const adjustCollateral = async (
 
   // balance should be above reclaim threshold, must reclaim
   const reclaimable = myBalance.sub(target);
+  if (reclaimable.eq(0)) {
+    logger.info({ assetId, channelAddress }, "Nothing to reclaim");
+    return Result.ok(undefined);
+  }
   logger.info({ reclaimable: reclaimable.toString(), assetId, channelAddress }, "Reclaiming funds");
 
   // NOTE: would be interesting to find another channel that needs collateral

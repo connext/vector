@@ -8,7 +8,7 @@ import {
   WithdrawCommitmentJson,
 } from "@connext/vector-types";
 import { getRandomBytes32 } from "@connext/vector-utils";
-import { HashZero } from "@ethersproject/constants";
+import { HashZero, AddressZero } from "@ethersproject/constants";
 import { parseUnits } from "@ethersproject/units";
 
 import { logger } from "..";
@@ -136,10 +136,17 @@ export const submitWithdrawalToChain = async (
       ),
     );
   }
-  if (wasSubmitted.getValue()) {
+  const noOp = commitment.amount === "0" && commitment.callTo === AddressZero;
+  if (wasSubmitted.getValue() || noOp) {
     logger.info(
-      { transferId: transfer.transferId, channelAddress: channel.channelAddress, commitment: json },
-      "Previously submitted",
+      {
+        transferId: transfer.transferId,
+        channelAddress: channel.channelAddress,
+        commitment: json,
+        wasSubmitted: wasSubmitted.getValue(),
+        noOp,
+      },
+      "Previously submitted / no-op",
     );
     commitment.addTransaction(HashZero);
     try {
