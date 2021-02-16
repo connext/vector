@@ -109,6 +109,11 @@ const config: HardhatUserConfig = {
       chainId: 97,
       url: urlOverride || "https://data-seed-prebsc-1-s1.binance.org:8545/",
     },
+    bsc: {
+      accounts: { mnemonic },
+      chainId: 56,
+      url: urlOverride || "https://bsc-dataseed.binance.org/",
+    },
   },
 };
 
