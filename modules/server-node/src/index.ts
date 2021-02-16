@@ -1013,13 +1013,14 @@ server.post<{ Body: NodeParams.SubmitWithdrawals }>(
         } else {
           logger.info(
             { results: nodeResults.getValue(), publicIdentifier: node.node.publicIdentifier },
-            "Submitted withdrawals",
+            "Submitted withdrawals for node",
           );
         }
         results[node.node.publicIdentifier] = nodeResults.isError
           ? jsonifyError(nodeResults.getError()!)
           : nodeResults.getValue();
       }
+      logger.info({ nodes: nodes.map((n) => n.node.publicIdentifier), results }, "Completed withdrawal submission");
       return reply.status(200).send(results);
     } catch (e) {
       return reply.status(500).send(jsonifyError(e));
