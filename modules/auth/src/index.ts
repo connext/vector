@@ -60,7 +60,9 @@ server.post<{ Body: PostAuthRequestBody }>(
   },
 );
 
-server.listen(config.port, "0.0.0.0", err => {
+const listenPort    = process.env.VECTOR_AUTH_PORT    || config.port;
+const listenAddress = process.env.VECTOR_AUTH_ADDRESS || "0.0.0.0";
+server.listen(listenPort, listenAddress, err => {
   if (err) {
     console.error(err);
     process.exit(1);
