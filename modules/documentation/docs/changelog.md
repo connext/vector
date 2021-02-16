@@ -2,6 +2,10 @@
 
 ## Next Release
 
+## 0.1.15-beta.19
+
+- \[server-node\] Query chain instead of using error message
+
 ## 0.1.15-beta.18
 
 - \[server-node\] Remove unique condition for `onchainTransactionId`

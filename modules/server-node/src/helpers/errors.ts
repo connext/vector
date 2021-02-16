@@ -74,6 +74,7 @@ export class ResubmitWithdrawalError extends NodeError {
 
   static readonly reasons = {
     ChainServiceNotFound: "Could not find chain service",
+    CouldNotCheckSubmissionStatus: "Failed to check withdrawal submission status onchain",
     CouldNotGetChannels: "Failed to get channels from store",
     CouldNotGetCommitments: "Failed to get unsubmitted withdrawals",
     CouldNotGetGasPrice: "Failed to get mainnet gas price",

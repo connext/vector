@@ -119,31 +119,69 @@ export const submitWithdrawalToChain = async (
   // submit to chain
   const { transfer, commitment: json } = record;
   const commitment = await WithdrawCommitment.fromJson(json);
-  const response = await chainService.sendWithdrawTx(channel!, commitment.getSignedTransaction());
-  if (response.isError) {
-    const error = response.getError()!;
-    // if already submitted, store hash as HashZero
-    if (!error.message.includes("CMCWithdraw: ALREADY_EXECUTED")) {
-      return Result.fail(
-        new ResubmitWithdrawalError(
-          ResubmitWithdrawalError.reasons.SubmissionFailed,
-          channel.aliceIdentifier,
-          channel.channelAddress,
-          record.transfer.transferId,
-          { chainServiceError: jsonifyError(error) },
-        ),
-      );
-    }
+  // before submitting, check status
+  const wasSubmitted = await chainService.getWithdrawalTransactionRecord(
+    record.commitment,
+    channel.channelAddress,
+    channel.networkContext.chainId,
+  );
+  if (wasSubmitted.isError) {
+    return Result.fail(
+      new ResubmitWithdrawalError(
+        ResubmitWithdrawalError.reasons.CouldNotCheckSubmissionStatus,
+        channel.aliceIdentifier,
+        channel.channelAddress,
+        record.transfer.transferId,
+        { chainServiceError: jsonifyError(wasSubmitted.getError()!) },
+      ),
+    );
+  }
+  if (wasSubmitted.getValue()) {
     logger.info(
       { transferId: transfer.transferId, channelAddress: channel.channelAddress, commitment: json },
       "Previously submitted",
     );
+    commitment.addTransaction(HashZero);
+    try {
+      await store.saveWithdrawalCommitment(transfer.transferId, commitment.toJson());
+    } catch (e) {
+      return Result.fail(
+        new ResubmitWithdrawalError(
+          ResubmitWithdrawalError.reasons.SavingCommitmentFailed,
+          channel.aliceIdentifier,
+          channel.channelAddress,
+          record.transfer.transferId,
+          { storeError: jsonifyError(e) },
+        ),
+      );
+    }
+    logger.debug({ method, methodId }, "Method complete");
+    return Result.ok({
+      transactionHash: HashZero,
+      transferId: transfer.transferId,
+      channelAddress: channel.channelAddress,
+    });
+  }
+
+  const response = await chainService.sendWithdrawTx(channel!, commitment.getSignedTransaction());
+  if (response.isError) {
+    return Result.fail(
+      new ResubmitWithdrawalError(
+        ResubmitWithdrawalError.reasons.SubmissionFailed,
+        channel.aliceIdentifier,
+        channel.channelAddress,
+        record.transfer.transferId,
+        { chainServiceError: jsonifyError(response.getError()!) },
+      ),
+    );
   }
 
   // submission was successful, update commitment with hash
-  const transactionHash = response.isError ? HashZero : response.getValue().hash;
-  logger.info({ transactionHash, channelAddress: channel.channelAddress }, "Submitted withdrawal to chain");
-  commitment.addTransaction(transactionHash);
+  logger.info(
+    { transactionHash: response.getValue().hash, channelAddress: channel.channelAddress },
+    "Submitted withdrawal to chain",
+  );
+  commitment.addTransaction(response.getValue().hash);
   try {
     await store.saveWithdrawalCommitment(transfer.transferId, commitment.toJson());
   } catch (e) {
@@ -159,7 +197,11 @@ export const submitWithdrawalToChain = async (
   }
 
   logger.debug({ method, methodId }, "Method complete");
-  return Result.ok({ transactionHash, transferId: transfer.transferId, channelAddress: channel.channelAddress });
+  return Result.ok({
+    transactionHash: response.getValue().hash,
+    transferId: transfer.transferId,
+    channelAddress: channel.channelAddress,
+  });
 };
 
 export const submitUnsubmittedWithdrawals = async (

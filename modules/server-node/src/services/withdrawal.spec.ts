@@ -76,6 +76,7 @@ describe(testName, () => {
     // default all mocks to be ok
     chainService.sendWithdrawTx.resolves(Result.ok({ hash: transactionHash }) as any);
     chainService.getRegisteredTransferByName.resolves(Result.ok({ definition: transferDefinition }) as any);
+    chainService.getWithdrawalTransactionRecord.resolves(Result.ok(false));
     store.saveWithdrawalCommitment.resolves();
     getChainServiceStub.returns(chainService);
   });
@@ -115,7 +116,7 @@ describe(testName, () => {
 
     it("should work when withdrawal was already submitted", async () => {
       const { channel, transfer, commitment } = await prepEnv();
-      chainService.sendWithdrawTx.resolves(Result.fail(new ChainError("CMCWithdraw: ALREADY_EXECUTED")));
+      chainService.getWithdrawalTransactionRecord.resolves(Result.ok(true));
 
       const result = await submitWithdrawalToChain(channel, { commitment, transfer }, store);
       expect(result.isError).to.be.false;
