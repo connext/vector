@@ -25,6 +25,7 @@ import { JsonRpcProvider, TransactionRequest } from "@ethersproject/providers";
 import pino from "pino";
 
 import { ChannelFactory, ChannelMastercopy, TransferDefinition, TransferRegistry, VectorChannel } from "../artifacts";
+import { logger } from "../constants";
 
 // https://github.com/rustwasm/wasm-bindgen/issues/700#issuecomment-419708471
 const execEvmBytecode = (bytecode: string, payload: string): Uint8Array =>
@@ -238,16 +239,23 @@ export class EthereumChainReader implements IVectorChainReader {
     if (!provider) {
       return Result.fail(new ChainError(ChainError.reasons.ProviderNotFound));
     }
-    const channelContract = new Contract(channelAddress, ChannelMastercopy.abi, provider);
-    let onchainBalance: BigNumber;
-    try {
-      onchainBalance = await channelContract.getBalance(assetId);
-    } catch (e) {
-      // Likely means channel contract was not deployed
-      // TODO: check for reason?
+    const code = await this.getCode(channelAddress, chainId);
+    if (code.isError) {
+      return Result.fail(code.getError()!);
+    }
+    if (code.getValue() === "0x") {
+      logger.debug({ channelAddress, chainId }, "Contract not deployed");
+      // contract *must* be deployed for alice to have a balance
       return this.getOnchainBalance(assetId, channelAddress, chainId);
     }
-    return Result.ok(onchainBalance);
+
+    const channelContract = new Contract(channelAddress, ChannelMastercopy.abi, provider);
+    try {
+      const onchainBalance = await channelContract.getBalance(assetId);
+      return Result.ok(onchainBalance);
+    } catch (e) {
+      return Result.fail(e);
+    }
   }
 
   async getTotalDepositedA(
@@ -260,16 +268,23 @@ export class EthereumChainReader implements IVectorChainReader {
       return Result.fail(new ChainError(ChainError.reasons.ProviderNotFound));
     }
 
-    const channelContract = new Contract(channelAddress, ChannelMastercopy.abi, provider);
-    let totalDepositsAlice: BigNumber;
-    try {
-      totalDepositsAlice = await channelContract.getTotalDepositsAlice(assetId);
-    } catch (e) {
-      // TODO: check for reason?
-      // Channel contract was not deployed, use 0 value
-      totalDepositsAlice = BigNumber.from(0);
+    const code = await this.getCode(channelAddress, chainId);
+    if (code.isError) {
+      return Result.fail(code.getError()!);
     }
-    return Result.ok(totalDepositsAlice);
+    if (code.getValue() === "0x") {
+      logger.debug({ channelAddress, chainId }, "Contract not deployed");
+      // contract *must* be deployed for alice to have a balance
+      return Result.ok(BigNumber.from(0));
+    }
+
+    const channelContract = new Contract(channelAddress, ChannelMastercopy.abi, provider);
+    try {
+      const totalDepositsAlice = await channelContract.getTotalDepositsAlice(assetId);
+      return Result.ok(totalDepositsAlice);
+    } catch (e) {
+      return Result.fail(e);
+    }
   }
 
   async getTotalDepositedB(
@@ -282,20 +297,23 @@ export class EthereumChainReader implements IVectorChainReader {
       return Result.fail(new ChainError(ChainError.reasons.ProviderNotFound));
     }
 
-    const channelContract = new Contract(channelAddress, ChannelMastercopy.abi, provider);
-    let totalDepositsBob: BigNumber;
-    try {
-      totalDepositsBob = await channelContract.getTotalDepositsBob(assetId);
-    } catch (e) {
-      // TODO: check for reason?
-      // Channel contract was not deployed, use onchain value
-      const deposited = await this.getChannelOnchainBalance(channelAddress, chainId, assetId);
-      if (deposited.isError) {
-        return deposited;
-      }
-      totalDepositsBob = deposited.getValue();
+    const code = await this.getCode(channelAddress, chainId);
+    if (code.isError) {
+      return Result.fail(code.getError()!);
     }
-    return Result.ok(totalDepositsBob);
+    if (code.getValue() === "0x") {
+      logger.debug({ channelAddress, chainId }, "Contract not deployed");
+      // all balance at channel address *must* be for bob
+      return this.getOnchainBalance(assetId, channelAddress, chainId);
+    }
+
+    const channelContract = new Contract(channelAddress, ChannelMastercopy.abi, provider);
+    try {
+      const totalDepositsBob = await channelContract.getTotalDepositsBob(assetId);
+      return Result.ok(totalDepositsBob);
+    } catch (e) {
+      return Result.fail(e);
+    }
   }
 
   async create(
@@ -512,16 +530,15 @@ export class EthereumChainReader implements IVectorChainReader {
     if (!provider) {
       return Result.fail(new ChainError(ChainError.reasons.ProviderNotFound));
     }
-    let onchainBalance: BigNumber;
     try {
-      onchainBalance =
+      const onchainBalance =
         assetId === AddressZero
-          ? await provider!.getBalance(balanceOf)
+          ? await provider.getBalance(balanceOf)
           : await new Contract(assetId, ERC20Abi, provider).balanceOf(balanceOf);
+      return Result.ok(onchainBalance);
     } catch (e) {
       return Result.fail(e);
     }
-    return Result.ok(onchainBalance);
   }
 
   async getWithdrawalTransactionRecord(

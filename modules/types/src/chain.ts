@@ -33,6 +33,7 @@ export class ChainError extends VectorError {
     ProviderNotFound: "Provider not found for chainId",
     SignerNotFound: "Signer not found for chainId",
     SenderNotInChannel: "Sender is not a channel participant",
+    NegativeDepositAmount: "Cannot deposit a negative amount",
     NotEnoughFunds: "Not enough funds in wallet",
     FailedToDeploy: "Could not deploy vector channel",
     FailedToSendTx: "Failed to send transaction to chain",
