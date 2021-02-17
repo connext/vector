@@ -60,12 +60,14 @@ export const autoRebalanceTask = async (
   const method = "rebalanceIfNeeded";
   const methodId = getRandomBytes32();
   logger.info({ method, methodId, allowedSwaps: config.allowedSwaps }, "Start task");
-  config.allowedSwaps.map(async (swap) => {
+  for (const swap of config.allowedSwaps) {
     const rebalanced = await rebalanceIfNeeded(swap, logger, wallet, chainService, hydratedProviders);
     if (rebalanced.isError) {
       logger.error({ swap, error: jsonifyError(rebalanced.getError()!) }, "Error auto rebalancing");
+      return;
     }
-  });
+    logger.info({ res: rebalanced.getValue() }, "Rebalance completed");
+  }
 };
 
 export const rebalanceIfNeeded = async (
@@ -121,7 +123,8 @@ export const rebalanceIfNeeded = async (
 
   // should be within 1/2 of total balance + threshold
   const totalBalance = fromAssetBalanceNumber + toAssetBalanceNumber;
-  const threshold = (totalBalance / 2) * (1 + rebalanceThreshold / 100);
+  const midpoint = totalBalance / 2;
+  const threshold = midpoint * (1 + rebalanceThreshold / 100);
 
   logger.info(
     {
@@ -132,12 +135,13 @@ export const rebalanceIfNeeded = async (
       rebalanceThreshold,
       totalBalance,
       threshold,
+      midpoint,
     },
     "Calculated numbers",
   );
 
   if (fromAssetBalanceNumber > threshold) {
-    const amountToSendNumber = fromAssetBalanceNumber - threshold;
+    const amountToSendNumber = fromAssetBalanceNumber - midpoint;
     const amountToSend = parseUnits(
       amountToSendNumber.toString(),
       rebalancedTokens[swap.fromChainId][swap.fromAssetId].decimals!,
@@ -148,6 +152,7 @@ export const rebalanceIfNeeded = async (
         method,
         intervalId: methodId,
         amountToSendNumber,
+        amountToSend,
       },
       "Rebalance required",
     );

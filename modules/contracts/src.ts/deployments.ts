@@ -175,3 +175,22 @@ const bsctestnetDeployment = {
 };
 deployments.bsctestnet = bsctestnetDeployment;
 deployments["97"] = bsctestnetDeployment;
+
+////////////////////////////////////////
+// 56 - bsc
+import * as bscChannelFactory from "../deployments/bsc/ChannelFactory.json";
+import * as bscChannelMastercopy from "../deployments/bsc/ChannelMastercopy.json";
+import * as bscHashlockTransfer from "../deployments/bsc/HashlockTransfer.json";
+import * as bscTestToken from "../deployments/bsc/TestToken.json";
+import * as bscTransferRegistry from "../deployments/bsc/TransferRegistry.json";
+import * as bscWithdraw from "../deployments/bsc/Withdraw.json";
+const bscDeployment = {
+  ChannelFactory: bscChannelFactory,
+  ChannelMastercopy: bscChannelMastercopy,
+  HashlockTransfer: bscHashlockTransfer,
+  TestToken: bscTestToken,
+  TransferRegistry: bscTransferRegistry,
+  Withdraw: bscWithdraw,
+};
+deployments.bsc = bscDeployment;
+deployments["56"] = bscDeployment;
