@@ -2,6 +2,9 @@
 
 ## Next Release
 
+- \[contracts\] Fix `chainReader` balance bug
+- \[contracts\] Fix `chainService` deposit bug
+
 ## 0.1.15
 
 - \[contracts\] Add BSC deployment data
