@@ -493,7 +493,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
       return this.sendDeployChannelTx(channelState, gasPrice, { amount, assetId });
     }
 
-    const balanceRes = await this.getOnchainBalance(assetId, channelState.alice, channelState.networkContext.chainId);
+    const balanceRes = await this.getOnchainBalance(assetId, sender, channelState.networkContext.chainId);
     if (balanceRes.isError) {
       return Result.fail(balanceRes.getError()!);
     }
