@@ -230,32 +230,13 @@ export class EthereumChainReader implements IVectorChainReader {
     }
   }
 
+  // TODO: remove!
   async getChannelOnchainBalance(
     channelAddress: string,
     chainId: number,
     assetId: string,
   ): Promise<Result<BigNumber, ChainError>> {
-    const provider = this.chainProviders[chainId];
-    if (!provider) {
-      return Result.fail(new ChainError(ChainError.reasons.ProviderNotFound));
-    }
-    const code = await this.getCode(channelAddress, chainId);
-    if (code.isError) {
-      return Result.fail(code.getError()!);
-    }
-    if (code.getValue() === "0x") {
-      logger.debug({ channelAddress, chainId }, "Contract not deployed");
-      // contract *must* be deployed for alice to have a balance
-      return this.getOnchainBalance(assetId, channelAddress, chainId);
-    }
-
-    const channelContract = new Contract(channelAddress, ChannelMastercopy.abi, provider);
-    try {
-      const onchainBalance = await channelContract.getBalance(assetId);
-      return Result.ok(onchainBalance);
-    } catch (e) {
-      return Result.fail(e);
-    }
+    return this.getOnchainBalance(assetId, channelAddress, chainId);
   }
 
   async getTotalDepositedA(
