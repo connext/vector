@@ -60,12 +60,14 @@ export const autoRebalanceTask = async (
   const method = "rebalanceIfNeeded";
   const methodId = getRandomBytes32();
   logger.info({ method, methodId, allowedSwaps: config.allowedSwaps }, "Start task");
-  config.allowedSwaps.map(async (swap) => {
+  for (const swap of config.allowedSwaps) {
     const rebalanced = await rebalanceIfNeeded(swap, logger, wallet, chainService, hydratedProviders);
     if (rebalanced.isError) {
       logger.error({ swap, error: jsonifyError(rebalanced.getError()!) }, "Error auto rebalancing");
+      return;
     }
-  });
+    logger.info({ res: rebalanced.getValue() }, "Rebalance completed");
+  }
 };
 
 export const rebalanceIfNeeded = async (
