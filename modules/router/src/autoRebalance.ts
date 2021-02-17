@@ -121,7 +121,8 @@ export const rebalanceIfNeeded = async (
 
   // should be within 1/2 of total balance + threshold
   const totalBalance = fromAssetBalanceNumber + toAssetBalanceNumber;
-  const threshold = (totalBalance / 2) * (1 + rebalanceThreshold / 100);
+  const midpoint = totalBalance / 2;
+  const threshold = midpoint * (1 + rebalanceThreshold / 100);
 
   logger.info(
     {
@@ -132,12 +133,13 @@ export const rebalanceIfNeeded = async (
       rebalanceThreshold,
       totalBalance,
       threshold,
+      midpoint,
     },
     "Calculated numbers",
   );
 
   if (fromAssetBalanceNumber > threshold) {
-    const amountToSendNumber = fromAssetBalanceNumber - threshold;
+    const amountToSendNumber = fromAssetBalanceNumber - midpoint;
     const amountToSend = parseUnits(
       amountToSendNumber.toString(),
       rebalancedTokens[swap.fromChainId][swap.fromAssetId].decimals!,
@@ -148,6 +150,7 @@ export const rebalanceIfNeeded = async (
         method,
         intervalId: methodId,
         amountToSendNumber,
+        amountToSend,
       },
       "Rebalance required",
     );
