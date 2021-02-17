@@ -2,8 +2,10 @@
 
 ## Next Release
 
-- \[contracts\] Add BSC deployment data
+## 0.1.15
 
+- \[contracts\] Add BSC deployment data
+- \[router\] Dashboard update
 ## 0.1.15-beta.21
 
 - \[router\] Fix auto-rebalancing bug
