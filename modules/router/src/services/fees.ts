@@ -27,6 +27,7 @@ export const calculateAmountWithFee = async (
   routerPublicIdentifier: string,
   logger: BaseLogger,
 ): Promise<Result<BigNumber, FeeError>> => {
+  // Get fee values from config
   let flatFee = config.baseFlatFee ?? "0";
   let percentageFee = config.basePercentageFee ?? 0;
   let dynamicGasFee = config.baseDynamicGasFee ?? false;
@@ -52,35 +53,36 @@ export const calculateAmountWithFee = async (
         }),
       );
     }
-    flatFee = swap.flatFee ?? "0";
-    percentageFee = swap.percentageFee ?? 0;
-    dynamicGasFee = swap.dynamicGasFee ?? false;
+    flatFee = swap.flatFee ?? flatFee;
+    percentageFee = swap.percentageFee ?? percentageFee;
+    dynamicGasFee = swap.dynamicGasFee ?? dynamicGasFee;
   }
-  let newAmount = startingAmount.add(flatFee);
-  const pctFee = newAmount.mul(percentageFee).div(100);
-  newAmount = newAmount.add(pctFee);
-  if (dynamicGasFee) {
-    const gasFeeRes = await calculateDynamicFee(
-      newAmount,
-      toChainId,
-      toAssetId,
-      toChannel,
-      ethReader,
-      routerPublicIdentifier,
-      logger,
-    );
-    if (gasFeeRes.isError) {
-      return gasFeeRes;
-    }
-    const gasFee = gasFeeRes.getValue();
-    const normalizedFeeRes = await normalizeFee(gasFee, toAssetId, toChainId, ethReader, logger);
-    if (normalizedFeeRes.isError) {
-      return gasFeeRes;
-    }
-    const normalizedFee = normalizedFeeRes.getValue();
-    newAmount = newAmount.add(normalizedFee);
+
+  // Calculate fees only on starting amount and update
+  const feeFromPercent = startingAmount.mul(percentageFee).div(100);
+  const staticFees = feeFromPercent.add(flatFee);
+  if (!dynamicGasFee) {
+    // no gas fee needed
+    return Result.ok(startingAmount.add(staticFees));
   }
-  return Result.ok(newAmount);
+  // Calculate dynamic gas fee
+  const gasFee = await calculateDynamicFee(
+    startingAmount,
+    toChainId,
+    toAssetId,
+    toChannel,
+    ethReader,
+    routerPublicIdentifier,
+    logger,
+  );
+  if (gasFee.isError) {
+    return gasFee;
+  }
+  const normalizedFee = await normalizeFee(gasFee.getValue(), toAssetId, toChainId, ethReader, logger);
+  if (normalizedFee.isError) {
+    return normalizedFee;
+  }
+  return Result.ok(startingAmount.add(staticFees).add(normalizedFee.getValue()));
 };
 
 export const calculateDynamicFee = async (
