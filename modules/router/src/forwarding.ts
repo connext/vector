@@ -28,7 +28,6 @@ import {
   attemptTransferWithCollateralization,
   transferWithCollateralization,
 } from "./services/transfer";
-import { config } from "./config";
 import { calculateAmountWithFee } from "./services/fees";
 
 export async function forwardTransferCreation(
@@ -303,6 +302,7 @@ export async function forwardTransferCreation(
       {
         participants: [routerPublicIdentifier, recipientIdentifier],
         chainId: recipientChainId,
+        calculateAmountWithFeeError: jsonifyError(feeCalculationRes.getError()!),
       },
     );
   }

@@ -6,6 +6,7 @@ import {
   getRandomBytes32,
   logAxiosError,
 } from "@connext/vector-utils";
+import { getAddress } from "@ethersproject/address";
 import { BigNumber } from "@ethersproject/bignumber";
 import { AddressZero, Zero } from "@ethersproject/constants";
 import axios from "axios";
@@ -30,19 +31,22 @@ export const calculateAmountWithFee = async (
   let percentageFee = config.basePercentageFee ?? 0;
   let dynamicGasFee = config.baseDynamicGasFee ?? false;
   if (fromChainId !== toChainId || fromAssetId !== toAssetId) {
+    const fromAsset = getAddress(fromAssetId);
+    const toAsset = getAddress(toAssetId);
     const swap = config.allowedSwaps.find(
       (s) =>
-        s.fromAssetId === fromAssetId &&
+        s.fromAssetId === fromAsset &&
         s.fromChainId === fromChainId &&
-        s.toAssetId === toAssetId &&
+        s.toAssetId === toAsset &&
         s.toChainId === toChainId,
     );
+
     if (!swap) {
       return Result.fail(
         new FeeError(FeeError.reasons.NoSwap, {
-          fromAssetId,
+          fromAsset,
           fromChainId,
-          toAssetId,
+          toAsset,
           toChainId,
           allowedSwaps: config.allowedSwaps,
         }),
