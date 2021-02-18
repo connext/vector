@@ -51,8 +51,8 @@ try {
 const mnemonic = mnemonicEnv || vectorConfig.mnemonic;
 
 // Set defaults
-vectorConfig.nodeUrl = vectorConfig.nodeUrl || "http://node:8000";
-vectorConfig.messagingUrl = vectorConfig.messagingUrl || "http://messaging";
+vectorConfig.nodeUrl = process.env.VECTOR_NODE_URL || vectorConfig.nodeUrl || "http://node:8000";
+vectorConfig.messagingUrl = process.env.VECTOR_MESSAGING_URL || vectorConfig.messagingUrl || "http://messaging";
 
 const validate = ajv.compile(VectorRouterConfigSchema);
 const valid = validate(vectorConfig);

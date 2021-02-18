@@ -33,8 +33,11 @@ import { autoRebalanceTask, startAutoRebalanceTask } from "./autoRebalance";
 import { wallet } from "./metrics";
 import { ServerError } from "./errors";
 
-const routerPort = 8000;
-const routerBase = `http://router:${routerPort}`;
+const routerListenPort    = process.env.VECTOR_ROUTER_PORT    || 8000;
+const routerListenAddress = process.env.VECTOR_ROUTER_ADDRESS || "router";
+const routerHost          = process.env.VECTOR_ROUTER_HOST    || `${routerListenAddress}:${routerListenPort}`
+const routerBase = `http://${routerHost}`;
+const nodeUrl = process.env.VECTOR_NODE_URL || config.nodeUrl;
 const isAlivePath = "/is-alive";
 const setupPath = "/setup";
 const conditionalTransferCreatedPath = "/conditional-transfer-created";
@@ -106,7 +109,7 @@ const evts: EventCallbackConfig = {
 const signer = new ChannelSigner(Wallet.fromMnemonic(config.mnemonic).privateKey);
 
 const logger = pino({ name: signer.publicIdentifier });
-logger.info({ config }, "Loaded config from environment");
+logger.info("Loaded config from environment");
 const server = fastify({ logger, pluginTimeout: 300_000, disableRequestLogging: config.logLevel !== "debug" });
 
 collectDefaultMetrics({ prefix: "router_" });
@@ -123,7 +126,7 @@ const messagingService = new NatsRouterMessagingService({
 
 server.addHook("onReady", async () => {
   const nodeService = await RestServerNodeService.connect(
-    config.nodeUrl,
+    nodeUrl,
     logger.child({ module: "RouterNodeService" }),
     evts,
     0,
@@ -244,7 +247,7 @@ server.post(transactionFailedPath, async (request, response) => {
   return response.status(200).send({ message: "success" });
 });
 
-server.listen(routerPort, "0.0.0.0", (err, address) => {
+server.listen(routerListenPort, routerListenAddress, (err, address) => {
   if (err) {
     console.error(err);
     process.exit(1);

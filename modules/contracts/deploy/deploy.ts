@@ -57,8 +57,8 @@ const func: DeployFunction = async () => {
     const receipt = await ethers.provider.getTransactionReceipt(deployment.transactionHash!);
     log.info(`Sent transaction to deploy ${name}, txHash: ${deployment.transactionHash}`);
     log.info(
-      `Success! Consumed ${receipt.gasUsed} gas worth ${EtherSymbol} ${formatEther(
-        (receipt.gasUsed || Zero).mul(tx.gasPrice),
+      `Success! Consumed ${receipt?.gasUsed ?? "unknown"} gas worth ${EtherSymbol} ${formatEther(
+        (receipt?.gasUsed || Zero).mul(tx.gasPrice),
       )} deploying ${name} to address: ${deployment.address}`,
     );
   };

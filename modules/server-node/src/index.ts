@@ -35,7 +35,7 @@ import {
 
 const configuredIdentifier = getPublicIdentifierFromPublicKey(Wallet.fromMnemonic(config.mnemonic).publicKey);
 export const logger = pino({ name: configuredIdentifier, level: config.logLevel ?? "info" });
-logger.info({ config }, "Loaded config from environment");
+logger.info("Loaded config from environment");
 const server = fastify({ logger, pluginTimeout: 300_000, disableRequestLogging: config.logLevel !== "debug" });
 server.register(fastifyCors, {
   origin: "*",
@@ -1139,7 +1139,9 @@ server.post<{ Params: { chainId: string }; Body: JsonRpcRequest }>(
   },
 );
 
-server.listen(8000, "0.0.0.0", (err, address) => {
+const listenPort    = process.env.VECTOR_NODE_PORT    || 8000;
+const listenAddress = process.env.VECTOR_NODE_ADDRESS || "0.0.0.0";
+server.listen(listenPort, listenAddress, (err, address) => {
   if (err) {
     logger.error(err);
     process.exit(1);
