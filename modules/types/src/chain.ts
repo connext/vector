@@ -92,12 +92,6 @@ export type MultisigTransaction = MinimalTransaction & {
 };
 
 export interface IVectorChainReader {
-  getChannelOnchainBalance(
-    channelAddress: string,
-    chainId: number,
-    assetId: string,
-  ): Promise<Result<BigNumber, ChainError>>;
-
   getTotalDepositedA(channelAddress: string, chainId: number, assetId: string): Promise<Result<BigNumber, ChainError>>;
 
   getTotalDepositedB(channelAddress: string, chainId: number, assetId: string): Promise<Result<BigNumber, ChainError>>;

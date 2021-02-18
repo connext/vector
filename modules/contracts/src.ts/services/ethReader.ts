@@ -25,7 +25,6 @@ import { JsonRpcProvider, TransactionRequest } from "@ethersproject/providers";
 import pino from "pino";
 
 import { ChannelFactory, ChannelMastercopy, TransferDefinition, TransferRegistry, VectorChannel } from "../artifacts";
-import { logger } from "../constants";
 
 // https://github.com/rustwasm/wasm-bindgen/issues/700#issuecomment-419708471
 const execEvmBytecode = (bytecode: string, payload: string): Uint8Array =>
@@ -230,15 +229,6 @@ export class EthereumChainReader implements IVectorChainReader {
     }
   }
 
-  // TODO: remove!
-  async getChannelOnchainBalance(
-    channelAddress: string,
-    chainId: number,
-    assetId: string,
-  ): Promise<Result<BigNumber, ChainError>> {
-    return this.getOnchainBalance(assetId, channelAddress, chainId);
-  }
-
   async getTotalDepositedA(
     channelAddress: string,
     chainId: number,
@@ -254,7 +244,6 @@ export class EthereumChainReader implements IVectorChainReader {
       return Result.fail(code.getError()!);
     }
     if (code.getValue() === "0x") {
-      logger.debug({ channelAddress, chainId }, "Contract not deployed");
       // contract *must* be deployed for alice to have a balance
       return Result.ok(BigNumber.from(0));
     }
@@ -283,7 +272,6 @@ export class EthereumChainReader implements IVectorChainReader {
       return Result.fail(code.getError()!);
     }
     if (code.getValue() === "0x") {
-      logger.debug({ channelAddress, chainId }, "Contract not deployed");
       // all balance at channel address *must* be for bob
       return this.getOnchainBalance(assetId, channelAddress, chainId);
     }

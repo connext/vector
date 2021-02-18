@@ -690,7 +690,6 @@ describe("outbound", () => {
   it("should successfully initiate an update if channels are in sync", async () => {
     // Create the update (a user deposit on a setup channel)
     const assetId = AddressZero;
-    const depositBAmt = BigNumber.from(16);
     const params: UpdateParams<typeof UpdateType.deposit> = createTestUpdateParams(UpdateType.deposit, {
       channelAddress,
       details: { assetId },
@@ -700,9 +699,6 @@ describe("outbound", () => {
     // channel at nonce 1, proposes nonce 2, syncs nonce 2 from counterparty
     // then proposes nonce 3
     store.getChannelState.resolves(createTestChannelStateWithSigners(signers, UpdateType.setup, { nonce: 2 }));
-
-    // Set the onchain service mocks
-    chainService.getChannelOnchainBalance.resolves(Result.ok(depositBAmt));
 
     // Stub the generation results
     validateParamsAndApplyStub.onFirstCall().resolves(

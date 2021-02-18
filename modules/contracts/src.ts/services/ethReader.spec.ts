@@ -32,11 +32,6 @@ describe("EthereumChainReader", function () {
     chainReader = new EthereumChainReader({ [chainId]: provider }, pino());
   });
 
-  it("getChannelOnchainBalance", async () => {
-    const balance = (await chainReader.getChannelOnchainBalance(channel.address, chainId, assetId)).getValue();
-    expect(balance).to.equal(Zero);
-  });
-
   it("getTotalDepositedA", async () => {
     const res = await chainReader.getTotalDepositedA(channel.address, chainId, assetId);
     expect(res.isError).to.be.false;
