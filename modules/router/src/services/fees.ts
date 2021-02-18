@@ -53,7 +53,9 @@ export const calculateFeeAmount = async (
   let flatFee = config.baseFlatFee ?? "0";
   let percentageFee = config.basePercentageFee ?? 0;
   let dynamicGasFee = config.baseDynamicGasFee ?? false;
+  let isSwap = false;
   if (fromChainId !== toChainId || fromAssetId !== toAssetId) {
+    isSwap = true;
     const fromAsset = getAddress(fromAssetId);
     const toAsset = getAddress(toAssetId);
     const swap = config.allowedSwaps.find(
@@ -168,14 +170,16 @@ export const calculateFeeAmount = async (
   // swap config to get the normalized collater in the desired `fromAsset`.
   // We know the to/from swap is supported, and we do *not* know if they are
   // both on mainnet (i.e. we do not have an oracle)
-  const normalizedCollateralFromAsset = await getSwappedAmount(
-    normalizedCollateralToAsset.toString(),
-    toAssetId,
-    toChainId,
-    fromAssetId,
-    fromChainId,
-  );
-  if (normalizedCollateralToAsset.isError) {
+  const normalizedCollateralFromAsset = isSwap
+    ? await getSwappedAmount(
+        normalizedCollateralToAsset.getValue().toString(),
+        toAssetId,
+        toChainId,
+        fromAssetId,
+        fromChainId,
+      )
+    : Result.ok(normalizedCollateralToAsset.getValue().toString());
+  if (normalizedCollateralFromAsset.isError) {
     return Result.fail(
       new FeeError(FeeError.reasons.ConversionError, {
         toChainId,
