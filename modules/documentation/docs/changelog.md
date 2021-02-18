@@ -2,6 +2,21 @@
 
 ## Next Release
 
+## 0.1.16
+
+- \[contracts\] Fix `chainReader` balance bug
+- \[contracts\] Fix `chainService` deposit bug
+- \[router\] Update volume metric collections
+
+## 0.1.15
+
+- \[contracts\] Add BSC deployment data
+- \[router\] Dashboard update
+
+## 0.1.15-beta.21
+
+- \[router\] Fix auto-rebalancing bug
+
 ## 0.1.15-beta.20
 
 - \[router\] Don't create 0 valued withdrawals

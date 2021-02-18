@@ -35,7 +35,7 @@ import {
 
 const configuredIdentifier = getPublicIdentifierFromPublicKey(Wallet.fromMnemonic(config.mnemonic).publicKey);
 export const logger = pino({ name: configuredIdentifier, level: config.logLevel ?? "info" });
-logger.info({ config }, "Loaded config from environment");
+logger.info("Loaded config from environment");
 const server = fastify({ logger, pluginTimeout: 300_000, disableRequestLogging: config.logLevel !== "debug" });
 server.register(fastifyCors, {
   origin: "*",
@@ -541,11 +541,11 @@ server.post<{ Body: NodeParams.SendDepositTx }>(
       request.body.assetId,
     );
     if (depositRes.isError) {
-      if (depositRes.getError()!.message === ChainError.reasons.NotEnoughFunds) {
-        return reply.status(400).send({ message: depositRes.getError()!.message });
-      }
       logger.error({ error: jsonifyError(depositRes.getError()!) });
-      return reply.status(500).send({ message: depositRes.getError()!.message.substring(0, 100) });
+      if (depositRes.getError()!.message === ChainError.reasons.NotEnoughFunds) {
+        return reply.status(400).send(jsonifyError(depositRes.getError()!));
+      }
+      return reply.status(500).send(jsonifyError(depositRes.getError()!));
     }
     return reply.status(200).send({ txHash: depositRes.getValue().hash });
   },
