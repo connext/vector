@@ -88,6 +88,7 @@ export class ForwardTransferCreationError extends RouterError {
     StoredUpdateError: "Error in stored update",
     ReceiverOffline: "Recipient was not online, could not forward",
     FailedToCancelSenderTransfer: "Could not cancel sender transfer",
+    FeeError: "Could not calculate fee",
   } as const;
 
   readonly context: ForwardTransferCreationErrorContext;
@@ -224,6 +225,9 @@ export class FeeError extends RouterError {
 
   static readonly reasons = {
     NoSwap: "Could not find swap",
+    ChainError: "Error reading the chain",
+    ChannelError: "Error retrieving channel info",
+    ExchangeRateError: "Error getting exchange rate",
   } as const;
 
   constructor(public readonly message: Values<typeof FeeError.reasons>, context: any = {}) {

@@ -29,6 +29,7 @@ import {
   transferWithCollateralization,
 } from "./services/transfer";
 import { config } from "./config";
+import { calculateAmountWithFee } from "./services/fees";
 
 export async function forwardTransferCreation(
   data: ConditionalTransferCreatedPayload,
@@ -248,9 +249,6 @@ export async function forwardTransferCreation(
     );
   }
 
-  // Add fees if any
-  recipientAmount = await calculateAmountWithFee();
-
   // Next, get the recipient's channel and figure out whether it needs to be collateralized
   const recipientChannelRes = await nodeService.getStateChannelByParticipants({
     publicIdentifier: routerPublicIdentifier,
@@ -283,6 +281,32 @@ export async function forwardTransferCreation(
       },
     );
   }
+
+  // add gas fee calculation
+  const feeCalculationRes = await calculateAmountWithFee(
+    BigNumber.from(recipientAmount),
+    senderChainId,
+    senderAssetId,
+    recipientChainId,
+    recipientAssetId,
+    recipientChannel,
+    chainReader,
+    routerPublicIdentifier,
+    logger,
+  );
+  if (feeCalculationRes.isError) {
+    return cancelSenderTransferAndReturnError(
+      routingId,
+      senderTransfer,
+      ForwardTransferCreationError.reasons.FeeError,
+      recipientChannel.channelAddress,
+      {
+        participants: [routerPublicIdentifier, recipientIdentifier],
+        chainId: recipientChainId,
+      },
+    );
+  }
+  recipientAmount = feeCalculationRes.getValue().toString();
 
   // Create the params you will transfer with
   const { balance, ...details } = createdTransferState;

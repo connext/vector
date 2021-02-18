@@ -445,8 +445,8 @@ export class EthereumChainReader implements IVectorChainReader {
     if (chainId === 1) {
       try {
         const gasNowResponse = await axios.get(`https://www.gasnow.org/api/v3/gas/price`);
-        const { fast } = gasNowResponse.data;
-        gasPrice = typeof fast !== "undefined" ? BigNumber.from(fast) : undefined;
+        const { rapid } = gasNowResponse.data;
+        gasPrice = typeof rapid !== "undefined" ? BigNumber.from(rapid) : undefined;
       } catch (e) {
         this.log.warn({ error: e }, "Gasnow failed, using provider");
       }
