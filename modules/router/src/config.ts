@@ -67,6 +67,13 @@ if (!valid) {
 
 // checksum allowed swaps + rebalance profiles
 vectorConfig.allowedSwaps = vectorConfig.allowedSwaps.map((s) => {
+  // sanity check:
+  // dynamicGasFees can only be assessed if `toChainId` or `fromChainId`
+  // is 1
+  if (s.toChainId !== 1 && s.fromChainId !== 1 && !!s.dynamicGasFee) {
+    throw new Error(`Cannot dynamically assess gas fees for non-mainnet swaps`);
+  }
+
   return { ...s, fromAssetId: getAddress(s.fromAssetId), toAssetId: getAddress(s.toAssetId) };
 });
 vectorConfig.rebalanceProfiles = vectorConfig.rebalanceProfiles.map((profile) => {
