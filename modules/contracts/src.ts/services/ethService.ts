@@ -445,6 +445,12 @@ export class EthereumChainService extends EthereumChainReader implements IVector
     if (channelState.alice !== sender && channelState.bob !== sender) {
       return Result.fail(new ChainError(ChainError.reasons.SenderNotInChannel));
     }
+
+    const toDeposit = BigNumber.from(amount);
+    if (toDeposit.isNegative()) {
+      return Result.fail(new ChainError(ChainError.reasons.NegativeDepositAmount));
+    }
+
     // first check if multisig is needed to deploy
     const multisigRes = await this.getCode(channelState.channelAddress, channelState.networkContext.chainId);
 
@@ -487,7 +493,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
       return this.sendDeployChannelTx(channelState, gasPrice, { amount, assetId });
     }
 
-    const balanceRes = await this.getOnchainBalance(assetId, channelState.alice, channelState.networkContext.chainId);
+    const balanceRes = await this.getOnchainBalance(assetId, sender, channelState.networkContext.chainId);
     if (balanceRes.isError) {
       return Result.fail(balanceRes.getError()!);
     }

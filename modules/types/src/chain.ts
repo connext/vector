@@ -33,6 +33,7 @@ export class ChainError extends VectorError {
     ProviderNotFound: "Provider not found for chainId",
     SignerNotFound: "Signer not found for chainId",
     SenderNotInChannel: "Sender is not a channel participant",
+    NegativeDepositAmount: "Cannot deposit a negative amount",
     NotEnoughFunds: "Not enough funds in wallet",
     FailedToDeploy: "Could not deploy vector channel",
     FailedToSendTx: "Failed to send transaction to chain",
@@ -91,12 +92,6 @@ export type MultisigTransaction = MinimalTransaction & {
 };
 
 export interface IVectorChainReader {
-  getChannelOnchainBalance(
-    channelAddress: string,
-    chainId: number,
-    assetId: string,
-  ): Promise<Result<BigNumber, ChainError>>;
-
   getTotalDepositedA(channelAddress: string, chainId: number, assetId: string): Promise<Result<BigNumber, ChainError>>;
 
   getTotalDepositedB(channelAddress: string, chainId: number, assetId: string): Promise<Result<BigNumber, ChainError>>;

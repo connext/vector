@@ -144,9 +144,16 @@ export const failedTransfer = new Counter({
 });
 
 // Track volume from receiver side
-export const forwardedVolume = new Gauge({
+export const forwardedTransferVolume = new Counter({
   name: "router_transfer_volume",
   help: "router_transfer_volume_help",
+  labelNames: ["assetId", "chainId"] as const,
+});
+
+// Track size of forwarded transfers
+export const forwardedTransferSize = new Gauge({
+  name: "router_transfer_size",
+  help: "router_transfer_size_help",
   labelNames: ["assetId", "chainId"] as const,
 });
 

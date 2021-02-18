@@ -195,7 +195,6 @@ describe("utils", () => {
       // set return values
       const mockedValues = {
         // Default the value chainReader + depositA + multisig deposit
-        getChannelOnchainBalance: Result.ok<BigNumber>(initialChainBalance.add(aliceDeposit ?? 0).add(bobDeposit ?? 0)),
         getTotalDepositedA: Result.ok<BigNumber>(BigNumber.from(aliceDeposit ?? 0).add(processedDepositsA![0])),
         getTotalDepositedB: Result.ok<BigNumber>(BigNumber.from(bobDeposit ?? 0).add(processedDepositsB![0])),
         ...stubs,

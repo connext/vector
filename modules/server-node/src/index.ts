@@ -541,11 +541,11 @@ server.post<{ Body: NodeParams.SendDepositTx }>(
       request.body.assetId,
     );
     if (depositRes.isError) {
-      if (depositRes.getError()!.message === ChainError.reasons.NotEnoughFunds) {
-        return reply.status(400).send({ message: depositRes.getError()!.message });
-      }
       logger.error({ error: jsonifyError(depositRes.getError()!) });
-      return reply.status(500).send({ message: depositRes.getError()!.message.substring(0, 100) });
+      if (depositRes.getError()!.message === ChainError.reasons.NotEnoughFunds) {
+        return reply.status(400).send(jsonifyError(depositRes.getError()!));
+      }
+      return reply.status(500).send(jsonifyError(depositRes.getError()!));
     }
     return reply.status(200).send({ txHash: depositRes.getValue().hash });
   },
