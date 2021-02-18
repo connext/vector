@@ -16,6 +16,10 @@ export const getSwappedAmount = async (
 ): Promise<Result<string, SwapError>> => {
   const fromAsset = getAddress(fromAssetId);
   const toAsset = getAddress(toAssetId);
+  if (toAsset === fromAsset && toChainId === fromChainId) {
+    // same asset, no swap needed
+    return Result.ok(fromAmount);
+  }
   const swap = config.allowedSwaps.find(
     (s) =>
       s.fromAssetId === fromAsset &&
