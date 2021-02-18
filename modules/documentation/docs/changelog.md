@@ -2,6 +2,8 @@
 
 ## Next Release
 
+## 0.1.16
+
 - \[contracts\] Fix `chainReader` balance bug
 - \[contracts\] Fix `chainService` deposit bug
 - \[router\] Update volume metric collections
