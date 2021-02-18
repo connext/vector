@@ -1,9 +1,10 @@
 import { FullChannelState, GAS_ESTIMATES, IVectorChainReader, jsonifyError, Result } from "@connext/vector-types";
 import {
-  calculateExchangeAmount,
+  calculateExchangeWad,
   getBalanceForAssetId,
   getParticipant,
   getRandomBytes32,
+  inverse,
   logAxiosError,
 } from "@connext/vector-utils";
 import { getAddress } from "@ethersproject/address";
@@ -16,10 +17,13 @@ import { config } from "../config";
 import { FeeError } from "../errors";
 import { rebalancedTokens } from "../metrics";
 
+import { getSwappedAmount } from "./swap";
+
 export const calculateAmountWithFee = async (
-  startingAmount: BigNumber,
+  startingAmount: BigNumber, // in fromAssetId
   fromChainId: number,
   fromAssetId: string,
+  fromChannel: FullChannelState,
   toChainId: number,
   toAssetId: string,
   toChannel: FullChannelState,
@@ -27,6 +31,22 @@ export const calculateAmountWithFee = async (
   routerPublicIdentifier: string,
   logger: BaseLogger,
 ): Promise<Result<BigNumber, FeeError>> => {
+  const method = "calculateAmountWithFee";
+  const methodId = getRandomBytes32();
+  logger.info(
+    {
+      method,
+      methodId,
+      startingAmount: startingAmount.toString(),
+      fromAssetId,
+      fromChainId,
+      fromChannel: fromChannel.channelAddress,
+      toChainId,
+      toAssetId,
+      toChannel: toChannel.channelAddress,
+    },
+    "Method start",
+  );
   // Get fee values from config
   let flatFee = config.baseFlatFee ?? "0";
   let percentageFee = config.basePercentageFee ?? 0;
@@ -57,17 +77,63 @@ export const calculateAmountWithFee = async (
     percentageFee = swap.percentageFee ?? percentageFee;
     dynamicGasFee = swap.dynamicGasFee ?? dynamicGasFee;
   }
+  logger.debug(
+    {
+      method,
+      methodId,
+      flatFee,
+      percentageFee,
+      dynamicGasFee,
+    },
+    "Got fee rates",
+  );
 
   // Calculate fees only on starting amount and update
   const feeFromPercent = startingAmount.mul(percentageFee).div(100);
-  const staticFees = feeFromPercent.add(flatFee);
-  if (!dynamicGasFee) {
-    // no gas fee needed
-    return Result.ok(startingAmount.add(staticFees));
+  const staticFeesFromAsset = feeFromPercent.add(flatFee);
+
+  // Convert startingAmount to amount + static fees in toAsset
+  const withStaticFees = startingAmount.add(staticFeesFromAsset);
+  // convert to toAsset
+  const converted = await getSwappedAmount(withStaticFees.toString(), fromAssetId, fromChainId, toAssetId, toChainId);
+  if (converted.isError) {
+    return Result.fail(
+      new FeeError(FeeError.reasons.ConversionError, {
+        swapError: jsonifyError(converted.getError()!),
+      }),
+    );
   }
+
+  if (!dynamicGasFee) {
+    logger.info(
+      {
+        method,
+        methodId,
+        startingAmount: startingAmount.toString(),
+        staticFees: staticFeesFromAsset.toString(),
+        withStaticFees: withStaticFees.toString(),
+        converted,
+      },
+      "Method complete",
+    );
+    return Result.ok(BigNumber.from(converted.getValue()));
+  }
+
+  logger.debug(
+    {
+      method,
+      methodId,
+      startingAmount: startingAmount.toString(),
+      staticFees: staticFeesFromAsset.toString(),
+    },
+    "Calculating gas fee",
+  );
+
   // Calculate dynamic gas fee
-  const gasFee = await calculateDynamicFee(
+  const gasFeesRes = await calculateDynamicFee(
     startingAmount,
+    fromChainId,
+    fromChannel,
     toChainId,
     toAssetId,
     toChannel,
@@ -75,25 +141,78 @@ export const calculateAmountWithFee = async (
     routerPublicIdentifier,
     logger,
   );
-  if (gasFee.isError) {
-    return gasFee;
+  if (gasFeesRes.isError) {
+    return Result.fail(gasFeesRes.getError()!);
   }
-  const normalizedFee = await normalizeFee(gasFee.getValue(), toAssetId, toChainId, ethReader, logger);
-  if (normalizedFee.isError) {
-    return normalizedFee;
+  const gasFees = gasFeesRes.getValue();
+
+  // After getting the gas fees for reclaim and for collateral, we
+  // must convert them to the proper value in the `fromAsset`
+  const normalizedReclaim =
+    fromChainId === 1
+      ? await normalizeFee(gasFees[fromChannel.channelAddress], toAssetId, fromChainId, ethReader, logger)
+      : Result.ok(Zero);
+  const normalizedCollateral =
+    toChainId === 1
+      ? await normalizeFee(gasFees[toChannel.channelAddress], toAssetId, toChainId, ethReader, logger)
+      : Result.ok(Zero);
+  if (normalizedReclaim.isError || normalizedCollateral.isError) {
+    return Result.fail(
+      new FeeError(FeeError.reasons.ExchangeRateError, {
+        message: "Could not normalize fees",
+        fromChainId,
+        toChainId,
+        toAssetId,
+        normalizedReclaim: normalizedReclaim.isError
+          ? jsonifyError(normalizedReclaim.getError())
+          : normalizedReclaim.getValue(),
+        normalizedCollateral: normalizedCollateral.isError
+          ? jsonifyError(normalizedCollateral.getError())
+          : normalizedCollateral.getValue(),
+      }),
+    );
   }
-  return Result.ok(startingAmount.add(staticFees).add(normalizedFee.getValue()));
+
+  const normalizedFee = normalizedReclaim.getValue().add(normalizedCollateral.getValue());
+  const withDynamicFees = normalizedFee.add(converted.getValue());
+  logger.info(
+    {
+      method,
+      methodId,
+      startingAmount: startingAmount.toString(),
+      staticFees: staticFeesFromAsset.toString(),
+      converted: converted.getValue(),
+      dynamicFees: normalizedFee.toString(),
+    },
+    "Method complete",
+  );
+  return Result.ok(withDynamicFees);
 };
 
+// This function returns the cost in wei units. it is in the `normalize`
+// function where this is properly converted to the `toAsset` units
+// NOTE: it will return an object keyed on chain id to indicate which
+// chain the fees are charged on. these fees will have to be normalized
+// separately, then added together.
+
+// E.g. consider the case where transferring from mainnet --> matic
+// the fees there are:
+// (1) collateralizing on matic
+// (2) reclaiming on mainnet
+// Because we don't have l2 prices of tokens/l2 base assets, we cannot
+// normalize the collateralization fees. However, we can normalize the
+// reclaim fees
 export const calculateDynamicFee = async (
   amountToSend: BigNumber,
+  fromChainId: number,
+  fromChannel: FullChannelState,
   toChainId: number,
   toAssetId: string,
   toChannel: FullChannelState,
   ethReader: IVectorChainReader,
   routerPublicIdentifier: string,
   logger: BaseLogger,
-): Promise<Result<BigNumber, FeeError>> => {
+): Promise<Result<{ [channelAddress: string]: BigNumber }, FeeError>> => {
   const method = "calculateDynamicFee";
   const methodId = getRandomBytes32();
   logger.info(
@@ -107,11 +226,33 @@ export const calculateDynamicFee = async (
     },
     "Method start",
   );
-  let dynamicGasFee = Zero;
 
-  // TODO: add base fee for reclaim? would need to use `fromChainId` in that case
+  // no matter what, the transaction will always involve a reclaim on
+  // the `fromChainId`. but may or may not need channel deployed to
+  // properly reclaim
+  const fromChannelCode = await ethReader.getCode(fromChannel.channelAddress, toChainId);
+  if (fromChannelCode.isError) {
+    return Result.fail(
+      new FeeError(FeeError.reasons.ChainError, {
+        fromChainId,
+        fromChannel: fromChannel.channelAddress,
+        getCodeError: jsonifyError(fromChannelCode.getError()!),
+      }),
+    );
+  }
+  const reclaimFee =
+    fromChannelCode.getValue() === "0x"
+      ? GAS_ESTIMATES.createChannel.add(GAS_ESTIMATES.withdraw)
+      : GAS_ESTIMATES.withdraw;
 
-  // check if channel needs collateral
+  // there are several conditions that would effect the collateral costs
+  // (1) channel has sufficient collateral: none
+  // (2) participant == alice && contract not deployed: createChannelAndDeposit
+  // (3) participant == alice && contract deployed: depositAlice
+  // (4) participant == bob && contract not deployed: depositBob (channel does
+  //     not need to be created for a deposit to be recognized offchain)
+  // (5) participant == bob && contract deployed: depositBob
+
   const participant = getParticipant(toChannel, routerPublicIdentifier);
   if (!participant) {
     return Result.fail(
@@ -125,57 +266,82 @@ export const calculateDynamicFee = async (
   }
   const routerBalance = getBalanceForAssetId(toChannel, toAssetId, participant);
   if (BigNumber.from(routerBalance).gte(amountToSend)) {
-    // channel has balance, no extra gas required
+    // channel has balance, no extra gas required to facilitate transfer
     logger.info(
       { method, methodId, routerBalance: routerBalance.toString(), amountToSend: amountToSend.toString() },
       "Channel is collateralized",
     );
-    return Result.ok(dynamicGasFee);
+    return Result.ok({
+      [fromChannel.channelAddress]: reclaimFee,
+      [toChannel.channelAddress]: Zero,
+    });
+  }
+  logger.info(
+    { method, methodId, routerBalance: routerBalance.toString(), amountToSend: amountToSend.toString(), participant },
+    "Channel is undercollateralized",
+  );
+
+  // If participant is bob, then you don't need to worry about deploying
+  // the channel contract
+  if (participant === "bob") {
+    return Result.ok({
+      [fromChannel.channelAddress]: reclaimFee,
+      [toChannel.channelAddress]: GAS_ESTIMATES.depositBob,
+    });
   }
 
-  logger.info(
-    { method, methodId, routerBalance: routerBalance.toString(), amountToSend: amountToSend.toString() },
-    "Channel needs collateral",
-  );
-  // check if channel needs to be deployed
-  const codeRes = await ethReader.getCode(toChannel.channelAddress, toChainId);
-  if (codeRes.isError) {
+  // Determine if channel needs to be deployed to properly calculate the
+  // collateral fee
+  const toChannelCode = await ethReader.getCode(toChannel.channelAddress, toChainId);
+  if (toChannelCode.isError) {
     return Result.fail(
       new FeeError(FeeError.reasons.ChainError, {
         toChainId,
-        getCodeError: jsonifyError(codeRes.getError()!),
+        getCodeError: jsonifyError(toChannelCode.getError()!),
       }),
     );
   }
-  const code = codeRes.getValue();
-  if (code === "0x") {
-    logger.info({ method, methodId, channelAddress: toChannel.channelAddress }, "Channel needs to be deployed");
-    dynamicGasFee = dynamicGasFee.add(GAS_ESTIMATES.createChannelAndDepositAlice);
-    return Result.ok(dynamicGasFee);
-  }
-
-  // channel is deployed, just need a normal deposit
-  if (participant === "alice") {
-    dynamicGasFee = dynamicGasFee.add(GAS_ESTIMATES.depositAlice);
-  } else {
-    dynamicGasFee = dynamicGasFee.add(GAS_ESTIMATES.depositBob);
-  }
-
-  return Result.ok(dynamicGasFee);
+  return Result.ok({
+    [fromChannel.channelAddress]: reclaimFee,
+    [toChannel.channelAddress]:
+      toChannelCode.getValue() === "0x" ? GAS_ESTIMATES.createChannelAndDepositAlice : GAS_ESTIMATES.depositAlice,
+  });
 };
 
-// function to calculate gas fee amount multiplied by gas price in the toAsset units
+// function to calculate gas fee amount multiplied by gas price in the
+// toAsset units. some caveats:
+// - there is no l2 exchange rate feed, so it is not possible to get the
+//   rates from l2BaseAsset --> toAsset
+// - there is no great way to determine *which* asset is the l2BaseAsset
+//
+// because of the above reasons, if the `toChainId` is *not* mainnet, then
+// the function returns an error. this is enforced in router config validation
+// as well
 export const normalizeFee = async (
   fee: BigNumber,
-  toAssetId: string,
-  toChainId: number,
+  desiredFeeAssetId: string, // asset you want fee denominated in
+  chainId: number,
   ethReader: IVectorChainReader,
   logger: BaseLogger,
 ): Promise<Result<BigNumber, FeeError>> => {
   const method = "normalizeFee";
   const methodId = getRandomBytes32();
-  logger.info({ method, methodId, fee: fee.toString(), toAssetId, toChainId }, "Method start");
-  const gasPriceRes = await ethReader.getGasPrice(toChainId);
+  logger.info(
+    { method, methodId, fee: fee.toString(), toAssetId: desiredFeeAssetId, toChainId: chainId },
+    "Method start",
+  );
+  if (chainId !== 1) {
+    return Result.fail(
+      new FeeError(FeeError.reasons.ChainError, {
+        message: "Cannot get normalize fees that are not going to mainnet",
+        toAssetId: desiredFeeAssetId,
+        toChainId: chainId,
+        fee: fee.toString(),
+      }),
+    );
+  }
+
+  const gasPriceRes = await ethReader.getGasPrice(chainId);
   if (gasPriceRes.isError) {
     return Result.fail(
       new FeeError(FeeError.reasons.ChainError, { getGasPriceError: jsonifyError(gasPriceRes.getError()!) }),
@@ -185,39 +351,34 @@ export const normalizeFee = async (
   const gasPrice = gasPriceRes.getValue();
   const feeWithGasPrice = fee.mul(gasPrice);
 
-  if (toChainId !== 1) {
-    logger.info({ method, methodId }, "Not normalizing fees for non-mainnet");
-    return Result.ok(feeWithGasPrice);
-  }
-
-  if (toAssetId === AddressZero) {
+  if (desiredFeeAssetId === AddressZero) {
     logger.info({ method, methodId }, "Eth detected, exchange rate not required");
     return Result.ok(feeWithGasPrice);
   }
 
-  const exchangeRateRes = await getExchangeRateInEth(toAssetId, logger);
+  const exchangeRateRes = await getExchangeRateInEth(desiredFeeAssetId, logger);
   if (exchangeRateRes.isError) {
     return Result.fail(exchangeRateRes.getError()!);
   }
   const exchangeRate = exchangeRateRes.getValue();
 
   // since rate is ETH : token, need to invert
-  const invertedRate = 1 / exchangeRate;
+  const invertedRate = inverse(exchangeRate.toString());
 
-  const decimals = rebalancedTokens[toChainId][toAssetId].decimals;
+  const decimals = rebalancedTokens[chainId][desiredFeeAssetId].decimals;
   if (!decimals) {
     return Result.fail(
       new FeeError(FeeError.reasons.ExchangeRateError, {
         message: "Could not get decimals",
         invertedRate,
-        toAssetId,
-        toChainId,
+        toAssetId: desiredFeeAssetId,
+        toChainId: chainId,
       }),
     );
   }
 
   // total fee in asset normalized decimals
-  const feeWithGasPriceInAsset = calculateExchangeAmount(feeWithGasPrice.toString(), invertedRate.toString(), decimals);
+  const feeWithGasPriceInAsset = calculateExchangeWad(feeWithGasPrice, 18, invertedRate, decimals);
   return Result.ok(BigNumber.from(feeWithGasPriceInAsset));
 };
 
