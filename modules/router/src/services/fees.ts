@@ -19,8 +19,10 @@ import { rebalancedTokens } from "../metrics";
 
 import { getSwappedAmount } from "./swap";
 
-export const calculateAmountWithFee = async (
-  startingAmount: BigNumber, // in fromAssetId
+// Takes in some proposed amount in toAssetId and returns the
+// fees in the toAssetId. Will *NOT* return an error if fees > amount
+export const calculateFeeAmount = async (
+  transferAmount: BigNumber,
   fromChainId: number,
   fromAssetId: string,
   fromChannel: FullChannelState,
@@ -31,13 +33,13 @@ export const calculateAmountWithFee = async (
   routerPublicIdentifier: string,
   logger: BaseLogger,
 ): Promise<Result<BigNumber, FeeError>> => {
-  const method = "calculateAmountWithFee";
+  const method = "calculateFeeAmount";
   const methodId = getRandomBytes32();
   logger.info(
     {
       method,
       methodId,
-      startingAmount: startingAmount.toString(),
+      startingAmount: transferAmount.toString(),
       fromAssetId,
       fromChainId,
       fromChannel: fromChannel.channelAddress,
@@ -89,53 +91,37 @@ export const calculateAmountWithFee = async (
   );
 
   // Calculate fees only on starting amount and update
-  const feeFromPercent = startingAmount.mul(percentageFee).div(100);
-  const staticFeesFromAsset = feeFromPercent.add(flatFee);
-
-  // Convert startingAmount to amount + static fees in toAsset
-  const withStaticFees = startingAmount.add(staticFeesFromAsset);
-  // convert to toAsset
-  const converted = await getSwappedAmount(withStaticFees.toString(), fromAssetId, fromChainId, toAssetId, toChainId);
-  if (converted.isError) {
-    return Result.fail(
-      new FeeError(FeeError.reasons.ConversionError, {
-        swapError: jsonifyError(converted.getError()!),
-      }),
-    );
-  }
-
+  const feeFromPercent = transferAmount.mul(percentageFee).div(100);
+  const staticFees = feeFromPercent.add(flatFee);
   if (!dynamicGasFee) {
     logger.info(
       {
         method,
         methodId,
-        startingAmount: startingAmount.toString(),
-        staticFees: staticFeesFromAsset.toString(),
-        withStaticFees: withStaticFees.toString(),
-        converted,
+        startingAmount: transferAmount.toString(),
+        staticFees: staticFees.toString(),
+        withStaticFees: staticFees.add(transferAmount).toString(),
       },
       "Method complete",
     );
-    return Result.ok(BigNumber.from(converted.getValue()));
+    return Result.ok(staticFees);
   }
 
   logger.debug(
     {
       method,
       methodId,
-      startingAmount: startingAmount.toString(),
-      staticFees: staticFeesFromAsset.toString(),
+      startingAmount: transferAmount.toString(),
+      staticFees: staticFees.toString(),
     },
     "Calculating gas fee",
   );
 
-  // Calculate dynamic gas fee
-  const gasFeesRes = await calculateDynamicFee(
-    startingAmount,
-    fromChainId,
-    fromChannel,
-    toChainId,
+  // Calculate gas fees for transfer
+  const gasFeesRes = await calculateEstimatedGasFee(
+    transferAmount,
     toAssetId,
+    fromChannel,
     toChannel,
     ethReader,
     routerPublicIdentifier,
@@ -147,46 +133,78 @@ export const calculateAmountWithFee = async (
   const gasFees = gasFeesRes.getValue();
 
   // After getting the gas fees for reclaim and for collateral, we
-  // must convert them to the proper value in the `fromAsset`
-  const normalizedReclaim =
-    fromChainId === 1
-      ? await normalizeFee(gasFees[fromChannel.channelAddress], toAssetId, fromChainId, ethReader, logger)
+  // must convert them to the proper value in the `fromAsset` (the same asset
+  // that the transfer amount is given in).
+  // NOTE: only *mainnet* gas fees are assessed here. If you are reclaiming
+  // on chain1, include reclaim fees. If you are collateralizing on chain1,
+  // include collateral fees
+  const normalizedReclaimFromAsset =
+    fromChainId === 1 // fromAsset MUST be on mainnet
+      ? await normalizeFee(gasFees[fromChannel.channelAddress], fromAssetId, fromChainId, ethReader, logger)
       : Result.ok(Zero);
-  const normalizedCollateral =
-    toChainId === 1
+  const normalizedCollateralToAsset =
+    toChainId === 1 // toAsset MUST be on mainnet
       ? await normalizeFee(gasFees[toChannel.channelAddress], toAssetId, toChainId, ethReader, logger)
       : Result.ok(Zero);
-  if (normalizedReclaim.isError || normalizedCollateral.isError) {
+
+  if (normalizedReclaimFromAsset.isError || normalizedCollateralToAsset.isError) {
     return Result.fail(
       new FeeError(FeeError.reasons.ExchangeRateError, {
         message: "Could not normalize fees",
         fromChainId,
         toChainId,
         toAssetId,
-        normalizedReclaim: normalizedReclaim.isError
-          ? jsonifyError(normalizedReclaim.getError())
-          : normalizedReclaim.getValue(),
-        normalizedCollateral: normalizedCollateral.isError
-          ? jsonifyError(normalizedCollateral.getError())
-          : normalizedCollateral.getValue(),
+        normalizedCollateralToAsset: normalizedCollateralToAsset.isError
+          ? jsonifyError(normalizedCollateralToAsset.getError())
+          : normalizedCollateralToAsset.getValue(),
+        normalizedCollateral: normalizedCollateralToAsset.isError
+          ? jsonifyError(normalizedCollateralToAsset.getError())
+          : normalizedCollateralToAsset.getValue(),
       }),
     );
   }
 
-  const normalizedFee = normalizedReclaim.getValue().add(normalizedCollateral.getValue());
-  const withDynamicFees = normalizedFee.add(converted.getValue());
+  // Now that you have the normalized collateral values, you must use the
+  // swap config to get the normalized collater in the desired `fromAsset`.
+  // We know the to/from swap is supported, and we do *not* know if they are
+  // both on mainnet (i.e. we do not have an oracle)
+  const normalizedCollateralFromAsset = await getSwappedAmount(
+    normalizedCollateralToAsset.toString(),
+    toAssetId,
+    toChainId,
+    fromAssetId,
+    fromChainId,
+  );
+  if (normalizedCollateralToAsset.isError) {
+    return Result.fail(
+      new FeeError(FeeError.reasons.ConversionError, {
+        toChainId,
+        toAssetId,
+        fromChainId,
+        fromAssetId,
+        conversionError: jsonifyError(normalizedCollateralFromAsset.getError()!),
+        normalizedCollateralToAsset: normalizedCollateralToAsset.getValue().toString(),
+      }),
+    );
+  }
+
+  const normalizedGasFees = normalizedReclaimFromAsset.getValue().add(normalizedCollateralFromAsset.getValue());
+  const totalFees = staticFees.add(normalizedGasFees);
   logger.info(
     {
       method,
       methodId,
-      startingAmount: startingAmount.toString(),
-      staticFees: staticFeesFromAsset.toString(),
-      converted: converted.getValue(),
-      dynamicFees: normalizedFee.toString(),
+      startingAmount: transferAmount.toString(),
+      staticFees: staticFees.toString(),
+      normalizedGasFees: normalizedGasFees.toString(),
+      totalFees: totalFees.toString(),
+      withFees: BigNumber.from(transferAmount).sub(totalFees).toString(),
     },
     "Method complete",
   );
-  return Result.ok(withDynamicFees);
+
+  // returns the total fees applied to transfer
+  return Result.ok(totalFees);
 };
 
 // This function returns the cost in wei units. it is in the `normalize`
@@ -202,12 +220,10 @@ export const calculateAmountWithFee = async (
 // Because we don't have l2 prices of tokens/l2 base assets, we cannot
 // normalize the collateralization fees. However, we can normalize the
 // reclaim fees
-export const calculateDynamicFee = async (
+export const calculateEstimatedGasFee = async (
   amountToSend: BigNumber,
-  fromChainId: number,
+  transferAssetId: string,
   fromChannel: FullChannelState,
-  toChainId: number,
-  toAssetId: string,
   toChannel: FullChannelState,
   ethReader: IVectorChainReader,
   routerPublicIdentifier: string,
@@ -220,8 +236,6 @@ export const calculateDynamicFee = async (
       method,
       methodId,
       amountToSend: amountToSend.toString(),
-      toChainId,
-      toAssetId,
       toChannel: toChannel.channelAddress,
     },
     "Method start",
@@ -230,11 +244,11 @@ export const calculateDynamicFee = async (
   // no matter what, the transaction will always involve a reclaim on
   // the `fromChainId`. but may or may not need channel deployed to
   // properly reclaim
-  const fromChannelCode = await ethReader.getCode(fromChannel.channelAddress, toChainId);
+  const fromChannelCode = await ethReader.getCode(fromChannel.channelAddress, fromChannel.networkContext.chainId);
   if (fromChannelCode.isError) {
     return Result.fail(
       new FeeError(FeeError.reasons.ChainError, {
-        fromChainId,
+        fromChainId: fromChannel.networkContext.chainId,
         fromChannel: fromChannel.channelAddress,
         getCodeError: jsonifyError(fromChannelCode.getError()!),
       }),
@@ -264,7 +278,7 @@ export const calculateDynamicFee = async (
       }),
     );
   }
-  const routerBalance = getBalanceForAssetId(toChannel, toAssetId, participant);
+  const routerBalance = getBalanceForAssetId(toChannel, transferAssetId, participant);
   if (BigNumber.from(routerBalance).gte(amountToSend)) {
     // channel has balance, no extra gas required to facilitate transfer
     logger.info(
@@ -292,11 +306,11 @@ export const calculateDynamicFee = async (
 
   // Determine if channel needs to be deployed to properly calculate the
   // collateral fee
-  const toChannelCode = await ethReader.getCode(toChannel.channelAddress, toChainId);
+  const toChannelCode = await ethReader.getCode(toChannel.channelAddress, toChannel.networkContext.chainId);
   if (toChannelCode.isError) {
     return Result.fail(
       new FeeError(FeeError.reasons.ChainError, {
-        toChainId,
+        toChainId: toChannel.networkContext.chainId,
         getCodeError: jsonifyError(toChannelCode.getError()!),
       }),
     );

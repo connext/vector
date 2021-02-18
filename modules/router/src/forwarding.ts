@@ -28,7 +28,7 @@ import {
   attemptTransferWithCollateralization,
   transferWithCollateralization,
 } from "./services/transfer";
-import { calculateAmountWithFee } from "./services/fees";
+import { calculateFeeAmount } from "./services/fees";
 
 export async function forwardTransferCreation(
   data: ConditionalTransferCreatedPayload,
@@ -201,54 +201,7 @@ export async function forwardTransferCreation(
   const requireOnline = meta.requireOnline ?? false;
   const recipientChainId = path.recipientChainId ?? senderChainId;
 
-  // Below, we figure out the correct params needed for the receiver's channel. This includes
-  // potential swaps/crosschain stuff
-  let recipientAmount = senderAmount;
-  if (recipientAssetId !== senderAssetId || recipientChainId !== senderChainId) {
-    logger.info(
-      {
-        method,
-        methodId,
-        recipientAssetId,
-        senderAssetId,
-        recipientChainId,
-        senderChainId,
-        conditionType,
-      },
-      "Detected inflight swap",
-    );
-    const swapRes = await getSwappedAmount(
-      senderAmount,
-      senderAssetId,
-      senderChainId,
-      recipientAssetId,
-      recipientChainId,
-    );
-    if (swapRes.isError) {
-      return cancelSenderTransferAndReturnError(
-        routingId,
-        senderTransfer,
-        ForwardTransferCreationError.reasons.UnableToCalculateSwap,
-        "",
-        {
-          swapError: swapRes.getError(),
-        },
-      );
-    }
-    recipientAmount = swapRes.getValue();
-
-    logger.info(
-      {
-        method,
-        methodId,
-        recipientAmount,
-        senderAmount,
-      },
-      "Inflight swap calculated",
-    );
-  }
-
-  // Next, get the recipient's channel and figure out whether it needs to be collateralized
+  // Pull the receiver channel from db
   const recipientChannelRes = await nodeService.getStateChannelByParticipants({
     publicIdentifier: routerPublicIdentifier,
     counterparty: recipientIdentifier,
@@ -281,11 +234,13 @@ export async function forwardTransferCreation(
     );
   }
 
-  // add gas fee calculation
-  const feeCalculationRes = await calculateAmountWithFee(
-    BigNumber.from(recipientAmount),
+  // Calculate the fees in the sender from asset
+  const senderAmountBN = BigNumber.from(senderAmount);
+  const fee = await calculateFeeAmount(
+    senderAmountBN,
     senderChainId,
     senderAssetId,
+    senderChannel,
     recipientChainId,
     recipientAssetId,
     recipientChannel,
@@ -293,20 +248,76 @@ export async function forwardTransferCreation(
     routerPublicIdentifier,
     logger,
   );
-  if (feeCalculationRes.isError) {
+  if (fee.isError) {
     return cancelSenderTransferAndReturnError(
       routingId,
       senderTransfer,
       ForwardTransferCreationError.reasons.FeeError,
       recipientChannel.channelAddress,
       {
-        participants: [routerPublicIdentifier, recipientIdentifier],
-        chainId: recipientChainId,
-        calculateAmountWithFeeError: jsonifyError(feeCalculationRes.getError()!),
+        feeError: jsonifyError(fee.getError()!),
       },
     );
   }
-  recipientAmount = feeCalculationRes.getValue().toString();
+  if (fee.getValue().gte(senderAmount)) {
+    return cancelSenderTransferAndReturnError(
+      routingId,
+      senderTransfer,
+      ForwardTransferCreationError.reasons.FeeError,
+      recipientChannel.channelAddress,
+      {
+        feeError: "Fees larger than amount",
+      },
+    );
+  }
+  const senderWithFees = senderAmountBN.sub(fee.getValue()).toString();
+
+  // Below, we figure out the correct params needed for the receiver's channel. This includes
+  // potential swaps/crosschain stuff
+  let recipientAmount = senderWithFees;
+  if (recipientAssetId !== senderAssetId || recipientChainId !== senderChainId) {
+    logger.info(
+      {
+        method,
+        methodId,
+        recipientAssetId,
+        senderAssetId,
+        recipientChainId,
+        senderChainId,
+        conditionType,
+      },
+      "Detected inflight swap",
+    );
+    const swapRes = await getSwappedAmount(
+      senderWithFees,
+      senderAssetId,
+      senderChainId,
+      recipientAssetId,
+      recipientChainId,
+    );
+    if (swapRes.isError) {
+      return cancelSenderTransferAndReturnError(
+        routingId,
+        senderTransfer,
+        ForwardTransferCreationError.reasons.UnableToCalculateSwap,
+        "",
+        {
+          swapError: swapRes.getError(),
+        },
+      );
+    }
+    recipientAmount = swapRes.getValue();
+
+    logger.info(
+      {
+        method,
+        methodId,
+        recipientAmount,
+        senderAmount,
+      },
+      "Inflight swap calculated",
+    );
+  }
 
   // Create the params you will transfer with
   const { balance, ...details } = createdTransferState;

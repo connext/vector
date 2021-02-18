@@ -229,6 +229,7 @@ export class FeeError extends RouterError {
     ChannelError: "Error retrieving channel info",
     ConversionError: "Error converting assets",
     ExchangeRateError: "Error getting exchange rate",
+    FeesLargerThanAmount: "Fees are greater than the proposed transfer",
   } as const;
 
   constructor(public readonly message: Values<typeof FeeError.reasons>, context: any = {}) {
