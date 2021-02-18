@@ -24,7 +24,6 @@ export const getSwappedAmount = async (
       s.toChainId === toChainId,
   );
 
-  // couldnt find both ways
   if (!swap) {
     return Result.fail(
       new SwapError(SwapError.reasons.SwapNotAllowed, fromAmount, fromAssetId, fromChainId, toAssetId, toChainId),

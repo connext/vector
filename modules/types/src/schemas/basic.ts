@@ -55,6 +55,9 @@ export const AllowedSwapSchema = Type.Object({
   hardcodedRate: TDecimalString,
   rebalancerUrl: Type.Optional(Type.String({ format: "uri" })),
   rebalanceThresholdPct: Type.Optional(Type.Number({ minimum: 0, maximum: 100 })),
+  percentageFee: Type.Optional(Type.Number({ minimum: 0, maximum: 100 })),
+  flatFee: Type.Optional(TIntegerString),
+  dynamicGasFee: Type.Optional(Type.Boolean()),
 });
 export type AllowedSwap = Static<typeof AllowedSwapSchema>;
 

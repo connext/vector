@@ -8,7 +8,7 @@ import { BigNumber } from "@ethersproject/bignumber";
 import { parseEther } from "@ethersproject/units";
 import axios from "axios";
 
-import { rebalanceIfNeeded } from "../autoRebalance";
+import { rebalanceIfNeeded } from "../services/autoRebalance";
 import { config } from "../config";
 
 const testName = "Auto Rebalance";

@@ -218,3 +218,15 @@ export class ServerError extends RouterError {
     super(message, context, ServerError.type);
   }
 }
+
+export class FeeError extends RouterError {
+  static readonly type = "FeeError";
+
+  static readonly reasons = {
+    NoSwap: "Could not find swap",
+  } as const;
+
+  constructor(public readonly message: Values<typeof FeeError.reasons>, context: any = {}) {
+    super(message, context, FeeError.type);
+  }
+}

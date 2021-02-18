@@ -29,7 +29,7 @@ import { config } from "./config";
 import { IRouter, Router } from "./router";
 import { PrismaStore } from "./services/store";
 import { NatsRouterMessagingService } from "./services/messaging";
-import { autoRebalanceTask, startAutoRebalanceTask } from "./autoRebalance";
+import { autoRebalanceTask, startAutoRebalanceTask } from "./services/autoRebalance";
 import { wallet } from "./metrics";
 import { ServerError } from "./errors";
 

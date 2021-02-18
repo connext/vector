@@ -28,6 +28,7 @@ import {
   attemptTransferWithCollateralization,
   transferWithCollateralization,
 } from "./services/transfer";
+import { config } from "./config";
 
 export async function forwardTransferCreation(
   data: ConditionalTransferCreatedPayload,
@@ -246,6 +247,9 @@ export async function forwardTransferCreation(
       "Inflight swap calculated",
     );
   }
+
+  // Add fees if any
+  recipientAmount = await calculateAmountWithFee();
 
   // Next, get the recipient's channel and figure out whether it needs to be collateralized
   const recipientChannelRes = await nodeService.getStateChannelByParticipants({
