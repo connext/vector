@@ -15,6 +15,7 @@ import {
   TransactionEventMap,
   StringifiedTransactionReceipt,
   StringifiedTransactionResponse,
+  GAS_ESTIMATES,
 } from "@connext/vector-types";
 import {
   bufferify,
@@ -207,7 +208,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
         if (multisigRes.getValue() !== `0x`) {
           return undefined;
         }
-        const _gas = await channelFactory.estimateGas.createChannel(channelState.alice, channelState.bob);
+        const _gas = GAS_ESTIMATES.createChannel;
         const gas = _gas.add(EXTRA_GAS);
         return channelFactory.createChannel(channelState.alice, channelState.bob, { gasPrice, gasLimit: gas });
       });
@@ -266,15 +267,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
           return this.sendDepositATx(channelState, amount, AddressZero, gasPrice);
         }
         // otherwise deploy with deposit
-        const _gas = await channelFactory.estimateGas.createChannelAndDepositAlice(
-          channelState.alice,
-          channelState.bob,
-          assetId,
-          amount,
-          {
-            value: amount,
-          },
-        );
+        const _gas = GAS_ESTIMATES.createChannelAndDepositAlice;
         const gas = _gas.add(EXTRA_GAS);
         return channelFactory.createChannelAndDepositAlice(channelState.alice, channelState.bob, assetId, amount, {
           value: amount,
@@ -314,12 +307,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
         // multisig deployed, just send deposit (will check allowance)
         return this.sendDepositATx(channelState, amount, assetId, gasPrice);
       }
-      const _gas = await channelFactory.estimateGas.createChannelAndDepositAlice(
-        channelState.alice,
-        channelState.bob,
-        assetId,
-        amount,
-      );
+      const _gas = GAS_ESTIMATES.createChannelAndDepositAlice;
       const gas = _gas.add(EXTRA_GAS);
       return channelFactory.createChannelAndDepositAlice(channelState.alice, channelState.bob, assetId, amount, {
         gasPrice,
@@ -423,7 +411,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
 
     this.log.info({ sender, method, methodId, channel: channelState.channelAddress }, "Sending withdraw tx to chain");
     return this.sendTxWithRetries(channelState.channelAddress, TransactionReason.withdraw, async () => {
-      const _gas = await signer.estimateGas(minTx);
+      const _gas = GAS_ESTIMATES.withdraw;
       const gas = _gas.add(EXTRA_GAS);
       return signer.sendTransaction({ ...minTx, gasPrice, gasLimit: gas });
     }) as Promise<Result<TransactionResponse, ChainError>>;
