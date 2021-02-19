@@ -60,7 +60,7 @@ export const calculateFeeAmount = async (
   // Get fee values from config
   let flatFee = config.baseFlatFee ?? "0";
   let percentageFee = config.basePercentageFee ?? 0;
-  let dynamicGasFee = config.baseDynamicGasFee ?? false;
+  let gasSubsidyPercentage = config.baseGasSubsidyPercentage ?? 0;
   let isSwap = false;
   if (fromChainId !== toChainId || fromAssetId !== toAssetId) {
     isSwap = true;
@@ -87,7 +87,7 @@ export const calculateFeeAmount = async (
     }
     flatFee = swap.flatFee ?? flatFee;
     percentageFee = swap.percentageFee ?? percentageFee;
-    dynamicGasFee = swap.dynamicGasFee ?? dynamicGasFee;
+    gasSubsidyPercentage = swap.gasSubsidyPercentage ?? gasSubsidyPercentage;
   }
   logger.debug(
     {
@@ -95,7 +95,7 @@ export const calculateFeeAmount = async (
       methodId,
       flatFee,
       percentageFee,
-      dynamicGasFee,
+      dynamicGasFee: gasSubsidyPercentage,
     },
     "Got fee rates",
   );
@@ -103,7 +103,8 @@ export const calculateFeeAmount = async (
   // Calculate fees only on starting amount and update
   const feeFromPercent = transferAmount.mul(percentageFee).div(100);
   const staticFees = feeFromPercent.add(flatFee);
-  if (!dynamicGasFee) {
+  if (gasSubsidyPercentage === 100) {
+    // gas is fully subsidized
     logger.info(
       {
         method,
@@ -209,7 +210,9 @@ export const calculateFeeAmount = async (
   }
 
   const normalizedGasFees = normalizedReclaimFromAsset.getValue().add(normalizedCollateralFromAsset.getValue());
-  const totalFees = staticFees.add(normalizedGasFees);
+  // take the subsidy percentage of the normalized fees
+  const subsidized = normalizedGasFees.mul(gasSubsidyPercentage).div(100);
+  const totalFees = staticFees.add(normalizedGasFees).sub(subsidized);
   logger.info(
     {
       method,

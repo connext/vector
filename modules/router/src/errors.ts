@@ -227,6 +227,7 @@ export class FeeError extends RouterError {
     NoSwap: "Could not find swap",
     ChainError: "Error reading the chain",
     ChannelError: "Error retrieving channel info",
+    ConfigError: "Error retrieving config info",
     ConversionError: "Error converting assets",
     ExchangeRateError: "Error getting exchange rate",
     FeesLargerThanAmount: "Fees are greater than the proposed transfer",

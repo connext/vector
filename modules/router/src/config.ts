@@ -38,7 +38,7 @@ const VectorRouterConfigSchema = Type.Object({
   autoRebalanceInterval: Type.Optional(Type.Number({ minimum: 1_800_000 })),
   basePercentageFee: Type.Optional(Type.Number({ minimum: 0, maximum: 100 })),
   baseFlatFee: Type.Optional(TIntegerString),
-  baseDynamicGasFee: Type.Optional(Type.Boolean()),
+  baseGasSubsidyPercentage: Type.Optional(Type.Number({ minimum: 0, maximum: 100 })),
 });
 
 type VectorRouterConfig = Static<typeof VectorRouterConfigSchema>;

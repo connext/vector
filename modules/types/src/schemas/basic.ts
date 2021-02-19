@@ -57,7 +57,7 @@ export const AllowedSwapSchema = Type.Object({
   rebalanceThresholdPct: Type.Optional(Type.Number({ minimum: 0, maximum: 100 })),
   percentageFee: Type.Optional(Type.Number({ minimum: 0, maximum: 100 })),
   flatFee: Type.Optional(TIntegerString),
-  dynamicGasFee: Type.Optional(Type.Boolean()),
+  gasSubsidyPercentage: Type.Optional(Type.Number({ minimum: 0, maximum: 100 })),
 });
 export type AllowedSwap = Static<typeof AllowedSwapSchema>;
 
