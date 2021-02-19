@@ -16,6 +16,7 @@ import { BaseLogger } from "pino";
 import { config } from "../config";
 import { FeeError } from "../errors";
 import { rebalancedTokens } from "../metrics";
+import { getRebalanceProfile } from "./config";
 
 import { getSwappedAmount } from "./swap";
 
@@ -121,8 +122,9 @@ export const calculateFeeAmount = async (
 
   // Calculate gas fees for transfer
   const gasFeesRes = await calculateEstimatedGasFee(
-    transferAmount,
+    transferAmount, // in fromAsset
     toAssetId,
+    fromAssetId,
     fromChannel,
     toChannel,
     ethReader,
@@ -225,8 +227,9 @@ export const calculateFeeAmount = async (
 // normalize the collateralization fees. However, we can normalize the
 // reclaim fees
 export const calculateEstimatedGasFee = async (
-  amountToSend: BigNumber,
-  transferAssetId: string,
+  amountToSend: BigNumber, // in fromAsset
+  toAssetId: string,
+  fromAssetId: string,
   fromChannel: FullChannelState,
   toChannel: FullChannelState,
   ethReader: IVectorChainReader,
@@ -245,9 +248,27 @@ export const calculateEstimatedGasFee = async (
     "Method start",
   );
 
-  // no matter what, the transaction will always involve a reclaim on
-  // the `fromChainId`. but may or may not need channel deployed to
-  // properly reclaim
+  // the sender channel will have the following possible actions based on the
+  // rebalance profile:
+  // (1) IFF current balance + transfer amount > reclaimThreshold, reclaim
+  // (2) IFF current balance + transfer amount < collateralThreshold,
+  //     collateralize
+  const participantFromChannel = getParticipant(fromChannel, routerPublicIdentifier);
+  if (!participantFromChannel) {
+    return Result.fail(
+      new FeeError(FeeError.reasons.ChannelError, {
+        message: "Not in channel",
+        publicIdentifier: routerPublicIdentifier,
+        alice: fromChannel.aliceIdentifier,
+        bob: fromChannel.bobIdentifier,
+        channelAddress: fromChannel.channelAddress,
+      }),
+    );
+  }
+  // Determine final balance (assuming successful transfer resolution)
+  const finalFromBalance = amountToSend.add(getBalanceForAssetId(fromChannel, fromAssetId, participantFromChannel));
+
+  // Actions in channel will depend on contract being deployed, so get that
   const fromChannelCode = await ethReader.getCode(fromChannel.channelAddress, fromChannel.networkContext.chainId);
   if (fromChannelCode.isError) {
     return Result.fail(
@@ -258,10 +279,39 @@ export const calculateEstimatedGasFee = async (
       }),
     );
   }
-  const reclaimFee =
-    fromChannelCode.getValue() === "0x"
-      ? GAS_ESTIMATES.createChannel.add(GAS_ESTIMATES.withdraw)
-      : GAS_ESTIMATES.withdraw;
+
+  // Get the rebalance profile
+  const rebalanceFromProfile = getRebalanceProfile(fromChannel.networkContext.chainId, fromAssetId);
+  if (rebalanceFromProfile.isError) {
+    return Result.fail(
+      new FeeError(FeeError.reasons.ConfigError, {
+        message: "Failed to get rebalance profile",
+        assetId: fromAssetId,
+        chainId: fromChannel.networkContext.chainId,
+      }),
+    );
+  }
+
+  const fromProfile = rebalanceFromProfile.getValue();
+  let fromChannelFee = Zero; // start with no actions
+  if (finalFromBalance.gt(fromProfile.reclaimThreshold)) {
+    // There will be a post-resolution reclaim of funds
+    fromChannelFee =
+      fromChannelCode.getValue() === "0x"
+        ? GAS_ESTIMATES.createChannel.add(GAS_ESTIMATES.withdraw)
+        : GAS_ESTIMATES.withdraw;
+  } else if (finalFromBalance.lt(fromProfile.collateralizeThreshold)) {
+    // There will be a post-resolution sender collateralization
+    fromChannelFee =
+      participantFromChannel === "bob"
+        ? GAS_ESTIMATES.depositBob
+        : fromChannelCode.getValue() === "0x" // is alice, is deployed?
+        ? GAS_ESTIMATES.createChannelAndDepositAlice
+        : GAS_ESTIMATES.depositAlice;
+  }
+
+  // when forwarding a transfer, the only immediate costs on the receiver-side
+  // are the ones needed to properly collateralize the transfer
 
   // there are several conditions that would effect the collateral costs
   // (1) channel has sufficient collateral: none
@@ -271,39 +321,61 @@ export const calculateEstimatedGasFee = async (
   //     not need to be created for a deposit to be recognized offchain)
   // (5) participant == bob && contract deployed: depositBob
 
-  const participant = getParticipant(toChannel, routerPublicIdentifier);
-  if (!participant) {
+  const participantToChannel = getParticipant(toChannel, routerPublicIdentifier);
+  if (!participantToChannel) {
     return Result.fail(
       new FeeError(FeeError.reasons.ChannelError, {
         message: "Not in channel",
         publicIdentifier: routerPublicIdentifier,
         alice: toChannel.aliceIdentifier,
         bob: toChannel.bobIdentifier,
+        channelAddress: toChannel.channelAddress,
       }),
     );
   }
-  const routerBalance = getBalanceForAssetId(toChannel, transferAssetId, participant);
-  if (BigNumber.from(routerBalance).gte(amountToSend)) {
+  const routerBalance = getBalanceForAssetId(toChannel, toAssetId, participantToChannel);
+  // get the amount you would send
+  const converted = await getSwappedAmount(
+    amountToSend.toString(),
+    fromAssetId,
+    fromChannel.networkContext.chainId,
+    toAssetId,
+    toChannel.networkContext.chainId,
+  );
+  if (converted.isError) {
+    return Result.fail(
+      new FeeError(FeeError.reasons.ConversionError, {
+        swapError: jsonifyError(converted.getError()!),
+      }),
+    );
+  }
+  if (BigNumber.from(routerBalance).gte(converted.getValue())) {
     // channel has balance, no extra gas required to facilitate transfer
     logger.info(
       { method, methodId, routerBalance: routerBalance.toString(), amountToSend: amountToSend.toString() },
       "Channel is collateralized",
     );
     return Result.ok({
-      [fromChannel.channelAddress]: reclaimFee,
+      [fromChannel.channelAddress]: fromChannelFee,
       [toChannel.channelAddress]: Zero,
     });
   }
   logger.info(
-    { method, methodId, routerBalance: routerBalance.toString(), amountToSend: amountToSend.toString(), participant },
+    {
+      method,
+      methodId,
+      routerBalance: routerBalance.toString(),
+      amountToSend: amountToSend.toString(),
+      participant: participantToChannel,
+    },
     "Channel is undercollateralized",
   );
 
   // If participant is bob, then you don't need to worry about deploying
   // the channel contract
-  if (participant === "bob") {
+  if (participantToChannel === "bob") {
     return Result.ok({
-      [fromChannel.channelAddress]: reclaimFee,
+      [fromChannel.channelAddress]: fromChannelFee,
       [toChannel.channelAddress]: GAS_ESTIMATES.depositBob,
     });
   }
@@ -320,7 +392,7 @@ export const calculateEstimatedGasFee = async (
     );
   }
   return Result.ok({
-    [fromChannel.channelAddress]: reclaimFee,
+    [fromChannel.channelAddress]: fromChannelFee,
     [toChannel.channelAddress]:
       toChannelCode.getValue() === "0x" ? GAS_ESTIMATES.createChannelAndDepositAlice : GAS_ESTIMATES.depositAlice,
   });
