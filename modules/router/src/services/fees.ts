@@ -1,4 +1,11 @@
-import { FullChannelState, GAS_ESTIMATES, IVectorChainReader, jsonifyError, Result } from "@connext/vector-types";
+import {
+  FullChannelState,
+  GAS_ESTIMATES,
+  IVectorChainReader,
+  jsonifyError,
+  Result,
+  REDUCED_GAS_PRICE,
+} from "@connext/vector-types";
 import {
   calculateExchangeWad,
   getBalanceForAssetId,
@@ -16,8 +23,8 @@ import { BaseLogger } from "pino";
 import { config } from "../config";
 import { FeeError } from "../errors";
 import { rebalancedTokens } from "../metrics";
-import { getRebalanceProfile } from "./config";
 
+import { getRebalanceProfile } from "./config";
 import { getSwappedAmount } from "./swap";
 
 // Takes in some proposed amount in toAssetId and returns the
@@ -144,7 +151,14 @@ export const calculateFeeAmount = async (
   // include collateral fees
   const normalizedReclaimFromAsset =
     fromChainId === 1 // fromAsset MUST be on mainnet
-      ? await normalizeFee(gasFees[fromChannel.channelAddress], fromAssetId, fromChainId, ethReader, logger)
+      ? await normalizeFee(
+          gasFees[fromChannel.channelAddress],
+          fromAssetId,
+          fromChainId,
+          ethReader,
+          logger,
+          REDUCED_GAS_PRICE, // assume reclaim actions happen at reduced price
+        )
       : Result.ok(Zero);
   const normalizedCollateralToAsset =
     toChainId === 1 // toAsset MUST be on mainnet
@@ -413,6 +427,7 @@ export const normalizeFee = async (
   chainId: number,
   ethReader: IVectorChainReader,
   logger: BaseLogger,
+  gasPriceOverride?: BigNumber,
 ): Promise<Result<BigNumber, FeeError>> => {
   const method = "normalizeFee";
   const methodId = getRandomBytes32();
@@ -431,15 +446,17 @@ export const normalizeFee = async (
     );
   }
 
-  const gasPriceRes = await ethReader.getGasPrice(chainId);
-  if (gasPriceRes.isError) {
-    return Result.fail(
-      new FeeError(FeeError.reasons.ChainError, { getGasPriceError: jsonifyError(gasPriceRes.getError()!) }),
-    );
+  let gasPrice = gasPriceOverride;
+  if (!gasPriceOverride) {
+    const gasPriceRes = await ethReader.getGasPrice(chainId);
+    if (gasPriceRes.isError) {
+      return Result.fail(
+        new FeeError(FeeError.reasons.ChainError, { getGasPriceError: jsonifyError(gasPriceRes.getError()!) }),
+      );
+    }
+    gasPrice = gasPriceRes.getValue();
   }
-
-  const gasPrice = gasPriceRes.getValue();
-  const feeWithGasPrice = fee.mul(gasPrice);
+  const feeWithGasPrice = fee.mul(gasPrice!);
 
   if (desiredFeeAssetId === AddressZero) {
     logger.info({ method, methodId }, "Eth detected, exchange rate not required");
