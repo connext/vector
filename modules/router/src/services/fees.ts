@@ -60,7 +60,7 @@ export const calculateFeeAmount = async (
   // Get fee values from config
   let flatFee = config.baseFlatFee ?? "0";
   let percentageFee = config.basePercentageFee ?? 0;
-  let gasSubsidyPercentage = config.baseGasSubsidyPercentage ?? 0;
+  let gasSubsidyPercentage = config.baseGasSubsidyPercentage ?? 100;
   let isSwap = false;
   if (fromChainId !== toChainId || fromAssetId !== toAssetId) {
     isSwap = true;
