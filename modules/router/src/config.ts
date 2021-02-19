@@ -70,7 +70,7 @@ vectorConfig.allowedSwaps = vectorConfig.allowedSwaps.map((s) => {
   // sanity check:
   // dynamicGasFees can only be assessed if `toChainId` or `fromChainId`
   // is 1
-  if (s.toChainId !== 1 && s.fromChainId !== 1 && !!s.dynamicGasFee) {
+  if (s.toChainId !== 1 && s.fromChainId !== 1 && typeof s.gasSubsidyPercentage !== "undefined") {
     throw new Error(`Cannot dynamically assess gas fees for non-mainnet swaps`);
   }
 
