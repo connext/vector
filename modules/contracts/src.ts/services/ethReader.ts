@@ -519,6 +519,16 @@ export class EthereumChainReader implements IVectorChainReader {
     if (!provider) {
       return Result.fail(new ChainError(ChainError.reasons.ProviderNotFound));
     }
+    // check if it was deployed
+    const code = await this.getCode(channelAddress, chainId);
+    if (code.isError) {
+      return Result.fail(code.getError()!);
+    }
+    if (code.getValue() === "0x") {
+      // channel must always be deployed for a withdrawal
+      // to be submitted
+      return Result.ok(false);
+    }
     const channel = new Contract(channelAddress, VectorChannel.abi, provider);
     try {
       const record = await channel.getWithdrawalTransactionRecord({
