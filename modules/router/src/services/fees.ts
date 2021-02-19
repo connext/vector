@@ -22,7 +22,7 @@ import { BaseLogger } from "pino";
 
 import { config } from "../config";
 import { FeeError } from "../errors";
-import { rebalancedTokens } from "../metrics";
+import { getDecimals } from "../metrics";
 
 import { getRebalanceProfile } from "./config";
 import { getSwappedAmount } from "./swap";
@@ -474,9 +474,12 @@ export const normalizeFee = async (
 
   // since rate is ETH : token, need to invert
   const invertedRate = inverse(exchangeRate.toString());
-
-  const decimals = rebalancedTokens[chainId][desiredFeeAssetId].decimals;
-  if (!decimals) {
+  let decimals: number;
+  let baseAssetDecimals: number;
+  try {
+    decimals = await getDecimals(chainId.toString(), desiredFeeAssetId);
+    baseAssetDecimals = await getDecimals(chainId.toString(), AddressZero);
+  } catch (e) {
     return Result.fail(
       new FeeError(FeeError.reasons.ExchangeRateError, {
         message: "Could not get decimals",
@@ -488,7 +491,7 @@ export const normalizeFee = async (
   }
 
   // total fee in asset normalized decimals
-  const feeWithGasPriceInAsset = calculateExchangeWad(feeWithGasPrice, 18, invertedRate, decimals);
+  const feeWithGasPriceInAsset = calculateExchangeWad(feeWithGasPrice, baseAssetDecimals, invertedRate, decimals);
   return Result.ok(BigNumber.from(feeWithGasPriceInAsset));
 };
 
@@ -517,6 +520,7 @@ export const getExchangeRateInEth = async (
       new FeeError(FeeError.reasons.ExchangeRateError, {
         message: "Could not get exchange rate",
         tokenAddress,
+        error: e.message,
       }),
     );
   }
