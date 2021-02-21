@@ -2,6 +2,11 @@
 
 ## Next Release
 
+## 0.1.17
+
+- \[router\] Fix collateral bug
+- \[contracts\] Check if contract is deployed before calling `chainService.getWithdrawalStatus`
+
 ## 0.1.16
 
 - \[contracts\] Fix `chainReader` balance bug
