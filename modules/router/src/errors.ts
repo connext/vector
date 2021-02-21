@@ -169,17 +169,13 @@ export class ConfigServiceError extends RouterError {
 
   static readonly reasons = {
     UnableToGetRebalanceProfile: "Could not get rebalance profile",
+    UnableToFindSwap: "Could not get matching swap",
   } as const;
 
   readonly context: ConfigServiceErrorContext;
 
-  constructor(
-    public readonly message: Values<typeof ConfigServiceError.reasons>,
-    chainId: number,
-    assetId: string,
-    context: any = {},
-  ) {
-    super(message, { chainId, assetId, ...context }, ConfigServiceError.type);
+  constructor(public readonly message: Values<typeof ConfigServiceError.reasons>, context: any = {}) {
+    super(message, context, ConfigServiceError.type);
   }
 }
 

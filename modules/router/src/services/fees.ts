@@ -14,17 +14,15 @@ import {
   inverse,
   logAxiosError,
 } from "@connext/vector-utils";
-import { getAddress } from "@ethersproject/address";
 import { BigNumber } from "@ethersproject/bignumber";
 import { AddressZero, Zero } from "@ethersproject/constants";
 import axios from "axios";
 import { BaseLogger } from "pino";
 
-import { config } from "../config";
 import { FeeError } from "../errors";
 import { getDecimals } from "../metrics";
 
-import { getRebalanceProfile } from "./config";
+import { getRebalanceProfile, getSwapFees } from "./config";
 import { getSwappedAmount } from "./swap";
 
 // Takes in some proposed amount in toAssetId and returns the
@@ -58,37 +56,16 @@ export const calculateFeeAmount = async (
     "Method start",
   );
   // Get fee values from config
-  let flatFee = config.baseFlatFee ?? "0";
-  let percentageFee = config.basePercentageFee ?? 0;
-  let gasSubsidyPercentage = config.baseGasSubsidyPercentage ?? 100;
-  let isSwap = false;
-  if (fromChainId !== toChainId || fromAssetId !== toAssetId) {
-    isSwap = true;
-    const fromAsset = getAddress(fromAssetId);
-    const toAsset = getAddress(toAssetId);
-    const swap = config.allowedSwaps.find(
-      (s) =>
-        s.fromAssetId === fromAsset &&
-        s.fromChainId === fromChainId &&
-        s.toAssetId === toAsset &&
-        s.toChainId === toChainId,
+  const fees = getSwapFees(fromAssetId, fromChainId, toAssetId, toChainId);
+  if (fees.isError) {
+    return Result.fail(
+      new FeeError(FeeError.reasons.ConfigError, {
+        getFeesError: jsonifyError(fees.getError()!),
+      }),
     );
-
-    if (!swap) {
-      return Result.fail(
-        new FeeError(FeeError.reasons.NoSwap, {
-          fromAsset,
-          fromChainId,
-          toAsset,
-          toChainId,
-          allowedSwaps: config.allowedSwaps,
-        }),
-      );
-    }
-    flatFee = swap.flatFee ?? flatFee;
-    percentageFee = swap.percentageFee ?? percentageFee;
-    gasSubsidyPercentage = swap.gasSubsidyPercentage ?? gasSubsidyPercentage;
   }
+  const { flatFee, percentageFee, gasSubsidyPercentage } = fees.getValue();
+  const isSwap = fromChainId !== toChainId || fromAssetId !== toAssetId;
   logger.debug(
     {
       method,
@@ -305,6 +282,7 @@ export const calculateEstimatedGasFee = async (
         message: "Failed to get rebalance profile",
         assetId: fromAssetId,
         chainId: fromChannel.networkContext.chainId,
+        error: jsonifyError(rebalanceFromProfile.getError()!),
       }),
     );
   }
