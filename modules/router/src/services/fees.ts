@@ -29,10 +29,8 @@ import { getSwappedAmount } from "./swap";
 // fees in the toAssetId. Will *NOT* return an error if fees > amount
 export const calculateFeeAmount = async (
   transferAmount: BigNumber,
-  fromChainId: number,
   fromAssetId: string,
   fromChannel: FullChannelState,
-  toChainId: number,
   toAssetId: string,
   toChannel: FullChannelState,
   ethReader: IVectorChainReader,
@@ -47,14 +45,16 @@ export const calculateFeeAmount = async (
       methodId,
       startingAmount: transferAmount.toString(),
       fromAssetId,
-      fromChainId,
+      fromChainId: fromChannel.networkContext.chainId,
       fromChannel: fromChannel.channelAddress,
-      toChainId,
+      toChainId: toChannel.networkContext.chainId,
       toAssetId,
       toChannel: toChannel.channelAddress,
     },
     "Method start",
   );
+  const toChainId = toChannel.networkContext.chainId;
+  const fromChainId = fromChannel.networkContext.chainId;
   // Get fee values from config
   const fees = getSwapFees(fromAssetId, fromChainId, toAssetId, toChainId);
   if (fees.isError) {
@@ -152,10 +152,10 @@ export const calculateFeeAmount = async (
         toAssetId,
         normalizedCollateralToAsset: normalizedCollateralToAsset.isError
           ? jsonifyError(normalizedCollateralToAsset.getError())
-          : normalizedCollateralToAsset.getValue(),
+          : normalizedCollateralToAsset.getValue().toString(),
         normalizedCollateral: normalizedCollateralToAsset.isError
           ? jsonifyError(normalizedCollateralToAsset.getError())
-          : normalizedCollateralToAsset.getValue(),
+          : normalizedCollateralToAsset.getValue().toString(),
       }),
     );
   }
@@ -188,8 +188,8 @@ export const calculateFeeAmount = async (
 
   const normalizedGasFees = normalizedReclaimFromAsset.getValue().add(normalizedCollateralFromAsset.getValue());
   // take the subsidy percentage of the normalized fees
-  const subsidized = normalizedGasFees.mul(gasSubsidyPercentage).div(100);
-  const totalFees = staticFees.add(normalizedGasFees).sub(subsidized);
+  const dynamic = normalizedGasFees.mul(100 - gasSubsidyPercentage).div(100);
+  const totalFees = staticFees.add(dynamic);
   logger.info(
     {
       method,
