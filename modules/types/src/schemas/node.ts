@@ -13,6 +13,7 @@ import {
   TFullChannelState,
   TChainId,
   AllowedSwapSchema,
+  TSignature,
 } from "./basic";
 
 ////////////////////////////////////////
@@ -35,6 +36,28 @@ const BasicTransferServerResponseSchema = {
     channelAddress: TAddress,
     transferId: TBytes32,
     routingId: Type.Optional(TBytes32),
+  }),
+};
+
+// GET TRANSFER QUOTE
+const GetTransferQuoteParamsSchema = Type.Intersect([
+  EngineParams.GetRouterConfigSchema,
+  Type.Object({
+    publicIdentifier: TPublicIdentifier,
+  }),
+]);
+
+const GetTransferQuoteResponseSchema = {
+  200: Type.Object({
+    routerIdentifier: TPublicIdentifier,
+    amount: TIntegerString,
+    assetId: TAddress,
+    recipient: TPublicIdentifier,
+    recipientChainId: TChainId,
+    recipientAssetId: TAddress,
+    fee: TIntegerString,
+    expiry: TIntegerString,
+    signature: TSignature,
   }),
 };
 
@@ -445,6 +468,9 @@ const PostSendIsAliveResponseSchema = {
 // Namespace exports
 // eslint-disable-next-line @typescript-eslint/no-namespace
 export namespace NodeParams {
+  export const GetTransferQuoteSchema = GetTransferQuoteParamsSchema;
+  export type GetTransferQuote = Static<typeof GetTransferQuoteParamsSchema>;
+
   export const GetRouterConfigSchema = GetRouterConfigParamsSchema;
   export type GetRouterConfig = Static<typeof GetRouterConfigParamsSchema>;
 
@@ -547,6 +573,9 @@ export namespace NodeParams {
 
 // eslint-disable-next-line @typescript-eslint/no-namespace
 export namespace NodeResponses {
+  export const GetTransferQuoteSchema = GetTransferQuoteResponseSchema;
+  export type GetTransferQuote = Static<typeof GetTransferQuoteResponseSchema["200"]>;
+
   export const GetRouterConfigSchema = GetRouterConfigResponseSchema;
   export type GetRouterConfig = Static<typeof GetRouterConfigResponseSchema["200"]>;
 

@@ -18,8 +18,17 @@ import {
 // Engine API Parameter schemas
 
 // The engine takes in user-friendly channel transition parameters
-// from the rpc, converts them to proper protocol parameters,
-// and returns the protocol response.
+// from the rpc, converts them to proper protocol/message parameters,
+// and returns the protocol/message response.
+
+const GetTransferQuoteParamsSchema = Type.Object({
+  routerIdentifier: TPublicIdentifier,
+  amount: TIntegerString,
+  assetId: TAddress,
+  recipient: Type.Optional(TPublicIdentifier),
+  recipientChainId: Type.Optional(TChainId),
+  recipientAssetId: Type.Optional(TAddress),
+});
 
 const GetRouterConfigParamsSchema = Type.Object({
   routerIdentifier: TPublicIdentifier,
@@ -257,4 +266,7 @@ export namespace EngineParams {
 
   export const DefundTransferSchema = DefundTransferParamsSchema;
   export type DefundTransfer = Static<typeof DefundTransferParamsSchema>;
+
+  export const GetTransferQuoteSchema = GetTransferQuoteParamsSchema;
+  export type GetTransferQuote = Static<typeof GetTransferQuoteParamsSchema>;
 }

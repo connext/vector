@@ -11,6 +11,9 @@ export interface IRouterMessagingService extends IBasicMessaging {
     publicIdentifier: string,
     callback: (configRequest: Result<void, RouterError | MessagingError>, from: string, inbox: string) => void,
   ): Promise<void>;
+
+  onReceiveTransferQuoteMessage(): Promise<void>;
+  respondToTransferQuoteMessage(): Promise<void>;
 }
 
 export class NatsRouterMessagingService extends NatsBasicMessagingService implements IRouterMessagingService {

@@ -197,6 +197,23 @@ export class VectorEngine implements IVectorEngine {
     return Result.ok([{ index: 0, publicIdentifier: this.publicIdentifier, signerAddress: this.signerAddress }]);
   }
 
+  private async getTransferQuote(
+    params: EngineParams.GetTransferQuote,
+  ): Promise<Result<ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_getConfig], EngineError>> {
+    const validate = ajv.compile(EngineParams.GetRouterConfigSchema);
+    const valid = validate(params);
+    if (!valid) {
+      return Result.fail(
+        new RpcError(RpcError.reasons.InvalidParams, "", this.publicIdentifier, {
+          invalidParamsError: validate.errors?.map((e) => e.message).join(","),
+          invalidParams: params,
+        }),
+      );
+    }
+    const { routerIdentifier, ...message } = params;
+    return this.messaging.sendTransferQuoteMessage(Result.ok(message), routerIdentifier, this.publicIdentifier);
+  }
+
   private async getRouterConfig(
     params: EngineParams.GetRouterConfig,
   ): Promise<Result<ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_getRouterConfig], EngineError>> {

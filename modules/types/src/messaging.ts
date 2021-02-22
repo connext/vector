@@ -1,7 +1,7 @@
 import { ChannelUpdate, FullChannelState, FullTransferState } from "./channel";
 import { EngineError, NodeError, MessagingError, ProtocolError, Result, RouterError, VectorError } from "./error";
 import { LockInformation } from "./lock";
-import { AllowedSwap, EngineParams } from "./schemas";
+import { AllowedSwap, EngineParams, NodeResponses } from "./schemas";
 
 export type CheckInInfo = { channelAddress: string };
 export type CheckInResponse = {
@@ -150,4 +150,11 @@ export interface IMessagingService extends IBasicMessaging {
     timeout?: number,
     numRetries?: number,
   ): Promise<Result<RouterConfigResponse, RouterError | MessagingError>>;
+  sendTransferQuoteMessage(
+    quoteRequest: Result<EngineParams.GetTransferQuote, VectorError>,
+    to: string,
+    from: string,
+    timeout?: number,
+    numRetries?: number,
+  ): Promise<Result<NodeResponses.GetTransferQuote, RouterError | MessagingError>>;
 }
