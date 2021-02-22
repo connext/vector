@@ -41,6 +41,7 @@ export default class ConnextManager {
     signature?: string,
     signerAddress?: string,
   ): Promise<BrowserNode> {
+    console.log(`Initializing node signature: ${signature}, ${signerAddress}`);
     // store entropy in local storage
     if (!localStorage) {
       throw new Error("localStorage not available in this window, please enable cross-site cookies and try again.");
@@ -48,7 +49,9 @@ export default class ConnextManager {
     if (signature) {
       const recovered = verifyTypedData(EIP712Domain, EIP712Types, EIP712Value, signature);
       if (recovered !== signerAddress) {
-        throw new Error(`Signature not properly recovered: ${signature}, ${signerAddress}`);
+        throw new Error(
+          `Signature not properly recovered. expected ${signerAddress}, got ${recovered}, signature: ${signature}`,
+        );
       }
     }
     let storedEntropy = localStorage.getItem("entropy");
@@ -120,6 +123,8 @@ export default class ConnextManager {
         request.params.chainProviders,
         request.params.chainAddresses,
         request.params.messagingUrl,
+        request.params.signature,
+        request.params.signer,
       );
       return {
         publicIdentifier: node.publicIdentifier,

@@ -151,11 +151,15 @@ export class BrowserNode implements INodeService {
     const method = "init";
     this.logger.debug({ method }, "Method started");
     const iframeSrc = this.iframeSrc ?? "https://wallet.connext.network";
-    this.logger.info({ method, iframeSrc }, "Connecting with iframe provider");
+    this.logger.info(
+      { method, iframeSrc, signer: params.signer, signature: params.signature },
+      "Connecting with iframe provider",
+    );
     this.channelProvider = await IframeChannelProvider.connect({
       src: iframeSrc,
       id: "connext-iframe",
     });
+    this.logger.info({ method }, "Authenticating Connext");
     const rpc = constructRpcRequest("connext_authenticate", {
       chainProviders: this.chainProviders,
       chainAddresses: this.chainAddresses,
