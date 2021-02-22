@@ -1,4 +1,4 @@
-import { BrowserNode, EIP712Domain, EIP712Types, EIP712Value } from "@connext/vector-browser-node";
+import { BrowserNode, NonEIP712Message } from "@connext/vector-browser-node";
 import {
   ChainAddresses,
   ChainProviders,
@@ -13,7 +13,7 @@ import { entropyToMnemonic } from "@ethersproject/hdnode";
 import { keccak256 } from "@ethersproject/keccak256";
 import { randomBytes } from "@ethersproject/random";
 import { toUtf8Bytes } from "@ethersproject/strings";
-import { Wallet, verifyTypedData } from "@ethersproject/wallet";
+import { Wallet, verifyMessage } from "@ethersproject/wallet";
 import { BigNumber } from "@ethersproject/bignumber";
 import pino from "pino";
 import { config } from "./config";
@@ -47,7 +47,7 @@ export default class ConnextManager {
       throw new Error("localStorage not available in this window, please enable cross-site cookies and try again.");
     }
     if (signature) {
-      const recovered = verifyTypedData(EIP712Domain, EIP712Types, EIP712Value, signature);
+      const recovered = verifyMessage(NonEIP712Message, signature);
       if (recovered !== signerAddress) {
         throw new Error(
           `Signature not properly recovered. expected ${signerAddress}, got ${recovered}, signature: ${signature}`,
@@ -210,7 +210,7 @@ export default class ConnextManager {
       console.log("No channels with balance found");
       return true;
     }
-    console.warn("Channels with balance exist, cannot migrate right now");
+    console.warn("Channels with balance exist, cannot migrate right now", channelsWithBalanceFiltered);
     return false;
   }
 }

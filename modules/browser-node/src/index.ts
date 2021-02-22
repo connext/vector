@@ -25,7 +25,7 @@ import { BrowserStore } from "./services/store";
 import { BrowserLockService } from "./services/lock";
 import { DirectProvider, IframeChannelProvider, IRpcChannelProvider } from "./channelProvider";
 import { BrowserNodeError } from "./errors";
-export { EIP712Domain, EIP712Types, EIP712Value } from "./constants";
+export * from "./constants";
 
 export type BrowserNodeSignerConfig = {
   natsUrl?: string;

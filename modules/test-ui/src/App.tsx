@@ -1,4 +1,4 @@
-import { BrowserNode, EIP712Domain, EIP712Types, EIP712Value } from "@connext/vector-browser-node";
+import { BrowserNode, NonEIP712Message } from "@connext/vector-browser-node";
 import {
   getPublicKeyFromPublicIdentifier,
   encrypt,
@@ -70,7 +70,7 @@ function App() {
         const signer = _loginProvider.getSigner();
         const signerAddress = await signer.getAddress();
         console.log("signerAddress: ", signerAddress);
-        const signature = await signer._signTypedData(EIP712Domain, EIP712Types, EIP712Value);
+        const signature = await signer.signMessage(NonEIP712Message);
         console.log("signature: ", signature);
         init = { signature, signer: signerAddress };
       }
