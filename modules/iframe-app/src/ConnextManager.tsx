@@ -1,6 +1,7 @@
-import { BrowserNode } from "@connext/vector-browser-node";
+import { BrowserNode, EIP712Domain, EIP712Types, EIP712Value } from "@connext/vector-browser-node";
 import {
   ChainAddresses,
+  ChainProviders,
   ChannelRpcMethod,
   ChannelRpcMethodsResponsesMap,
   EngineParams,
@@ -12,7 +13,8 @@ import { entropyToMnemonic } from "@ethersproject/hdnode";
 import { keccak256 } from "@ethersproject/keccak256";
 import { randomBytes } from "@ethersproject/random";
 import { toUtf8Bytes } from "@ethersproject/strings";
-import { Wallet } from "@ethersproject/wallet";
+import { Wallet, verifyTypedData } from "@ethersproject/wallet";
+import { BigNumber } from "@ethersproject/bignumber";
 import pino from "pino";
 import { config } from "./config";
 
@@ -36,16 +38,40 @@ export default class ConnextManager {
     chainProviders: { [chainId: number]: string },
     chainAddresses?: ChainAddresses,
     messagingUrl?: string,
+    signature?: string,
+    signerAddress?: string,
   ): Promise<BrowserNode> {
     // store entropy in local storage
     if (!localStorage) {
       throw new Error("localStorage not available in this window, please enable cross-site cookies and try again.");
     }
-    let storedEntropy = localStorage.getItem("entropy");
-    if (!storedEntropy) {
-      storedEntropy = hexlify(randomBytes(65));
-      localStorage.setItem("entropy", storedEntropy);
+    if (signature) {
+      const recovered = verifyTypedData(EIP712Domain, EIP712Types, EIP712Value, signature);
+      if (recovered !== signerAddress) {
+        throw new Error(`Signature not properly recovered: ${signature}, ${signerAddress}`);
+      }
     }
+    let storedEntropy = localStorage.getItem("entropy");
+
+    if (!storedEntropy) {
+      storedEntropy = signature ?? hexlify(randomBytes(65));
+    } else {
+      if (signature && storedEntropy !== signature) {
+        // need to migrate
+        const ableToMigrate = await this.ableToMigrate(
+          storedEntropy,
+          chainAddresses ?? config.chainAddresses,
+          chainProviders,
+          messagingUrl ?? config.messagingUrl,
+        );
+        if (ableToMigrate) {
+          storedEntropy = signature;
+        } else {
+          storedEntropy = hexlify(randomBytes(65));
+        }
+      }
+    }
+    localStorage.setItem("entropy", storedEntropy);
 
     // use the entropy of the signature to generate a private key for this wallet
     // since the signature depends on the private key stored by Magic/Metamask, this is not forgeable by an adversary
@@ -126,5 +152,60 @@ export default class ConnextManager {
       return true;
     }
     return await this.browserNode.send(request);
+  }
+
+  private async ableToMigrate(
+    storedEntropy: string,
+    chainAddresses: ChainAddresses,
+    chainProviders: ChainProviders,
+    messagingUrl?: string,
+  ): Promise<boolean> {
+    console.warn("Checking if local storage can be migrated to deterministic key");
+    const mnemonic = entropyToMnemonic(keccak256(storedEntropy));
+    const privateKey = Wallet.fromMnemonic(mnemonic).privateKey;
+    const signer = new ChannelSigner(privateKey);
+
+    const browserNode = await BrowserNode.connect({
+      signer,
+      chainAddresses,
+      chainProviders,
+      logger: pino(),
+      messagingUrl,
+      authUrl: config.authUrl,
+      natsUrl: config.natsUrl,
+    });
+
+    const channelAddressesRes = await browserNode.getStateChannels();
+    if (channelAddressesRes.isError) {
+      throw channelAddressesRes.getError();
+    }
+    const channelAddresses = channelAddressesRes.getValue();
+    const channelsWithBalance = await Promise.all(
+      channelAddresses.map(async (channelAddress) => {
+        const channel = await browserNode.getStateChannel({ channelAddress });
+        if (channel.isError) {
+          throw channel.getError();
+        }
+        const chan = channel.getValue();
+        const hasBalance = chan?.balances.find((balance) => {
+          // this checks both alice and bob balance
+          if (BigNumber.from(balance.amount[0]).gt(0) || BigNumber.from(balance.amount[1]).gt(0)) {
+            return true;
+          }
+          return false;
+        });
+        if (hasBalance) {
+          return chan;
+        }
+        return undefined;
+      }),
+    );
+    const channelsWithBalanceFiltered = channelsWithBalance.filter((chan) => !!chan);
+    if (channelsWithBalanceFiltered.length === 0) {
+      console.log("No channels with balance found");
+      return true;
+    }
+    console.warn("Channels with balance exist, cannot migrate right now");
+    return false;
   }
 }

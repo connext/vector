@@ -25,6 +25,7 @@ import { BrowserStore } from "./services/store";
 import { BrowserLockService } from "./services/lock";
 import { DirectProvider, IframeChannelProvider, IRpcChannelProvider } from "./channelProvider";
 import { BrowserNodeError } from "./errors";
+export { EIP712Domain, EIP712Types, EIP712Value } from "./constants";
 
 export type BrowserNodeSignerConfig = {
   natsUrl?: string;
@@ -145,7 +146,7 @@ export class BrowserNode implements INodeService {
   }
 
   // method for non-signer based apps to connect to iframe
-  async init(): Promise<void> {
+  async init(params: { signature?: string; signer?: string } = {}): Promise<void> {
     // TODO: validate config
     const method = "init";
     this.logger.debug({ method }, "Method started");
@@ -159,6 +160,8 @@ export class BrowserNode implements INodeService {
       chainProviders: this.chainProviders,
       chainAddresses: this.chainAddresses,
       messagingUrl: this.messagingUrl,
+      signature: params.signature,
+      signer: params.signer,
     });
     const auth = await this.channelProvider.send(rpc);
     this.logger.info({ method, response: auth }, "Received response from auth method");
