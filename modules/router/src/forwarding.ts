@@ -64,7 +64,6 @@ export async function forwardTransferCreation(
     },
     "Method started",
   );
-  inProgressCreations[data.transfer.channelAddress].push(data.transfer.transferId);
   logger.debug({ method, methodId, event: data }, "Event data");
 
   /*
