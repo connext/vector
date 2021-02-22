@@ -1,7 +1,7 @@
 import { ChannelUpdate, FullChannelState, FullTransferState } from "./channel";
 import { EngineError, NodeError, MessagingError, ProtocolError, Result, RouterError, VectorError } from "./error";
 import { LockInformation } from "./lock";
-import { AllowedSwap, EngineParams, NodeResponses } from "./schemas";
+import { EngineParams, NodeResponses } from "./schemas";
 
 export type CheckInInfo = { channelAddress: string };
 export type CheckInResponse = {
@@ -9,11 +9,6 @@ export type CheckInResponse = {
   bobIdentifier: string;
   chainId: number;
   channelAddress: string;
-};
-
-export type RouterConfigResponse = {
-  supportedChains: number[];
-  allowedSwaps: AllowedSwap[];
 };
 
 // All basic NATS messaging services
@@ -149,9 +144,9 @@ export interface IMessagingService extends IBasicMessaging {
     from: string,
     timeout?: number,
     numRetries?: number,
-  ): Promise<Result<RouterConfigResponse, RouterError | MessagingError>>;
+  ): Promise<Result<NodeResponses.GetRouterConfig, RouterError | MessagingError>>;
   sendTransferQuoteMessage(
-    quoteRequest: Result<EngineParams.GetTransferQuote, VectorError>,
+    quoteRequest: Result<Omit<EngineParams.GetTransferQuote, "routerIdentifier">, VectorError>,
     to: string,
     from: string,
     timeout?: number,

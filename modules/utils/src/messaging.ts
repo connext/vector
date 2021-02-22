@@ -12,9 +12,9 @@ import {
   VectorError,
   MessagingError,
   ProtocolError,
-  RouterConfigResponse,
   IBasicMessaging,
   RouterError,
+  NodeResponses,
 } from "@connext/vector-types";
 import axios, { AxiosResponse } from "axios";
 import pino, { BaseLogger } from "pino";
@@ -531,7 +531,7 @@ export class NatsMessagingService extends NatsBasicMessagingService implements I
     from: string,
     timeout?: number,
     numRetries?: number,
-  ): Promise<Result<RouterConfigResponse, RouterError | MessagingError>> {
+  ): Promise<Result<NodeResponses.GetRouterConfig, RouterError | MessagingError>> {
     return this.sendMessageWithRetries(
       configRequest,
       "config",
@@ -543,4 +543,23 @@ export class NatsMessagingService extends NatsBasicMessagingService implements I
     );
   }
   ////////////
+
+  // QUOTE METHODS
+  sendTransferQuoteMessage(
+    quoteRequest: Result<Omit<EngineParams.GetTransferQuote, "routerIdentifier">, VectorError>,
+    to: string,
+    from: string,
+    timeout?: number,
+    numRetries?: number,
+  ): Promise<Result<NodeResponses.GetTransferQuote, RouterError | MessagingError>> {
+    return this.sendMessageWithRetries(
+      quoteRequest,
+      "quote",
+      to,
+      from,
+      timeout,
+      numRetries,
+      "sendTransferQuoteMessage",
+    );
+  }
 }

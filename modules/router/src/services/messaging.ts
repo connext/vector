@@ -1,19 +1,29 @@
-import { RouterConfigResponse, IBasicMessaging, Result, RouterError, MessagingError } from "@connext/vector-types";
+import { IBasicMessaging, Result, RouterError, MessagingError, NodeResponses, NodeParams } from "@connext/vector-types";
 import { NatsBasicMessagingService, MessagingConfig } from "@connext/vector-utils";
 import pino, { BaseLogger } from "pino";
 export interface IRouterMessagingService extends IBasicMessaging {
   // Specialized request/response methods
   respondToRouterConfigMessage(
     inbox: string,
-    configData: Result<RouterConfigResponse, RouterError | MessagingError>,
+    configData: Result<NodeResponses.GetRouterConfig, RouterError | MessagingError>,
   ): Promise<void>;
   onReceiveRouterConfigMessage(
     publicIdentifier: string,
     callback: (configRequest: Result<void, RouterError | MessagingError>, from: string, inbox: string) => void,
   ): Promise<void>;
 
-  onReceiveTransferQuoteMessage(): Promise<void>;
-  respondToTransferQuoteMessage(): Promise<void>;
+  onReceiveTransferQuoteMessage(
+    publicIdentifier: string,
+    callback: (
+      quoteRequest: Result<NodeParams.GetTransferQuote, RouterError | MessagingError>,
+      from: string,
+      inbox: string,
+    ) => void,
+  ): Promise<void>;
+  respondToTransferQuoteMessage(
+    inbox: string,
+    response: Result<NodeResponses.GetTransferQuote, RouterError | MessagingError>,
+  ): Promise<void>;
 }
 
 export class NatsRouterMessagingService extends NatsBasicMessagingService implements IRouterMessagingService {
@@ -26,7 +36,7 @@ export class NatsRouterMessagingService extends NatsBasicMessagingService implem
   // Config messages
   respondToRouterConfigMessage(
     inbox: string,
-    configData: Result<RouterConfigResponse, RouterError | MessagingError>,
+    configData: Result<NodeResponses.GetRouterConfig, RouterError | MessagingError>,
   ): Promise<void> {
     return this.respondToMessage(inbox, configData, "respondToRouterConfigMessage");
   }
@@ -38,4 +48,23 @@ export class NatsRouterMessagingService extends NatsBasicMessagingService implem
     await this.registerCallback(`${publicIdentifier}.*.config`, callback, "onReceiveRouterConfigMessage");
   }
   //////////////////
+
+  // Transfer Quote messages
+  respondToTransferQuoteMessage(
+    inbox: string,
+    response: Result<NodeResponses.GetTransferQuote, RouterError | MessagingError>,
+  ): Promise<void> {
+    return this.respondToMessage(inbox, response, "respondToTransferQuoteMessage");
+  }
+
+  async onReceiveTransferQuoteMessage(
+    publicIdentifier: string,
+    callback: (
+      quoteRequest: Result<NodeParams.GetTransferQuote, RouterError | MessagingError>,
+      from: string,
+      inbox: string,
+    ) => void,
+  ): Promise<void> {
+    await this.registerCallback(`${publicIdentifier}.*.quote`, callback, "onReceiveTransferQuoteMessage");
+  }
 }

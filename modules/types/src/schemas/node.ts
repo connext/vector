@@ -41,7 +41,7 @@ const BasicTransferServerResponseSchema = {
 
 // GET TRANSFER QUOTE
 const GetTransferQuoteParamsSchema = Type.Intersect([
-  EngineParams.GetRouterConfigSchema,
+  EngineParams.GetTransferQuoteSchema,
   Type.Object({
     publicIdentifier: TPublicIdentifier,
   }),
