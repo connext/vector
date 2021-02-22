@@ -199,7 +199,7 @@ export class VectorEngine implements IVectorEngine {
 
   private async getTransferQuote(
     params: EngineParams.GetTransferQuote,
-  ): Promise<Result<ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_getConfig], EngineError>> {
+  ): Promise<Result<ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_getTransferQuote], EngineError>> {
     const validate = ajv.compile(EngineParams.GetRouterConfigSchema);
     const valid = validate(params);
     if (!valid) {
