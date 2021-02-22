@@ -527,7 +527,15 @@ export async function handleIsAlive(
     logger,
   );
 
-  // TODO: should this be done IFF the processing pending updates doesnt fail?
+  const errors = [pending.getError(), unverified.getError()].filter((x) => !!x);
+  if (errors.length !== 0) {
+    return Result.fail(
+      new CheckInError(CheckInError.reasons.TasksFailed, data.channelAddress, {
+        pending: pending.isError ? jsonifyError(pending.getError()!) : undefined,
+        unverified: unverified.isError ? jsonifyError(unverified.getError()!) : undefined,
+      }),
+    );
+  }
   const dropped = await handleRouterDroppedTransfers(
     data,
     routerPublicIdentifier,
@@ -536,17 +544,7 @@ export async function handleIsAlive(
     chainReader,
     logger,
   );
-
-  const errors = [pending.getError(), unverified.getError()].filter((x) => !!x);
-  if (errors.length === 0) {
-    return Result.ok(undefined);
-  }
-  return Result.fail(
-    new CheckInError(CheckInError.reasons.TasksFailed, data.channelAddress, {
-      pending: pending.isError ? jsonifyError(pending.getError()!) : undefined,
-      unverified: unverified.isError ? jsonifyError(unverified.getError()!) : undefined,
-    }),
-  );
+  return dropped;
 }
 
 // This function handles transfers that are dropped by the router
