@@ -14,11 +14,15 @@ import {
   IVectorChainReader,
   NodeError,
   jsonifyError,
+  TransferNames,
+  VectorErrorJson,
 } from "@connext/vector-types";
+import Ajv from "ajv";
 import { BaseLogger } from "pino";
 import { BigNumber } from "@ethersproject/bignumber";
-import { getRandomBytes32 } from "@connext/vector-utils";
+import { getRandomBytes32, getSignerAddressFromPublicIdentifier } from "@connext/vector-utils";
 import { AddressZero } from "@ethersproject/constants";
+import { getAddress } from "@ethersproject/address";
 
 import { getSwappedAmount } from "./services/swap";
 import { IRouterStore, RouterUpdateType, RouterUpdateStatus, RouterStoredUpdate } from "./services/store";
@@ -28,6 +32,9 @@ import {
   attemptTransferWithCollateralization,
   transferWithCollateralization,
 } from "./services/transfer";
+import { inProgressCreations } from "./listener";
+
+const ajv = new Ajv();
 
 export async function forwardTransferCreation(
   data: ConditionalTransferCreatedPayload,
@@ -57,6 +64,7 @@ export async function forwardTransferCreation(
     },
     "Method started",
   );
+  inProgressCreations[data.transfer.channelAddress].push(data.transfer.transferId);
   logger.debug({ method, methodId, event: data }, "Event data");
 
   /*
@@ -519,6 +527,16 @@ export async function handleIsAlive(
     logger,
   );
 
+  // TODO: should this be done IFF the processing pending updates doesnt fail?
+  const dropped = await handleRouterDroppedTransfers(
+    data,
+    routerPublicIdentifier,
+    nodeService,
+    store,
+    chainReader,
+    logger,
+  );
+
   const errors = [pending.getError(), unverified.getError()].filter((x) => !!x);
   if (errors.length === 0) {
     return Result.ok(undefined);
@@ -531,6 +549,220 @@ export async function handleIsAlive(
   );
 }
 
+// This function handles transfers that are dropped by the router
+// eg. router is restarted to change config or to update software
+// and transfers that were being processed were not properly
+// checkpointed
+const handleRouterDroppedTransfers = async (
+  data: IsAlivePayload,
+  routerPublicIdentifier: string,
+  nodeService: INodeService,
+  store: IRouterStore,
+  chainReader: IVectorChainReader,
+  logger: BaseLogger,
+): Promise<Result<undefined, CheckInError>> => {
+  const method = "handleRouterDroppedUpdates";
+  const methodId = getRandomBytes32();
+  logger.debug(
+    {
+      method,
+      methodId,
+      routerPublicIdentifier,
+      channelAddress: data.channelAddress,
+    },
+    "Method started",
+  );
+
+  // Get the channel
+  const channelRes = await nodeService.getStateChannel({ channelAddress: data.channelAddress });
+  if (channelRes.isError || !channelRes.getValue()) {
+    // Do not proceed with processing updates
+    return Result.fail(
+      new CheckInError(CheckInError.reasons.CouldNotGetChannel, data.channelAddress, {
+        getChannelError: channelRes.isError ? channelRes.getError()?.message : "Channel not found",
+      }),
+    );
+  }
+  const channel = channelRes.getValue() as FullChannelState;
+
+  // Get all active transfers for the channel
+  const active = await nodeService.getActiveTransfers({ channelAddress: data.channelAddress });
+  if (active.isError) {
+    // Do not proceed with processing updates
+    return Result.fail(
+      new CheckInError(CheckInError.reasons.CouldNotGetActiveTransfers, data.channelAddress, {
+        getChannelError: jsonifyError(active.getError()!),
+      }),
+    );
+  }
+
+  // We are processing any transfers we may need to forward, so include
+  // only transfers where router must route, it is *not* a withdrawal,
+  // *and* the transfer isnt currently being forwarded
+  const withdrawInfo = await chainReader.getRegisteredTransferByName(
+    TransferNames.Withdraw,
+    channel.networkContext.transferRegistryAddress,
+    channel.networkContext.chainId,
+  );
+  if (withdrawInfo.isError) {
+    return Result.fail(
+      new CheckInError(CheckInError.reasons.CouldNotGetRegistryInfo, data.channelAddress, {
+        registryError: jsonifyError(withdrawInfo.getError()!),
+      }),
+    );
+  }
+  const { definition } = withdrawInfo.getValue();
+  const relevant = active.getValue().filter((t) => {
+    if (t.responderIdentifier !== routerPublicIdentifier) {
+      return false;
+    }
+    if (getAddress(t.transferDefinition) === getAddress(definition)) {
+      return false;
+    }
+    // valid routing meta
+    const validate = ajv.compile(RouterSchemas.RouterMeta);
+    const valid = validate(t.meta);
+    if (!valid) {
+      return false;
+    }
+    // not being currently processed
+    if ((inProgressCreations[data.channelAddress] ?? []).includes(t.transferId)) {
+      return false;
+    }
+    return true;
+  });
+
+  const errors: VectorErrorJson[] = [];
+  for (const transfer of relevant) {
+    // Get the receiver transfer
+    const transfersByRoutingId = await nodeService.getTransfersByRoutingId({ routingId: transfer.meta.routingId });
+    if (transfersByRoutingId.isError) {
+      errors.push(jsonifyError(transfersByRoutingId.getError()!));
+      continue;
+    }
+    const receiverTransfer = transfersByRoutingId
+      .getValue()
+      .find((t) => t.initiatorIdentifier === routerPublicIdentifier);
+
+    // If the receiver transfer is created and not resolved, do nothing
+    if (receiverTransfer && !receiverTransfer.transferResolver) {
+      continue;
+    }
+
+    // If the receiver transfer is created && resolved, resolve the
+    // sender transfer
+    if (receiverTransfer && receiverTransfer.transferResolver) {
+      const resolve = await nodeService.resolveTransfer({
+        transferId: transfer.transferId,
+        channelAddress: transfer.channelAddress,
+        transferResolver: receiverTransfer.transferResolver,
+      });
+      if (resolve.isError) {
+        errors.push(jsonifyError(resolve.getError()!));
+      }
+      continue;
+    }
+
+    // Receiver transfer is not created, cancel sender or
+    // queue receiver transfer creation
+    if (transfer.meta.requireOnline) {
+      // cancel sender transfer because router was not online
+      // so we cannot guarantee this condition
+      const cancel = await cancelCreatedTransfer(
+        "Router not online",
+        transfer,
+        routerPublicIdentifier,
+        nodeService,
+        store,
+        logger,
+        "", // receiverChannelAddress (not needed)
+        true,
+      );
+      if (cancel.isError) {
+        errors.push(jsonifyError(cancel.getError()!));
+      }
+      continue;
+    }
+
+    // Before creating transfer with receiver, make sure the
+    // creation is not already queued to avoid a router double spend
+    const receiverChannel = await nodeService.getStateChannelByParticipants({
+      publicIdentifier: routerPublicIdentifier,
+      counterparty: transfer.meta.path[0].recipient,
+      chainId: transfer.meta.path[0].chainId,
+    });
+    if (receiverChannel.isError || !receiverChannel.getValue()) {
+      errors.push(
+        receiverChannel.isError
+          ? jsonifyError(receiverChannel.getError()!)
+          : jsonifyError(
+              new CheckInError(CheckInError.reasons.CouldNotGetChannel, "", {
+                senderChannel: channel.channelAddress,
+                senderTransfer: transfer,
+              }),
+            ),
+      );
+      continue;
+    }
+    // Do not process if *any* updates exist for this routing id
+    const updates = await store.getQueuedUpdates(receiverChannel.getValue()!.channelAddress, [
+      RouterUpdateStatus.FAILED,
+      RouterUpdateStatus.COMPLETE,
+      RouterUpdateStatus.PENDING,
+      RouterUpdateStatus.PROCESSING,
+      RouterUpdateStatus.UNVERIFIED,
+    ]);
+    const receiverUpdate = updates.find(
+      (u) =>
+        u.payload.meta &&
+        u.payload.meta.routingId === transfer.meta.routingId &&
+        u.type === RouterUpdateType.TRANSFER_CREATION,
+    );
+    if (receiverUpdate) {
+      // recipient update is already queued or being, do nothing
+      continue;
+    }
+    // proceed to create or queue receiver transfer
+    const assetIdx = channel.assetIds.findIndex((a) => getAddress(a) === getAddress(transfer.assetId));
+    // Add to processing
+    inProgressCreations[data.channelAddress] = [
+      ...(inProgressCreations[data.channelAddress] ?? []),
+      transfer.transferId,
+    ];
+    const forwardRes = await forwardTransferCreation(
+      {
+        aliceIdentifier: channel.aliceIdentifier,
+        bobIdentifier: channel.bobIdentifier,
+        channelAddress: channel.channelAddress,
+        channelBalance: channel.balances[assetIdx],
+        conditionType: transfer.transferDefinition,
+        transfer,
+      },
+      routerPublicIdentifier,
+      getSignerAddressFromPublicIdentifier(routerPublicIdentifier),
+      nodeService,
+      store,
+      logger,
+      chainReader,
+    );
+    // Remove from processing
+    inProgressCreations[data.channelAddress] = inProgressCreations[data.channelAddress].filter(
+      (t) => t !== transfer.transferId,
+    );
+    if (forwardRes.isError) {
+      errors.push(forwardRes.getError()!);
+    }
+  }
+  if (errors.length === 0) {
+    return Result.ok(undefined);
+  }
+  return Result.fail(new CheckInError(CheckInError.reasons.RouterCleanupFailed, channel.channelAddress, { errors }));
+};
+
+// This should handle updates where a single-signed update creating
+// the transfer with a recipient was generated, but the router does
+// not know whether or not the transfer was installed or should be
+// cancelled with the sender
 const handleUnverifiedUpdates = async (
   data: IsAlivePayload,
   routerPublicIdentifier: string,
@@ -551,13 +783,8 @@ const handleUnverifiedUpdates = async (
     "Method started",
   );
 
-  // This should handle updates where a single-signed update creating
-  // the transfer with a recipient was generated, but the router does
-  // not know whether or not the transfer was installed or should be
-  // cancelled with the sender
-
-  // Get all verified updates
-  const updates = await store.getQueuedUpdates(data.channelAddress, RouterUpdateStatus.UNVERIFIED);
+  // Get all unverified updates
+  const updates = await store.getQueuedUpdates(data.channelAddress, [RouterUpdateStatus.UNVERIFIED]);
 
   // Get the channel (if needed, should only query 1x for it)
   const channelRes = await nodeService.getStateChannel({ channelAddress: data.channelAddress });
@@ -729,7 +956,7 @@ const handlePendingUpdates = async (
   );
   // This means the user is online and has checked in. Get all updates that are
   // queued and then execute them.
-  const updates = await store.getQueuedUpdates(data.channelAddress, RouterUpdateStatus.PENDING);
+  const updates = await store.getQueuedUpdates(data.channelAddress, [RouterUpdateStatus.PENDING]);
 
   // Get the channel (if needed, should only query 1x for it)
   const channelRes = await nodeService.getStateChannel({ channelAddress: data.channelAddress });
