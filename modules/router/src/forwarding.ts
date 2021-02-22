@@ -536,6 +536,8 @@ export async function handleIsAlive(
       }),
     );
   }
+  // Because this depends on the state of the channel, only perform this
+  // IFF the queued channel updates were properly completed
   const dropped = await handleRouterDroppedTransfers(
     data,
     routerPublicIdentifier,
