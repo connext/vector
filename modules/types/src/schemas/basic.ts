@@ -42,7 +42,6 @@ export const TNetworkContext = Type.Intersect([
   TContractAddresses,
   Type.Object({
     chainId: TChainId,
-    providerUrl: TUrl,
   }),
 ]);
 

@@ -15,7 +15,7 @@ export interface IRouterMessagingService extends IBasicMessaging {
   onReceiveTransferQuoteMessage(
     publicIdentifier: string,
     callback: (
-      quoteRequest: Result<NodeParams.GetTransferQuote, RouterError | MessagingError>,
+      quoteRequest: Result<Omit<NodeParams.GetTransferQuote, "routerIdentifier">, RouterError | MessagingError>,
       from: string,
       inbox: string,
     ) => void,

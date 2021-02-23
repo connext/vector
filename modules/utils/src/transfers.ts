@@ -42,3 +42,9 @@ export const hashCoreTransferState = (state: CoreTransferState): string =>
   solidityKeccak256(["bytes"], [encodeCoreTransferState(state)]);
 
 export const createlockHash = (preImage: string): string => soliditySha256(["bytes32"], [preImage]);
+
+export const encodeTransferQuote = (quote: TransferQuote): string =>
+  defaultAbiCoder.encode([TransferQuoteEncoding], [quote]);
+
+export const hashTransferQuote = (quote: TransferQuote): string =>
+  solidityKeccak256(["bytes"], [encodeTransferQuote(quote)]);

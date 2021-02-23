@@ -25,6 +25,7 @@ const GetTransferQuoteParamsSchema = Type.Object({
   routerIdentifier: TPublicIdentifier,
   amount: TIntegerString,
   assetId: TAddress,
+  chainId: TChainId,
   recipient: Type.Optional(TPublicIdentifier),
   recipientChainId: Type.Optional(TChainId),
   recipientAssetId: Type.Optional(TAddress),

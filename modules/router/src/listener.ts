@@ -8,13 +8,19 @@ import {
   jsonifyError,
   Result,
   ConditionalTransferResolvedPayload,
+  DEFAULT_CHANNEL_TIMEOUT,
 } from "@connext/vector-types";
-import { getBalanceForAssetId, getParticipant, getRandomBytes32 } from "@connext/vector-utils";
+import {
+  getBalanceForAssetId,
+  getParticipant,
+  getRandomBytes32,
+  getSignerAddressFromPublicIdentifier,
+} from "@connext/vector-utils";
 import Ajv from "ajv";
 import { JsonRpcProvider } from "@ethersproject/providers";
 import { BaseLogger } from "pino";
 import { BigNumber } from "@ethersproject/bignumber";
-import { AddressZero } from "@ethersproject/constants";
+import { AddressZero, HashZero } from "@ethersproject/constants";
 
 import { adjustCollateral, requestCollateral } from "./services/collateral";
 import { forwardTransferCreation, forwardTransferResolution, handleIsAlive } from "./forwarding";
@@ -36,6 +42,7 @@ import {
   forwardedTransferVolume,
   attemptedTransfer,
 } from "./metrics";
+import { calculateFeeAmount } from "./services/fees";
 
 const ajv = new Ajv();
 
@@ -448,7 +455,7 @@ export async function setupListeners(
   ///// Messaging responses //////
   ///////////////////////////////
   await messagingService.onReceiveRouterConfigMessage(routerPublicIdentifier, async (request, from, inbox) => {
-    const method = "configureSubscriptions";
+    const method = "onReceiveRouterConfigMessage";
     const methodId = getRandomBytes32();
     logger.debug({ method, methodId }, "Method started");
     if (request.isError) {
@@ -464,6 +471,93 @@ export async function setupListeners(
       .filter((x) => !!x);
     await messagingService.respondToRouterConfigMessage(inbox, Result.ok({ supportedChains, allowedSwaps }));
     logger.debug({ method, methodId }, "Method complete");
+  });
+
+  await messagingService.onReceiveTransferQuoteMessage(routerPublicIdentifier, async (request, from, inbox) => {
+    const method = "onReceiveTransferQuoteMessage";
+    const methodId = getRandomBytes32();
+    logger.debug({ method, methodId }, "Method started");
+    if (request.isError) {
+      logger.error(
+        { error: request.getError()!.toJson(), from, method, methodId },
+        "Received error, shouldn't happen!",
+      );
+      return;
+    }
+    const {
+      amount,
+      assetId,
+      chainId,
+      recipient: _recipient,
+      recipientChainId: _recipientChainId,
+      recipientAssetId: _recipientAssetId,
+    } = request.getValue();
+
+    const recipient = _recipient ?? routerPublicIdentifier;
+    const recipientChainId = _recipientChainId ?? chainId;
+    const recipientAssetId = _recipientAssetId ?? assetId;
+
+    const [senderChannelRes, recipientChannelRes] = await Promise.all([
+      nodeService.getStateChannelByParticipants({ counterparty: from, chainId }),
+      nodeService.getStateChannelByParticipants({
+        chainId: recipientChainId,
+        counterparty: recipient === routerPublicIdentifier ? from : recipient,
+      }),
+    ]);
+
+    if (senderChannelRes.isError || recipientChannelRes.isError) {
+      // return error to counterparty
+      return;
+    }
+
+    const getEmptyChannel = async (counterparty: string, chainId: number): Promise<Result<FullChannelState, Error>> => {
+      const alice = getSignerAddressFromPublicIdentifier(routerPublicIdentifier);
+      const bob = getSignerAddressFromPublicIdentifier(counterparty);
+      const channelAddress = await chainReader.getChannelAddress(alice, bob, "", chainId);
+      if (channelAddress.isError) {
+        return Result.fail(channelAddress.getError()!);
+      }
+      return Result.ok({
+        nonce: 1,
+        channelAddress: channelAddress.getValue(),
+        timeout: DEFAULT_CHANNEL_TIMEOUT.toString(),
+        alice,
+        bob,
+        balances: [],
+        processedDepositsA: [],
+        processedDepositsB: [],
+        assetIds: [],
+        defundNonces: [],
+        merkleRoot: HashZero,
+        latestUpdate: {} as any,
+        networkContext: { chainId, channelFactoryAddress: "", transferRegistryAddress: "" },
+        aliceIdentifier: routerPublicIdentifier,
+        bobIdentifier: counterparty,
+        inDispute: false,
+      });
+    };
+
+    const fee = await calculateFeeAmount(
+      BigNumber.from(amount),
+      assetId,
+      senderChannelRes.getValue() ?? (await getEmptyChannel(from, chainId)), // sender channel
+      recipientAssetId,
+      recipientChannelRes.getValue() ?? (await getEmptyChannel(from, chainId)), // receiver channel
+      chainReader,
+      routerPublicIdentifier,
+      logger,
+    );
+    if (fee.isError) {
+      await messagingService.respondToTransferQuoteMessage(inbox, Result.fail(fee.getError()!));
+      return;
+    }
+    const toSign = hashTransferQuote({});
+    try {
+      const signature = await signer.signMessage(toSign);
+      await messagingService.respondToTransferQuoteMessage(inbox, { ...quote, signature });
+    } catch (e) {}
+
+    await messagingService.respondToTransferQuoteMessage(inbox);
   });
 
   logger.debug({ method, methodId }, "Method complete");

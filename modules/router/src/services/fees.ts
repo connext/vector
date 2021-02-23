@@ -53,6 +53,12 @@ export const calculateFeeAmount = async (
     },
     "Method start",
   );
+  // If recipient is router, i.e. fromChannel ===  toChannel, then the
+  // fee amount is 0 because no fees are taken without forwarding
+  if (toChannel.channelAddress === fromChannel.channelAddress) {
+    return Result.ok(BigNumber.from(0));
+  }
+
   const toChainId = toChannel.networkContext.chainId;
   const fromChainId = fromChannel.networkContext.chainId;
   // Get fee values from config
