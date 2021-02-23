@@ -32,7 +32,8 @@ import {
   successfulTransfer,
   failedTransfer,
   gasConsumed,
-  forwardedVolume,
+  forwardedTransferSize,
+  forwardedTransferVolume,
   attemptedTransfer,
 } from "./metrics";
 
@@ -215,10 +216,19 @@ export async function setupListeners(
           chainId: data.transfer.chainId,
         });
 
-        // add volume
-        forwardedVolume.set(
-          { assetId: data.transfer.assetId, chainId: data.transfer.chainId },
-          await parseBalanceToNumber(amount, data.transfer.chainId.toString(), data.transfer.assetId),
+        // add volume metrics
+        const amountNumber = await parseBalanceToNumber(
+          amount,
+          data.transfer.chainId.toString(),
+          data.transfer.assetId,
+        );
+        forwardedTransferSize.set({ assetId: data.transfer.assetId, chainId: data.transfer.chainId }, amountNumber);
+        forwardedTransferVolume.inc(
+          {
+            assetId: data.transfer.assetId,
+            chainId: data.transfer.chainId,
+          },
+          amountNumber,
         );
       }
       logger.info(

@@ -255,7 +255,7 @@ export const requestCollateral = async (
     );
   }
 
-  const assetIdx = channel.assetIds.findIndex((assetId: string) => getAddress(assetId) === getAddress(assetId));
+  const assetIdx = channel.assetIds.findIndex((a: string) => getAddress(a) === getAddress(assetId));
   const myBalance = BigNumber.from(getBalanceForAssetId(channel, assetId, participant));
 
   if (myBalance.gte(target)) {

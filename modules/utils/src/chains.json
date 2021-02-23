@@ -213,7 +213,8 @@
       "0x0000000000000000000000000000000000000000": "XDAI",
       "0x4ecaba5870353805a9f068101a40e0f32ed605c6": "USDT",
       "0x4537e328bf7e4efa29d05caea260d7fe26af9d74": "UNI",
-      "0xddafbb505ad214d7b80b1f830fccc89b60fb7a83": "USDC"
+      "0xddafbb505ad214d7b80b1f830fccc89b60fb7a83": "USDC",
+      "0x44fA8E6f47987339850636F88629646662444217": "DAI"
     },
     "rpc": [
       "https://rpc.xdaichain.com",
