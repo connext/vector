@@ -19,4 +19,4 @@ export const EIP712Value = {
   contents: "Welcome to Connext. Please confirm signature to sign in!",
 };
 
-export const NonEIP712Message = "Connext V1 Login";
+export const NonEIP712Message = "Connext Login v1.0";

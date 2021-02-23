@@ -11,7 +11,7 @@ import React, { useState } from "react";
 import { constants, providers } from "ethers";
 import { Col, Divider, Row, Statistic, Input, Typography, Table, Form, Button, List, Select, Tabs, Radio } from "antd";
 import { CopyToClipboard } from "react-copy-to-clipboard";
-import { EngineEvents, FullChannelState, TransferNames } from "@connext/vector-types";
+import { EngineEvents, FullChannelState, jsonifyError, TransferNames } from "@connext/vector-types";
 
 import "./App.css";
 import { config } from "./config";
@@ -74,7 +74,45 @@ function App() {
         console.log("signature: ", signature);
         init = { signature, signer: signerAddress };
       }
-      await client.init(init);
+
+      let error: any | undefined;
+      try {
+        await client.init(init);
+      } catch (e) {
+        console.error("Error initializing Browser Node:", jsonifyError(e));
+        error = e;
+      }
+      const shouldAttemptRestore = (error?.context?.validationError ?? "").includes("Channel is already setup");
+      if (error && !shouldAttemptRestore) {
+        throw new Error(`Error initializing browser node: ${error}`);
+      }
+
+      if (error && shouldAttemptRestore) {
+        console.warn("Attempting restore from router");
+        for (const supportedChain of supportedChains) {
+          const channelRes = await client.getStateChannelByParticipants({
+            counterparty: routerPublicIdentifier,
+            chainId: supportedChain,
+          });
+          if (channelRes.isError) {
+            throw channelRes.getError();
+          }
+          if (!channelRes.getValue()) {
+            const restoreChannelState = await client.restoreState({
+              counterpartyIdentifier: routerPublicIdentifier,
+              chainId: supportedChain,
+            });
+            if (restoreChannelState.isError) {
+              console.error("Could not restore state");
+              throw restoreChannelState.getError();
+            }
+            console.log("Restored state: ", restoreChannelState.getValue());
+          }
+        }
+        console.warn("Restore complete, re-initing");
+        await client.init(init);
+      }
+
       const channelsRes = await client.getStateChannels();
       if (channelsRes.isError) {
         setConnectError(channelsRes.getError().message);
