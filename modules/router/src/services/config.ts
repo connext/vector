@@ -80,3 +80,17 @@ export const getSwapFees = (
     gasSubsidyPercentage,
   });
 };
+
+export const shouldChargeFees = (
+  fromAssetId: string,
+  fromChainId: number,
+  toAssetId: string,
+  toChainId: number,
+): Result<boolean, ConfigServiceError> => {
+  const fees = getSwapFees(fromAssetId, fromChainId, toAssetId, toChainId);
+  if (fees.isError) {
+    return Result.fail(fees.getError()!);
+  }
+  const { flatFee, percentageFee, gasSubsidyPercentage } = fees.getValue();
+  return Result.ok(flatFee !== "0" || percentageFee !== 0 || gasSubsidyPercentage !== 100);
+};

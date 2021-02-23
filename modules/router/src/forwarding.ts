@@ -20,7 +20,12 @@ import {
 import Ajv from "ajv";
 import { BaseLogger } from "pino";
 import { BigNumber } from "@ethersproject/bignumber";
-import { getRandomBytes32, getSignerAddressFromPublicIdentifier } from "@connext/vector-utils";
+import {
+  getRandomBytes32,
+  getSignerAddressFromPublicIdentifier,
+  hashTransferQuote,
+  recoverAddressFromChannelMessage,
+} from "@connext/vector-utils";
 import { AddressZero } from "@ethersproject/constants";
 import { getAddress } from "@ethersproject/address";
 
@@ -33,6 +38,7 @@ import {
   transferWithCollateralization,
 } from "./services/transfer";
 import { inProgressCreations } from "./listener";
+import { shouldChargeFees } from "./services/config";
 
 const ajv = new Ajv();
 
@@ -148,9 +154,10 @@ export async function forwardTransferCreation(
     channelAddress: senderChannelAddress,
     initiator,
     transferTimeout,
+    chainId: senderChainId,
   } = senderTransfer;
   const meta = { ...untypedMeta } as RouterSchemas.RouterMeta & any;
-  const { routingId } = meta ?? {};
+  const { routingId, quote } = meta ?? {};
   const [path] = meta.path ?? [];
   const recipientIdentifier = path?.recipient;
   if (!routingId || !path || !recipientIdentifier) {
@@ -200,12 +207,70 @@ export async function forwardTransferCreation(
       ),
     );
   }
-  const senderChainId = senderChannel.networkContext.chainId;
 
   // Defaults
   const recipientAssetId = path.recipientAssetId ?? senderAssetId;
   const requireOnline = meta.requireOnline ?? false;
   const recipientChainId = path.recipientChainId ?? senderChainId;
+
+  // Check if fees should be charged
+  const quoteRequired = shouldChargeFees(senderAssetId, senderChainId, recipientAssetId, recipientChainId);
+  if (quoteRequired.isError) {
+    return cancelSenderTransferAndReturnError(
+      routingId,
+      senderTransfer,
+      ForwardTransferCreationError.reasons.ConfigError,
+      "",
+      {
+        shouldChargeFeesError: jsonifyError(quoteRequired.getError()!),
+      },
+    );
+  }
+  if (quoteRequired.getValue()) {
+    // Enforce quote present in meta, not expired, and properly signed
+    const validateQuote = ajv.compile(NodeResponses.GetTransferQuoteSchema);
+    if (!validateQuote(quote)) {
+      return cancelSenderTransferAndReturnError(
+        routingId,
+        senderTransfer,
+        ForwardTransferCreationError.reasons.QuoteError,
+        "",
+        {
+          quoteError: `Malformed: ${validateQuote.errors?.join(",")}`,
+          quote,
+        },
+      );
+    }
+    if (parseInt(quote.expiry) < Date.now()) {
+      return cancelSenderTransferAndReturnError(
+        routingId,
+        senderTransfer,
+        ForwardTransferCreationError.reasons.QuoteError,
+        "",
+        {
+          quoteError: "Quote expired",
+          quote,
+        },
+      );
+    }
+    try {
+      const recovered = await recoverAddressFromChannelMessage(hashTransferQuote(quote), quote.signature);
+      if (recovered !== routerSignerAddress) {
+        throw new Error(`Failed to recover signature. Expected ${routerSignerAddress}, got ${recovered}`);
+      }
+    } catch (e) {
+      return cancelSenderTransferAndReturnError(
+        routingId,
+        senderTransfer,
+        ForwardTransferCreationError.reasons.QuoteError,
+        "",
+        {
+          quoteError: `Recovery failed: ${e.message}`,
+          quote,
+        },
+      );
+    }
+  }
 
   // Pull the receiver channel from db
   const recipientChannelRes = await nodeService.getStateChannelByParticipants({
@@ -240,9 +305,13 @@ export async function forwardTransferCreation(
     );
   }
 
-  // Below, we figure out the correct params needed for the receiver's channel. This includes
-  // potential swaps/crosschain stuff
-  let recipientAmount = senderAmount;
+  // Below, we figure out the correct params needed for the receiver's channel.
+  // This includes potential swaps/crosschain stuff
+  let recipientAmount = !quoteRequired.getValue()
+    ? senderAmount
+    : BigNumber.from(senderAmount).sub(quote.fee).isNegative()
+    ? "0"
+    : BigNumber.from(senderAmount).sub(quote.fee);
   if (recipientAssetId !== senderAssetId || recipientChainId !== senderChainId) {
     logger.info(
       {

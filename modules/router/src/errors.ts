@@ -89,6 +89,8 @@ export class ForwardTransferCreationError extends RouterError {
     ReceiverOffline: "Recipient was not online, could not forward",
     FailedToCancelSenderTransfer: "Could not cancel sender transfer",
     FeeError: "Could not calculate fee",
+    ConfigError: "Error with config",
+    QuoteError: "Error with provided quote",
   } as const;
 
   readonly context: ForwardTransferCreationErrorContext;
