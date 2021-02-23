@@ -197,6 +197,12 @@ export class VectorEngine implements IVectorEngine {
     return Result.ok([{ index: 0, publicIdentifier: this.publicIdentifier, signerAddress: this.signerAddress }]);
   }
 
+  private async getChainAddresses(): Promise<
+    Result<ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_getChainAddresses], EngineError>
+  > {
+    return Result.ok(this.chainAddresses);
+  }
+
   private async getTransferQuote(
     params: EngineParams.GetTransferQuote,
   ): Promise<Result<ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_getTransferQuote], EngineError>> {

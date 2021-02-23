@@ -9,7 +9,6 @@ import {
   Values,
   NodeError,
   GetTransfersFilterOpts,
-  EngineEvents,
 } from "@connext/vector-types";
 import Ajv from "ajv";
 import Axios from "axios";
@@ -103,8 +102,12 @@ export class RestServerNodeService implements INodeService {
       `${publicIdentifer ?? this.publicIdentifier}/status`,
       "get",
       {},
-      NodeParams.GetConfigSchema,
+      NodeParams.GetStatusSchema,
     );
+  }
+
+  getChainAddresses(): Promise<Result<NodeResponses.GetChainAddresses, ServerNodeServiceError>> {
+    return this.executeHttpRequest(`chain-addresses`, "get", {}, NodeParams.GetChainAddressesSchema);
   }
 
   getRouterConfig(

@@ -14,6 +14,7 @@ import {
   TChainId,
   AllowedSwapSchema,
   TSignature,
+  TContractAddresses,
 } from "./basic";
 
 ////////////////////////////////////////
@@ -165,6 +166,11 @@ const GetConfigResponseSchema = {
       index: Type.Integer(),
     }),
   ),
+};
+
+// GET CHAIN ADDRESSES
+const GetChainAddressesResponseSchema = {
+  200: Type.Dict(TContractAddresses),
 };
 
 // GET STATUS
@@ -468,6 +474,12 @@ const PostSendIsAliveResponseSchema = {
 // Namespace exports
 // eslint-disable-next-line @typescript-eslint/no-namespace
 export namespace NodeParams {
+  export const GetChainAddressesSchema = Type.Object({});
+  export type GetChainAddresses = Static<typeof GetChainAddressesSchema>;
+
+  export const GetStatusSchema = Type.Object({});
+  export type GetStatus = Static<typeof GetStatusSchema>;
+
   export const GetTransferQuoteSchema = GetTransferQuoteParamsSchema;
   export type GetTransferQuote = Static<typeof GetTransferQuoteParamsSchema>;
 
@@ -573,6 +585,9 @@ export namespace NodeParams {
 
 // eslint-disable-next-line @typescript-eslint/no-namespace
 export namespace NodeResponses {
+  export const GetChainAddressesSchema = GetChainAddressesResponseSchema;
+  export type GetChainAddresses = Static<typeof GetChainAddressesResponseSchema["200"]>;
+
   export const GetTransferQuoteSchema = GetTransferQuoteResponseSchema;
   export type GetTransferQuote = Static<typeof GetTransferQuoteResponseSchema["200"]>;
 

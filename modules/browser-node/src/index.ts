@@ -216,6 +216,11 @@ export class BrowserNode implements INodeService {
     return this.send(rpc);
   }
 
+  async getChainAddresses(): Promise<Result<NodeResponses.GetChainAddresses, BrowserNodeError>> {
+    const rpc = constructRpcRequest("chan_getChainAddresses", {});
+    return this.send(rpc);
+  }
+
   async getRouterConfig(
     params: OptionalPublicIdentifier<NodeParams.GetRouterConfig>,
   ): Promise<Result<NodeResponses.GetRouterConfig, BrowserNodeError>> {

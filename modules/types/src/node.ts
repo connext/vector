@@ -17,6 +17,8 @@ export interface INodeService {
 
   getStatus(): Promise<Result<NodeResponses.GetStatus, NodeError>>;
 
+  getChainAddresses(): Promise<Result<NodeResponses.GetChainAddresses, NodeError>>;
+
   getRouterConfig(
     params: OptionalPublicIdentifier<NodeParams.GetRouterConfig>,
   ): Promise<Result<NodeResponses.GetRouterConfig, NodeError>>;
