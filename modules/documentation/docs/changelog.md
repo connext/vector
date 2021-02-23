@@ -2,6 +2,9 @@
 
 ## Next Release
 
+## 0.1.18-beta.1
+
+- \[router\] Clean up hanging transfers on reconnect
 ## 0.1.18-beta.0
 
 - \[browser-node\] Beta feature: Sign in with login providers: Metamask + Magic.Link
