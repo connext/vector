@@ -67,6 +67,7 @@ export type ChannelRpcMethodsPayloadMap = {
   [ChannelRpcMethods.chan_unsubscribeAll]: {};
   [ChannelRpcMethods.connext_authenticate]: {
     signature?: string;
+    signer?: string;
     chainProviders: ChainProviders;
     chainAddresses?: ChainAddresses;
     messagingUrl?: string;
