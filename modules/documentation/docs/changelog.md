@@ -2,6 +2,9 @@
 
 ## Next Release
 
+## 0.1.18-beta.0
+
+- \[browser-node\] Beta feature: Sign in with login providers: Metamask + Magic.Link
 ## 0.1.17
 
 - \[router\] Fix collateral bug
