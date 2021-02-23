@@ -10,9 +10,9 @@ import {
   ConditionalTransferResolvedPayload,
   DEFAULT_CHANNEL_TIMEOUT,
   ChainAddresses,
+  IChannelSigner,
 } from "@connext/vector-types";
 import {
-  ChannelSigner,
   getBalanceForAssetId,
   getParticipant,
   getRandomBytes32,
@@ -28,7 +28,7 @@ import { AddressZero, HashZero } from "@ethersproject/constants";
 import { adjustCollateral, requestCollateral } from "./services/collateral";
 import { forwardTransferCreation, forwardTransferResolution, handleIsAlive } from "./forwarding";
 import { IRouterStore } from "./services/store";
-import { getRebalanceProfile } from "./services/config";
+import { getMatchingSwap, getRebalanceProfile } from "./services/config";
 import { IRouterMessagingService } from "./services/messaging";
 import { config } from "./config";
 import {
@@ -46,6 +46,7 @@ import {
   attemptedTransfer,
 } from "./metrics";
 import { calculateFeeAmount } from "./services/fees";
+import { QuoteError } from "./errors";
 
 const ajv = new Ajv();
 
@@ -63,7 +64,7 @@ export type ChainJsonProviders = {
 export const inProgressCreations: { [channelAddr: string]: string[] } = {};
 
 export async function setupListeners(
-  routerSigner: ChannelSigner,
+  routerSigner: IChannelSigner,
   chainAddresses: ChainAddresses,
   nodeService: INodeService,
   store: IRouterStore,
@@ -526,8 +527,48 @@ export async function setupListeners(
     const recipientChainId = _recipientChainId ?? chainId;
     const recipientAssetId = _recipientAssetId ?? assetId;
 
-    // TODO: ensure the swap is supported before sending quote
-    // TODO: ensure the chain is supported before sending quote
+    const isSwap = recipientChainId !== chainId || recipientAssetId !== assetId;
+    const supported = isSwap
+      ? getMatchingSwap(assetId, chainId, recipientAssetId, recipientChainId)
+      : getRebalanceProfile(recipientChainId, recipientAssetId);
+
+    if (supported.isError || !supported.getValue()) {
+      // transfer of this chain/asset not supported
+      await messagingService.respondToTransferQuoteMessage(
+        inbox,
+        Result.fail(
+          new QuoteError(QuoteError.reasons.TransferNotSupported, {
+            recipient,
+            recipientChainId,
+            recipientAssetId,
+            assetId,
+            chainId,
+            sender: from,
+          }),
+        ),
+      );
+      return;
+    }
+
+    const supportedChains = Object.keys(config.chainProviders);
+    if (!supportedChains.includes(chainId.toString()) || !supportedChains.includes(recipientChainId.toString())) {
+      // recipient or sender chain not supported
+      await messagingService.respondToTransferQuoteMessage(
+        inbox,
+        Result.fail(
+          new QuoteError(QuoteError.reasons.ChainNotSupported, {
+            supportedChains,
+            recipient,
+            recipientChainId,
+            recipientAssetId,
+            assetId,
+            chainId,
+            sender: from,
+          }),
+        ),
+      );
+      return;
+    }
 
     const [senderChannelRes, recipientChannelRes] = await Promise.all([
       nodeService.getStateChannelByParticipants({ counterparty: from, chainId }),
@@ -539,11 +580,28 @@ export async function setupListeners(
 
     if (senderChannelRes.isError || recipientChannelRes.isError) {
       // return error to counterparty
-      // TODO: error handling
+      await messagingService.respondToTransferQuoteMessage(
+        inbox,
+        Result.fail(
+          new QuoteError(QuoteError.reasons.CouldNotGetChannel, {
+            senderChannelError: senderChannelRes.isError ? jsonifyError(senderChannelRes.getError()!) : undefined,
+            recipientChannelError: senderChannelRes.isError ? jsonifyError(recipientChannelRes.getError()!) : undefined,
+            recipient,
+            recipientChainId,
+            recipientAssetId,
+            assetId,
+            chainId,
+            sender: from,
+          }),
+        ),
+      );
       return;
     }
 
-    const getEmptyChannel = async (counterparty: string, chainId: number): Promise<Result<FullChannelState, Error>> => {
+    const getEmptyChannel = async (
+      counterparty: string,
+      chainId: number,
+    ): Promise<Result<FullChannelState, QuoteError>> => {
       const alice = getSignerAddressFromPublicIdentifier(routerSigner.publicIdentifier);
       const bob = getSignerAddressFromPublicIdentifier(counterparty);
       const channelAddress = await chainReader.getChannelAddress(
@@ -553,8 +611,17 @@ export async function setupListeners(
         chainId,
       );
       if (channelAddress.isError) {
-        // TODO: error handling
-        return Result.fail(channelAddress.getError()!);
+        return Result.fail(
+          new QuoteError(QuoteError.reasons.CouldNotGetChannelAddress, {
+            chainServiceError: jsonifyError(channelAddress.getError()!),
+            recipient,
+            recipientChainId,
+            recipientAssetId,
+            assetId,
+            chainId,
+            sender: from,
+          }),
+        );
       }
       return Result.ok({
         nonce: 1,
@@ -580,18 +647,49 @@ export async function setupListeners(
       });
     };
 
+    let senderChannel = senderChannelRes.getValue() as FullChannelState | undefined;
+    if (!senderChannel) {
+      const placeholder = await getEmptyChannel(from, chainId);
+      if (placeholder.isError) {
+        await messagingService.respondToTransferQuoteMessage(inbox, Result.fail(placeholder.getError()!));
+        return;
+      }
+      senderChannel = placeholder.getValue();
+    }
+    let recipientChannel = recipientChannelRes.getValue() as FullChannelState | undefined;
+    if (!recipientChannel) {
+      const placeholder = await getEmptyChannel(recipient, chainId);
+      if (placeholder.isError) {
+        await messagingService.respondToTransferQuoteMessage(inbox, Result.fail(placeholder.getError()!));
+        return;
+      }
+      recipientChannel = placeholder.getValue();
+    }
     const fee = await calculateFeeAmount(
       BigNumber.from(amount),
       assetId,
-      senderChannelRes.getValue() ?? (await getEmptyChannel(from, chainId)),
+      senderChannel,
       recipientAssetId,
-      recipientChannelRes.getValue() ?? (await getEmptyChannel(from, chainId)),
+      recipientChannel,
       chainReader,
       routerSigner.publicIdentifier,
       logger,
     );
     if (fee.isError) {
-      await messagingService.respondToTransferQuoteMessage(inbox, Result.fail(fee.getError()!));
+      await messagingService.respondToTransferQuoteMessage(
+        inbox,
+        Result.fail(
+          new QuoteError(QuoteError.reasons.CouldNotGetFee, {
+            feeError: jsonifyError(fee.getError()!),
+            recipient,
+            recipientChainId,
+            recipientAssetId,
+            assetId,
+            chainId,
+            sender: from,
+          }),
+        ),
+      );
       return;
     }
     const quote = {
@@ -602,15 +700,29 @@ export async function setupListeners(
       recipientChainId,
       recipientAssetId,
       fee: fee.getValue().toString(),
-      expiry: Date.now() + 30_000, // valid for next 2 blocks
+      expiry: (Date.now() + 30_000).toString(), // valid for next 2 blocks
     };
     const toSign = hashTransferQuote(quote);
     try {
       const signature = await routerSigner.signMessage(toSign);
       await messagingService.respondToTransferQuoteMessage(inbox, Result.ok({ ...quote, signature }));
     } catch (e) {
-      // TODO: error handling
-      await messagingService.respondToTransferQuoteMessage(inbox, Result.fail(e));
+      await messagingService.respondToTransferQuoteMessage(
+        inbox,
+        Result.fail(
+          new QuoteError(QuoteError.reasons.CouldNotSignQuote, {
+            error: jsonifyError(e),
+            recipient,
+            recipientChainId,
+            recipientAssetId,
+            assetId,
+            chainId,
+            sender: from,
+            fee: quote.fee,
+            expiry: quote.expiry,
+          }),
+        ),
+      );
     }
   });
 

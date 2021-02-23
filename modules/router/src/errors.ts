@@ -236,3 +236,20 @@ export class FeeError extends RouterError {
     super(message, context, FeeError.type);
   }
 }
+
+export class QuoteError extends RouterError {
+  static readonly type = "QuoteError";
+
+  static readonly reasons = {
+    ChainNotSupported: "Chain is not supported",
+    CouldNotGetChannel: "Error retrieving channels",
+    CouldNotGetChannelAddress: "Failed to calculate channel address",
+    CouldNotGetFee: "Failed to get fee for transfer",
+    CouldNotSignQuote: "Failed to sign transfer quote",
+    TransferNotSupported: "Proposed transfer not supported",
+  } as const;
+
+  constructor(public readonly message: Values<typeof QuoteError.reasons>, context: any = {}) {
+    super(message, context, FeeError.type);
+  }
+}

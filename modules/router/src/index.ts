@@ -130,9 +130,22 @@ server.addHook("onReady", async () => {
     true,
   );
 
+  if (nodeService.publicIdentifier !== signer.publicIdentifier) {
+    throw new Error("Router signer misconfigured, node and router have different identifiers");
+  }
+
+  const nodeConfigs = await nodeService.getConfig();
+  if (nodeConfigs.isError) {
+    throw nodeConfigs.getError();
+  }
+  const nodeConfig = nodeConfigs.getValue().find((c) => c.publicIdentifier === signer.publicIdentifier);
+  if (!nodeConfig) {
+    throw new Error("Router node config not available");
+  }
+
   router = await Router.connect(
-    nodeService.publicIdentifier,
-    nodeService.signerAddress,
+    signer,
+    nodeConfig.chainAddresses,
     nodeService,
     chainService,
     store,
