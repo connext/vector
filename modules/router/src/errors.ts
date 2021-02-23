@@ -148,7 +148,10 @@ export class CheckInError extends RouterError {
   static readonly type = "CheckInError";
 
   static readonly reasons = {
+    CouldNotGetActiveTransfers: "Failed to get active transfers",
     CouldNotGetChannel: "Could not get channel, or not found",
+    CouldNotGetRegistryInfo: "Could not get transfer registry information",
+    RouterCleanupFailed: "Could not handle all dropped transfers",
     TasksFailed: "Router couldn't complete all check-in tasks",
     UpdatesFailed: "Could not forward all updates",
   } as const;

@@ -1,4 +1,4 @@
-import { BrowserNode } from "@connext/vector-browser-node";
+import { BrowserNode, NonEIP712Message } from "@connext/vector-browser-node";
 import {
   getPublicKeyFromPublicIdentifier,
   encrypt,
@@ -8,10 +8,10 @@ import {
   constructRpcRequest,
 } from "@connext/vector-utils";
 import React, { useState } from "react";
-import { constants } from "ethers";
-import { Col, Divider, Row, Statistic, Input, Typography, Table, Form, Button, List, Select, Tabs } from "antd";
+import { constants, providers } from "ethers";
+import { Col, Divider, Row, Statistic, Input, Typography, Table, Form, Button, List, Select, Tabs, Radio } from "antd";
 import { CopyToClipboard } from "react-copy-to-clipboard";
-import { EngineEvents, FullChannelState, TransferNames } from "@connext/vector-types";
+import { EngineEvents, FullChannelState, jsonifyError, TransferNames } from "@connext/vector-types";
 
 import "./App.css";
 import { config } from "./config";
@@ -41,6 +41,7 @@ function App() {
     iframeSrc: string,
     supportedChains: number[],
     routerPublicIdentifier: string,
+    loginProvider: "none" | "metamask" | "magic",
   ): Promise<BrowserNode> => {
     try {
       setConnectLoading(true);
@@ -56,7 +57,62 @@ function App() {
         chainAddresses: config.chainAddresses,
         messagingUrl: config.messagingUrl,
       });
-      await client.init();
+      let init: { signature?: string; signer?: string } | undefined = undefined;
+      if (loginProvider === "metamask" || loginProvider === "magic") {
+        let _loginProvider: providers.Web3Provider;
+        if (loginProvider === "metamask") {
+          _loginProvider = new providers.Web3Provider((window as any).ethereum);
+          const accts = await _loginProvider.send("eth_requestAccounts", []);
+          console.log("accts: ", accts);
+        } else {
+          throw new Error("MAGIC TODO");
+        }
+        const signer = _loginProvider.getSigner();
+        const signerAddress = await signer.getAddress();
+        console.log("signerAddress: ", signerAddress);
+        const signature = await signer.signMessage(NonEIP712Message);
+        console.log("signature: ", signature);
+        init = { signature, signer: signerAddress };
+      }
+
+      let error: any | undefined;
+      try {
+        await client.init(init);
+      } catch (e) {
+        console.error("Error initializing Browser Node:", jsonifyError(e));
+        error = e;
+      }
+      const shouldAttemptRestore = (error?.context?.validationError ?? "").includes("Channel is already setup");
+      if (error && !shouldAttemptRestore) {
+        throw new Error(`Error initializing browser node: ${error}`);
+      }
+
+      if (error && shouldAttemptRestore) {
+        console.warn("Attempting restore from router");
+        for (const supportedChain of supportedChains) {
+          const channelRes = await client.getStateChannelByParticipants({
+            counterparty: routerPublicIdentifier,
+            chainId: supportedChain,
+          });
+          if (channelRes.isError) {
+            throw channelRes.getError();
+          }
+          if (!channelRes.getValue()) {
+            const restoreChannelState = await client.restoreState({
+              counterpartyIdentifier: routerPublicIdentifier,
+              chainId: supportedChain,
+            });
+            if (restoreChannelState.isError) {
+              console.error("Could not restore state");
+              throw restoreChannelState.getError();
+            }
+            console.log("Restored state: ", restoreChannelState.getValue());
+          }
+        }
+        console.warn("Restore complete, re-initing");
+        await client.init(init);
+      }
+
       const channelsRes = await client.getStateChannels();
       if (channelsRes.isError) {
         setConnectError(channelsRes.getError().message);
@@ -357,12 +413,14 @@ function App() {
                   iframe,
                   vals.supportedChains.split(",").map((x: string) => parseInt(x.trim())),
                   vals.routerPublicIdentifier,
+                  vals.loginProvider,
                 );
               }}
               initialValues={{
                 iframeSrc: "http://localhost:3030",
                 routerPublicIdentifier: "vector8Uz1BdpA9hV5uTm6QUv5jj1PsUyCH8m8ciA94voCzsxVmrBRor",
                 supportedChains: "1337,1338",
+                loginProvider: "none",
               }}
             >
               <Form.Item label="IFrame Src" name="iframeSrc">
@@ -393,6 +451,14 @@ function App() {
 
               <Form.Item name="supportedChains" label="Supported Chains">
                 <Input placeholder="Chain Ids (domma-separated)" />
+              </Form.Item>
+
+              <Form.Item name="loginProvider" label="Login Provider">
+                <Radio.Group>
+                  <Radio value="none">None</Radio>
+                  <Radio value="metamask">Metamask</Radio>
+                  <Radio value="magic">Magic.Link</Radio>
+                </Radio.Group>
               </Form.Item>
 
               <Form.Item wrapperCol={{ offset: 8, span: 16 }}>
