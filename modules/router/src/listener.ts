@@ -9,12 +9,15 @@ import {
   Result,
   ConditionalTransferResolvedPayload,
   DEFAULT_CHANNEL_TIMEOUT,
+  ChainAddresses,
 } from "@connext/vector-types";
 import {
+  ChannelSigner,
   getBalanceForAssetId,
   getParticipant,
   getRandomBytes32,
   getSignerAddressFromPublicIdentifier,
+  hashTransferQuote,
 } from "@connext/vector-utils";
 import Ajv from "ajv";
 import { JsonRpcProvider } from "@ethersproject/providers";
@@ -51,8 +54,8 @@ export type ChainJsonProviders = {
 };
 
 export async function setupListeners(
-  routerPublicIdentifier: string,
-  routerSignerAddress: string,
+  routerSigner: ChannelSigner,
+  chainAddresses: ChainAddresses,
   nodeService: INodeService,
   store: IRouterStore,
   chainReader: IVectorChainReader,
@@ -61,7 +64,15 @@ export async function setupListeners(
 ): Promise<void> {
   const method = "setupListeners";
   const methodId = getRandomBytes32();
-  logger.debug({ method, methodId, routerPublicIdentifier, routerSignerAddress }, "Method started");
+  logger.debug(
+    {
+      method,
+      methodId,
+      routerPublicIdentifier: routerSigner.publicIdentifier,
+      routerSignerAddress: routerSigner.address,
+    },
+    "Method started",
+  );
 
   nodeService.on(EngineEvents.SETUP, async (data) => {
     openChannels.inc({
@@ -131,8 +142,8 @@ export async function setupListeners(
       });
       const res = await forwardTransferCreation(
         data,
-        routerPublicIdentifier,
-        routerSignerAddress,
+        routerSigner.publicIdentifier,
+        routerSigner.address,
         nodeService,
         store,
         logger,
@@ -172,7 +183,7 @@ export async function setupListeners(
         return false;
       }
 
-      if (data.transfer.initiator === routerSignerAddress) {
+      if (data.transfer.initiator === routerSigner.address) {
         logger.info(
           { initiator: data.transfer.initiator },
           "Not forwarding transfer which was initiated by our node, doing nothing",
@@ -180,9 +191,9 @@ export async function setupListeners(
         return false;
       }
 
-      if (!meta.path[0].recipient || meta.path[0].recipient === routerPublicIdentifier) {
+      if (!meta.path[0].recipient || meta.path[0].recipient === routerSigner.publicIdentifier) {
         logger.warn(
-          { path: meta.path[0], publicIdentifier: routerPublicIdentifier },
+          { path: meta.path[0], publicIdentifier: routerSigner.publicIdentifier },
           "Not forwarding transfer with no path to follow",
         );
         return false;
@@ -197,8 +208,8 @@ export async function setupListeners(
     async (data: ConditionalTransferResolvedPayload) => {
       const res = await forwardTransferResolution(
         data,
-        routerPublicIdentifier,
-        routerSignerAddress,
+        routerSigner.publicIdentifier,
+        routerSigner.address,
         nodeService,
         store,
         logger,
@@ -261,7 +272,7 @@ export async function setupListeners(
       const response = await adjustCollateral(
         transferSenderResolutionChannelAddress,
         transferSenderResolutionAssetId,
-        routerPublicIdentifier,
+        routerSigner.publicIdentifier,
         nodeService,
         chainReader,
         logger,
@@ -305,7 +316,7 @@ export async function setupListeners(
 
       // If we are the receiver of this transfer, do nothing
       // (indicates a sender-side resolve)
-      if (data.transfer.responder === routerSignerAddress) {
+      if (data.transfer.responder === routerSigner.address) {
         logger.info({ routingId: data.transfer.meta.routingId }, "Nothing to reclaim");
         return false;
       }
@@ -324,7 +335,7 @@ export async function setupListeners(
     logger.debug({ method, methodId, event: data }, "Handling event");
     const channelRes = await nodeService.getStateChannel({
       channelAddress: data.channelAddress,
-      publicIdentifier: routerPublicIdentifier,
+      publicIdentifier: routerSigner.publicIdentifier,
     });
     if (channelRes.isError) {
       logger.error(
@@ -383,7 +394,7 @@ export async function setupListeners(
     const res = await requestCollateral(
       channel as FullChannelState,
       data.assetId,
-      routerPublicIdentifier,
+      routerSigner.publicIdentifier,
       nodeService,
       chainReader,
       logger,
@@ -436,8 +447,8 @@ export async function setupListeners(
   nodeService.on(EngineEvents.IS_ALIVE, async (data) => {
     const res = await handleIsAlive(
       data,
-      routerPublicIdentifier,
-      routerSignerAddress,
+      routerSigner.publicIdentifier,
+      routerSigner.address,
       nodeService,
       store,
       chainReader,
@@ -454,7 +465,7 @@ export async function setupListeners(
   /////////////////////////////////
   ///// Messaging responses //////
   ///////////////////////////////
-  await messagingService.onReceiveRouterConfigMessage(routerPublicIdentifier, async (request, from, inbox) => {
+  await messagingService.onReceiveRouterConfigMessage(routerSigner.publicIdentifier, async (request, from, inbox) => {
     const method = "onReceiveRouterConfigMessage";
     const methodId = getRandomBytes32();
     logger.debug({ method, methodId }, "Method started");
@@ -473,7 +484,7 @@ export async function setupListeners(
     logger.debug({ method, methodId }, "Method complete");
   });
 
-  await messagingService.onReceiveTransferQuoteMessage(routerPublicIdentifier, async (request, from, inbox) => {
+  await messagingService.onReceiveTransferQuoteMessage(routerSigner.publicIdentifier, async (request, from, inbox) => {
     const method = "onReceiveTransferQuoteMessage";
     const methodId = getRandomBytes32();
     logger.debug({ method, methodId }, "Method started");
@@ -493,28 +504,38 @@ export async function setupListeners(
       recipientAssetId: _recipientAssetId,
     } = request.getValue();
 
-    const recipient = _recipient ?? routerPublicIdentifier;
+    const recipient = _recipient ?? routerSigner.publicIdentifier;
     const recipientChainId = _recipientChainId ?? chainId;
     const recipientAssetId = _recipientAssetId ?? assetId;
+
+    // TODO: ensure the swap is supported before sending quote
+    // TODO: ensure the chain is supported before sending quote
 
     const [senderChannelRes, recipientChannelRes] = await Promise.all([
       nodeService.getStateChannelByParticipants({ counterparty: from, chainId }),
       nodeService.getStateChannelByParticipants({
         chainId: recipientChainId,
-        counterparty: recipient === routerPublicIdentifier ? from : recipient,
+        counterparty: recipient === routerSigner.publicIdentifier ? from : recipient,
       }),
     ]);
 
     if (senderChannelRes.isError || recipientChannelRes.isError) {
       // return error to counterparty
+      // TODO: error handling
       return;
     }
 
     const getEmptyChannel = async (counterparty: string, chainId: number): Promise<Result<FullChannelState, Error>> => {
-      const alice = getSignerAddressFromPublicIdentifier(routerPublicIdentifier);
+      const alice = getSignerAddressFromPublicIdentifier(routerSigner.publicIdentifier);
       const bob = getSignerAddressFromPublicIdentifier(counterparty);
-      const channelAddress = await chainReader.getChannelAddress(alice, bob, "", chainId);
+      const channelAddress = await chainReader.getChannelAddress(
+        alice,
+        bob,
+        chainAddresses[chainId].channelFactoryAddress,
+        chainId,
+      );
       if (channelAddress.isError) {
+        // TODO: error handling
         return Result.fail(channelAddress.getError()!);
       }
       return Result.ok({
@@ -530,8 +551,12 @@ export async function setupListeners(
         defundNonces: [],
         merkleRoot: HashZero,
         latestUpdate: {} as any,
-        networkContext: { chainId, channelFactoryAddress: "", transferRegistryAddress: "" },
-        aliceIdentifier: routerPublicIdentifier,
+        networkContext: {
+          chainId,
+          channelFactoryAddress: chainAddresses[chainId].channelFactoryAddress,
+          transferRegistryAddress: chainAddresses[chainId].transferRegistryAddress,
+        },
+        aliceIdentifier: routerSigner.publicIdentifier,
         bobIdentifier: counterparty,
         inDispute: false,
       });
@@ -540,24 +565,35 @@ export async function setupListeners(
     const fee = await calculateFeeAmount(
       BigNumber.from(amount),
       assetId,
-      senderChannelRes.getValue() ?? (await getEmptyChannel(from, chainId)), // sender channel
+      senderChannelRes.getValue() ?? (await getEmptyChannel(from, chainId)),
       recipientAssetId,
-      recipientChannelRes.getValue() ?? (await getEmptyChannel(from, chainId)), // receiver channel
+      recipientChannelRes.getValue() ?? (await getEmptyChannel(from, chainId)),
       chainReader,
-      routerPublicIdentifier,
+      routerSigner.publicIdentifier,
       logger,
     );
     if (fee.isError) {
       await messagingService.respondToTransferQuoteMessage(inbox, Result.fail(fee.getError()!));
       return;
     }
-    const toSign = hashTransferQuote({});
+    const quote = {
+      assetId,
+      amount,
+      routerIdentifier: routerSigner.publicIdentifier,
+      recipient,
+      recipientChainId,
+      recipientAssetId,
+      fee: fee.getValue().toString(),
+      expiry: Date.now() + 30_000, // valid for next 2 blocks
+    };
+    const toSign = hashTransferQuote(quote);
     try {
-      const signature = await signer.signMessage(toSign);
-      await messagingService.respondToTransferQuoteMessage(inbox, { ...quote, signature });
-    } catch (e) {}
-
-    await messagingService.respondToTransferQuoteMessage(inbox);
+      const signature = await routerSigner.signMessage(toSign);
+      await messagingService.respondToTransferQuoteMessage(inbox, Result.ok({ ...quote, signature }));
+    } catch (e) {
+      // TODO: error handling
+      await messagingService.respondToTransferQuoteMessage(inbox, Result.fail(e));
+    }
   });
 
   logger.debug({ method, methodId }, "Method complete");
