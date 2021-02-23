@@ -57,10 +57,10 @@ export type RegisteredTransfer = {
 
 export type TransferQuote = Omit<NodeResponses.GetTransferQuote, "signature">;
 export const TransferQuoteEncoding = tidy(`tuple(
-  bytes routerIdentifier,
+  string routerIdentifier,
   uint256 amount,
   address assetId,
-  bytes recipient,
+  string recipient,
   uint256 recipientChainId,
   address recipientAssetId,
   uint256 fee,
