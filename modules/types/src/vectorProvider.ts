@@ -5,7 +5,6 @@ import { RegisteredTransfer } from "./transferDefinitions";
 
 export const ChannelRpcMethods = {
   chan_signUtilityMessage: "chan_signUtilityMessage",
-  chan_getChainAddresses: "chan_getChainAddresses",
   chan_getConfig: "chan_getConfig",
   chan_getRouterConfig: "chan_getRouterConfig",
   chan_getTransferQuote: "chan_getTransferQuote",
@@ -43,7 +42,6 @@ export type ChannelRpcMethod = typeof ChannelRpcMethods[keyof typeof ChannelRpcM
 export type ChannelRpcMethodsPayloadMap = {
   [ChannelRpcMethods.chan_signUtilityMessage]: EngineParams.SignUtilityMessage;
   [ChannelRpcMethods.chan_getConfig]: {};
-  [ChannelRpcMethods.chan_getChainAddresses]: {};
   [ChannelRpcMethods.chan_getRouterConfig]: EngineParams.GetRouterConfig;
   [ChannelRpcMethods.chan_getStatus]: {};
   [ChannelRpcMethods.chan_getTransferQuote]: EngineParams.GetTransferQuote;
@@ -87,7 +85,6 @@ export type ChannelRpcMethodsPayloadMap = {
 
 export type ChannelRpcMethodsResponsesMap = {
   [ChannelRpcMethods.chan_signUtilityMessage]: string;
-  [ChannelRpcMethods.chan_getChainAddresses]: NodeResponses.GetChainAddresses;
   [ChannelRpcMethods.chan_getConfig]: NodeResponses.GetConfig;
   [ChannelRpcMethods.chan_getRouterConfig]: NodeResponses.GetRouterConfig;
   [ChannelRpcMethods.chan_getTransferQuote]: NodeResponses.GetTransferQuote;

@@ -106,10 +106,6 @@ export class RestServerNodeService implements INodeService {
     );
   }
 
-  getChainAddresses(): Promise<Result<NodeResponses.GetChainAddresses, ServerNodeServiceError>> {
-    return this.executeHttpRequest(`chain-addresses`, "get", {}, NodeParams.GetChainAddressesSchema);
-  }
-
   getRouterConfig(
     params: OptionalPublicIdentifier<NodeParams.GetRouterConfig>,
   ): Promise<Result<NodeResponses.GetRouterConfig, ServerNodeServiceError>> {

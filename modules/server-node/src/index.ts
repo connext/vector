@@ -84,14 +84,6 @@ server.get("/config", { schema: { response: NodeResponses.GetConfigSchema } }, a
   );
 });
 
-server.get(
-  "/chain-addresses",
-  { schema: { response: NodeResponses.GetChainAddressesSchema } },
-  async (request, reply) => {
-    return reply.status(200).send(config.chainAddresses);
-  },
-);
-
 server.get<{ Params: { publicIdentifier: string } }>(
   "/:publicIdentifier/status",
   { schema: { params: Type.Object({ publicIdentifier: TPublicIdentifier }) } },

@@ -194,13 +194,14 @@ export class VectorEngine implements IVectorEngine {
   private async getConfig(): Promise<
     Result<ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_getConfig], EngineError>
   > {
-    return Result.ok([{ index: 0, publicIdentifier: this.publicIdentifier, signerAddress: this.signerAddress }]);
-  }
-
-  private async getChainAddresses(): Promise<
-    Result<ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_getChainAddresses], EngineError>
-  > {
-    return Result.ok(this.chainAddresses);
+    return Result.ok([
+      {
+        index: 0,
+        publicIdentifier: this.publicIdentifier,
+        signerAddress: this.signerAddress,
+        chainAddresses: this.chainAddresses,
+      },
+    ]);
   }
 
   private async getTransferQuote(
@@ -526,7 +527,6 @@ export class VectorEngine implements IVectorEngine {
         channelFactoryAddress: this.chainAddresses[params.chainId].channelFactoryAddress,
         transferRegistryAddress: this.chainAddresses[params.chainId].transferRegistryAddress,
         chainId: params.chainId,
-        providerUrl: chainProviders.getValue()[params.chainId],
       },
       meta: params.meta,
     });
