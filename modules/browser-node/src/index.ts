@@ -25,6 +25,7 @@ import { BrowserStore } from "./services/store";
 import { BrowserLockService } from "./services/lock";
 import { DirectProvider, IframeChannelProvider, IRpcChannelProvider } from "./channelProvider";
 import { BrowserNodeError } from "./errors";
+export * from "./constants";
 
 export type BrowserNodeSignerConfig = {
   natsUrl?: string;
@@ -145,20 +146,26 @@ export class BrowserNode implements INodeService {
   }
 
   // method for non-signer based apps to connect to iframe
-  async init(): Promise<void> {
+  async init(params: { signature?: string; signer?: string } = {}): Promise<void> {
     // TODO: validate config
     const method = "init";
     this.logger.debug({ method }, "Method started");
     const iframeSrc = this.iframeSrc ?? "https://wallet.connext.network";
-    this.logger.info({ method, iframeSrc }, "Connecting with iframe provider");
+    this.logger.info(
+      { method, iframeSrc, signer: params.signer, signature: params.signature },
+      "Connecting with iframe provider",
+    );
     this.channelProvider = await IframeChannelProvider.connect({
       src: iframeSrc,
       id: "connext-iframe",
     });
+    this.logger.info({ method }, "Authenticating Connext");
     const rpc = constructRpcRequest("connext_authenticate", {
       chainProviders: this.chainProviders,
       chainAddresses: this.chainAddresses,
       messagingUrl: this.messagingUrl,
+      signature: params.signature,
+      signer: params.signer,
     });
     const auth = await this.channelProvider.send(rpc);
     this.logger.info({ method, response: auth }, "Received response from auth method");
