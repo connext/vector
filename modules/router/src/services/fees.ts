@@ -22,6 +22,7 @@ import { getDecimals } from "../metrics";
 
 import { getRebalanceProfile, getSwapFees } from "./config";
 import { getSwappedAmount } from "./swap";
+import { normalizeGasFees } from "./utils";
 
 // Takes in some proposed amount in toAssetId and returns the
 // fees in the toAssetId. Will *NOT* return an error if fees > amount
@@ -155,7 +156,7 @@ export const calculateFeeAmount = async (
   // include collateral fees
   const normalizedReclaimFromAsset =
     fromChainId === 1 || TESTNETS_WITH_FEES.includes(fromChainId) // fromAsset MUST be on mainnet or hardcoded
-      ? await normalizeFee(
+      ? await normalizeGasFees(
           gasFees[fromChannel.channelAddress],
           baseAssetFromChainDecimals,
           fromAssetId,
@@ -168,7 +169,7 @@ export const calculateFeeAmount = async (
       : Result.ok(Zero);
   const normalizedCollateralToAsset =
     toChainId === 1 || TESTNETS_WITH_FEES.includes(toChainId) // toAsset MUST be on mainnet or hardcoded
-      ? await normalizeFee(
+      ? await normalizeGasFees(
           gasFees[toChannel.channelAddress],
           baseAssetToChainDecimals,
           toAssetId,
@@ -186,9 +187,9 @@ export const calculateFeeAmount = async (
         fromChainId,
         toChainId,
         toAssetId,
-        normalizedCollateralToAsset: normalizedCollateralToAsset.isError
-          ? jsonifyError(normalizedCollateralToAsset.getError())
-          : normalizedCollateralToAsset.getValue().toString(),
+        normalizedCollateralToAsset: normalizedReclaimFromAsset.isError
+          ? jsonifyError(normalizedReclaimFromAsset.getError())
+          : normalizedReclaimFromAsset.getValue().toString(),
         normalizedCollateral: normalizedCollateralToAsset.isError
           ? jsonifyError(normalizedCollateralToAsset.getError())
           : normalizedCollateralToAsset.getValue().toString(),

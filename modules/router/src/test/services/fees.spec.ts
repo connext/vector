@@ -10,23 +10,27 @@ import * as swapService from "../../services/swap";
 import * as configService from "../../services/config";
 import { FeeError } from "../../errors";
 import * as feesService from "../../services/fees";
+import * as metrics from "../../metrics";
+import * as utils from "../../services/utils";
 
 const config = getConfig();
 
 const testName = "Router fees";
 const { log } = vectorUtils.getTestLoggers(testName, config.logLevel ?? ("info" as any));
 
-describe(testName, () => {
+describe.only(testName, () => {
   let ethReader: Sinon.SinonStubbedInstance<VectorChainReader>;
   let getRebalanceProfileStub: Sinon.SinonStub;
   let getSwappedAmountStub: Sinon.SinonStub;
   let getFeesStub: Sinon.SinonStub;
+  let getDecimalsStub: Sinon.SinonStub;
 
   beforeEach(async () => {
     ethReader = Sinon.createStubInstance(VectorChainReader);
     getRebalanceProfileStub = Sinon.stub(configService, "getRebalanceProfile");
     getSwappedAmountStub = Sinon.stub(swapService, "getSwappedAmount");
     getFeesStub = Sinon.stub(configService, "getSwapFees");
+    getDecimalsStub = Sinon.stub(metrics, "getDecimals").resolves(18);
   });
 
   afterEach(() => {
@@ -81,8 +85,8 @@ describe(testName, () => {
 
       // by default, these functions should only return gas fee values
       // i.e. they do nothing
-      normalizedGasFeesStub = Sinon.stub(vectorUtils, "normalizeFee");
-      normalizedGasFeesStub.resolves(Result.ok(gasFees[fromChannel.channelAddress]));
+      normalizedGasFeesStub = Sinon.stub(utils, "normalizeGasFees");
+      normalizedGasFeesStub.onFirstCall().resolves(Result.ok(gasFees[fromChannel.channelAddress]));
       normalizedGasFeesStub.onSecondCall().resolves(Result.ok(gasFees[toChannel.channelAddress]));
       getSwappedAmountStub.resolves(Result.ok(gasFees[toChannel.channelAddress]));
     });

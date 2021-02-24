@@ -21,10 +21,11 @@ describe(testName, () => {
     ethReader = Sinon.createStubInstance(VectorChainReader);
   });
 
-  describe("normalizeFee", () => {
-    let coinGeckoStub: Sinon.SinonStub;
-    let ethReader: Sinon.SinonStubbedInstance<VectorChainReader>;
+  afterEach(() => {
+    Sinon.restore();
+  });
 
+  describe("normalizeFee", () => {
     const tokenAddress = mkAddress("0xeee");
     const chainId = 1;
     const fee = BigNumber.from(20);
@@ -48,13 +49,6 @@ describe(testName, () => {
       expect(result.isError).to.be.true;
       expect(result.getError()?.message).to.be.eq(FeeCalculationError.reasons.ChainError);
       expect(result.getError()?.context.getGasPriceError).to.be.ok;
-    });
-
-    it("should fail if it cannot get decimals", async () => {
-      const result = await normalizeFee(fee, 18, tokenAddress, 18, chainId, ethReader, log);
-      expect(result.isError).to.be.true;
-      expect(result.getError()?.message).to.be.eq(FeeCalculationError.reasons.ExchangeRateError);
-      expect(result.getError()?.context.message).to.be.eq("Could not get decimals");
     });
 
     it("should work for eth", async () => {
