@@ -332,7 +332,7 @@ server-node-js: engine $(shell find modules/server-node/src $(find_options))
 	$(log_finish) && mv -f $(totalTime) .flags/$@
 server-node-bundle: contracts-js server-node-js $(shell find modules/server-node/src $(find_options))
 	$(log_start)
-	$(docker_run) "cd modules/server-node && npm install && npm audit --audit-level=moderate && npm outdated || true && npm run build-bundle"
+	$(docker_run) "cd modules/server-node && npm run build-bundle"
 	$(log_finish) && mv -f $(totalTime) .flags/$@
 server-node-img: server-node-bundle $(shell find modules/server-node/ops $(find_options))
 	$(log_start)
