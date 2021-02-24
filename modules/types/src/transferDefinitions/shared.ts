@@ -60,6 +60,7 @@ export const TransferQuoteEncoding = tidy(`tuple(
   string routerIdentifier,
   uint256 amount,
   address assetId,
+  uint256 chainId,
   string recipient,
   uint256 recipientChainId,
   address recipientAssetId,

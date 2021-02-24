@@ -40,6 +40,25 @@ const BasicTransferServerResponseSchema = {
   }),
 };
 
+// GET WITHDRAWAL QUOTE
+const GetWithdrawalQuoteParamsSchema = Type.Intersect([
+  EngineParams.GetWithdrawalQuoteSchema,
+  Type.Object({
+    publicIdentifier: TPublicIdentifier,
+  }),
+]);
+
+const GetWithdrawalQuoteResponseSchema = {
+  200: Type.Object({
+    channelAddress: TAddress,
+    amount: TIntegerString,
+    assetId: TAddress,
+    fee: TIntegerString,
+    expiry: TIntegerString,
+    signature: TSignature,
+  }),
+};
+
 // GET TRANSFER QUOTE
 const GetTransferQuoteParamsSchema = Type.Intersect([
   EngineParams.GetTransferQuoteSchema,
@@ -53,6 +72,7 @@ const GetTransferQuoteResponseSchema = {
     routerIdentifier: TPublicIdentifier,
     amount: TIntegerString,
     assetId: TAddress,
+    chainId: TChainId,
     recipient: TPublicIdentifier,
     recipientChainId: TChainId,
     recipientAssetId: TAddress,
@@ -473,6 +493,9 @@ export namespace NodeParams {
   export const GetStatusSchema = Type.Object({});
   export type GetStatus = Static<typeof GetStatusSchema>;
 
+  export const GetWithdrawalQuoteSchema = GetWithdrawalQuoteParamsSchema;
+  export type GetWithdrawalQuote = Static<typeof GetWithdrawalQuoteParamsSchema>;
+
   export const GetTransferQuoteSchema = GetTransferQuoteParamsSchema;
   export type GetTransferQuote = Static<typeof GetTransferQuoteParamsSchema>;
 
@@ -578,6 +601,9 @@ export namespace NodeParams {
 
 // eslint-disable-next-line @typescript-eslint/no-namespace
 export namespace NodeResponses {
+  export const GetWithdrawalQuoteSchema = GetWithdrawalQuoteResponseSchema;
+  export type GetWithdrawalQuote = Static<typeof GetWithdrawalQuoteResponseSchema["200"]>;
+
   export const GetTransferQuoteSchema = GetTransferQuoteResponseSchema;
   export type GetTransferQuote = Static<typeof GetTransferQuoteResponseSchema["200"]>;
 

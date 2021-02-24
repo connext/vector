@@ -697,6 +697,7 @@ export async function setupListeners(
     const quote = {
       assetId,
       amount,
+      chainId,
       routerIdentifier: routerSigner.publicIdentifier,
       recipient,
       recipientChainId,

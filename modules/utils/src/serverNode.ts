@@ -375,6 +375,12 @@ export class RestServerNodeService implements INodeService {
     );
   }
 
+  getTransferQuote(
+    params: OptionalPublicIdentifier<NodeParams.GetTransferQuote>,
+  ): Promise<Result<NodeResponses.GetTransferQuote, NodeError>> {
+    return this.executeHttpRequest(`transfers/quote`, "post", params, NodeParams.GetTransferQuoteSchema);
+  }
+
   async conditionalTransfer(
     params: OptionalPublicIdentifier<NodeParams.ConditionalTransfer>,
   ): Promise<Result<NodeResponses.ConditionalTransfer, ServerNodeServiceError>> {
@@ -397,10 +403,16 @@ export class RestServerNodeService implements INodeService {
     );
   }
 
-  async withdraw(
+  withdraw(
     params: OptionalPublicIdentifier<NodeParams.Withdraw>,
   ): Promise<Result<NodeResponses.Withdraw, ServerNodeServiceError>> {
     return this.executeHttpRequest<NodeResponses.Withdraw>(`withdraw`, "post", params, NodeParams.WithdrawSchema);
+  }
+
+  getWithdrawalQuote(
+    params: OptionalPublicIdentifier<NodeParams.GetWithdrawalQuote>,
+  ): Promise<Result<NodeResponses.GetWithdrawalQuote, NodeError>> {
+    throw new Error("not implemented");
   }
 
   signUtilityMessage(

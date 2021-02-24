@@ -736,6 +736,37 @@ server.post<{ Body: NodeParams.RequestCollateral }>(
   },
 );
 
+server.post<{ Body: NodeParams.GetTransferQuote }>(
+  "/transfers/quote",
+  {
+    schema: {
+      body: NodeParams.GetTransferQuoteSchema,
+      response: NodeResponses.GetTransferQuoteSchema,
+    },
+  },
+  async (request, reply) => {
+    const engine = getNode(request.body.publicIdentifier);
+    if (!engine) {
+      return reply
+        .status(400)
+        .send(
+          jsonifyError(
+            new ServerNodeError(ServerNodeError.reasons.NodeNotFound, request.body.publicIdentifier, request.body),
+          ),
+        );
+    }
+
+    const rpc = constructRpcRequest(ChannelRpcMethods.chan_getTransferQuote, request.body);
+    try {
+      const res = await engine.request<typeof ChannelRpcMethods.chan_getTransferQuote>(rpc);
+      return reply.status(200).send(res);
+    } catch (e) {
+      logger.error({ error: jsonifyError(e) });
+      return reply.status(500).send(jsonifyError(e));
+    }
+  },
+);
+
 server.post<{ Body: NodeParams.ConditionalTransfer }>(
   "/transfers/create",
   {
@@ -980,6 +1011,37 @@ server.post<{ Body: NodeParams.Admin }>(
           storeError: e.message,
         }).toJson(),
       );
+    }
+  },
+);
+
+server.post<{ Body: NodeParams.GetWithdrawalQuote }>(
+  "/withdraw/quote",
+  {
+    schema: {
+      body: NodeParams.GetWithdrawalQuoteSchema,
+      response: NodeResponses.GetWithdrawalQuoteSchema,
+    },
+  },
+  async (request, reply) => {
+    const engine = getNode(request.body.publicIdentifier);
+    if (!engine) {
+      return reply
+        .status(400)
+        .send(
+          jsonifyError(
+            new ServerNodeError(ServerNodeError.reasons.NodeNotFound, request.body.publicIdentifier, request.body),
+          ),
+        );
+    }
+
+    const rpc = constructRpcRequest(ChannelRpcMethods.chan_getWithdrawalQuote, request.body);
+    try {
+      const res = await engine.request<typeof ChannelRpcMethods.chan_getWithdrawalQuote>(rpc);
+      return reply.status(200).send(res);
+    } catch (e) {
+      logger.error({ error: jsonifyError(e) });
+      return reply.status(500).send(jsonifyError(e));
     }
   },
 );

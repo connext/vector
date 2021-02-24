@@ -17,6 +17,7 @@ import {
   FullChannelState,
   DEFAULT_CHANNEL_TIMEOUT,
   GetTransfersFilterOpts,
+  ChannelRpcMethod,
 } from "@connext/vector-types";
 import { constructRpcRequest, hydrateProviders, NatsMessagingService } from "@connext/vector-utils";
 import pino, { BaseLogger } from "pino";
@@ -279,6 +280,18 @@ export class BrowserNode implements INodeService {
     }
   }
 
+  async getTransferQuote(
+    params: OptionalPublicIdentifier<NodeParams.GetTransferQuote>,
+  ): Promise<Result<NodeResponses.GetTransferQuote, BrowserNodeError>> {
+    try {
+      const rpc = constructRpcRequest<"chan_getTransferQuote">(ChannelRpcMethods.chan_getTransferQuote, params);
+      const res = await this.channelProvider!.send(rpc);
+      return Result.ok(res);
+    } catch (e) {
+      return Result.fail(e);
+    }
+  }
+
   async getTransferByRoutingId(
     params: OptionalPublicIdentifier<NodeParams.GetTransferStateByRoutingId>,
   ): Promise<Result<NodeResponses.GetTransferStateByRoutingId, BrowserNodeError>> {
@@ -444,6 +457,18 @@ export class BrowserNode implements INodeService {
         transferId: (res.latestUpdate.details as CreateUpdateDetails).transferId,
         routingId: (res.latestUpdate.details as CreateUpdateDetails).meta?.routingId,
       });
+    } catch (e) {
+      return Result.fail(e);
+    }
+  }
+
+  async getWithdrawalQuote(
+    params: OptionalPublicIdentifier<NodeParams.GetWithdrawalQuote>,
+  ): Promise<Result<NodeResponses.GetWithdrawalQuote, BrowserNodeError>> {
+    try {
+      const rpc = constructRpcRequest<"chan_getWithdrawalQuote">(ChannelRpcMethods.chan_getWithdrawalQuote, params);
+      const res = await this.channelProvider!.send(rpc);
+      return Result.ok(res);
     } catch (e) {
       return Result.fail(e);
     }

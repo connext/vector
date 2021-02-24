@@ -33,6 +33,10 @@ export interface INodeService {
     params: OptionalPublicIdentifier<NodeParams.GetChannelState>,
   ): Promise<Result<NodeResponses.GetChannelState, NodeError>>;
 
+  getTransferQuote(
+    params: OptionalPublicIdentifier<NodeParams.GetTransferQuote>,
+  ): Promise<Result<NodeResponses.GetTransferQuote, NodeError>>;
+
   getTransferByRoutingId(
     params: OptionalPublicIdentifier<NodeParams.GetTransferStateByRoutingId>,
   ): Promise<Result<NodeResponses.GetTransferStateByRoutingId, NodeError>>;
@@ -114,6 +118,10 @@ export interface INodeService {
   ): Promise<Result<NodeResponses.SendDefundTransferTx, NodeError>>;
 
   withdraw(params: OptionalPublicIdentifier<NodeParams.Withdraw>): Promise<Result<NodeResponses.Withdraw, NodeError>>;
+
+  getWithdrawalQuote(
+    params: OptionalPublicIdentifier<NodeParams.GetWithdrawalQuote>,
+  ): Promise<Result<NodeResponses.GetWithdrawalQuote, NodeError>>;
 
   restoreState(
     params: OptionalPublicIdentifier<NodeParams.RestoreState>,

@@ -21,6 +21,12 @@ import {
 // from the rpc, converts them to proper protocol/message parameters,
 // and returns the protocol/message response.
 
+const GetWithdrawalQuoteParamsSchema = Type.Object({
+  amount: TIntegerString,
+  assetId: TAddress,
+  channelAddress: TAddress,
+});
+
 const GetTransferQuoteParamsSchema = Type.Object({
   routerIdentifier: TPublicIdentifier,
   amount: TIntegerString,
@@ -270,4 +276,7 @@ export namespace EngineParams {
 
   export const GetTransferQuoteSchema = GetTransferQuoteParamsSchema;
   export type GetTransferQuote = Static<typeof GetTransferQuoteParamsSchema>;
+
+  export const GetWithdrawalQuoteSchema = GetWithdrawalQuoteParamsSchema;
+  export type GetWithdrawalQuote = Static<typeof GetWithdrawalQuoteParamsSchema>;
 }

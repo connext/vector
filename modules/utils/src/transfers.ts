@@ -54,6 +54,7 @@ export const decodeTransferQuote = (encodedQuote: string): TransferQuote => {
     routerIdentifier: decoded.routerIdentifier,
     amount: decoded.amount.toString(),
     assetId: decoded.assetId,
+    chainId: decoded.chainId.toNumber(),
     recipient: decoded.recipient,
     recipientChainId: decoded.recipientChainId.toNumber(),
     recipientAssetId: decoded.recipientAssetId,
