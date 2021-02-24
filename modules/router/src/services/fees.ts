@@ -7,16 +7,14 @@ import {
   REDUCED_GAS_PRICE,
 } from "@connext/vector-types";
 import {
-  calculateExchangeWad,
   getBalanceForAssetId,
   getParticipant,
   getRandomBytes32,
-  inverse,
-  logAxiosError,
+  TESTNETS_WITH_FEES,
+  normalizeFee,
 } from "@connext/vector-utils";
 import { BigNumber } from "@ethersproject/bignumber";
 import { AddressZero, Zero } from "@ethersproject/constants";
-import axios from "axios";
 import { BaseLogger } from "pino";
 
 import { FeeError } from "../errors";
@@ -24,10 +22,6 @@ import { getDecimals } from "../metrics";
 
 import { getRebalanceProfile, getSwapFees } from "./config";
 import { getSwappedAmount } from "./swap";
-
-// Some testnets will have hardcoded fees for easier testing
-// [rinkeby, goerli, kovan, mumbai]
-const TESTNETS_WITH_FEES = [4, 5, 42, 80001];
 
 // Takes in some proposed amount in toAssetId and returns the
 // fees in the toAssetId. Will *NOT* return an error if fees > amount
@@ -131,6 +125,28 @@ export const calculateFeeAmount = async (
   }
   const gasFees = gasFeesRes.getValue();
 
+  // Get decimals for base asset + fees
+  let fromAssetDecimals: number | undefined = undefined;
+  let baseAssetFromChainDecimals: number | undefined = undefined;
+  let toAssetDecimals: number | undefined = undefined;
+  let baseAssetToChainDecimals: number | undefined = undefined;
+  try {
+    fromAssetDecimals = await getDecimals(fromChannel.networkContext.chainId.toString(), fromAssetId);
+    baseAssetFromChainDecimals = await getDecimals(fromChannel.networkContext.chainId.toString(), AddressZero);
+    toAssetDecimals = await getDecimals(toChannel.networkContext.chainId.toString(), toAssetId);
+    baseAssetToChainDecimals = await getDecimals(toChannel.networkContext.chainId.toString(), AddressZero);
+  } catch (e) {
+    return Result.fail(
+      new FeeError(FeeError.reasons.ExchangeRateError, {
+        message: "Could not get decimals",
+        fromAssetDecimals,
+        baseAssetFromChainDecimals,
+        toAssetDecimals,
+        baseAssetToChainDecimals,
+      }),
+    );
+  }
+
   // After getting the gas fees for reclaim and for collateral, we
   // must convert them to the proper value in the `fromAsset` (the same asset
   // that the transfer amount is given in).
@@ -141,7 +157,9 @@ export const calculateFeeAmount = async (
     fromChainId === 1 || TESTNETS_WITH_FEES.includes(fromChainId) // fromAsset MUST be on mainnet or hardcoded
       ? await normalizeFee(
           gasFees[fromChannel.channelAddress],
+          baseAssetFromChainDecimals,
           fromAssetId,
+          fromAssetDecimals,
           fromChainId,
           ethReader,
           logger,
@@ -150,7 +168,15 @@ export const calculateFeeAmount = async (
       : Result.ok(Zero);
   const normalizedCollateralToAsset =
     toChainId === 1 || TESTNETS_WITH_FEES.includes(toChainId) // toAsset MUST be on mainnet or hardcoded
-      ? await normalizeFee(gasFees[toChannel.channelAddress], toAssetId, toChainId, ethReader, logger)
+      ? await normalizeFee(
+          gasFees[toChannel.channelAddress],
+          baseAssetToChainDecimals,
+          toAssetId,
+          toAssetDecimals,
+          toChainId,
+          ethReader,
+          logger,
+        )
       : Result.ok(Zero);
 
   if (normalizedReclaimFromAsset.isError || normalizedCollateralToAsset.isError) {
@@ -401,118 +427,4 @@ export const calculateEstimatedGasFee = async (
     [toChannel.channelAddress]:
       toChannelCode.getValue() === "0x" ? GAS_ESTIMATES.createChannelAndDepositAlice : GAS_ESTIMATES.depositAlice,
   });
-};
-
-// function to calculate gas fee amount multiplied by gas price in the
-// toAsset units. some caveats:
-// - there is no l2 exchange rate feed, so it is not possible to get the
-//   rates from l2BaseAsset --> toAsset
-// - there is no great way to determine *which* asset is the l2BaseAsset
-//
-// because of the above reasons, if the `toChainId` is *not* mainnet, then
-// the function returns an error. this is enforced in router config validation
-// as well
-export const normalizeFee = async (
-  fee: BigNumber,
-  desiredFeeAssetId: string, // asset you want fee denominated in
-  chainId: number,
-  ethReader: IVectorChainReader,
-  logger: BaseLogger,
-  gasPriceOverride?: BigNumber,
-): Promise<Result<BigNumber, FeeError>> => {
-  const method = "normalizeFee";
-  const methodId = getRandomBytes32();
-  logger.info(
-    { method, methodId, fee: fee.toString(), toAssetId: desiredFeeAssetId, toChainId: chainId },
-    "Method start",
-  );
-  if (chainId !== 1 && !TESTNETS_WITH_FEES.includes(chainId)) {
-    return Result.fail(
-      new FeeError(FeeError.reasons.ChainError, {
-        message: "Cannot get normalize fees that are not going to mainnet",
-        toAssetId: desiredFeeAssetId,
-        toChainId: chainId,
-        fee: fee.toString(),
-      }),
-    );
-  }
-
-  let gasPrice = gasPriceOverride;
-  if (!gasPriceOverride) {
-    const gasPriceRes = await ethReader.getGasPrice(chainId);
-    if (gasPriceRes.isError) {
-      return Result.fail(
-        new FeeError(FeeError.reasons.ChainError, { getGasPriceError: jsonifyError(gasPriceRes.getError()!) }),
-      );
-    }
-    gasPrice = gasPriceRes.getValue();
-  }
-  const feeWithGasPrice = fee.mul(gasPrice!);
-
-  if (desiredFeeAssetId === AddressZero) {
-    logger.info({ method, methodId }, "Eth detected, exchange rate not required");
-    return Result.ok(feeWithGasPrice);
-  }
-
-  // use hardcoded rate of 100 tokens : 1 ETH if testnet
-  const exchangeRateRes = TESTNETS_WITH_FEES.includes(chainId)
-    ? Result.ok(0.01)
-    : await getExchangeRateInEth(desiredFeeAssetId, logger);
-  if (exchangeRateRes.isError) {
-    return Result.fail(exchangeRateRes.getError()!);
-  }
-  const exchangeRate = exchangeRateRes.getValue();
-
-  // since rate is ETH : token, need to invert
-  const invertedRate = inverse(exchangeRate.toString());
-  let decimals: number;
-  let baseAssetDecimals: number;
-  try {
-    decimals = await getDecimals(chainId.toString(), desiredFeeAssetId);
-    baseAssetDecimals = await getDecimals(chainId.toString(), AddressZero);
-  } catch (e) {
-    return Result.fail(
-      new FeeError(FeeError.reasons.ExchangeRateError, {
-        message: "Could not get decimals",
-        invertedRate,
-        toAssetId: desiredFeeAssetId,
-        toChainId: chainId,
-      }),
-    );
-  }
-
-  // total fee in asset normalized decimals
-  const feeWithGasPriceInAsset = calculateExchangeWad(feeWithGasPrice, baseAssetDecimals, invertedRate, decimals);
-  return Result.ok(BigNumber.from(feeWithGasPriceInAsset));
-};
-
-export const getExchangeRateInEth = async (
-  tokenAddress: string,
-  logger: BaseLogger,
-): Promise<Result<number, FeeError>> => {
-  const uri = `https://api.coingecko.com/api/v3/simple/token_price/ethereum?contract_addresses=${tokenAddress}&vs_currencies=eth`;
-  logger.info({ uri }, "Getting exchange rate");
-  try {
-    const response = await axios.get<{ [token: string]: { eth: number } }>(uri);
-    logger.info({ uri, response: response.data }, "Got exchange rate");
-    if (!response.data[tokenAddress]?.eth) {
-      return Result.fail(
-        new FeeError(FeeError.reasons.ExchangeRateError, {
-          message: "Could not find rate in response",
-          response: response.data,
-          tokenAddress,
-        }),
-      );
-    }
-    return Result.ok(response.data[tokenAddress].eth);
-  } catch (e) {
-    logAxiosError(logger, e);
-    return Result.fail(
-      new FeeError(FeeError.reasons.ExchangeRateError, {
-        message: "Could not get exchange rate",
-        tokenAddress,
-        error: e.message,
-      }),
-    );
-  }
 };
