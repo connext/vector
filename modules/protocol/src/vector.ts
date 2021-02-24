@@ -20,7 +20,7 @@ import {
   ProtocolError,
   jsonifyError,
 } from "@connext/vector-types";
-import { getCreate2MultisigAddress, getRandomBytes32 } from "@connext/vector-utils";
+import { getCreate2MultisigAddress, getRandomBytes32, logOperationTime } from "@connext/vector-utils";
 import { Evt } from "evt";
 import pino from "pino";
 
@@ -132,6 +132,7 @@ export class Vector implements IVectorProtocol {
   ): Promise<Result<FullChannelState, OutboundChannelUpdateError>> {
     const method = "executeUpdate";
     const methodId = getRandomBytes32();
+    const label = logOperationTime(this.logger, method);
     this.logger.debug({
       method,
       methodId,
@@ -178,6 +179,7 @@ export class Vector implements IVectorProtocol {
       );
     }
 
+    logOperationTime(this.logger, method, label);
     return outboundRes;
   }
 
@@ -199,7 +201,7 @@ export class Vector implements IVectorProtocol {
         }
         const method = "onReceiveProtocolMessage";
         const methodId = getRandomBytes32();
-        this.logger.debug({ method, methodId }, "Method start");
+        const label = logOperationTime(this.logger, method);
 
         if (msg.isError) {
           this.logger.error(
@@ -267,7 +269,7 @@ export class Vector implements IVectorProtocol {
           updatedTransfers: updatedActiveTransfers,
           updatedTransfer,
         });
-        this.logger.debug({ method, methodId }, "Method complete");
+        logOperationTime(this.logger, method, label);
       },
     );
 
@@ -355,7 +357,7 @@ export class Vector implements IVectorProtocol {
   public async setup(params: ProtocolParams.Setup): Promise<Result<FullChannelState, OutboundChannelUpdateError>> {
     const method = "setup";
     const methodId = getRandomBytes32();
-    this.logger.debug({ method, methodId }, "Method start");
+    const label = logOperationTime(this.logger, method);
     // Validate all parameters
     const error = this.validateParamSchema(params, ProtocolParams.SetupSchema);
     if (error) {
@@ -400,6 +402,7 @@ export class Vector implements IVectorProtocol {
       },
       "Method complete",
     );
+    logOperationTime(this.logger, method, label);
     return returnVal;
   }
 
@@ -407,7 +410,7 @@ export class Vector implements IVectorProtocol {
   public async deposit(params: ProtocolParams.Deposit): Promise<Result<FullChannelState, OutboundChannelUpdateError>> {
     const method = "deposit";
     const methodId = getRandomBytes32();
-    this.logger.debug({ method, methodId }, "Method start");
+    const label = logOperationTime(this.logger, method);
     // Validate all input
     const error = this.validateParamSchema(params, ProtocolParams.DepositSchema);
     if (error) {
