@@ -171,16 +171,6 @@ describe("Vector", () => {
           error: "should be >= 1",
         },
         {
-          name: "should fail if there is no providerUrl",
-          params: { ...validParams, networkContext: { ...network, providerUrl: undefined } },
-          error: "should have required property 'providerUrl'",
-        },
-        {
-          name: "should fail if there is an invalid providerUrl",
-          params: { ...validParams, networkContext: { ...network, providerUrl: 0 } },
-          error: "should be string",
-        },
-        {
           name: "should fail if there is no channelFactoryAddress",
           params: { ...validParams, networkContext: { ...network, channelFactoryAddress: undefined } },
           error: "should have required property 'channelFactoryAddress'",
