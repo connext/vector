@@ -34,6 +34,7 @@ import {
   getSignerAddressFromPublicIdentifier,
   getRandomBytes32,
   getParticipant,
+  hashWithdrawalQuote,
 } from "@connext/vector-utils";
 import pino from "pino";
 import Ajv from "ajv";
@@ -207,7 +208,7 @@ export class VectorEngine implements IVectorEngine {
   private async getTransferQuote(
     params: EngineParams.GetTransferQuote,
   ): Promise<Result<ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_getTransferQuote], EngineError>> {
-    const validate = ajv.compile(EngineParams.GetRouterConfigSchema);
+    const validate = ajv.compile(EngineParams.GetTransferQuoteSchema);
     const valid = validate(params);
     if (!valid) {
       return Result.fail(
@@ -219,6 +220,53 @@ export class VectorEngine implements IVectorEngine {
     }
     const { routerIdentifier, ...message } = params;
     return this.messaging.sendTransferQuoteMessage(Result.ok(message), routerIdentifier, this.publicIdentifier);
+  }
+
+  private async getWithdrawalQuote(
+    params: EngineParams.GetWithdrawalQuote,
+  ): Promise<Result<ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_getWithdrawalQuote], EngineError>> {
+    const validate = ajv.compile(EngineParams.GetWithdrawalQuoteSchema);
+    const valid = validate(params);
+    if (!valid) {
+      return Result.fail(
+        new RpcError(RpcError.reasons.InvalidParams, "", this.publicIdentifier, {
+          invalidParamsError: validate.errors?.map((e) => e.message).join(","),
+          invalidParams: params,
+        }),
+      );
+    }
+    const channelRes = await this.getChannelState({ channelAddress: params.channelAddress });
+    if (channelRes.isError) {
+      return Result.fail(channelRes.getError()!);
+    }
+    const channel = channelRes.getValue();
+    if (!channel) {
+      return Result.fail(new RpcError(RpcError.reasons.ChannelNotFound, params.channelAddress, this.publicIdentifier));
+    }
+
+    if (this.publicIdentifier === channel.aliceIdentifier) {
+      try {
+        // return 0 for quoted fee if you are alice (since you are the submitter)
+        const quote = {
+          channelAddress: params.channelAddress,
+          amount: params.amount,
+          assetId: params.assetId,
+          fee: "0",
+          expiry: (Date.now() + 30_000).toString(),
+        };
+        const signature = await this.signer.signMessage(hashWithdrawalQuote(quote));
+        return Result.ok({ ...quote, signature });
+      } catch (e) {
+        return Result.fail(
+          new RpcError(RpcError.reasons.SigningFailed, params.channelAddress, this.publicIdentifier, {
+            signingError: jsonifyError(e),
+          }),
+        );
+      }
+    }
+
+    // you are not alice, send request to channel counterparty
+    return this.messaging.sendWithdrawalQuoteMessage(Result.ok(params), channel.aliceIdentifier, this.publicIdentifier);
   }
 
   private async getRouterConfig(

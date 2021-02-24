@@ -1,4 +1,4 @@
-import { EngineError, Values } from "@connext/vector-types";
+import { EngineError, EngineParams, Values } from "@connext/vector-types";
 
 export class DisputeError extends EngineError {
   static readonly type = "DisputeError";
@@ -130,6 +130,7 @@ export class RpcError extends EngineError {
     SignerNotInChannel: "Signer is not in channel",
     StoreMethodFailed: "Failed to execute store method",
     TransferNotFound: "Transfer not found",
+    SigningFailed: "Failed to sign message",
     UtilitySigningFailed: "Failed to sign utility message",
   } as const;
 
@@ -140,5 +141,25 @@ export class RpcError extends EngineError {
     context: any = {},
   ) {
     super(message, channelAddress, publicIdentifier, context, RpcError.type);
+  }
+}
+
+export class WithdrawQuoteError extends EngineError {
+  static readonly type = "WithdrawQuoteError";
+
+  static readonly reasons = {
+    ChannelNotFound: "Channel not found",
+    ChainServiceFailure: "Chain service method failed",
+    ExchangeRateError: "Calculating exchange failed",
+    SignatureFailure: "Signing quote failed",
+  } as const;
+
+  constructor(
+    public readonly message: Values<typeof WithdrawQuoteError.reasons>,
+    publicIdentifier: string,
+    request: EngineParams.GetWithdrawalQuote,
+    context: any = {},
+  ) {
+    super(message, request.channelAddress, publicIdentifier, context, WithdrawQuoteError.type);
   }
 }
