@@ -2,7 +2,7 @@
   "name": "auth",
   "description": "This is only used to install & pin versions for a few global packages in the prod-mode docker container",
   "dependencies": {
-    "nodemon": "2.0.6",
+    "nodemon": "2.0.7",
     "pino-pretty": "4.5.0"
   }
 }
