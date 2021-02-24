@@ -79,6 +79,7 @@ server.get("/config", { schema: { response: NodeResponses.GetConfigSchema } }, a
         index: node.index,
         publicIdentifier: node.node.publicIdentifier,
         signerAddress: node.node.signerAddress,
+        chainAddresses: config.chainAddresses,
       };
     }),
   );
