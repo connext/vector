@@ -83,7 +83,12 @@ describe(testName, () => {
             toIdentifier: aliceIdentifier,
           },
         },
-        { meta: transferMeta, initiator: mkAddress("0xeee") },
+        {
+          meta: transferMeta,
+          initiator: mkAddress("0xeee"),
+          assetId: config.allowedSwaps[0].fromAssetId,
+          chainId: config.allowedSwaps[0].fromChainId,
+        },
       );
 
       const { channel: receiverChannel } = createTestChannelState(UpdateType.deposit, {
@@ -280,7 +285,7 @@ describe(testName, () => {
       await verifySuccessfulResult(result, ctx, 0);
     });
 
-    it("successfully forwards a transfer creation with swaps, no cross-chain and no collateralization", async () => {
+    it.only("successfully forwards a transfer creation with swaps, no cross-chain and no collateralization", async () => {
       const ctx = generateDefaultTestContext();
       ctx.receiverChannel.assetIds = [mkAddress("0xfff")];
       ctx.receiverChannel.balances = [ctx.receiverChannel.balances[0]];
@@ -322,8 +327,8 @@ describe(testName, () => {
     it("successfully forwards a transfer creation with swaps, cross-chain, and collateralization", async () => {
       const ctx = generateDefaultTestContext();
       ctx.receiverChannel.networkContext.chainId = 1338;
-      ctx.senderTransfer.meta.path[0].recipientChainId = 1338;
-      ctx.senderTransfer.meta.path[0].recipientAssetId = mkAddress("0xfff");
+      ctx.senderTransfer.meta.path[0].recipientChainId = config.allowedSwaps[0].toChainId;
+      ctx.senderTransfer.meta.path[0].recipientAssetId = config.allowedSwaps[0].toAssetId;
       const mocked = prepEnv({ ...ctx });
 
       const result = await forwardTransferCreation(

@@ -25,6 +25,10 @@ import { getDecimals } from "../metrics";
 import { getRebalanceProfile, getSwapFees } from "./config";
 import { getSwappedAmount } from "./swap";
 
+// Some testnets will have hardcoded fees for easier testing
+// [rinkeby, goerli, kovan, mumbai]
+const TESTNETS_WITH_FEES = [4, 5, 42, 80001];
+
 // Takes in some proposed amount in toAssetId and returns the
 // fees in the toAssetId. Will *NOT* return an error if fees > amount
 export const calculateFeeAmount = async (
@@ -134,7 +138,7 @@ export const calculateFeeAmount = async (
   // on chain1, include reclaim fees. If you are collateralizing on chain1,
   // include collateral fees
   const normalizedReclaimFromAsset =
-    fromChainId === 1 // fromAsset MUST be on mainnet
+    fromChainId === 1 || TESTNETS_WITH_FEES.includes(fromChainId) // fromAsset MUST be on mainnet or hardcoded
       ? await normalizeFee(
           gasFees[fromChannel.channelAddress],
           fromAssetId,
@@ -145,7 +149,7 @@ export const calculateFeeAmount = async (
         )
       : Result.ok(Zero);
   const normalizedCollateralToAsset =
-    toChainId === 1 // toAsset MUST be on mainnet
+    toChainId === 1 || TESTNETS_WITH_FEES.includes(toChainId) // toAsset MUST be on mainnet or hardcoded
       ? await normalizeFee(gasFees[toChannel.channelAddress], toAssetId, toChainId, ethReader, logger)
       : Result.ok(Zero);
 
@@ -422,7 +426,7 @@ export const normalizeFee = async (
     { method, methodId, fee: fee.toString(), toAssetId: desiredFeeAssetId, toChainId: chainId },
     "Method start",
   );
-  if (chainId !== 1) {
+  if (chainId !== 1 && !TESTNETS_WITH_FEES.includes(chainId)) {
     return Result.fail(
       new FeeError(FeeError.reasons.ChainError, {
         message: "Cannot get normalize fees that are not going to mainnet",
@@ -450,7 +454,10 @@ export const normalizeFee = async (
     return Result.ok(feeWithGasPrice);
   }
 
-  const exchangeRateRes = await getExchangeRateInEth(desiredFeeAssetId, logger);
+  // use hardcoded rate of 100 tokens : 1 ETH if testnet
+  const exchangeRateRes = TESTNETS_WITH_FEES.includes(chainId)
+    ? Result.ok(0.01)
+    : await getExchangeRateInEth(desiredFeeAssetId, logger);
   if (exchangeRateRes.isError) {
     return Result.fail(exchangeRateRes.getError()!);
   }

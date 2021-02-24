@@ -98,11 +98,13 @@ export const rebalanceIfNeeded = async (
       ),
     );
   }
+  console.log("***** here0");
   const fromAssetBalanceNumber = await parseBalanceToNumber(
     fromAssetBalance.getValue(),
     swap.fromChainId.toString(),
     swap.fromAssetId,
   );
+  console.log("here1");
 
   const toAssetBalance = await chainService.getOnchainBalance(swap.toAssetId, wallet.address, swap.toChainId);
   if (toAssetBalance.isError) {
@@ -120,6 +122,7 @@ export const rebalanceIfNeeded = async (
     swap.toChainId.toString(),
     swap.toAssetId,
   );
+  console.log("here2");
 
   // should be within 1/2 of total balance + threshold
   const totalBalance = fromAssetBalanceNumber + toAssetBalanceNumber;

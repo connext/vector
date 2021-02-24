@@ -215,6 +215,7 @@ export async function forwardTransferCreation(
 
   // Check if fees should be charged
   const quoteRequired = shouldChargeFees(senderAssetId, senderChainId, recipientAssetId, recipientChainId);
+  console.log("**** quoteRequired", quoteRequired);
   if (quoteRequired.isError) {
     return cancelSenderTransferAndReturnError(
       routingId,
@@ -311,7 +312,7 @@ export async function forwardTransferCreation(
     ? senderAmount
     : BigNumber.from(senderAmount).sub(quote.fee).isNegative()
     ? "0"
-    : BigNumber.from(senderAmount).sub(quote.fee);
+    : BigNumber.from(senderAmount).sub(quote.fee).toString();
   if (recipientAssetId !== senderAssetId || recipientChainId !== senderChainId) {
     logger.info(
       {
