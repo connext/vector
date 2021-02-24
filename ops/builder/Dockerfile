@@ -13,12 +13,12 @@ WORKDIR /app
 COPY entry.sh /entry.sh
 COPY test.sh /test.sh
 
-RUN apk add --no-cache bash curl g++ gcc git jq make python2 ;\
-    npm config set unsafe-perm true ;\
-    npm install -g lerna@$LERNA_VERSION ;\
-    curl https://raw.githubusercontent.com/vishnubob/wait-for-it/$(git ls-remote https://github.com/vishnubob/wait-for-it.git refs/heads/master | cut -f1)/wait-for-it.sh > /bin/wait-for ;\
-    chmod +x /bin/wait-for ;\
-    chmod +x /*.sh ;\
+RUN apk add --no-cache bash curl g++ gcc git jq make python2 &&\
+    npm config set unsafe-perm true &&\
+    npm install -g lerna@$LERNA_VERSION &&\
+    curl https://raw.githubusercontent.com/vishnubob/wait-for-it/$(git ls-remote https://github.com/vishnubob/wait-for-it.git refs/heads/master | cut -f1)/wait-for-it.sh > /bin/wait-for &&\
+    chmod +x /bin/wait-for &&\
+    chmod +x /*.sh &&\
     rm -rf /var/cache/apk/* /tmp/*
 
 # USER node

@@ -1,12 +1,26 @@
-FROM node:12.16.0-alpine3.10
-WORKDIR /root
-ENV HOME /root
-RUN apk add --update --no-cache bash curl g++ gcc git jq make python
-RUN npm config set unsafe-perm true && npm install -g npm@6.14.7
-RUN curl https://raw.githubusercontent.com/vishnubob/wait-for-it/ed77b63706ea721766a62ff22d3a251d8b4a6a30/wait-for-it.sh > /bin/wait-for && chmod +x /bin/wait-for
-ENV PATH="/root/node_modules/.bin:./node_modules/.bin:${PATH}"
-COPY package.json package.json
+FROM node:14.16.0-alpine3.13
+LABEL website="Secure Docker Images https://secureimages.dev"
+LABEL description="We secure your business from scratch"
+LABEL maintainer="support@secureimages.dev"
+
+ENV HOME=/app \
+    PATH=/app/node_modules/.bin:./node_modules/.bin:${PATH}
+
+WORKDIR /app
+
+RUN apk add --no-cache bash curl g++ gcc git jq make python2 &&\
+    npm config set unsafe-perm true &&\
+    curl https://raw.githubusercontent.com/vishnubob/wait-for-it/$(git ls-remote https://github.com/vishnubob/wait-for-it.git refs/heads/master | cut -f1)/wait-for-it.sh > /bin/wait-for &&\
+    chmod +x /bin/wait-for &&\
+    chmod +x /*.sh &&\
+    rm -rf /var/cache/apk/* /tmp/*
+
+COPY package*.json ./
+
+RUN npm audit --audit-level=moderate
 RUN npm install
+RUN npm outdated || true
+
 COPY tsconfig.json tsconfig.json
 COPY hardhat.config.ts hardhat.config.ts
 COPY ops/entry.sh entry.sh
@@ -16,6 +30,11 @@ COPY src.ts src.ts
 COPY artifacts artifacts
 COPY dist dist
 COPY typechain typechain
+
 RUN find dist -type f -name "*.ts"  -exec rm {} \;
+
 RUN find dist -type f -name "*.map" -exec rm {} \;
+
+# USER node
+
 ENTRYPOINT ["bash", "entry.sh"]

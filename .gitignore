@@ -14,7 +14,7 @@ modules/browser-node-test-ui/config-node.json
 **/tsconfig.tsbuildinfo
 *.docker-compose.yml
 docker-compose.yml
-modules/*/package-lock.json
+# modules/*/package-lock.json
 config-prod.json
 
 # Cache
