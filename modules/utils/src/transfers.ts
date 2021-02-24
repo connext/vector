@@ -8,6 +8,8 @@ import {
   BalanceEncoding,
   TransferQuote,
   TransferQuoteEncoding,
+  WithdrawalQuote,
+  WithdrawalQuoteEncoding,
 } from "@connext/vector-types";
 import { defaultAbiCoder } from "@ethersproject/abi";
 import { keccak256 as solidityKeccak256, sha256 as soliditySha256 } from "@ethersproject/solidity";
@@ -65,3 +67,20 @@ export const decodeTransferQuote = (encodedQuote: string): TransferQuote => {
 
 export const hashTransferQuote = (quote: TransferQuote): string =>
   solidityKeccak256(["bytes"], [encodeTransferQuote(quote)]);
+
+export const encodeWithdrawalQuote = (quote: WithdrawalQuote): string =>
+  defaultAbiCoder.encode([WithdrawalQuoteEncoding], [quote]);
+
+export const decodeWithdrawalQuote = (encodedQuote: string): WithdrawalQuote => {
+  const decoded = defaultAbiCoder.decode([WithdrawalQuoteEncoding], encodedQuote)[0];
+  return {
+    channelAddress: decoded.channelAddress,
+    amount: decoded.amount.toString(),
+    assetId: decoded.assetId,
+    fee: decoded.fee.toString(),
+    expiry: decoded.expiry.toString(),
+  };
+};
+
+export const hashWithdrawalQuote = (quote: WithdrawalQuote): string =>
+  solidityKeccak256(["bytes"], [encodeWithdrawalQuote(quote)]);
