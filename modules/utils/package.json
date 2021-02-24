@@ -17,7 +17,7 @@
     "@ethersproject/abi": "5.0.12",
     "@ethersproject/abstract-provider": "5.0.9",
     "@ethersproject/abstract-signer": "5.0.13",
-    "@ethersproject/address": "5.0.10",
+    "@ethersproject/address": "5.0.8",
     "@ethersproject/bignumber": "5.0.14",
     "@ethersproject/bytes": "5.0.10",
     "@ethersproject/constants": "5.0.9",
