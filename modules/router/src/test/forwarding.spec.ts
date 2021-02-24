@@ -130,8 +130,12 @@ describe(testName, () => {
             fromChainId: ctx.event.transfer.chainId,
             hardcodedRate: "1",
             priceType: "hardcoded",
-            toAssetId: ctx.event.transfer.meta.path[0].recipientAssetId ?? ctx.event.transfer.assetId,
-            toChainId: ctx.event.transfer.meta.path[0].recipientChainId ?? ctx.event.transfer.chainId,
+            toAssetId: ctx.event.transfer.meta?.path
+              ? ctx.event.transfer.meta?.path[0]?.recipientAssetId ?? ctx.event.transfer.assetId
+              : ctx.event.transfer.assetId,
+            toChainId: ctx.event.transfer.meta?.path
+              ? ctx.event.transfer.meta?.path[0]?.recipientChainId ?? ctx.event.transfer.chainId
+              : ctx.event.transfer.chainId,
           },
         ],
       });
