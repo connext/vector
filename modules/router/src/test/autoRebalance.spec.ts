@@ -9,8 +9,10 @@ import { parseEther } from "@ethersproject/units";
 import axios from "axios";
 
 import { rebalanceIfNeeded } from "../services/autoRebalance";
-import { config } from "../config";
+import { getConfig } from "../config";
 import * as metrics from "../metrics";
+
+const config = getConfig();
 
 const testName = "Auto Rebalance";
 const { log } = getTestLoggers(testName, config.logLevel as any);

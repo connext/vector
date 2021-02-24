@@ -15,12 +15,14 @@ import { expect } from "chai";
 import Sinon from "sinon";
 import { AddressZero } from "@ethersproject/constants";
 
-import { config } from "../../config";
+import { getConfig } from "../../config";
 import * as swapService from "../../services/swap";
 import * as configService from "../../services/config";
 import { FeeError } from "../../errors";
 import * as feesService from "../../services/fees";
 import * as metrics from "../../metrics";
+
+const config = getConfig();
 
 const testName = "Router fees";
 const { log } = getTestLoggers(testName, config.logLevel ?? ("info" as any));

@@ -16,9 +16,11 @@ import { Type, Static } from "@sinclair/typebox";
 import axios from "axios";
 import { BaseLogger } from "pino";
 
-import { config } from "../config";
+import { getConfig } from "../config";
 import { AutoRebalanceServiceError } from "../errors";
 import { parseBalanceToNumber, rebalancedTokens } from "../metrics";
+
+const config = getConfig();
 
 const DEFAULT_REBALANCE_THRESHOLD = 20;
 const MIN_INTERVAL = 1_800_000;

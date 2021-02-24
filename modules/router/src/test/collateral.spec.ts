@@ -14,10 +14,12 @@ import { AddressZero } from "@ethersproject/constants";
 import { ChainError, INodeService, Result, UpdateType } from "@connext/vector-types";
 import { parseEther } from "@ethersproject/units";
 
-import { config } from "../config";
+import { getConfig } from "../config";
 import { adjustCollateral, justInTimeCollateral, requestCollateral } from "../services/collateral";
 import * as configService from "../services/config";
 import { CollateralError } from "../errors";
+
+const config = getConfig();
 
 const testName = "Collateral";
 const { log } = getTestLoggers(testName, config.logLevel as any);

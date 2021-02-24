@@ -25,13 +25,15 @@ import {
 import { collectDefaultMetrics, register } from "prom-client";
 import { Wallet } from "ethers";
 
-import { config } from "./config";
+import { getConfig } from "./config";
 import { IRouter, Router } from "./router";
 import { PrismaStore } from "./services/store";
 import { NatsRouterMessagingService } from "./services/messaging";
 import { autoRebalanceTask, startAutoRebalanceTask } from "./services/autoRebalance";
 import { wallet } from "./metrics";
 import { ServerError } from "./errors";
+
+const config = getConfig();
 
 const routerPort = 8000;
 const routerBase = `http://router:${routerPort}`;

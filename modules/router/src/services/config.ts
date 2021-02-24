@@ -1,12 +1,12 @@
 import { AllowedSwap, Result } from "@connext/vector-types";
 import { getAddress } from "@ethersproject/address";
 
-import { config, RebalanceProfile } from "../config";
+import { getConfig, RebalanceProfile } from "../config";
 import { ConfigServiceError } from "../errors";
 
 export const getRebalanceProfile = (chainId: number, assetId: string): Result<RebalanceProfile, ConfigServiceError> => {
   const asset = getAddress(assetId);
-  const rebalanceProfile = config.rebalanceProfiles.find(
+  const rebalanceProfile = getConfig().rebalanceProfiles.find(
     (profile) => profile.assetId === asset && profile.chainId === chainId,
   );
   if (!rebalanceProfile) {
@@ -25,8 +25,11 @@ export const getMatchingSwap = (
   toChainId: number,
 ): Result<AllowedSwap, ConfigServiceError> => {
   const fromAsset = getAddress(fromAssetId);
+  console.log("fromAsset: ", fromAsset);
   const toAsset = getAddress(toAssetId);
-  const swap = config.allowedSwaps.find(
+  console.log("toAsset: ", toAsset);
+  console.log("getConfig().allowedSwaps: ", getConfig().allowedSwaps);
+  const swap = getConfig().allowedSwaps.find(
     (s) =>
       s.fromAssetId === fromAsset &&
       s.fromChainId === fromChainId &&
@@ -61,9 +64,9 @@ export const getSwapFees = (
   ConfigServiceError
 > => {
   // Get fee values from config
-  let flatFee = config.baseFlatFee ?? "0";
-  let percentageFee = config.basePercentageFee ?? 0;
-  let gasSubsidyPercentage = config.baseGasSubsidyPercentage ?? 100;
+  let flatFee = getConfig().baseFlatFee ?? "0";
+  let percentageFee = getConfig().basePercentageFee ?? 0;
+  let gasSubsidyPercentage = getConfig().baseGasSubsidyPercentage ?? 100;
   if (fromChainId !== toChainId || fromAssetId !== toAssetId) {
     const swapRes = getMatchingSwap(fromAssetId, fromChainId, toAssetId, toChainId);
     if (swapRes.isError) {

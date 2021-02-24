@@ -31,15 +31,17 @@ import Sinon from "sinon";
 
 import { PrismaStore } from "../services/store";
 import { forwardTransferCreation } from "../forwarding";
-import { config } from "../config";
+import * as configService from "../config";
 import * as swapService from "../services/swap";
 import * as transferService from "../services/transfer";
 import { ForwardTransferCreationError } from "../errors";
 import * as collateralService from "../services/collateral";
+import { getAddress } from "@ethersproject/address";
 
 const testName = "Forwarding";
 
-const { log: logger } = getTestLoggers(testName, config.logLevel as any);
+const realConfig = configService.getEnvConfig();
+const { log: logger } = getTestLoggers(testName, realConfig.vectorConfig.logLevel as any);
 
 type TransferCreatedTestContext = {
   senderTransfer: FullTransferState;
@@ -59,6 +61,7 @@ describe(testName, () => {
     let getSwappedAmount: Sinon.SinonStub;
     let cancelTransfer: Sinon.SinonStub;
     let justInTimeCollateral: Sinon.SinonStub;
+    let getConfig: Sinon.SinonStub;
 
     const routerPublicIdentifier = mkPublicIdentifier("vectorRRR");
     const aliceIdentifier = mkPublicIdentifier("vectorA");
@@ -86,8 +89,8 @@ describe(testName, () => {
         {
           meta: transferMeta,
           initiator: mkAddress("0xeee"),
-          assetId: config.allowedSwaps[0].fromAssetId,
-          chainId: config.allowedSwaps[0].fromChainId,
+          assetId: realConfig.vectorConfig.allowedSwaps[0].fromAssetId,
+          chainId: realConfig.vectorConfig.allowedSwaps[0].fromChainId,
         },
       );
 
@@ -116,6 +119,25 @@ describe(testName, () => {
 
       const receiverTransferId = getRandomBytes32();
       // Set mock methods for default happy case
+      // config
+      getConfig.returns({
+        dbUrl: realConfig.dbUrl,
+        mnemonicEnv: realConfig.mnemonicEnv,
+        ...realConfig.vectorConfig,
+        allowedSwaps: [
+          {
+            fromAssetId: ctx.event.transfer.assetId,
+            fromChainId: ctx.event.transfer.chainId,
+            hardcodedRate: "1",
+            priceType: "hardcoded",
+            toAssetId: ctx.event.transfer.meta.path[0].recipientAssetId ?? ctx.event.transfer.assetId,
+            toChainId: ctx.event.transfer.meta.path[0].recipientChainId ?? ctx.event.transfer.chainId,
+            flatFee: "0",
+            gasSubsidyPercentage: 0,
+            percentageFee: 0,
+          },
+        ],
+      });
       // get sender channel
       node.getStateChannel.onFirstCall().resolves(Result.ok(senderChannel));
       // get swapped amount (optional)
@@ -262,6 +284,8 @@ describe(testName, () => {
       chainReader = Sinon.createStubInstance(VectorChainReader);
 
       justInTimeCollateral = Sinon.stub(collateralService, "justInTimeCollateral");
+
+      getConfig = Sinon.stub(configService, "getConfig");
     });
 
     afterEach(() => {
@@ -287,9 +311,9 @@ describe(testName, () => {
 
     it.only("successfully forwards a transfer creation with swaps, no cross-chain and no collateralization", async () => {
       const ctx = generateDefaultTestContext();
-      ctx.receiverChannel.assetIds = [mkAddress("0xfff")];
+      ctx.receiverChannel.assetIds = [getAddress(mkAddress("0xfff"))];
       ctx.receiverChannel.balances = [ctx.receiverChannel.balances[0]];
-      ctx.senderTransfer.meta.path[0].recipientAssetId = mkAddress("0xfff");
+      ctx.senderTransfer.meta.path[0].recipientAssetId = getAddress(mkAddress("0xfff"));
       const mocked = prepEnv({ ...ctx });
 
       const result = await forwardTransferCreation(
@@ -302,6 +326,7 @@ describe(testName, () => {
         chainReader,
       );
 
+      console.log("result: ", JSON.stringify(result.getError()?.toJson(), null, 2));
       await verifySuccessfulResult(result, mocked, 1);
     });
 
@@ -327,8 +352,8 @@ describe(testName, () => {
     it("successfully forwards a transfer creation with swaps, cross-chain, and collateralization", async () => {
       const ctx = generateDefaultTestContext();
       ctx.receiverChannel.networkContext.chainId = 1338;
-      ctx.senderTransfer.meta.path[0].recipientChainId = config.allowedSwaps[0].toChainId;
-      ctx.senderTransfer.meta.path[0].recipientAssetId = config.allowedSwaps[0].toAssetId;
+      ctx.senderTransfer.meta.path[0].recipientChainId = realConfig.vectorConfig.allowedSwaps[0].toChainId;
+      ctx.senderTransfer.meta.path[0].recipientAssetId = realConfig.vectorConfig.allowedSwaps[0].toAssetId;
       const mocked = prepEnv({ ...ctx });
 
       const result = await forwardTransferCreation(

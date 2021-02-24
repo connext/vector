@@ -7,7 +7,9 @@ import { formatEther, formatUnits } from "@ethersproject/units";
 import { Wallet } from "@ethersproject/wallet";
 import { Counter, Gauge } from "prom-client";
 
-import { config } from "./config";
+import { getConfig } from "./config";
+
+const config = getConfig();
 
 //////////////////////////
 ///// Router Metrics /////

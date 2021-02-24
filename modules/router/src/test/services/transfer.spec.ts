@@ -26,11 +26,13 @@ import {
 import { HashZero } from "@ethersproject/constants";
 import * as Sinon from "sinon";
 
-import { config } from "../../config";
+import { getConfig } from "../../config";
 import { ForwardTransferCreationError } from "../../errors";
 import { PrismaStore, RouterUpdateType } from "../../services/store";
 import { cancelCreatedTransfer, attemptTransferWithCollateralization } from "../../services/transfer";
 import * as collateral from "../../services/collateral";
+
+const config = getConfig();
 
 const testName = "Router transfer service";
 

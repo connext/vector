@@ -30,7 +30,7 @@ import { forwardTransferCreation, forwardTransferResolution, handleIsAlive } fro
 import { IRouterStore } from "./services/store";
 import { getMatchingSwap, getRebalanceProfile } from "./services/config";
 import { IRouterMessagingService } from "./services/messaging";
-import { config } from "./config";
+import { getConfig } from "./config";
 import {
   openChannels,
   transactionAttempt,
@@ -47,6 +47,8 @@ import {
 } from "./metrics";
 import { calculateFeeAmount } from "./services/fees";
 import { QuoteError } from "./errors";
+
+const config = getConfig();
 
 const ajv = new Ajv();
 

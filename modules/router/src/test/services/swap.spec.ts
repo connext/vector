@@ -1,8 +1,10 @@
 import { calculateExchangeAmount, expect, getRandomAddress } from "@connext/vector-utils";
 
 import { getSwappedAmount } from "../../services/swap";
-import { config } from "../../config";
+import { getConfig } from "../../config";
 import { SwapError } from "../../errors";
+
+const config = getConfig();
 
 describe("swap.ts", () => {
   describe("getSwappedAmount", () => {
