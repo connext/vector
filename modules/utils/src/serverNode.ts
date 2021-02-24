@@ -556,7 +556,7 @@ export class RestServerNodeService implements INodeService {
       return Result.fail(
         new ServerNodeServiceError(
           ServerNodeServiceError.reasons.InvalidParams,
-          filled.publicIdentifer,
+          (filled as any).publicIdentifer,
           urlPath,
           params,
           {
@@ -575,7 +575,7 @@ export class RestServerNodeService implements INodeService {
       const msg = e.response?.data?.message ?? jsonErr.message ?? ServerNodeServiceError.reasons.InternalServerError;
       const toThrow = new ServerNodeServiceError(
         msg.includes("timed out") || msg.includes("timeout") ? ServerNodeServiceError.reasons.Timeout : msg,
-        filled.publicIdentifier,
+        (filled as any).publicIdentifier,
         urlPath,
         params,
         {
