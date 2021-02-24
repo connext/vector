@@ -510,6 +510,19 @@ export class EthereumChainReader implements IVectorChainReader {
     }
   }
 
+  async getDecimals(assetId: string, chainId: number): Promise<Result<number, ChainError>> {
+    const provider = this.chainProviders[chainId];
+    if (!provider) {
+      return Result.fail(new ChainError(ChainError.reasons.ProviderNotFound));
+    }
+    try {
+      const decimals = assetId === AddressZero ? 18 : await new Contract(assetId, ERC20Abi, provider).decimals();
+      return Result.ok(decimals);
+    } catch (e) {
+      return Result.fail(e);
+    }
+  }
+
   async getWithdrawalTransactionRecord(
     withdrawData: WithdrawCommitmentJson,
     channelAddress: string,

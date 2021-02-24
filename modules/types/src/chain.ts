@@ -108,6 +108,8 @@ export interface IVectorChainReader {
 
   getChannelMastercopyAddress(channelFactoryAddress: string, chainId: number): Promise<Result<string, ChainError>>;
 
+  getDecimals(assetId: string, chainId: number): Promise<Result<number, ChainError>>;
+
   getChannelAddress(
     initiator: string,
     responder: string,
