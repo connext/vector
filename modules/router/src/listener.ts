@@ -43,6 +43,15 @@ export type ChainJsonProviders = {
   [k: string]: JsonRpcProvider;
 };
 
+// Used to track all the transfers we are forwarding in memory
+// so that when router is handling transfers they may have dropped,
+// they do not double spend. I.e. sender creates transfer and goes
+// offline. Router starts forwarding to receiver, and while this is
+// happening sender comes back online. Without tracking the in-progress
+// forwards, the transfer would be double created with the receiver via
+// the handleIsAlive fn
+export const inProgressCreations: { [channelAddr: string]: string[] } = {};
+
 export async function setupListeners(
   routerPublicIdentifier: string,
   routerSignerAddress: string,
@@ -122,6 +131,11 @@ export async function setupListeners(
         assetId,
         chainId,
       });
+      // Add to processing
+      inProgressCreations[data.channelAddress] = [
+        ...(inProgressCreations[data.channelAddress] ?? []),
+        data.transfer.transferId,
+      ];
       const res = await forwardTransferCreation(
         data,
         routerPublicIdentifier,
@@ -130,6 +144,10 @@ export async function setupListeners(
         store,
         logger,
         chainReader,
+      );
+      // Remove from processing
+      inProgressCreations[data.channelAddress] = inProgressCreations[data.channelAddress].filter(
+        (t) => t !== data.transfer.transferId,
       );
       if (res.isError) {
         const { receiverAmount } = res.getError()?.context;

@@ -30,7 +30,10 @@ export type RouterStoredUpdate<T extends RouterUpdateType> = {
   status: RouterUpdateStatus;
 };
 export interface IRouterStore {
-  getQueuedUpdates(channelAddress: string, status: RouterUpdateStatus): Promise<RouterStoredUpdate<RouterUpdateType>[]>;
+  getQueuedUpdates(
+    channelAddress: string,
+    statuses: RouterUpdateStatus[],
+  ): Promise<RouterStoredUpdate<RouterUpdateType>[]>;
   queueUpdate<T extends RouterUpdateType>(
     channelAddress: string,
     type: T,
@@ -68,9 +71,9 @@ export class PrismaStore implements IRouterStore {
   // Interface methods
   async getQueuedUpdates(
     channelAddress: string,
-    status: RouterUpdateStatus,
+    statuses: RouterUpdateStatus[],
   ): Promise<RouterStoredUpdate<RouterUpdateType>[]> {
-    const updates = await this.prisma.queuedUpdate.findMany({ where: { channelAddress, status } });
+    const updates = await this.prisma.queuedUpdate.findMany({ where: { channelAddress, status: { in: statuses } } });
     return updates.map((u) => {
       return {
         payload: JSON.parse(u.updateData),
