@@ -52,7 +52,7 @@
     "merkletreejs": "0.2.9",
     "p-queue": "6.6.2",
     "pino": "6.7.0",
-    "pino-pretty": "4.3.0"
+    "pino-pretty": "4.5.0"
   },
   "devDependencies": {
     "@nomiclabs/hardhat-ethers": "2.0.0",

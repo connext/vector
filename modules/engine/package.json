@@ -28,7 +28,7 @@
     "ajv": "6.12.6",
     "evt": "1.9.12",
     "pino": "6.7.0",
-    "pino-pretty": "4.3.0"
+    "pino-pretty": "4.5.0"
   },
   "devDependencies": {
     "@types/chai": "4.2.14",
