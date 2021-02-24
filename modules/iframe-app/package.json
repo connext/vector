@@ -19,7 +19,7 @@
     "react": "17.0.1",
     "react-dom": "17.0.1",
     "react-scripts": "3.4.3",
-    "typescript": "4.0.5"
+    "typescript": "4.2.2"
   },
   "scripts": {
     "start": "BROWSER=none PORT=3030 react-scripts start",
