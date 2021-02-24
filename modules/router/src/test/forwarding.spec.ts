@@ -28,6 +28,7 @@ import {
 import { AddressZero, HashZero } from "@ethersproject/constants";
 import { BigNumber } from "@ethersproject/bignumber";
 import Sinon from "sinon";
+import { getAddress } from "@ethersproject/address";
 
 import { PrismaStore } from "../services/store";
 import { forwardTransferCreation } from "../forwarding";
@@ -36,7 +37,6 @@ import * as swapService from "../services/swap";
 import * as transferService from "../services/transfer";
 import { ForwardTransferCreationError } from "../errors";
 import * as collateralService from "../services/collateral";
-import { getAddress } from "@ethersproject/address";
 
 const testName = "Forwarding";
 
@@ -132,9 +132,6 @@ describe(testName, () => {
             priceType: "hardcoded",
             toAssetId: ctx.event.transfer.meta.path[0].recipientAssetId ?? ctx.event.transfer.assetId,
             toChainId: ctx.event.transfer.meta.path[0].recipientChainId ?? ctx.event.transfer.chainId,
-            flatFee: "0",
-            gasSubsidyPercentage: 0,
-            percentageFee: 0,
           },
         ],
       });
@@ -309,7 +306,7 @@ describe(testName, () => {
       await verifySuccessfulResult(result, ctx, 0);
     });
 
-    it.only("successfully forwards a transfer creation with swaps, no cross-chain and no collateralization", async () => {
+    it("successfully forwards a transfer creation with swaps, no cross-chain and no collateralization", async () => {
       const ctx = generateDefaultTestContext();
       ctx.receiverChannel.assetIds = [getAddress(mkAddress("0xfff"))];
       ctx.receiverChannel.balances = [ctx.receiverChannel.balances[0]];
@@ -326,7 +323,6 @@ describe(testName, () => {
         chainReader,
       );
 
-      console.log("result: ", JSON.stringify(result.getError()?.toJson(), null, 2));
       await verifySuccessfulResult(result, mocked, 1);
     });
 

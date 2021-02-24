@@ -215,7 +215,6 @@ export async function forwardTransferCreation(
 
   // Check if fees should be charged
   const quoteRequired = shouldChargeFees(senderAssetId, senderChainId, recipientAssetId, recipientChainId);
-  console.log("**** quoteRequired", quoteRequired);
   if (quoteRequired.isError) {
     return cancelSenderTransferAndReturnError(
       routingId,
@@ -228,9 +227,11 @@ export async function forwardTransferCreation(
     );
   }
   if (quoteRequired.getValue()) {
+    logger.info({ quote, methodId, method }, "Quote required for transfer");
     // Enforce quote present in meta, not expired, and properly signed
-    const validateQuote = ajv.compile(NodeResponses.GetTransferQuoteSchema);
-    if (!validateQuote(quote)) {
+    const validateQuote = ajv.compile(NodeResponses.GetTransferQuoteSchema[200]);
+    const valid = validateQuote(quote);
+    if (!valid) {
       return cancelSenderTransferAndReturnError(
         routingId,
         senderTransfer,
