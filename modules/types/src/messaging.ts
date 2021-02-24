@@ -138,6 +138,22 @@ export interface IMessagingService extends IBasicMessaging {
   ): Promise<void>;
   respondToRequestCollateralMessage(inbox: string, params: Result<{ message?: string }, EngineError>): Promise<void>;
 
+  onReceiveWithdrawalQuoteMessage(
+    myPublicIdentifier: string,
+    callback: (quoteRequest: Result<EngineParams.GetWithdrawalQuote, NodeError>, from: string, inbox: string) => void,
+  ): Promise<void>;
+  sendWithdrawalQuoteMessage(
+    quoteRequest: Result<EngineParams.GetWithdrawalQuote, NodeError>,
+    to: string,
+    from: string,
+    timeout?: number,
+    numRetries?: number,
+  ): Promise<Result<NodeResponses.GetWithdrawalQuote, NodeError | MessagingError>>;
+  respondToWithdrawalQuoteMessage(
+    inbox: string,
+    quote: Result<NodeResponses.GetWithdrawalQuote, NodeError>,
+  ): Promise<void>;
+
   sendRouterConfigMessage(
     configRequest: Result<void, VectorError>,
     to: string,

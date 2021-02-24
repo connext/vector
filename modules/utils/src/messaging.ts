@@ -544,7 +544,7 @@ export class NatsMessagingService extends NatsBasicMessagingService implements I
   }
   ////////////
 
-  // QUOTE METHODS
+  // TRANSFER QUOTE METHODS
   sendTransferQuoteMessage(
     quoteRequest: Result<Omit<EngineParams.GetTransferQuote, "routerIdentifier">, VectorError>,
     to: string,
@@ -554,7 +554,7 @@ export class NatsMessagingService extends NatsBasicMessagingService implements I
   ): Promise<Result<NodeResponses.GetTransferQuote, RouterError | MessagingError>> {
     return this.sendMessageWithRetries(
       quoteRequest,
-      "quote",
+      "transfer-quote",
       to,
       from,
       timeout,
@@ -562,4 +562,43 @@ export class NatsMessagingService extends NatsBasicMessagingService implements I
       "sendTransferQuoteMessage",
     );
   }
+  ////////////
+
+  // WITHDRAWAL QUOTE METHODS
+  sendWithdrawalQuoteMessage(
+    quoteRequest: Result<EngineParams.GetWithdrawalQuote, NodeError>,
+    to: string,
+    from: string,
+    timeout?: number,
+    numRetries?: number,
+  ): Promise<Result<NodeResponses.GetWithdrawalQuote, NodeError | MessagingError>> {
+    return this.sendMessageWithRetries(
+      quoteRequest,
+      "withdrawal-quote",
+      to,
+      from,
+      timeout,
+      numRetries,
+      "sendWithdrawalQuoteMessage",
+    );
+  }
+
+  onReceiveWithdrawalQuoteMessage(
+    myPublicIdentifier: string,
+    callback: (quoteRequest: Result<EngineParams.GetWithdrawalQuote, NodeError>, from: string, inbox: string) => void,
+  ): Promise<void> {
+    return this.registerCallback(
+      `${myPublicIdentifier}.*.withdrawal-quote`,
+      callback,
+      "onReceiveWithdrawalQuoteMessage",
+    );
+  }
+
+  respondToWithdrawalQuoteMessage(
+    inbox: string,
+    quote: Result<NodeResponses.GetWithdrawalQuote, NodeError>,
+  ): Promise<void> {
+    return this.respondToMessage(inbox, quote, "respondToWithdrawalQuoteMessage");
+  }
+  ////////////
 }

@@ -65,6 +65,6 @@ export class NatsRouterMessagingService extends NatsBasicMessagingService implem
       inbox: string,
     ) => void,
   ): Promise<void> {
-    await this.registerCallback(`${publicIdentifier}.*.quote`, callback, "onReceiveTransferQuoteMessage");
+    await this.registerCallback(`${publicIdentifier}.*.transfer-quote`, callback, "onReceiveTransferQuoteMessage");
   }
 }

@@ -244,6 +244,30 @@ export class MemoryMessagingService implements IMessagingService {
     throw new Error("Method not implemented.");
   }
 
+  onReceiveWithdrawalQuoteMessage(
+    myPublicIdentifier: string,
+    callback: (quoteRequest: Result<EngineParams.GetWithdrawalQuote, NodeError>, from: string, inbox: string) => void,
+  ): Promise<void> {
+    throw new Error("Method not implemented.");
+  }
+
+  sendWithdrawalQuoteMessage(
+    quoteRequest: Result<EngineParams.GetWithdrawalQuote, NodeError>,
+    to: string,
+    from: string,
+    timeout?: number,
+    numRetries?: number,
+  ): Promise<Result<NodeResponses.GetWithdrawalQuote, NodeError | MessagingError>> {
+    throw new Error("Method not implemented.");
+  }
+
+  respondToWithdrawalQuoteMessage(
+    inbox: string,
+    quote: Result<NodeResponses.GetWithdrawalQuote, NodeError>,
+  ): Promise<void> {
+    throw new Error("Method not implemented.");
+  }
+
   async subscribe(subject: string, callback: (data: any) => void): Promise<void> {
     throw new Error("Method not implemented.");
   }
