@@ -1007,16 +1007,6 @@ describe("validateAndApplyInboundUpdate", () => {
           error: "should be number",
         },
         {
-          name: "no networkContext.providerUrl",
-          overrides: { networkContext: { ...valid.details.networkContext, providerUrl: undefined } },
-          error: "should have required property 'providerUrl'",
-        },
-        {
-          name: "invalid networkContext.providerUrl",
-          overrides: { networkContext: { ...valid.details.networkContext, providerUrl: "fail" } },
-          error: 'should match format "uri"',
-        },
-        {
           name: "no networkContext.channelFactoryAddress",
           overrides: { networkContext: { ...valid.details.networkContext, channelFactoryAddress: undefined } },
           error: "should have required property 'channelFactoryAddress'",
