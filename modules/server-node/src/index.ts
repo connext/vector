@@ -48,18 +48,10 @@ export const store = new PrismaStore();
 export const _providers = hydrateProviders(config.chainProviders);
 
 server.addHook("onReady", async () => {
-  // get persisted mnemonic
-  let storedMnemonic = await store.getMnemonic();
-  if (!storedMnemonic) {
-    logger.info("No mnemonic found in store, setting mnemonic from config");
-    await store.setMnemonic(config.mnemonic);
-    storedMnemonic = config.mnemonic;
-  }
-
   const persistedNodes = await store.getNodeIndexes();
   for (const nodeIndex of persistedNodes) {
     logger.info({ node: nodeIndex }, "Rehydrating persisted node");
-    await createNode(nodeIndex.index, store, storedMnemonic, config.skipCheckIn ?? false);
+    await createNode(nodeIndex.index, store, config.mnemonic, config.skipCheckIn ?? false);
   }
 
   // submit all withdrawals older than a week or any mainnet withdrawals when
@@ -1087,15 +1079,17 @@ server.post<{ Body: NodeParams.CreateNode }>(
   { schema: { body: NodeParams.CreateNodeSchema, response: NodeResponses.CreateNodeSchema } },
   async (request, reply) => {
     try {
-      let storedMnemonic = await store.getMnemonic();
-      if (request.body.mnemonic && request.body.mnemonic !== storedMnemonic) {
-        logger.warn({}, "Mnemonic provided, resetting stored mnemonic");
+      if (request.body.mnemonic && request.body.mnemonic !== config.mnemonic) {
+        logger.warn({ method: "/node" }, "Mnemonic provided, resetting stored mnemonic");
         // new mnemonic, reset nodes and store mnemonic
         await deleteNodes(store);
-        store.setMnemonic(request.body.mnemonic);
-        storedMnemonic = request.body.mnemonic;
       }
-      const newNode = await createNode(request.body.index, store, storedMnemonic!, request.body.skipCheckIn ?? false);
+      const newNode = await createNode(
+        request.body.index,
+        store,
+        request.body.mnemonic ?? config.mnemonic,
+        request.body.skipCheckIn ?? false,
+      );
       return reply.status(200).send({
         index: request.body.index,
         publicIdentifier: newNode.publicIdentifier,
