@@ -52,7 +52,7 @@ if (!valid) {
 
 const mnemonic = mnemonicEnv || vectorConfig.mnemonic;
 
-export const config = {
+export const config: any = {
   dbUrl,
   ...vectorConfig,
   mnemonic,

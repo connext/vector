@@ -59,7 +59,7 @@ server.addHook("onReady", async () => {
   const persistedNodes = await store.getNodeIndexes();
   for (const nodeIndex of persistedNodes) {
     logger.info({ node: nodeIndex }, "Rehydrating persisted node");
-    await createNode(nodeIndex.index, store, storedMnemonic, config.skipCheckIn ?? false);
+    await createNode(nodeIndex.index, store, storedMnemonic!, config.skipCheckIn ?? false);
   }
 
   // submit all withdrawals older than a week or any mainnet withdrawals when
@@ -86,7 +86,7 @@ server.get("/config", { schema: { response: NodeResponses.GetConfigSchema } }, a
 
 server.get<{ Params: { publicIdentifier: string } }>(
   "/:publicIdentifier/status",
-  { schema: { params: Type.Object({ publicIdentifier: TPublicIdentifier }) } },
+  { schema: { params: Type.Object({ publicIdentifier: TPublicIdentifier as any }) } },
   async (request, reply) => {
     const engine = getNode(request.params.publicIdentifier);
     if (!engine) {
@@ -1139,7 +1139,7 @@ server.post<{ Params: { chainId: string }; Body: JsonRpcRequest }>(
   },
 );
 
-const listenPort    = process.env.VECTOR_NODE_PORT    || 8000;
+const listenPort = process.env.VECTOR_NODE_PORT || 8000;
 const listenAddress = process.env.VECTOR_NODE_ADDRESS || "0.0.0.0";
 server.listen(listenPort, listenAddress, (err, address) => {
   if (err) {
