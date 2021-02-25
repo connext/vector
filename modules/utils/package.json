@@ -40,7 +40,7 @@
     "evt": "1.9.12",
     "merkletreejs": "0.2.9",
     "pino": "6.7.0",
-    "pino-pretty": "4.3.0",
+    "pino-pretty": "4.5.0",
     "ts-natsutil": "1.1.1"
   },
   "devDependencies": {
