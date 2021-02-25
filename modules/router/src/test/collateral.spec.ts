@@ -258,7 +258,9 @@ describe(testName, () => {
         ],
       });
       node.getStateChannel.resolves(Result.ok(channel));
-      node.withdraw.resolves(Result.ok({ channelAddress: channel.channelAddress, transferId: getRandomBytes32() }));
+      node.withdraw.resolves(
+        Result.ok({ channelAddress: channel.channelAddress, transferId: getRandomBytes32(), channel }),
+      );
       const res = await adjustCollateral(
         channel.channelAddress,
         AddressZero,
@@ -331,7 +333,9 @@ describe(testName, () => {
       const profile = { ...ethProfile, target: "0" };
       getRebalanceProfile.returns(Result.ok(profile));
       node.getStateChannel.resolves(Result.ok(channel));
-      node.withdraw.resolves(Result.ok({ channelAddress: channel.channelAddress, transferId: getRandomBytes32() }));
+      node.withdraw.resolves(
+        Result.ok({ channelAddress: channel.channelAddress, transferId: getRandomBytes32(), channel }),
+      );
       const res = await adjustCollateral(
         channel.channelAddress,
         AddressZero,
