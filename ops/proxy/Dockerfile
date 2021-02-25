@@ -10,7 +10,7 @@ WORKDIR /app
 COPY entry.sh /entry.sh
 COPY *.cfg /etc/haproxy/
 
-RUN apk add --no-cache bash ca-certificates certbot curl iputils openssl &&\
+RUN apk add --no-cache bash ca-certificates certbot curl iputils openssl git &&\
     curl https://raw.githubusercontent.com/vishnubob/wait-for-it/$(git ls-remote https://github.com/vishnubob/wait-for-it.git refs/heads/master | cut -f1)/wait-for-it.sh > /bin/wait-for &&\
     chmod +x /bin/wait-for &&\
     chmod +x /*.sh &&\

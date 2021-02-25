@@ -274,19 +274,19 @@ node-modules: builder package.json $(shell ls modules/*/package.json)
 
 types: node-modules $(shell find modules/types $(find_options))
 	$(log_start)
-	$(docker_run) "cd modules/types && npm install && npm audit --audit-level=moderate && npm outdated || true && npm run build"
+	$(docker_run) "cd modules/types && npm run build"
 	$(log_finish) && mv -f $(totalTime) .flags/$@
 
 utils: types $(shell find modules/utils $(find_options))
 	$(log_start)
-	$(docker_run) "cd modules/utils && npm install && npm audit --audit-level=moderate && npm outdated || true && npm run build"
+	$(docker_run) "cd modules/utils && npm run build"
 	$(log_finish) && mv -f $(totalTime) .flags/$@
 
 contracts: contracts-js
 ethprovider: contracts-img
 contracts-js: utils modules/contracts/hardhat.config.ts $(shell find modules/contracts/src.sol modules/contracts/src.ts modules/contracts/deploy $(find_options))
 	$(log_start)
-	$(docker_run) "cd modules/contracts && npm install && npm audit --audit-level=moderate && npm outdated || true && npm run build"
+	$(docker_run) "cd modules/contracts && npm run build"
 	$(log_finish) && mv -f $(totalTime) .flags/$@
 contracts-img: contracts-js $(shell find modules/contracts/ops $(find_options))
 	$(log_start)
@@ -296,27 +296,27 @@ contracts-img: contracts-js $(shell find modules/contracts/ops $(find_options))
 
 protocol: utils contracts-js $(shell find modules/protocol $(find_options))
 	$(log_start)
-	$(docker_run) "cd modules/protocol && npm install && npm audit --audit-level=moderate && npm outdated || true && npm run build"
+	$(docker_run) "cd modules/protocol && npm run build"
 	$(log_finish) && mv -f $(totalTime) .flags/$@
 
 engine: utils protocol $(shell find modules/engine $(find_options))
 	$(log_start)
-	$(docker_run) "cd modules/engine && npm install && npm audit --audit-level=moderate && npm outdated || true && npm run build"
+	$(docker_run) "cd modules/engine && npm run build"
 	$(log_finish) && mv -f $(totalTime) .flags/$@
 
 browser-node: engine $(shell find modules/browser-node $(find_options))
 	$(log_start)
-	$(docker_run) "cd modules/browser-node && npm install && npm audit --audit-level=moderate && npm outdated || true && npm run build && touch src/index.ts"
+	$(docker_run) "cd modules/browser-node && npm run build && touch src/index.ts"
 	$(log_finish) && mv -f $(totalTime) .flags/$@
 
 auth: auth-img
 auth-js: utils $(shell find modules/auth $(find_options))
 	$(log_start)
-	$(docker_run) "cd modules/auth && npm install && npm audit --audit-level=moderate && npm outdated || true && npm run build"
+	$(docker_run) "cd modules/auth && npm run build"
 	$(log_finish) && mv -f $(totalTime) .flags/$@
 auth-bundle: auth-js utils $(shell find modules/auth $(find_options))
 	$(log_start)
-	$(docker_run) "cd modules/auth && npm install && npm audit --audit-level=moderate && npm outdated || true && npm run build-bundle"
+	$(docker_run) "cd modules/auth && npm run build-bundle"
 	$(log_finish) && mv -f $(totalTime) .flags/$@
 auth-img: auth-bundle $(shell find modules/auth/ops $(find_options))
 	$(log_start)
@@ -328,7 +328,7 @@ auth-img: auth-bundle $(shell find modules/auth/ops $(find_options))
 server-node: server-node-img
 server-node-js: engine $(shell find modules/server-node/src $(find_options))
 	$(log_start)
-	$(docker_run) "cd modules/server-node && npm install && npm audit --audit-level=moderate && npm outdated || true && npm run build && touch src/index.ts"
+	$(docker_run) "cd modules/server-node && npm run build && touch src/index.ts"
 	$(log_finish) && mv -f $(totalTime) .flags/$@
 server-node-bundle: contracts-js server-node-js $(shell find modules/server-node/src $(find_options))
 	$(log_start)
@@ -342,11 +342,11 @@ server-node-img: server-node-bundle $(shell find modules/server-node/ops $(find_
 
 router-js: engine $(shell find modules/router $(find_options))
 	$(log_start)
-	$(docker_run) "cd modules/router && npm install && npm audit --audit-level=moderate && npm outdated || true && npm run build"
+	$(docker_run) "cd modules/router && npm run build"
 	$(log_finish) && mv -f $(totalTime) .flags/$@
 router-bundle: contracts-js router-js $(shell find modules/router $(find_options))
 	$(log_start)
-	$(docker_run) "cd modules/router && npm install && npm audit --audit-level=moderate && npm outdated || true && npm run build-bundle"
+	$(docker_run) "cd modules/router && npm run build-bundle"
 	$(log_finish) && mv -f $(totalTime) .flags/$@
 router-img: router-bundle $(shell find modules/router/ops $(find_options))
 	$(log_start)
@@ -357,7 +357,7 @@ router-img: router-bundle $(shell find modules/router/ops $(find_options))
 iframe-app: iframe-app-img
 iframe-app-js: browser-node $(shell find modules/iframe-app $(find_options))
 	$(log_start)
-	$(docker_run) "cd modules/iframe-app && npm install && npm audit --audit-level=moderate && npm outdated || true && npm run build"
+	$(docker_run) "cd modules/iframe-app && npm run build"
 	$(log_finish) && mv -f $(totalTime) .flags/$@
 iframe-app-img: iframe-app-js $(shell find modules/iframe-app/ops $(find_options))
 	$(log_start)
@@ -369,11 +369,11 @@ iframe-app-img: iframe-app-js $(shell find modules/iframe-app/ops $(find_options
 test-runner: test-runner-img
 test-runner-js: engine $(shell find modules/test-runner/src $(find_options))
 	$(log_start)
-	$(docker_run) "cd modules/test-runner && npm install && npm audit --audit-level=moderate && npm outdated || true && npm run build"
+	$(docker_run) "cd modules/test-runner && npm run build"
 	$(log_finish) && mv -f $(totalTime) .flags/$@
 test-runner-bundle: test-runner-js $(shell find modules/test-runner/src $(find_options))
 	$(log_start)
-	$(docker_run) "cd modules/test-runner && npm install && npm audit --audit-level=moderate && npm outdated || true && npm run build-bundle"
+	$(docker_run) "cd modules/test-runner && npm run build-bundle"
 	$(log_finish) && mv -f $(totalTime) .flags/$@
 test-runner-img: test-runner-bundle $(shell find modules/test-runner/ops $(find_options))
 	$(log_start)

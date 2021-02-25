@@ -14,10 +14,10 @@ RUN apk add --no-cache bash curl g++ gcc git jq make python2 &&\
     chmod +x /bin/wait-for &&\
     rm -rf /var/cache/apk/* /tmp/*
 
-COPY package*.json ./
+COPY package.json ./
 
-RUN npm audit --audit-level=moderate
 RUN npm install
+RUN npm audit --audit-level=moderate
 RUN npm outdated || true
 
 COPY tsconfig.json tsconfig.json
