@@ -218,12 +218,12 @@ const PostSetupBodySchema = Type.Intersect([
   Type.Object({ publicIdentifier: TPublicIdentifier }),
 ]);
 
-const PostSetupResponseSchema = TFullChannelState;
+const PostSetupResponseSchema = { 200: TFullChannelState };
 
 // POST REQUEST SETUP
 const PostRequestSetupBodySchema = PostSetupBodySchema;
 
-const PostRequestSetupResponseSchema = TFullChannelState;
+const PostRequestSetupResponseSchema = { 200: TFullChannelState };
 
 // POST DEPOSIT
 const PostDepositBodySchema = Type.Intersect([
@@ -231,7 +231,7 @@ const PostDepositBodySchema = Type.Intersect([
   Type.Object({ publicIdentifier: TPublicIdentifier }),
 ]);
 
-const PostDepositResponseSchema = TFullChannelState;
+const PostDepositResponseSchema = { 200: TFullChannelState };
 
 // POST DEPOSIT
 const PostRequestCollateralBodySchema = Type.Intersect([
@@ -239,7 +239,7 @@ const PostRequestCollateralBodySchema = Type.Intersect([
   Type.Object({ publicIdentifier: TPublicIdentifier }),
 ]);
 
-const PostRequestCollateralResponseSchema = TFullChannelState;
+const PostRequestCollateralResponseSchema = { 200: TFullChannelState };
 
 // POST SEND DEPOSIT TX
 const PostSendDepositTxBodySchema = Type.Object({
@@ -262,7 +262,14 @@ const PostConditionalTransferBodySchema = Type.Intersect([
   Type.Object({ publicIdentifier: TPublicIdentifier }),
 ]);
 
-const PostConditionalTransferResponseSchema = TFullTransferState;
+const PostConditionalTransferResponseSchema = {
+  200: {
+    channelAddress: TAddress,
+    transferId: TBytes32,
+    routingId: TBytes32,
+    channel: TFullChannelState,
+  },
+};
 
 // POST RESOLVE CONDITIONAL TRANSFER
 const PostResolveTransferBodySchema = Type.Intersect([
@@ -270,7 +277,13 @@ const PostResolveTransferBodySchema = Type.Intersect([
   Type.Object({ publicIdentifier: TPublicIdentifier }),
 ]);
 
-const PostResolveTransferResponseSchema = TFullTransferState;
+const PostResolveTransferResponseSchema = {
+  200: {
+    channelAddress: TAddress,
+    transferId: TBytes32,
+    channel: TFullChannelState,
+  },
+};
 
 // POST WITHDRAW TRANSFER
 const PostWithdrawTransferBodySchema = Type.Intersect([

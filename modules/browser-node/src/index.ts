@@ -459,6 +459,7 @@ export class BrowserNode implements INodeService {
         channelAddress: res.channel.channelAddress,
         transferId: (res.channel.latestUpdate.details as CreateUpdateDetails).transferId,
         transactionHash: res.transactionHash,
+        channel: res.channel,
       });
     } catch (e) {
       return Result.fail(e);
@@ -471,7 +472,7 @@ export class BrowserNode implements INodeService {
     try {
       const rpc = constructRpcRequest<"chan_restoreState">(ChannelRpcMethods.chan_restoreState, params);
       const res = await this.channelProvider!.send(rpc);
-      return Result.ok({ channelAddress: res.channelAddress });
+      return Result.ok(res);
     } catch (e) {
       return Result.fail(e);
     }

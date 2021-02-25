@@ -754,6 +754,7 @@ server.post<{ Body: NodeParams.ConditionalTransfer }>(
         channelAddress: res.channelAddress,
         transferId: (res.latestUpdate.details as CreateUpdateDetails).transferId,
         routingId: (res.latestUpdate.details as CreateUpdateDetails).meta?.routingId,
+        channel: res,
       } as NodeResponses.ConditionalTransfer);
     } catch (e) {
       logger.error({ error: jsonifyError(e) });
@@ -787,6 +788,7 @@ server.post<{ Body: NodeParams.ResolveTransfer }>(
       return reply.status(200).send({
         channelAddress: res.channelAddress,
         transferId: (res.latestUpdate.details as ResolveUpdateDetails).transferId,
+        channel: res,
       } as NodeResponses.ResolveTransfer);
     } catch (e) {
       logger.error({ error: jsonifyError(e) });
