@@ -82,6 +82,7 @@ export class VectorEngine implements IVectorEngine {
     chainAddresses: ChainAddresses,
     logger: pino.BaseLogger,
     skipCheckIn: boolean,
+    gasSubsidyPercentage: number,
     validationService?: IExternalValidation,
   ): Promise<VectorEngine> {
     const vector = await Vector.connect(
@@ -104,7 +105,7 @@ export class VectorEngine implements IVectorEngine {
       lock,
       logger.child({ module: "VectorEngine" }),
     );
-    await engine.setupListener();
+    await engine.setupListener(gasSubsidyPercentage);
     logger.debug({}, "Setup engine listeners");
     if (!skipCheckIn) {
       sendIsAlive(engine.signer, engine.messaging, engine.store, engine.chainService, engine.logger);
@@ -129,7 +130,7 @@ export class VectorEngine implements IVectorEngine {
   //    - yes && my withdrawal: make sure transaction hash is included in
   //      the meta (verify tx)
 
-  private async setupListener(): Promise<void> {
+  private async setupListener(gasSubsidyPercentage: number): Promise<void> {
     await setupEngineListeners(
       this.evts,
       this.chainService,
@@ -142,6 +143,7 @@ export class VectorEngine implements IVectorEngine {
       this.setup.bind(this),
       this.acquireRestoreLocks.bind(this),
       this.releaseRestoreLocks.bind(this),
+      gasSubsidyPercentage,
     );
   }
 
