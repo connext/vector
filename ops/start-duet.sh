@@ -89,7 +89,7 @@ public_url="http://localhost:$alice_port"
 node_image="image: '${project}_builder'
     entrypoint: 'bash modules/server-node/ops/entry.sh'
     volumes:
-      - '$root:/root'
+      - '$root:/app'
     tmpfs: /tmp"
 
 node_env="environment:

@@ -106,7 +106,7 @@ else
     ports:
       - '$auth_port:$auth_port'
     volumes:
-      - '$root:/root'"
+      - '$root:/app'"
   echo "${stack}_auth will be exposed on *:$auth_port"
 fi
 

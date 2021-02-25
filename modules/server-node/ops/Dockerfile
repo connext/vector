@@ -12,13 +12,12 @@ RUN apk add --no-cache bash curl g++ gcc git jq make python2 &&\
     npm config set unsafe-perm true &&\
     curl https://raw.githubusercontent.com/vishnubob/wait-for-it/$(git ls-remote https://github.com/vishnubob/wait-for-it.git refs/heads/master | cut -f1)/wait-for-it.sh > /bin/wait-for &&\
     chmod +x /bin/wait-for &&\
-    chmod +x /*.sh &&\
     rm -rf /var/cache/apk/* /tmp/*
 
 COPY ops/package.json package.json
 
-RUN npm audit --audit-level=moderate
 RUN npm install
+RUN npm audit --audit-level=moderate
 RUN npm outdated || true
 
 COPY ops ops
@@ -26,6 +25,8 @@ COPY prisma-postgres prisma-postgres
 COPY prisma-sqlite prisma-sqlite
 COPY dist dist
 COPY dist/generated/db-client /.prisma/client
+
+RUN  chmod +x ./ops/entry.sh
 
 # USER node
 

@@ -48,7 +48,7 @@ then
     --env="LOG_LEVEL=${LOG_LEVEL:-info}" \
     --env "MNEMONIC=$eth_mnemonic" \
     --mount "type=bind,source=$chain_data,target=/data" \
-    --mount "type=bind,source=$root,target=/root" \
+    --mount "type=bind,source=$root,target=/app" \
     --name "$ethprovider_host" \
     --network "$project" \
     --publish "$port:8545" \
@@ -95,5 +95,5 @@ docker run \
   --network "$project" \
   --rm \
   --tmpfs="/tmp" \
-  --volume="$root:/root" \
+  --volume="$root:/app" \
   "${project}_builder" "/test.sh" "$unit" "$cmd"

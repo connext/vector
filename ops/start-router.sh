@@ -147,13 +147,13 @@ then
   database_image_node="image: '$database_image'
     volumes:
       - 'database_node:/var/lib/postgresql/data'
-      - '$snapshots_dir_node:/root/snapshots'
+      - '$snapshots_dir_node:/postgres/snapshots'
     secrets:
       - '$db_secret'"
   database_image_router="image: '$database_image'
     volumes:
       - 'database_router:/var/lib/postgresql/data'
-      - '$snapshots_dir_router:/root/snapshots'
+      - '$snapshots_dir_router:/postgres/snapshots'
     secrets:
       - '$db_secret'"
 
@@ -188,7 +188,7 @@ else
   node_image="image: '$node_image_name'
     entrypoint: 'bash modules/server-node/ops/entry.sh'
     volumes:
-      - '$root:/root'
+      - '$root:/app'
     ports:
       - '$node_public_port:$node_internal_port'"
   echo "${stack}_node will be exposed on *:$node_public_port"
@@ -227,7 +227,7 @@ else
   router_image="image: '$router_image_name'
     entrypoint: 'bash modules/router/ops/entry.sh'
     volumes:
-      - '$root:/root'
+      - '$root:/app'
     ports:
       - '$router_public_port:$router_internal_port'"
   echo "${stack}_router will be exposed on *:$router_public_port"

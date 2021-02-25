@@ -40,8 +40,8 @@ docker run \
   --rm \
   --tmpfs="/tmp" \
   --tty \
-  --volume="$root:/root" \
-  --workdir="/root/modules/contracts" \
+  --volume="$root:/app" \
+  --workdir="/app/modules/contracts" \
   "$ethprovider_image" "${args[@]}"
 
 echo "Hardhat CLI image has been launched, printing logs & waiting for ctrl-c"
