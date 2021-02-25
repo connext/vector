@@ -902,6 +902,7 @@ export class VectorEngine implements IVectorEngine {
       channel,
       this.chainAddresses,
       this.chainService,
+      this.messaging,
     );
     if (createResult.isError) {
       return Result.fail(createResult.getError()!);

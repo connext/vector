@@ -22,6 +22,9 @@ import {
   getRandomIdentifier,
   mkAddress,
   ChannelSigner,
+  NatsMessagingService,
+  getRandomChannelSigner,
+  mkPublicIdentifier,
 } from "@connext/vector-utils";
 import { expect } from "chai";
 import Sinon from "sinon";
@@ -60,14 +63,22 @@ describe("ParamConverter", () => {
   let chainReader: Sinon.SinonStubbedInstance<VectorChainReader>;
   let signerA: Sinon.SinonStubbedInstance<ChannelSigner>;
   let signerB: Sinon.SinonStubbedInstance<ChannelSigner>;
+  // const signerA = getRandomChannelSigner();
+  // const signerB = getRandomChannelSigner();
+  let messaging: Sinon.SinonStubbedInstance<NatsMessagingService>;
 
   beforeEach(() => {
     chainReader = Sinon.createStubInstance(VectorChainReader);
     signerA = Sinon.createStubInstance(ChannelSigner);
     signerB = Sinon.createStubInstance(ChannelSigner);
+    messaging = Sinon.createStubInstance(NatsMessagingService);
 
     signerA.signMessage.resolves("success");
     signerB.signMessage.resolves("success");
+    signerA.publicIdentifier = mkPublicIdentifier("vectorAAA");
+    signerB.publicIdentifier = mkPublicIdentifier("vectorBBB");
+    signerA.address = mkAddress("0xaaa");
+    signerB.address = mkAddress("0xeee");
     chainReader.getBlockNumber.resolves(Result.ok<number>(110));
   });
 
@@ -167,7 +178,7 @@ describe("ParamConverter", () => {
       const err = ret.getError();
       expect(err?.message).to.be.eq(ParameterConversionError.reasons.CannotSendToSelf);
       expect(err?.context.channelAddress).to.be.eq(channelState.channelAddress);
-      expect(err?.context.publicIdentifier).to.be.eq(signerA.publicIdentifier);
+      expect(err?.context.publicIdentifier).to.be.eq(signerB.publicIdentifier);
       expect(err?.context.params).to.be.deep.eq(params);
     });
 
@@ -337,16 +348,17 @@ describe("ParamConverter", () => {
   });
 
   describe("convertWithdrawParams", () => {
+    const quoteFee = "3";
     const generateParams = () => {
-      return {
+      const params = {
         channelAddress: mkAddress("0xa"),
         amount: "8",
         assetId: mkAddress("0x0"),
         recipient: mkAddress("0xb"),
-        fee: "1",
         callTo: AddressZero,
         callData: "0x",
       };
+      return params;
     };
 
     beforeEach(() => {
@@ -377,9 +389,21 @@ describe("ParamConverter", () => {
           providerUrl,
         },
       });
+      if (!isUserA) {
+        messaging.sendWithdrawalQuoteMessage.resolves(
+          Result.ok({
+            channelAddress: params.channelAddress,
+            amount: params.amount,
+            assetId: params.assetId,
+            fee: quoteFee,
+            expiry: (Date.now() + 30_000).toString(),
+            signature: "success",
+          }),
+        );
+      }
       const result = isUserA
-        ? await convertWithdrawParams(params, signerA, channelState, chainAddresses, chainReader)
-        : await convertWithdrawParams(params, signerB, channelState, chainAddresses, chainReader);
+        ? await convertWithdrawParams(params, signerA, channelState, chainAddresses, chainReader, messaging)
+        : await convertWithdrawParams(params, signerB, channelState, chainAddresses, chainReader, messaging);
 
       return { channelState, result };
     };
@@ -392,10 +416,15 @@ describe("ParamConverter", () => {
     ) => {
       const withdrawHash = generateChainData(params, channelState);
       const signature = isUserA ? await signerA.signMessage(withdrawHash) : await signerB.signMessage(withdrawHash);
-      expect(result).to.deep.eq({
+      expect(result).to.containSubset({
         channelAddress: channelState.channelAddress,
         balance: {
-          amount: [BigNumber.from(params.amount).add(params.fee).toString(), "0"],
+          amount: [
+            BigNumber.from(params.amount)
+              .add(isUserA ? "0" : quoteFee)
+              .toString(),
+            "0",
+          ],
           to: isUserA
             ? [getAddress(params.recipient), channelState.bob]
             : [getAddress(params.recipient), channelState.alice],
@@ -404,19 +433,35 @@ describe("ParamConverter", () => {
         transferDefinition: withdrawRegisteredInfo.definition,
         transferInitialState: {
           initiatorSignature: signature,
-          initiator: signerA.address,
-          responder: signerB.address,
+          initiator: isUserA ? signerA.address : signerB.address,
+          responder: isUserA ? signerB.address : signerA.address,
           data: withdrawHash,
           nonce: channelState.nonce.toString(),
-          fee: params.fee ?? "0",
+          fee: isUserA ? "0" : quoteFee,
           callTo: params.callTo ?? AddressZero,
           callData: params.callData ?? "0x",
         },
         timeout: DEFAULT_TRANSFER_TIMEOUT.toString(),
         meta: {
           withdrawNonce: channelState.nonce.toString(),
+          quote: isUserA
+            ? {
+                channelAddress: params.channelAddress,
+                amount: params.amount,
+                assetId: params.assetId,
+                fee: "0",
+              }
+            : {
+                channelAddress: params.channelAddress,
+                amount: params.amount,
+                assetId: params.assetId,
+                fee: "3",
+              },
         },
       });
+      if (!isUserA) {
+        expect(result.meta.quote.signature).to.be.ok;
+      }
     };
 
     it("should fail if signer fails to sign message", async () => {
@@ -427,6 +472,7 @@ describe("ParamConverter", () => {
       expect(result.isError).to.be.true;
       expect(result.getError()).to.contain(new Error(`${signerA.publicIdentifier} failed to sign: fail`));
     });
+
     it("should fail if it cannot get registry information", async () => {
       const params = generateParams();
       const chainErr = new ChainError("Failure");
@@ -444,52 +490,38 @@ describe("ParamConverter", () => {
 
     const users = ["A", "B"];
     for (const user of users) {
-      let isUserA = false;
-      if (user === "A") {
-        isUserA = true;
-      }
+      const isUserA = user === "A";
       const baseParams = generateParams();
 
       describe(`should work for ${user}`, () => {
-        it("should work with provided params.fee", async () => {
-          const params = { ...baseParams, fee: "2" };
-
-          const { channelState, result } = await testSetup(params, true);
-
-          await runTest(params, channelState, result.getValue(), isUserA);
-        });
-        it("should work without provided params.fee", async () => {
-          const params = { ...baseParams, fee: undefined };
-
-          const { channelState, result } = await testSetup(params, true);
-          const expectedParams = { ...baseParams, fee: "0" };
-          await runTest(expectedParams, channelState, result.getValue(), isUserA);
-        });
         it("should work with provided params.callTo", async () => {
           const params = { ...baseParams, callTo: AddressZero };
 
-          const { channelState, result } = await testSetup(params, true);
+          const { channelState, result } = await testSetup(params, isUserA);
 
           await runTest(params, channelState, result.getValue(), isUserA);
         });
+
         it("should work without provided params.callTo", async () => {
           const params = { ...baseParams, callTo: undefined };
 
-          const { channelState, result } = await testSetup(params, true);
+          const { channelState, result } = await testSetup(params, isUserA);
           const expectedParams = { ...baseParams, callTo: AddressZero };
           await runTest(expectedParams, channelState, result.getValue(), isUserA);
         });
+
         it("should work with provided params.callData", async () => {
           const params = { ...baseParams, callData: "0x" };
 
-          const { channelState, result } = await testSetup(params, true);
+          const { channelState, result } = await testSetup(params, isUserA);
 
           await runTest(params, channelState, result.getValue(), isUserA);
         });
+
         it("should work without provided params.callData", async () => {
           const params = { ...baseParams, callData: undefined };
 
-          const { channelState, result } = await testSetup(params, true);
+          const { channelState, result } = await testSetup(params, isUserA);
 
           const expectedParams = { ...baseParams, callData: "0x" };
           await runTest(expectedParams, channelState, result.getValue(), isUserA);

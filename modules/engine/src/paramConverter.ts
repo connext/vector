@@ -17,6 +17,7 @@ import {
   IVectorChainReader,
   EngineError,
   jsonifyError,
+  IMessagingService,
 } from "@connext/vector-types";
 import { BigNumber } from "@ethersproject/bignumber";
 import { AddressZero } from "@ethersproject/constants";
@@ -134,8 +135,9 @@ export async function convertWithdrawParams(
   channel: FullChannelState,
   chainAddresses: ChainAddresses,
   chainReader: IVectorChainReader,
+  messaging: IMessagingService,
 ): Promise<Result<CreateTransferParams, EngineError>> {
-  const { channelAddress, fee, callTo, callData, meta } = params;
+  const { channelAddress, callTo, callData, meta } = params;
   const assetId = getAddress(params.assetId);
   const recipient = getAddress(params.recipient);
 
@@ -151,8 +153,57 @@ export async function convertWithdrawParams(
     );
   }
 
+  // If it is a no-op, throw
+  const noCall = !callTo || callTo === AddressZero;
+  if (params.amount === "0" && noCall) {
+    return Result.fail(
+      new ParameterConversionError(ParameterConversionError.reasons.NoOp, channelAddress, signer.publicIdentifier, {
+        params,
+      }),
+    );
+  }
+
+  // If you are not alice, request a quote
+  const quote =
+    signer.publicIdentifier !== channel.aliceIdentifier
+      ? await messaging.sendWithdrawalQuoteMessage(
+          Result.ok({ channelAddress: channel.channelAddress, amount: params.amount, assetId: params.assetId }),
+          channel.aliceIdentifier,
+          signer.publicIdentifier,
+        )
+      : Result.ok({
+          // use hardcoded values
+          channelAddress: channel.channelAddress,
+          amount: params.amount,
+          assetId: params.assetId,
+          fee: "0",
+          expiry: (Date.now() + 30_000).toString(),
+        });
+
+  if (quote.isError) {
+    return Result.fail(
+      new ParameterConversionError(
+        ParameterConversionError.reasons.CouldNotGetQuote,
+        channelAddress,
+        signer.publicIdentifier,
+        { params, quoteError: jsonifyError(quote.getError()!) },
+      ),
+    );
+  }
+  const fee = BigNumber.from(quote.getValue().fee);
+  if (fee.gte(params.amount)) {
+    return Result.fail(
+      new ParameterConversionError(
+        ParameterConversionError.reasons.FeeGreaterThanWithdrawal,
+        channelAddress,
+        signer.publicIdentifier,
+        { params, quote },
+      ),
+    );
+  }
+
   // If there is a fee being charged, add the fee to the amount.
-  const amount = fee ? BigNumber.from(params.amount).add(fee).toString() : params.amount;
+  const amount = fee.add(params.amount).toString();
 
   const commitment = new WithdrawCommitment(
     channel.channelAddress,
@@ -194,7 +245,7 @@ export async function convertWithdrawParams(
     responder: channelCounterparty,
     data: commitment.hashToSign(),
     nonce: channel.nonce.toString(),
-    fee: fee ?? "0",
+    fee: fee.toString(),
     callTo: callTo ?? AddressZero,
     callData: callData ?? "0x",
   };
@@ -230,6 +281,7 @@ export async function convertWithdrawParams(
     // Note: we MUST include withdrawNonce in meta. The counterparty will NOT have the same nonce on their end otherwise.
     meta: {
       ...(meta ?? {}),
+      quote: quote.getValue(),
       withdrawNonce: channel.nonce.toString(),
     },
   });
