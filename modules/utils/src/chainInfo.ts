@@ -16,9 +16,7 @@ export const getChainInfo = async (chainId: number): Promise<ChainInfo> => {
       const chainInfo: ChainInfo[] = await fetchJson(CHAIN_INFO_URL);
       chain = chainInfo!.find((info) => info.chainId === chainId);
     }
-  } catch (e) {
-    console.warn(`Could not fetch chain info`);
-  }
+  } catch (e) {}
   return chain;
 };
 

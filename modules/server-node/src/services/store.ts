@@ -36,8 +36,6 @@ export interface IServerNodeStore extends IEngineStore {
   registerSubscription<T extends EngineEvent>(publicIdentifier: string, event: T, url: string): Promise<void>;
   getSubscription<T extends EngineEvent>(publicIdentifier: string, event: T): Promise<string | undefined>;
   getSubscriptions(publicIdentifier: string): Promise<{ [event: string]: string }>;
-  setMnemonic(mnemonic: string): Promise<void>;
-  getMnemonic(): Promise<string | undefined>;
   setNodeIndex(index: number, publicIdentifier: string): Promise<void>;
   getNodeIndexes(): Promise<{ index: number; publicIdentifier: string }[]>;
   removeNodeIndexes(): Promise<void>;
@@ -1126,29 +1124,6 @@ export class PrismaStore implements IServerNodeStore {
     }
 
     return transfers.map(convertTransferEntityToFullTransferState);
-  }
-
-  async setMnemonic(mnemonic: string): Promise<void> {
-    await this.prisma.configuration.upsert({
-      where: {
-        id: 0,
-      },
-      create: {
-        id: 0,
-        mnemonic,
-      },
-      update: {
-        mnemonic,
-      },
-    });
-  }
-
-  async getMnemonic(): Promise<string | undefined> {
-    const config = await this.prisma.configuration.findUnique({ where: { id: 0 } });
-    if (!config) {
-      return undefined;
-    }
-    return config.mnemonic;
   }
 
   async setNodeIndex(index: number, publicIdentifier: string): Promise<void> {

@@ -197,7 +197,6 @@ model OnchainTransaction {
 
 model Configuration {
   id       Int    @id
-  mnemonic String @unique
 
   @@map(name: "configuration")
 }
