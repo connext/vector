@@ -18,7 +18,7 @@ try {
 
 // Set defaults
 vectorConfig.messagingUrl = vectorConfig.messagingUrl || "http://messaging";
-vectorConfig.gasSubsidyPercentage = vectorConfig.gasSubsidyPercentage ?? 100;
+vectorConfig.baseGasSubsidyPercentage = vectorConfig.baseGasSubsidyPercentage ?? 100;
 
 // Pull live network addresses out of public deployments if not provided explicitly
 for (const chainId of Object.keys(vectorConfig.chainProviders)) {
