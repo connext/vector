@@ -34,5 +34,5 @@ docker run \
   --network "$project" \
   --rm \
   --tmpfs="/tmp" \
-  --volume="$root:/root" \
+  --volume="$root:/app" \
   "${project}_builder" -c "cd ./modules/test-ui && npm start"
