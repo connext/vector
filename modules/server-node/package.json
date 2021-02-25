@@ -47,7 +47,7 @@
     "mocha": "8.2.0",
     "nodemon": "2.0.6",
     "nyc": "15.1.0",
-    "pino-pretty": "4.3.0",
+    "pino-pretty": "4.5.0",
     "ts-loader": "8.0.7",
     "ts-mocha": "8.0.0",
     "ts-node": "9.0.0",

@@ -4,6 +4,6 @@
   "dependencies": {
     "ethers": "5.0.21",
     "hardhat": "2.0.5",
-    "pino-pretty": "4.3.0"
+    "pino-pretty": "4.5.0"
   }
 }
