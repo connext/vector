@@ -482,7 +482,7 @@ export async function forwardTransferResolution(
 
   logger.info({ method, methodId }, "Method complete");
   return Result.ok({
-    ...resolution.getValue(),
+    ...resolution.getValue() as any,
     assetId: incomingTransfer.assetId,
   });
 }

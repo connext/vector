@@ -246,7 +246,7 @@ describe(testName, () => {
       node.getStateChannelByParticipants.resolves(Result.ok(receiverChannel));
       node.conditionalTransfer.resolves(Result.ok({} as any));
       node.sendDepositTx.resolves(Result.ok({ txHash: getRandomBytes32() }));
-      node.reconcileDeposit.resolves(Result.ok({ channelAddress: data.channelAddress }));
+      node.reconcileDeposit.resolves(Result.ok(senderChannel));
 
       store = Sinon.createStubInstance(PrismaStore);
 

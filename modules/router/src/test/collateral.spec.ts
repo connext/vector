@@ -35,7 +35,7 @@ describe(testName, () => {
     node = Sinon.createStubInstance(RestServerNodeService);
     node.conditionalTransfer.resolves(Result.ok({} as any));
     node.sendDepositTx.resolves(Result.ok({ txHash: getRandomBytes32() }));
-    node.reconcileDeposit.resolves(Result.ok({ channelAddress: mkAddress() }));
+    node.reconcileDeposit.resolves(Result.ok(createTestChannelState("deposit").channel));
 
     chainReader = Sinon.createStubInstance(VectorChainReader);
     chainReader.getTotalDepositedA.resolves(Result.ok(BigNumber.from(0)));

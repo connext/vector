@@ -225,7 +225,7 @@ export async function setupListeners(
           "Error forwarding resolution",
         );
       }
-      const resolved = res.getValue();
+      const resolved: any = res.getValue();
       if (!!resolved) {
         // was not queued, use receiver transfer for values
         const amount = BigNumber.from(data.transfer.balance.amount[0]).add(data.transfer.balance.amount[1]);
