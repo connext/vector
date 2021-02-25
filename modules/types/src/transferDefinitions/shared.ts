@@ -55,7 +55,6 @@ export type RegisteredTransfer = {
   encodedCancel: string;
 };
 
-export type TransferQuote = Omit<NodeResponses.GetTransferQuote, "signature">;
 export const TransferQuoteEncoding = tidy(`tuple(
   string routerIdentifier,
   uint256 amount,

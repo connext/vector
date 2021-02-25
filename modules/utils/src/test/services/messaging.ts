@@ -240,7 +240,7 @@ export class MemoryMessagingService implements IMessagingService {
     from: string,
     timeout?: number,
     numRetries?: number,
-  ): Promise<Result<NodeResponses.GetTransferQuote, RouterError | MessagingError>> {
+  ): Promise<Result<NodeResponses.TransferQuote, RouterError | MessagingError>> {
     throw new Error("Method not implemented.");
   }
 
@@ -257,13 +257,13 @@ export class MemoryMessagingService implements IMessagingService {
     from: string,
     timeout?: number,
     numRetries?: number,
-  ): Promise<Result<NodeResponses.GetWithdrawalQuote, NodeError | MessagingError>> {
+  ): Promise<Result<NodeResponses.WithdrawalQuote, NodeError | MessagingError>> {
     throw new Error("Method not implemented.");
   }
 
   respondToWithdrawalQuoteMessage(
     inbox: string,
-    quote: Result<NodeResponses.GetWithdrawalQuote, NodeError>,
+    quote: Result<NodeResponses.WithdrawalQuote, NodeError>,
   ): Promise<void> {
     throw new Error("Method not implemented.");
   }

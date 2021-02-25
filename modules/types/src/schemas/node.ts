@@ -13,8 +13,9 @@ import {
   TFullChannelState,
   TChainId,
   AllowedSwapSchema,
-  TSignature,
   TContractAddresses,
+  TransferQuoteSchema,
+  WithdrawalQuoteSchema,
 } from "./basic";
 
 ////////////////////////////////////////
@@ -41,45 +42,27 @@ const BasicTransferServerResponseSchema = {
 };
 
 // GET WITHDRAWAL QUOTE
-const GetWithdrawalQuoteParamsSchema = Type.Intersect([
+const PostWithdrawalQuoteParamsSchema = Type.Intersect([
   EngineParams.GetWithdrawalQuoteSchema,
   Type.Object({
     publicIdentifier: TPublicIdentifier,
   }),
 ]);
 
-const GetWithdrawalQuoteResponseSchema = {
-  200: Type.Object({
-    channelAddress: TAddress,
-    amount: TIntegerString,
-    assetId: TAddress,
-    fee: TIntegerString,
-    expiry: TIntegerString,
-    signature: TSignature,
-  }),
+const PostWithdrawalQuoteResponseSchema = {
+  200: WithdrawalQuoteSchema,
 };
 
 // GET TRANSFER QUOTE
-const GetTransferQuoteParamsSchema = Type.Intersect([
+const PostTransferQuoteParamsSchema = Type.Intersect([
   EngineParams.GetTransferQuoteSchema,
   Type.Object({
     publicIdentifier: TPublicIdentifier,
   }),
 ]);
 
-const GetTransferQuoteResponseSchema = {
-  200: Type.Object({
-    routerIdentifier: TPublicIdentifier,
-    amount: TIntegerString,
-    assetId: TAddress,
-    chainId: TChainId,
-    recipient: TPublicIdentifier,
-    recipientChainId: TChainId,
-    recipientAssetId: TAddress,
-    fee: TIntegerString,
-    expiry: TIntegerString,
-    signature: TSignature,
-  }),
+const PostTransferQuoteResponseSchema = {
+  200: TransferQuoteSchema,
 };
 
 // GET ROUTER CONFIG
@@ -493,11 +476,11 @@ export namespace NodeParams {
   export const GetStatusSchema = Type.Object({});
   export type GetStatus = Static<typeof GetStatusSchema>;
 
-  export const GetWithdrawalQuoteSchema = GetWithdrawalQuoteParamsSchema;
-  export type GetWithdrawalQuote = Static<typeof GetWithdrawalQuoteParamsSchema>;
+  export const WithdrawalQuoteSchema = PostWithdrawalQuoteParamsSchema;
+  export type WithdrawalQuote = Static<typeof PostWithdrawalQuoteParamsSchema>;
 
-  export const GetTransferQuoteSchema = GetTransferQuoteParamsSchema;
-  export type GetTransferQuote = Static<typeof GetTransferQuoteParamsSchema>;
+  export const TransferQuoteSchema = PostTransferQuoteParamsSchema;
+  export type TransferQuote = Static<typeof PostTransferQuoteParamsSchema>;
 
   export const GetRouterConfigSchema = GetRouterConfigParamsSchema;
   export type GetRouterConfig = Static<typeof GetRouterConfigParamsSchema>;
@@ -601,11 +584,11 @@ export namespace NodeParams {
 
 // eslint-disable-next-line @typescript-eslint/no-namespace
 export namespace NodeResponses {
-  export const GetWithdrawalQuoteSchema = GetWithdrawalQuoteResponseSchema;
-  export type GetWithdrawalQuote = Static<typeof GetWithdrawalQuoteResponseSchema["200"]>;
+  export const WithdrawalQuoteSchema = PostWithdrawalQuoteResponseSchema;
+  export type WithdrawalQuote = Static<typeof PostWithdrawalQuoteResponseSchema["200"]>;
 
-  export const GetTransferQuoteSchema = GetTransferQuoteResponseSchema;
-  export type GetTransferQuote = Static<typeof GetTransferQuoteResponseSchema["200"]>;
+  export const TransferQuoteSchema = PostTransferQuoteResponseSchema;
+  export type TransferQuote = Static<typeof PostTransferQuoteResponseSchema["200"]>;
 
   export const GetRouterConfigSchema = GetRouterConfigResponseSchema;
   export type GetRouterConfig = Static<typeof GetRouterConfigResponseSchema["200"]>;

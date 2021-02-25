@@ -281,8 +281,8 @@ export class BrowserNode implements INodeService {
   }
 
   async getTransferQuote(
-    params: OptionalPublicIdentifier<NodeParams.GetTransferQuote>,
-  ): Promise<Result<NodeResponses.GetTransferQuote, BrowserNodeError>> {
+    params: OptionalPublicIdentifier<NodeParams.TransferQuote>,
+  ): Promise<Result<NodeResponses.TransferQuote, BrowserNodeError>> {
     try {
       const rpc = constructRpcRequest<"chan_getTransferQuote">(ChannelRpcMethods.chan_getTransferQuote, params);
       const res = await this.channelProvider!.send(rpc);
@@ -463,8 +463,8 @@ export class BrowserNode implements INodeService {
   }
 
   async getWithdrawalQuote(
-    params: OptionalPublicIdentifier<NodeParams.GetWithdrawalQuote>,
-  ): Promise<Result<NodeResponses.GetWithdrawalQuote, BrowserNodeError>> {
+    params: OptionalPublicIdentifier<NodeParams.WithdrawalQuote>,
+  ): Promise<Result<NodeResponses.WithdrawalQuote, BrowserNodeError>> {
     try {
       const rpc = constructRpcRequest<"chan_getWithdrawalQuote">(ChannelRpcMethods.chan_getWithdrawalQuote, params);
       const res = await this.channelProvider!.send(rpc);

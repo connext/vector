@@ -229,7 +229,7 @@ export async function forwardTransferCreation(
   if (quoteRequired.getValue()) {
     logger.info({ quote, methodId, method }, "Quote required for transfer");
     // Enforce quote present in meta, not expired, and properly signed
-    const validateQuote = ajv.compile(NodeResponses.GetTransferQuoteSchema[200]);
+    const validateQuote = ajv.compile(NodeResponses.TransferQuoteSchema[200]);
     const valid = validateQuote(quote);
     if (!valid) {
       return cancelSenderTransferAndReturnError(

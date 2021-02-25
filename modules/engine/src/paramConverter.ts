@@ -164,33 +164,38 @@ export async function convertWithdrawParams(
   }
 
   // If you are not alice, request a quote
-  const quote =
-    signer.publicIdentifier !== channel.aliceIdentifier
-      ? await messaging.sendWithdrawalQuoteMessage(
-          Result.ok({ channelAddress: channel.channelAddress, amount: params.amount, assetId: params.assetId }),
-          channel.aliceIdentifier,
-          signer.publicIdentifier,
-        )
-      : Result.ok({
-          // use hardcoded values
-          channelAddress: channel.channelAddress,
-          amount: params.amount,
-          assetId: params.assetId,
-          fee: "0",
-          expiry: (Date.now() + 30_000).toString(),
-        });
+  let quote = params.quote;
+  if (!quote) {
+    const quoteRes =
+      signer.publicIdentifier !== channel.aliceIdentifier
+        ? await messaging.sendWithdrawalQuoteMessage(
+            Result.ok({ channelAddress: channel.channelAddress, amount: params.amount, assetId: params.assetId }),
+            channel.aliceIdentifier,
+            signer.publicIdentifier,
+          )
+        : Result.ok({
+            // use hardcoded values
+            channelAddress: channel.channelAddress,
+            amount: params.amount,
+            assetId: params.assetId,
+            fee: "0",
+            expiry: (Date.now() + 30_000).toString(),
+          });
 
-  if (quote.isError) {
-    return Result.fail(
-      new ParameterConversionError(
-        ParameterConversionError.reasons.CouldNotGetQuote,
-        channelAddress,
-        signer.publicIdentifier,
-        { params, quoteError: jsonifyError(quote.getError()!) },
-      ),
-    );
+    if (quoteRes.isError) {
+      return Result.fail(
+        new ParameterConversionError(
+          ParameterConversionError.reasons.CouldNotGetQuote,
+          channelAddress,
+          signer.publicIdentifier,
+          { params, quoteError: jsonifyError(quoteRes.getError()!) },
+        ),
+      );
+    }
+    quote = quoteRes.getValue();
   }
-  const fee = BigNumber.from(quote.getValue().fee);
+
+  const fee = BigNumber.from(quote.fee);
   if (fee.gte(params.amount)) {
     return Result.fail(
       new ParameterConversionError(
@@ -281,7 +286,7 @@ export async function convertWithdrawParams(
     // Note: we MUST include withdrawNonce in meta. The counterparty will NOT have the same nonce on their end otherwise.
     meta: {
       ...(meta ?? {}),
-      quote: quote.getValue(),
+      quote,
       withdrawNonce: channel.nonce.toString(),
     },
   });

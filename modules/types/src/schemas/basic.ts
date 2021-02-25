@@ -180,3 +180,28 @@ export const TFullChannelState = Type.Object({
 });
 
 export type TFullChannelState = Static<typeof TFullChannelState>;
+
+// Quote schemas
+export const TransferQuoteSchema = Type.Object({
+  routerIdentifier: TPublicIdentifier,
+  amount: TIntegerString,
+  assetId: TAddress,
+  chainId: TChainId,
+  recipient: TPublicIdentifier,
+  recipientChainId: TChainId,
+  recipientAssetId: TAddress,
+  fee: TIntegerString,
+  expiry: TIntegerString,
+  signature: Type.Optional(TSignature),
+});
+export type TransferQuote = Static<typeof TransferQuoteSchema>;
+
+export const WithdrawalQuoteSchema = Type.Object({
+  channelAddress: TAddress,
+  amount: TIntegerString,
+  assetId: TAddress,
+  fee: TIntegerString,
+  expiry: TIntegerString,
+  signature: Type.Optional(TSignature),
+});
+export type WithdrawalQuote = Static<typeof WithdrawalQuoteSchema>;

@@ -15,14 +15,14 @@ export interface IRouterMessagingService extends IBasicMessaging {
   onReceiveTransferQuoteMessage(
     publicIdentifier: string,
     callback: (
-      quoteRequest: Result<Omit<NodeParams.GetTransferQuote, "routerIdentifier">, RouterError | MessagingError>,
+      quoteRequest: Result<Omit<NodeParams.TransferQuote, "routerIdentifier">, RouterError | MessagingError>,
       from: string,
       inbox: string,
     ) => void,
   ): Promise<void>;
   respondToTransferQuoteMessage(
     inbox: string,
-    response: Result<NodeResponses.GetTransferQuote, RouterError | MessagingError>,
+    response: Result<NodeResponses.TransferQuote, RouterError | MessagingError>,
   ): Promise<void>;
 }
 
@@ -52,7 +52,7 @@ export class NatsRouterMessagingService extends NatsBasicMessagingService implem
   // Transfer Quote messages
   respondToTransferQuoteMessage(
     inbox: string,
-    response: Result<NodeResponses.GetTransferQuote, RouterError | MessagingError>,
+    response: Result<NodeResponses.TransferQuote, RouterError | MessagingError>,
   ): Promise<void> {
     return this.respondToMessage(inbox, response, "respondToTransferQuoteMessage");
   }
@@ -60,7 +60,7 @@ export class NatsRouterMessagingService extends NatsBasicMessagingService implem
   async onReceiveTransferQuoteMessage(
     publicIdentifier: string,
     callback: (
-      quoteRequest: Result<NodeParams.GetTransferQuote, RouterError | MessagingError>,
+      quoteRequest: Result<NodeParams.TransferQuote, RouterError | MessagingError>,
       from: string,
       inbox: string,
     ) => void,

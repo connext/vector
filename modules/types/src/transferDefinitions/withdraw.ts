@@ -49,7 +49,6 @@ export type WithdrawCommitmentJson = {
   transactionHash?: string;
 };
 
-export type WithdrawalQuote = Omit<NodeResponses.GetWithdrawalQuote, "signature">;
 export const WithdrawalQuoteEncoding = tidy(`tuple(
   address channelAddress,
   uint256 amount,

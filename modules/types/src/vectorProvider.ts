@@ -89,8 +89,8 @@ export type ChannelRpcMethodsResponsesMap = {
   [ChannelRpcMethods.chan_signUtilityMessage]: string;
   [ChannelRpcMethods.chan_getConfig]: NodeResponses.GetConfig;
   [ChannelRpcMethods.chan_getRouterConfig]: NodeResponses.GetRouterConfig;
-  [ChannelRpcMethods.chan_getTransferQuote]: NodeResponses.GetTransferQuote;
-  [ChannelRpcMethods.chan_getWithdrawalQuote]: NodeResponses.GetWithdrawalQuote;
+  [ChannelRpcMethods.chan_getTransferQuote]: NodeResponses.TransferQuote;
+  [ChannelRpcMethods.chan_getWithdrawalQuote]: NodeResponses.WithdrawalQuote;
   [ChannelRpcMethods.chan_getStatus]: NodeResponses.GetStatus;
   [ChannelRpcMethods.chan_sendIsAlive]: NodeResponses.SendIsAlive;
   [ChannelRpcMethods.chan_getChannelState]: FullChannelState | undefined;

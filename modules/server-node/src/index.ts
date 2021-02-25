@@ -736,12 +736,12 @@ server.post<{ Body: NodeParams.RequestCollateral }>(
   },
 );
 
-server.post<{ Body: NodeParams.GetTransferQuote }>(
+server.post<{ Body: NodeParams.TransferQuote }>(
   "/transfers/quote",
   {
     schema: {
-      body: NodeParams.GetTransferQuoteSchema,
-      response: NodeResponses.GetTransferQuoteSchema,
+      body: NodeParams.TransferQuoteSchema,
+      response: NodeResponses.TransferQuoteSchema,
     },
   },
   async (request, reply) => {
@@ -1015,12 +1015,12 @@ server.post<{ Body: NodeParams.Admin }>(
   },
 );
 
-server.post<{ Body: NodeParams.GetWithdrawalQuote }>(
+server.post<{ Body: NodeParams.WithdrawalQuote }>(
   "/withdraw/quote",
   {
     schema: {
-      body: NodeParams.GetWithdrawalQuoteSchema,
-      response: NodeResponses.GetWithdrawalQuoteSchema,
+      body: NodeParams.WithdrawalQuoteSchema,
+      response: NodeResponses.WithdrawalQuoteSchema,
     },
   },
   async (request, reply) => {

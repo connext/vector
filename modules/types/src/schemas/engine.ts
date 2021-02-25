@@ -12,6 +12,7 @@ import {
   TChainId,
   TIntegerString,
   TransferResolverSchema,
+  WithdrawalQuoteSchema,
 } from "./basic";
 
 ////////////////////////////////////////
@@ -144,6 +145,7 @@ const WithdrawParamsSchema = Type.Object({
   amount: TIntegerString,
   assetId: TAddress,
   recipient: TAddress,
+  quote: Type.Optional(WithdrawalQuoteSchema),
   callTo: Type.Optional(TAddress),
   callData: Type.Optional(Type.String()),
   meta: Type.Optional(TBasicMeta),

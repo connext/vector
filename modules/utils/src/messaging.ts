@@ -551,7 +551,7 @@ export class NatsMessagingService extends NatsBasicMessagingService implements I
     from: string,
     timeout?: number,
     numRetries?: number,
-  ): Promise<Result<NodeResponses.GetTransferQuote, RouterError | MessagingError>> {
+  ): Promise<Result<NodeResponses.TransferQuote, RouterError | MessagingError>> {
     return this.sendMessageWithRetries(
       quoteRequest,
       "transfer-quote",
@@ -571,7 +571,7 @@ export class NatsMessagingService extends NatsBasicMessagingService implements I
     from: string,
     timeout?: number,
     numRetries?: number,
-  ): Promise<Result<NodeResponses.GetWithdrawalQuote, NodeError | MessagingError>> {
+  ): Promise<Result<NodeResponses.WithdrawalQuote, NodeError | MessagingError>> {
     return this.sendMessageWithRetries(
       quoteRequest,
       "withdrawal-quote",
@@ -596,7 +596,7 @@ export class NatsMessagingService extends NatsBasicMessagingService implements I
 
   respondToWithdrawalQuoteMessage(
     inbox: string,
-    quote: Result<NodeResponses.GetWithdrawalQuote, NodeError>,
+    quote: Result<NodeResponses.WithdrawalQuote, NodeError>,
   ): Promise<void> {
     return this.respondToMessage(inbox, quote, "respondToWithdrawalQuoteMessage");
   }
