@@ -786,7 +786,7 @@ async function handleWithdrawalTransferCreation(
   chainAddresses: ChainAddresses,
   chainService: IVectorChainService,
   logger: Pino.BaseLogger,
-  gasSubsidyPecentage: number,
+  gasSubsidyPercentage: number,
 ): Promise<void> {
   const isWithdrawRes = await isWithdrawTransfer(event.updatedTransfer!, chainAddresses, chainService);
   if (isWithdrawRes.isError) {
@@ -808,7 +808,7 @@ async function handleWithdrawalTransferCreation(
     signer,
     chainService,
     logger,
-    gasSubsidyPecentage,
+    gasSubsidyPercentage,
   );
 }
 

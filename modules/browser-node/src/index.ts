@@ -17,7 +17,6 @@ import {
   FullChannelState,
   DEFAULT_CHANNEL_TIMEOUT,
   GetTransfersFilterOpts,
-  ChannelRpcMethod,
 } from "@connext/vector-types";
 import { constructRpcRequest, hydrateProviders, NatsMessagingService } from "@connext/vector-utils";
 import pino, { BaseLogger } from "pino";
@@ -139,6 +138,7 @@ export class BrowserNode implements INodeService {
       config.chainAddresses!,
       config.logger.child({ module: "VectorEngine" }),
       false,
+      100,
     );
     node.channelProvider = new DirectProvider(engine);
     node.publicIdentifier = config.signer.publicIdentifier;

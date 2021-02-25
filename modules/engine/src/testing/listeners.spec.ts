@@ -247,7 +247,7 @@ describe(testName, () => {
       signer: IChannelSigner = bob,
       withdrawer: IChannelSigner = alice,
       withdrawalRecipient: Address = alice.address,
-      gasSubsidyPecentage = 100,
+      gasSubsidyPercentage = 100,
     ) => {
       // Create the withdrawal data
       // Responder is always the withdrawer's counterparty
@@ -306,7 +306,7 @@ describe(testName, () => {
         () => Promise.resolve(Result.ok({} as any)),
         acquireRestoreLockStub,
         releaseRestoreLockStub,
-        gasSubsidyPecentage,
+        gasSubsidyPercentage,
       );
 
       // Create a promise that will resolve once the event is emitted
