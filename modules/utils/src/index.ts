@@ -16,6 +16,7 @@ export * from "./hexStrings";
 export * from "./identifiers";
 export * from "./json";
 export * from "./lock";
+export * from "./fees";
 export * from "./math";
 export * from "./merkle";
 export * from "./messaging";

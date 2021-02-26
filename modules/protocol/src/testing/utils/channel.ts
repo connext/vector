@@ -88,7 +88,6 @@ export const setupChannel = async (alice: IVectorProtocol, bob: IVectorProtocol)
     timeout: DEFAULT_CHANNEL_TIMEOUT.toString(),
     networkContext: {
       chainId,
-      providerUrl: Object.values(env.chainProviders)[0] as string,
       channelFactoryAddress: env.chainAddresses[chainId].channelFactoryAddress,
       transferRegistryAddress: env.chainAddresses[chainId].transferRegistryAddress,
     },

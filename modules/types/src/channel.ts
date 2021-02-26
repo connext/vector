@@ -170,7 +170,6 @@ export type ContractAddresses = {
 
 export type NetworkContext = ContractAddresses & {
   chainId: number;
-  providerUrl: string;
 };
 
 export type ChannelUpdate<T extends UpdateType = any> = {

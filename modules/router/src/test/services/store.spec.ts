@@ -2,7 +2,9 @@ import { DEFAULT_TRANSFER_TIMEOUT, NodeParams, TransferNames } from "@connext/ve
 import { expect, getRandomBytes32, mkAddress, mkPublicIdentifier } from "@connext/vector-utils";
 
 import { PrismaStore, RouterUpdateStatus, RouterUpdateType } from "../../services/store";
-import { config } from "../../config";
+import { getConfig } from "../../config";
+
+const config = getConfig();
 
 describe("Router store", () => {
   let store: PrismaStore;

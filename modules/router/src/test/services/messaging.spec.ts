@@ -3,7 +3,9 @@ import pino from "pino";
 import { IChannelSigner, Result } from "@connext/vector-types";
 
 import { NatsRouterMessagingService } from "../../services/messaging";
-import { config } from "../../config";
+import { getConfig } from "../../config";
+
+const config = getConfig();
 
 describe("messaging.ts", () => {
   const { log: logger } = getTestLoggers("messaging", "trace" as pino.Level);

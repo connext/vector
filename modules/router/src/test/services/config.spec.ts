@@ -1,8 +1,10 @@
 import { expect, mkAddress } from "@connext/vector-utils";
 
-import { config } from "../../config";
+import { getConfig } from "../../config";
 import { ConfigServiceError } from "../../errors";
 import { getRebalanceProfile } from "../../services/config";
+
+const config = getConfig();
 
 describe("config.ts", () => {
   const chainId = parseInt(Object.keys(config.chainProviders)[0]);

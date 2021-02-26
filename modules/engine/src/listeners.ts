@@ -20,7 +20,6 @@ import {
   WithdrawalCreatedPayload,
   WithdrawalResolvedPayload,
   WITHDRAWAL_RECONCILED_EVENT,
-  WithdrawState,
   IVectorChainReader,
   REQUEST_COLLATERAL_EVENT,
   ChannelRpcMethods,
@@ -33,13 +32,23 @@ import {
   IS_ALIVE_EVENT,
   Values,
   jsonifyError,
+  GAS_ESTIMATES,
 } from "@connext/vector-types";
-import { getRandomBytes32 } from "@connext/vector-utils";
+import {
+  getRandomBytes32,
+  TESTNETS_WITH_FEES,
+  normalizeFee,
+  hashWithdrawalQuote,
+  recoverAddressFromChannelMessage,
+  safeJsonStringify,
+  mkSig,
+} from "@connext/vector-utils";
 import { getAddress } from "@ethersproject/address";
 import { BigNumber } from "@ethersproject/bignumber";
+import { Zero } from "@ethersproject/constants";
 import Pino, { BaseLogger } from "pino";
 
-import { IsAliveError, RestoreError } from "./errors";
+import { IsAliveError, RestoreError, WithdrawQuoteError } from "./errors";
 
 import { EngineEvtContainer } from "./index";
 
@@ -57,6 +66,7 @@ export async function setupEngineListeners(
   ) => Promise<Result<ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_setup], EngineError>>,
   acquireRestoreLocks: (channel: FullChannelState) => Promise<Result<void, EngineError>>,
   releaseRestoreLocks: (channel: FullChannelState) => Promise<Result<void, EngineError>>,
+  gasSubsidyPercentage: number,
 ): Promise<void> {
   // Set up listener for channel setup
   vector.on(
@@ -119,7 +129,17 @@ export async function setupEngineListeners(
   vector.on(
     ProtocolEventName.CHANNEL_UPDATE_EVENT,
     async (event) =>
-      await handleWithdrawalTransferCreation(event, signer, vector, store, evts, chainAddresses, chainService, logger),
+      await handleWithdrawalTransferCreation(
+        event,
+        signer,
+        vector,
+        store,
+        evts,
+        chainAddresses,
+        chainService,
+        logger,
+        gasSubsidyPercentage,
+      ),
     (event) => {
       const {
         updatedChannelState: {
@@ -305,7 +325,17 @@ export async function setupEngineListeners(
       // handle hanging withdrawals
       // do NOT await this -- could involve 2+ onchain transactions:
       // one to deploy a channel and one to submit tx for each commitment
-      resolveExistingWithdrawals(channel, signer, store, vector, chainAddresses, chainService, evts, logger);
+      resolveExistingWithdrawals(
+        channel,
+        signer,
+        store,
+        vector,
+        chainAddresses,
+        chainService,
+        evts,
+        logger,
+        gasSubsidyPercentage,
+      );
 
       // respond if necessary
       if (!needsResponse) {
@@ -356,6 +386,134 @@ export async function setupEngineListeners(
     );
   });
 
+  await messaging.onReceiveWithdrawalQuoteMessage(signer.publicIdentifier, async (quoteRequest, from, inbox) => {
+    const method = "onReceiveWithdrawalQuoteMessage";
+    const methodId = getRandomBytes32();
+    logger.info({ method, methodId, quoteRequest: quoteRequest.toJson() }, "Method started");
+    if (quoteRequest.isError) {
+      logger.error({ error: quoteRequest.getError()?.message, method, methodId }, "Error received");
+      return;
+    }
+    const request = quoteRequest.getValue();
+    logger.info({ ...request, method, methodId }, "Calculating quote");
+
+    // Get channel from store
+    const channel = await store.getChannelState(request.channelAddress);
+    if (!channel) {
+      await messaging.respondToWithdrawalQuoteMessage(
+        inbox,
+        Result.fail(
+          new WithdrawQuoteError(WithdrawQuoteError.reasons.ChannelNotFound, signer.publicIdentifier, request),
+        ),
+      );
+      return;
+    }
+
+    // First check to see if the channel is deployed
+    const code = await chainService.getCode(request.channelAddress, channel.networkContext.chainId);
+    if (code.isError) {
+      await messaging.respondToWithdrawalQuoteMessage(
+        inbox,
+        Result.fail(
+          new WithdrawQuoteError(WithdrawQuoteError.reasons.ChainServiceFailure, signer.publicIdentifier, request, {
+            chainServiceMethod: "getCode",
+            error: jsonifyError(code.getError()!),
+          }),
+        ),
+      );
+      return;
+    }
+
+    const gasEstimate =
+      code.getValue() !== "0x" ? GAS_ESTIMATES.withdraw : GAS_ESTIMATES.withdraw.add(GAS_ESTIMATES.createChannel);
+
+    // Get the gas price
+    const gasPrice = await chainService.getGasPrice(channel.networkContext.chainId);
+    if (gasPrice.isError) {
+      await messaging.respondToWithdrawalQuoteMessage(
+        inbox,
+        Result.fail(
+          new WithdrawQuoteError(WithdrawQuoteError.reasons.ChainServiceFailure, signer.publicIdentifier, request, {
+            chainServiceMethod: "getGasPrice",
+            error: jsonifyError(gasPrice.getError()!),
+          }),
+        ),
+      );
+      return;
+    }
+
+    // Get the fee in eth
+    const ethFee = gasEstimate.mul(gasPrice.getValue());
+    logger.info({ ethFee: ethFee.toString(), method, methodId }, "Estimated gas fee");
+
+    // Convert ethFee to price in given `assetId`
+    const assetDecimals = await chainService.getDecimals(request.assetId, channel.networkContext.chainId);
+    if (assetDecimals.isError) {
+      await messaging.respondToWithdrawalQuoteMessage(
+        inbox,
+        Result.fail(
+          new WithdrawQuoteError(WithdrawQuoteError.reasons.ChainServiceFailure, signer.publicIdentifier, request, {
+            chainServiceMethod: "getDecimals",
+            error: jsonifyError(assetDecimals.getError()!),
+          }),
+        ),
+      );
+      return;
+    }
+
+    const normalizedFee =
+      channel.networkContext.chainId === 1 || TESTNETS_WITH_FEES.includes(channel.networkContext.chainId) // fromAsset MUST be on mainnet or hardcoded
+        ? await normalizeFee(
+            ethFee,
+            18,
+            request.assetId,
+            assetDecimals.getValue(),
+            channel.networkContext.chainId,
+            chainService,
+            logger,
+          )
+        : Result.ok(Zero);
+
+    if (normalizedFee.isError) {
+      await messaging.respondToWithdrawalQuoteMessage(
+        inbox,
+        Result.fail(
+          new WithdrawQuoteError(WithdrawQuoteError.reasons.ExchangeRateError, signer.publicIdentifier, request, {
+            error: jsonifyError(normalizedFee.getError()!),
+          }),
+        ),
+      );
+      return;
+    }
+    logger.info(
+      { normalizedFee: normalizedFee.toString(), assetId: request.assetId, method, methodId },
+      "Withdrawal fee",
+    );
+
+    // Sign the quote + return to user
+    const quote = {
+      channelAddress: request.channelAddress,
+      amount: request.amount,
+      assetId: request.assetId,
+      fee: normalizedFee.getValue().toString(),
+      expiry: (Date.now() + 30_000).toString(),
+    };
+    try {
+      const signature = await signer.signMessage(hashWithdrawalQuote(quote));
+      await messaging.respondToWithdrawalQuoteMessage(inbox, Result.ok({ ...quote, signature }));
+    } catch (e) {
+      await messaging.respondToWithdrawalQuoteMessage(
+        inbox,
+        Result.fail(
+          new WithdrawQuoteError(WithdrawQuoteError.reasons.SignatureFailure, signer.publicIdentifier, request, {
+            error: jsonifyError(e),
+          }),
+        ),
+      );
+    }
+    logger.info({ quote, method, methodId }, "Method complete");
+  });
+
   ////////////////////////////
   /// CHAIN SERVICE EVENTS
   chainService.on(EngineEvents.TRANSACTION_SUBMITTED, (data) => {
@@ -383,6 +541,7 @@ export async function resolveExistingWithdrawals(
   chainService: IVectorChainService,
   evts: EngineEvtContainer,
   logger: BaseLogger,
+  gasSubsidyPercentage: number,
 ): Promise<void> {
   const method = "resolveExistingWithdrawals";
   const methodId = getRandomBytes32();
@@ -405,7 +564,17 @@ export async function resolveExistingWithdrawals(
   await Promise.all(
     withdrawalsToComplete.map(async (transfer) => {
       logger.info({ method, methodId, transfer: transfer!.transferId }, "Found withdrawal to handle");
-      await resolveWithdrawal(channel, transfer!, vector, evts, store, signer, chainService, logger);
+      await resolveWithdrawal(
+        channel,
+        transfer!,
+        vector,
+        evts,
+        store,
+        signer,
+        chainService,
+        logger,
+        gasSubsidyPercentage,
+      );
       logger.info({ method, methodId, transfer: transfer!.transferId }, "Resolved withdrawal");
     }),
   );
@@ -617,6 +786,7 @@ async function handleWithdrawalTransferCreation(
   chainAddresses: ChainAddresses,
   chainService: IVectorChainService,
   logger: Pino.BaseLogger,
+  gasSubsidyPercentage: number,
 ): Promise<void> {
   const isWithdrawRes = await isWithdrawTransfer(event.updatedTransfer!, chainAddresses, chainService);
   if (isWithdrawRes.isError) {
@@ -638,6 +808,7 @@ async function handleWithdrawalTransferCreation(
     signer,
     chainService,
     logger,
+    gasSubsidyPercentage,
   );
 }
 
@@ -843,6 +1014,7 @@ export const resolveWithdrawal = async (
   signer: IChannelSigner,
   chainService: IVectorChainService,
   logger: BaseLogger,
+  gasSubsidyPercentage: number,
 ): Promise<void> => {
   const method = "resolveWithdrawal";
   const methodId = getRandomBytes32();
@@ -865,27 +1037,26 @@ export const resolveWithdrawal = async (
 
   // Get the recipient + amount from the transfer state
   const {
-    nonce,
-    initiatorSignature,
-    fee,
-    initiator,
-    responder,
-    callTo,
-    callData,
-  } = transfer.transferState as WithdrawState;
+    meta,
+    assetId,
+    balance,
+    initiatorIdentifier,
+    transferId,
+    transferState: { nonce, initiatorSignature, fee, initiator, responder, callTo, callData },
+  } = transfer;
 
-  const withdrawalAmount = transfer.balance.amount.reduce((prev, curr) => prev.add(curr), BigNumber.from(0)).sub(fee);
+  const withdrawalAmount = balance.amount.reduce((prev, curr) => prev.add(curr), BigNumber.from(0)).sub(fee);
   logger.debug({ withdrawalAmount: withdrawalAmount.toString(), initiator, responder, fee }, "Withdrawal info");
 
   // Post to evt
-  const assetIdx = assetIds.findIndex((a) => getAddress(a) === getAddress(transfer.assetId));
+  const assetIdx = assetIds.findIndex((a) => getAddress(a) === getAddress(assetId));
   const payload: WithdrawalCreatedPayload = {
     aliceIdentifier,
     bobIdentifier,
-    assetId: transfer.assetId,
+    assetId,
     amount: withdrawalAmount.toString(),
     fee,
-    recipient: transfer.balance.to[0],
+    recipient: balance.to[0],
     channelBalance: balances[assetIdx],
     channelAddress,
     transfer,
@@ -895,9 +1066,66 @@ export const resolveWithdrawal = async (
   evts[EngineEvents.WITHDRAWAL_CREATED].post(payload);
 
   // If it is not from counterparty, do not respond
-  if (transfer.initiatorIdentifier === signer.publicIdentifier) {
+  if (initiatorIdentifier === signer.publicIdentifier) {
     logger.info({ method }, "Waiting for counterparty sig");
     return;
+  }
+
+  // Verify fee is present, signed correctly, and not expired IFF configured and
+  // channel is on proper chain
+  const relevantChain = transfer.chainId === 1 || TESTNETS_WITH_FEES.includes(transfer.chainId);
+  if (gasSubsidyPercentage !== 100 && signer.address === channelState.alice && relevantChain) {
+    const cancelWithdrawal = async (cancellationReason: string) => {
+      const resolveRes = await vector.resolve({
+        transferResolver: { responderSignature: mkSig("0x0") },
+        transferId,
+        channelAddress,
+        meta: { ...(meta ?? {}), cancellationReason },
+      });
+
+      // Handle the error
+      if (resolveRes.isError) {
+        logger.error(
+          {
+            method,
+            error: resolveRes.getError()!.message,
+            transferId,
+            channelAddress,
+            transactionHash,
+          },
+          "Failed to cancel withdrawal",
+        );
+        return;
+      }
+    };
+    // configured
+    const { quote } = meta ?? {};
+    if (!quote) {
+      // cancel withdrawal
+      await cancelWithdrawal("Missing withdrawal quote");
+      return;
+    }
+    if (parseInt(quote.expiry) < Date.now()) {
+      await cancelWithdrawal("Withdrawal quote expired, please retry");
+      return;
+    }
+    try {
+      const recreated = {
+        channelAddress: transfer.channelAddress,
+        amount: withdrawalAmount.toString(),
+        assetId,
+        fee,
+        expiry: quote.expiry,
+      };
+      const recovered = await recoverAddressFromChannelMessage(quote.signature, hashWithdrawalQuote(recreated));
+      if (recovered !== channelState.alice) {
+        throw new Error(`Got ${recovered} expected ${channelState.alice} on ${safeJsonStringify(recreated)}`);
+      }
+    } catch (e) {
+      await cancelWithdrawal(`Withdrawal quote recovery failed: ${e.message}`);
+      return;
+    }
+    logger.info({ quote, method, methodId }, "Withdrawal fees verified");
   }
 
   // TODO: should inject validation to make sure that a withdrawal transfer
@@ -906,8 +1134,8 @@ export const resolveWithdrawal = async (
     channelAddress,
     alice,
     bob,
-    transfer.balance.to[0],
-    transfer.assetId,
+    balance.to[0],
+    assetId,
     withdrawalAmount.toString(),
     nonce,
     callTo,
@@ -945,7 +1173,7 @@ export const resolveWithdrawal = async (
         aliceIdentifier,
         bobIdentifier,
         channelAddress,
-        transferId: transfer.transferId,
+        transferId,
         transactionHash,
       });
     } else {
@@ -959,12 +1187,12 @@ export const resolveWithdrawal = async (
 
   // Resolve withdrawal from counterparty
   // See note above re: fees + injected validation
-  const meta = { transactionHash, ...(transfer.meta ?? {}) };
+  const resolveMeta = { transactionHash, ...(meta ?? {}) };
   const resolveRes = await vector.resolve({
     transferResolver: { responderSignature },
-    transferId: transfer.transferId,
+    transferId,
     channelAddress,
-    meta,
+    meta: resolveMeta,
   });
 
   // Handle the error
@@ -973,7 +1201,7 @@ export const resolveWithdrawal = async (
       {
         method,
         error: resolveRes.getError()!.message,
-        transferId: transfer.transferId,
+        transferId,
         channelAddress,
         transactionHash,
       },

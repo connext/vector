@@ -445,8 +445,8 @@ export class EthereumChainReader implements IVectorChainReader {
     if (chainId === 1) {
       try {
         const gasNowResponse = await axios.get(`https://www.gasnow.org/api/v3/gas/price`);
-        const { fast } = gasNowResponse.data;
-        gasPrice = typeof fast !== "undefined" ? BigNumber.from(fast) : undefined;
+        const { rapid } = gasNowResponse.data;
+        gasPrice = typeof rapid !== "undefined" ? BigNumber.from(rapid) : undefined;
       } catch (e) {
         this.log.warn({ error: e }, "Gasnow failed, using provider");
       }
@@ -505,6 +505,19 @@ export class EthereumChainReader implements IVectorChainReader {
           ? await provider.getBalance(balanceOf)
           : await new Contract(assetId, ERC20Abi, provider).balanceOf(balanceOf);
       return Result.ok(onchainBalance);
+    } catch (e) {
+      return Result.fail(e);
+    }
+  }
+
+  async getDecimals(assetId: string, chainId: number): Promise<Result<number, ChainError>> {
+    const provider = this.chainProviders[chainId];
+    if (!provider) {
+      return Result.fail(new ChainError(ChainError.reasons.ProviderNotFound));
+    }
+    try {
+      const decimals = assetId === AddressZero ? 18 : await new Contract(assetId, ERC20Abi, provider).decimals();
+      return Result.ok(decimals);
     } catch (e) {
       return Result.fail(e);
     }

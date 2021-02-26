@@ -71,6 +71,7 @@ server.get("/config", { schema: { response: NodeResponses.GetConfigSchema } }, a
         index: node.index,
         publicIdentifier: node.node.publicIdentifier,
         signerAddress: node.node.signerAddress,
+        chainAddresses: config.chainAddresses,
       };
     }),
   );
@@ -727,6 +728,37 @@ server.post<{ Body: NodeParams.RequestCollateral }>(
   },
 );
 
+server.post<{ Body: NodeParams.TransferQuote }>(
+  "/transfers/quote",
+  {
+    schema: {
+      body: NodeParams.TransferQuoteSchema,
+      response: NodeResponses.TransferQuoteSchema,
+    },
+  },
+  async (request, reply) => {
+    const engine = getNode(request.body.publicIdentifier);
+    if (!engine) {
+      return reply
+        .status(400)
+        .send(
+          jsonifyError(
+            new ServerNodeError(ServerNodeError.reasons.NodeNotFound, request.body.publicIdentifier, request.body),
+          ),
+        );
+    }
+
+    const rpc = constructRpcRequest(ChannelRpcMethods.chan_getTransferQuote, request.body);
+    try {
+      const res = await engine.request<typeof ChannelRpcMethods.chan_getTransferQuote>(rpc);
+      return reply.status(200).send(res);
+    } catch (e) {
+      logger.error({ error: jsonifyError(e) });
+      return reply.status(500).send(jsonifyError(e));
+    }
+  },
+);
+
 server.post<{ Body: NodeParams.ConditionalTransfer }>(
   "/transfers/create",
   {
@@ -971,6 +1003,37 @@ server.post<{ Body: NodeParams.Admin }>(
           storeError: e.message,
         }).toJson(),
       );
+    }
+  },
+);
+
+server.post<{ Body: NodeParams.WithdrawalQuote }>(
+  "/withdraw/quote",
+  {
+    schema: {
+      body: NodeParams.WithdrawalQuoteSchema,
+      response: NodeResponses.WithdrawalQuoteSchema,
+    },
+  },
+  async (request, reply) => {
+    const engine = getNode(request.body.publicIdentifier);
+    if (!engine) {
+      return reply
+        .status(400)
+        .send(
+          jsonifyError(
+            new ServerNodeError(ServerNodeError.reasons.NodeNotFound, request.body.publicIdentifier, request.body),
+          ),
+        );
+    }
+
+    const rpc = constructRpcRequest(ChannelRpcMethods.chan_getWithdrawalQuote, request.body);
+    try {
+      const res = await engine.request<typeof ChannelRpcMethods.chan_getWithdrawalQuote>(rpc);
+      return reply.status(200).send(res);
+    } catch (e) {
+      logger.error({ error: jsonifyError(e) });
+      return reply.status(500).send(jsonifyError(e));
     }
   },
 );

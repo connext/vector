@@ -9,7 +9,6 @@ import {
   Values,
   NodeError,
   GetTransfersFilterOpts,
-  EngineEvents,
 } from "@connext/vector-types";
 import Ajv from "ajv";
 import Axios from "axios";
@@ -103,7 +102,7 @@ export class RestServerNodeService implements INodeService {
       `${publicIdentifer ?? this.publicIdentifier}/status`,
       "get",
       {},
-      NodeParams.GetConfigSchema,
+      NodeParams.GetStatusSchema,
     );
   }
 
@@ -376,6 +375,12 @@ export class RestServerNodeService implements INodeService {
     );
   }
 
+  getTransferQuote(
+    params: OptionalPublicIdentifier<NodeParams.TransferQuote>,
+  ): Promise<Result<NodeResponses.TransferQuote, NodeError>> {
+    return this.executeHttpRequest(`transfers/quote`, "post", params, NodeParams.TransferQuoteSchema);
+  }
+
   async conditionalTransfer(
     params: OptionalPublicIdentifier<NodeParams.ConditionalTransfer>,
   ): Promise<Result<NodeResponses.ConditionalTransfer, ServerNodeServiceError>> {
@@ -398,10 +403,16 @@ export class RestServerNodeService implements INodeService {
     );
   }
 
-  async withdraw(
+  withdraw(
     params: OptionalPublicIdentifier<NodeParams.Withdraw>,
   ): Promise<Result<NodeResponses.Withdraw, ServerNodeServiceError>> {
     return this.executeHttpRequest<NodeResponses.Withdraw>(`withdraw`, "post", params, NodeParams.WithdrawSchema);
+  }
+
+  getWithdrawalQuote(
+    params: OptionalPublicIdentifier<NodeParams.WithdrawalQuote>,
+  ): Promise<Result<NodeResponses.WithdrawalQuote, NodeError>> {
+    throw new Error("not implemented");
   }
 
   signUtilityMessage(

@@ -1,6 +1,6 @@
 import { Type, Static } from "@sinclair/typebox";
 
-import { TBytes32, TAddress, TChainId, TPublicIdentifier } from "./basic";
+import { TBytes32, TAddress, TChainId, TPublicIdentifier, TransferQuoteSchema } from "./basic";
 
 ////////////////////////////////////////
 // Router Schemas
@@ -27,6 +27,7 @@ const TRoutingMeta = Type.Object({
   routingId: TBytes32,
   requireOnline: Type.Boolean(),
   path: Type.Array(TPathSchema),
+  quote: Type.Optional(TransferQuoteSchema),
 });
 
 // Namespace exports

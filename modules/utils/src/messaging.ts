@@ -12,9 +12,9 @@ import {
   VectorError,
   MessagingError,
   ProtocolError,
-  RouterConfigResponse,
   IBasicMessaging,
   RouterError,
+  NodeResponses,
 } from "@connext/vector-types";
 import axios, { AxiosResponse } from "axios";
 import pino, { BaseLogger } from "pino";
@@ -531,7 +531,7 @@ export class NatsMessagingService extends NatsBasicMessagingService implements I
     from: string,
     timeout?: number,
     numRetries?: number,
-  ): Promise<Result<RouterConfigResponse, RouterError | MessagingError>> {
+  ): Promise<Result<NodeResponses.GetRouterConfig, RouterError | MessagingError>> {
     return this.sendMessageWithRetries(
       configRequest,
       "config",
@@ -541,6 +541,64 @@ export class NatsMessagingService extends NatsBasicMessagingService implements I
       numRetries,
       "sendRouterConfigMessage",
     );
+  }
+  ////////////
+
+  // TRANSFER QUOTE METHODS
+  sendTransferQuoteMessage(
+    quoteRequest: Result<Omit<EngineParams.GetTransferQuote, "routerIdentifier">, VectorError>,
+    to: string,
+    from: string,
+    timeout?: number,
+    numRetries?: number,
+  ): Promise<Result<NodeResponses.TransferQuote, RouterError | MessagingError>> {
+    return this.sendMessageWithRetries(
+      quoteRequest,
+      "transfer-quote",
+      to,
+      from,
+      timeout,
+      numRetries,
+      "sendTransferQuoteMessage",
+    );
+  }
+  ////////////
+
+  // WITHDRAWAL QUOTE METHODS
+  sendWithdrawalQuoteMessage(
+    quoteRequest: Result<EngineParams.GetWithdrawalQuote, NodeError>,
+    to: string,
+    from: string,
+    timeout?: number,
+    numRetries?: number,
+  ): Promise<Result<NodeResponses.WithdrawalQuote, NodeError | MessagingError>> {
+    return this.sendMessageWithRetries(
+      quoteRequest,
+      "withdrawal-quote",
+      to,
+      from,
+      timeout,
+      numRetries,
+      "sendWithdrawalQuoteMessage",
+    );
+  }
+
+  onReceiveWithdrawalQuoteMessage(
+    myPublicIdentifier: string,
+    callback: (quoteRequest: Result<EngineParams.GetWithdrawalQuote, NodeError>, from: string, inbox: string) => void,
+  ): Promise<void> {
+    return this.registerCallback(
+      `${myPublicIdentifier}.*.withdrawal-quote`,
+      callback,
+      "onReceiveWithdrawalQuoteMessage",
+    );
+  }
+
+  respondToWithdrawalQuoteMessage(
+    inbox: string,
+    quote: Result<NodeResponses.WithdrawalQuote, NodeError>,
+  ): Promise<void> {
+    return this.respondToMessage(inbox, quote, "respondToWithdrawalQuoteMessage");
   }
   ////////////
 }

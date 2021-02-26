@@ -55,6 +55,7 @@
     "nyc": "15.1.0",
     "pino-pretty": "4.5.0",
     "prisma": "2.16.1",
+    "sinon": "9.2.1",
     "ts-loader": "8.0.7",
     "ts-mocha": "8.0.0",
     "ts-node": "9.0.0",
