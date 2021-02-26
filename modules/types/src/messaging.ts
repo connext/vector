@@ -1,7 +1,7 @@
 import { ChannelUpdate, FullChannelState, FullTransferState } from "./channel";
 import { EngineError, NodeError, MessagingError, ProtocolError, Result, RouterError, VectorError } from "./error";
 import { LockInformation } from "./lock";
-import { AllowedSwap, EngineParams } from "./schemas";
+import { EngineParams, NodeResponses } from "./schemas";
 
 export type CheckInInfo = { channelAddress: string };
 export type CheckInResponse = {
@@ -9,11 +9,6 @@ export type CheckInResponse = {
   bobIdentifier: string;
   chainId: number;
   channelAddress: string;
-};
-
-export type RouterConfigResponse = {
-  supportedChains: number[];
-  allowedSwaps: AllowedSwap[];
 };
 
 // All basic NATS messaging services
@@ -27,6 +22,7 @@ export interface IBasicMessaging {
   request(subject: string, timeout: number, data: any): Promise<any>;
 }
 
+type TransferQuoteRequest = Omit<EngineParams.GetTransferQuote, "routerIdentifier">;
 export interface IMessagingService extends IBasicMessaging {
   onReceiveLockMessage(
     myPublicIdentifier: string,
@@ -143,11 +139,34 @@ export interface IMessagingService extends IBasicMessaging {
   ): Promise<void>;
   respondToRequestCollateralMessage(inbox: string, params: Result<{ message?: string }, EngineError>): Promise<void>;
 
+  onReceiveWithdrawalQuoteMessage(
+    myPublicIdentifier: string,
+    callback: (quoteRequest: Result<EngineParams.GetWithdrawalQuote, NodeError>, from: string, inbox: string) => void,
+  ): Promise<void>;
+  sendWithdrawalQuoteMessage(
+    quoteRequest: Result<EngineParams.GetWithdrawalQuote, NodeError>,
+    to: string,
+    from: string,
+    timeout?: number,
+    numRetries?: number,
+  ): Promise<Result<NodeResponses.WithdrawalQuote, NodeError | MessagingError>>;
+  respondToWithdrawalQuoteMessage(
+    inbox: string,
+    quote: Result<NodeResponses.WithdrawalQuote, NodeError>,
+  ): Promise<void>;
+
   sendRouterConfigMessage(
     configRequest: Result<void, VectorError>,
     to: string,
     from: string,
     timeout?: number,
     numRetries?: number,
-  ): Promise<Result<RouterConfigResponse, RouterError | MessagingError>>;
+  ): Promise<Result<NodeResponses.GetRouterConfig, RouterError | MessagingError>>;
+  sendTransferQuoteMessage(
+    quoteRequest: Result<TransferQuoteRequest, VectorError>,
+    to: string,
+    from: string,
+    timeout?: number,
+    numRetries?: number,
+  ): Promise<Result<NodeResponses.TransferQuote, RouterError | MessagingError>>;
 }

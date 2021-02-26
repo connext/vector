@@ -1,5 +1,5 @@
 import { BaseLogger } from "pino";
-import { INodeService, IVectorChainReader } from "@connext/vector-types";
+import { INodeService, IVectorChainReader, IChannelSigner, ChainAddresses } from "@connext/vector-types";
 
 import { setupListeners } from "./listener";
 import { IRouterStore } from "./services/store";
@@ -11,8 +11,8 @@ export interface IRouter {
 
 export class Router implements IRouter {
   constructor(
-    private readonly publicIdentifier: string,
-    private readonly signerAddress: string,
+    private readonly signer: IChannelSigner,
+    private readonly chainAddresses: ChainAddresses,
     private readonly nodeService: INodeService,
     private readonly chainReader: IVectorChainReader,
     private readonly store: IRouterStore,
@@ -21,23 +21,15 @@ export class Router implements IRouter {
   ) {}
 
   static async connect(
-    publicIdentifier: string,
-    signerAddress: string,
+    signer: IChannelSigner,
+    chainAddresses: ChainAddresses,
     nodeService: INodeService,
     chainReader: IVectorChainReader,
     store: IRouterStore,
     messagingService: IRouterMessagingService,
     logger: BaseLogger,
   ): Promise<Router> {
-    const router = new Router(
-      publicIdentifier,
-      signerAddress,
-      nodeService,
-      chainReader,
-      store,
-      messagingService,
-      logger,
-    );
+    const router = new Router(signer, chainAddresses, nodeService, chainReader, store, messagingService, logger);
     await router.startup();
     logger.info("Vector Router connected 🚀");
     return router;
@@ -46,8 +38,8 @@ export class Router implements IRouter {
   async startup(): Promise<void> {
     await this.messagingService.connect();
     await setupListeners(
-      this.publicIdentifier,
-      this.signerAddress,
+      this.signer,
+      this.chainAddresses,
       this.nodeService,
       this.store,
       this.chainReader,

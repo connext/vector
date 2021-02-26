@@ -9,6 +9,14 @@ import { TransactionEvent, TransactionEventMap } from "./event";
 import { ChainProviders, HydratedProviders } from "./network";
 import { RegisteredTransfer, TransferName, TransferState, WithdrawCommitmentJson } from "./transferDefinitions";
 
+export const GAS_ESTIMATES = {
+  createChannelAndDepositAlice: BigNumber.from(250_000),
+  createChannel: BigNumber.from(250_000),
+  depositAlice: BigNumber.from(75_000),
+  depositBob: BigNumber.from(50_000),
+  withdraw: BigNumber.from(100_000),
+};
+
 export const ERC20Abi = [
   // Read-Only Functions
   "function balanceOf(address owner) view returns (uint256)",
@@ -99,6 +107,8 @@ export interface IVectorChainReader {
   getChannelFactoryBytecode(channelFactoryAddress: string, chainId: number): Promise<Result<string, ChainError>>;
 
   getChannelMastercopyAddress(channelFactoryAddress: string, chainId: number): Promise<Result<string, ChainError>>;
+
+  getDecimals(assetId: string, chainId: number): Promise<Result<number, ChainError>>;
 
   getChannelAddress(
     initiator: string,

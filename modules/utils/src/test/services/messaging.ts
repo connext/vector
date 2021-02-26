@@ -11,8 +11,8 @@ import {
   EngineParams,
   VectorError,
   ProtocolError,
-  RouterConfigResponse,
   RouterError,
+  NodeResponses,
 } from "@connext/vector-types";
 import { Evt } from "evt";
 
@@ -230,8 +230,42 @@ export class MemoryMessagingService implements IMessagingService {
     from: string,
     timeout?: number,
     numRetries?: number,
-  ): Promise<Result<RouterConfigResponse, RouterError | MessagingError>> {
+  ): Promise<Result<NodeResponses.GetRouterConfig, RouterError | MessagingError>> {
     throw new Error("Method not implemented");
+  }
+
+  sendTransferQuoteMessage(
+    quoteRequest: Result<Omit<EngineParams.GetTransferQuote, "routerIdentifier">, VectorError>,
+    to: string,
+    from: string,
+    timeout?: number,
+    numRetries?: number,
+  ): Promise<Result<NodeResponses.TransferQuote, RouterError | MessagingError>> {
+    throw new Error("Method not implemented.");
+  }
+
+  onReceiveWithdrawalQuoteMessage(
+    myPublicIdentifier: string,
+    callback: (quoteRequest: Result<EngineParams.GetWithdrawalQuote, NodeError>, from: string, inbox: string) => void,
+  ): Promise<void> {
+    throw new Error("Method not implemented.");
+  }
+
+  sendWithdrawalQuoteMessage(
+    quoteRequest: Result<EngineParams.GetWithdrawalQuote, NodeError>,
+    to: string,
+    from: string,
+    timeout?: number,
+    numRetries?: number,
+  ): Promise<Result<NodeResponses.WithdrawalQuote, NodeError | MessagingError>> {
+    throw new Error("Method not implemented.");
+  }
+
+  respondToWithdrawalQuoteMessage(
+    inbox: string,
+    quote: Result<NodeResponses.WithdrawalQuote, NodeError>,
+  ): Promise<void> {
+    throw new Error("Method not implemented.");
   }
 
   async subscribe(subject: string, callback: (data: any) => void): Promise<void> {

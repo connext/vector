@@ -88,6 +88,9 @@ export class ForwardTransferCreationError extends RouterError {
     StoredUpdateError: "Error in stored update",
     ReceiverOffline: "Recipient was not online, could not forward",
     FailedToCancelSenderTransfer: "Could not cancel sender transfer",
+    FeeError: "Could not calculate fee",
+    ConfigError: "Error with config",
+    QuoteError: "Error with provided quote",
   } as const;
 
   readonly context: ForwardTransferCreationErrorContext;
@@ -147,7 +150,10 @@ export class CheckInError extends RouterError {
   static readonly type = "CheckInError";
 
   static readonly reasons = {
+    CouldNotGetActiveTransfers: "Failed to get active transfers",
     CouldNotGetChannel: "Could not get channel, or not found",
+    CouldNotGetRegistryInfo: "Could not get transfer registry information",
+    RouterCleanupFailed: "Could not handle all dropped transfers",
     TasksFailed: "Router couldn't complete all check-in tasks",
     UpdatesFailed: "Could not forward all updates",
   } as const;
@@ -168,17 +174,13 @@ export class ConfigServiceError extends RouterError {
 
   static readonly reasons = {
     UnableToGetRebalanceProfile: "Could not get rebalance profile",
+    UnableToFindSwap: "Could not get matching swap",
   } as const;
 
   readonly context: ConfigServiceErrorContext;
 
-  constructor(
-    public readonly message: Values<typeof ConfigServiceError.reasons>,
-    chainId: number,
-    assetId: string,
-    context: any = {},
-  ) {
-    super(message, { chainId, assetId, ...context }, ConfigServiceError.type);
+  constructor(public readonly message: Values<typeof ConfigServiceError.reasons>, context: any = {}) {
+    super(message, context, ConfigServiceError.type);
   }
 }
 
@@ -216,5 +218,40 @@ export class ServerError extends RouterError {
 
   constructor(public readonly message: Values<typeof ServerError.reasons>, context: any = {}) {
     super(message, context, ServerError.type);
+  }
+}
+
+export class FeeError extends RouterError {
+  static readonly type = "FeeError";
+
+  static readonly reasons = {
+    NoSwap: "Could not find swap",
+    ChainError: "Error reading the chain",
+    ChannelError: "Error retrieving channel info",
+    ConfigError: "Error retrieving config info",
+    ConversionError: "Error converting assets",
+    ExchangeRateError: "Error getting exchange rate",
+    FeesLargerThanAmount: "Fees are greater than the proposed transfer",
+  } as const;
+
+  constructor(public readonly message: Values<typeof FeeError.reasons>, context: any = {}) {
+    super(message, context, FeeError.type);
+  }
+}
+
+export class QuoteError extends RouterError {
+  static readonly type = "QuoteError";
+
+  static readonly reasons = {
+    ChainNotSupported: "Chain is not supported",
+    CouldNotGetChannel: "Error retrieving channels",
+    CouldNotGetChannelAddress: "Failed to calculate channel address",
+    CouldNotGetFee: "Failed to get fee for transfer",
+    CouldNotSignQuote: "Failed to sign transfer quote",
+    TransferNotSupported: "Proposed transfer not supported",
+  } as const;
+
+  constructor(public readonly message: Values<typeof QuoteError.reasons>, context: any = {}) {
+    super(message, context, FeeError.type);
   }
 }

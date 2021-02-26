@@ -1,4 +1,5 @@
 import { BigNumber } from "@ethersproject/bignumber";
+import { parseUnits } from "@ethersproject/units";
 
 // Declare timeout values
 export const DEFAULT_TRANSFER_TIMEOUT = 60 * 60 * 24; // 24 hrs
@@ -19,3 +20,6 @@ export const UINT_MAX = BigNumber.from("0xffffffffffffffffffffffffffffffffffffff
 // use create2
 export const ARBITRUM_TESTNET_1_CHAIN_ID = 152709604825713;
 export const AUTODEPLOY_CHAIN_IDS = [ARBITRUM_TESTNET_1_CHAIN_ID];
+
+// Used by alice nodes to submit their withdrawals when gas is low
+export const REDUCED_GAS_PRICE = parseUnits("125", "gwei");

@@ -8,20 +8,29 @@ import {
   jsonifyError,
   Result,
   ConditionalTransferResolvedPayload,
+  DEFAULT_CHANNEL_TIMEOUT,
+  ChainAddresses,
+  IChannelSigner,
 } from "@connext/vector-types";
-import { getBalanceForAssetId, getParticipant, getRandomBytes32 } from "@connext/vector-utils";
+import {
+  getBalanceForAssetId,
+  getParticipant,
+  getRandomBytes32,
+  getSignerAddressFromPublicIdentifier,
+  hashTransferQuote,
+} from "@connext/vector-utils";
 import Ajv from "ajv";
 import { JsonRpcProvider } from "@ethersproject/providers";
 import { BaseLogger } from "pino";
 import { BigNumber } from "@ethersproject/bignumber";
-import { AddressZero } from "@ethersproject/constants";
+import { AddressZero, HashZero } from "@ethersproject/constants";
 
 import { adjustCollateral, requestCollateral } from "./services/collateral";
 import { forwardTransferCreation, forwardTransferResolution, handleIsAlive } from "./forwarding";
 import { IRouterStore } from "./services/store";
-import { getRebalanceProfile } from "./services/config";
+import { getMatchingSwap, getRebalanceProfile } from "./services/config";
 import { IRouterMessagingService } from "./services/messaging";
-import { config } from "./config";
+import { getConfig } from "./config";
 import {
   openChannels,
   transactionAttempt,
@@ -36,6 +45,10 @@ import {
   forwardedTransferVolume,
   attemptedTransfer,
 } from "./metrics";
+import { calculateFeeAmount } from "./services/fees";
+import { QuoteError } from "./errors";
+
+const config = getConfig();
 
 const ajv = new Ajv();
 
@@ -43,9 +56,18 @@ export type ChainJsonProviders = {
   [k: string]: JsonRpcProvider;
 };
 
+// Used to track all the transfers we are forwarding in memory
+// so that when router is handling transfers they may have dropped,
+// they do not double spend. I.e. sender creates transfer and goes
+// offline. Router starts forwarding to receiver, and while this is
+// happening sender comes back online. Without tracking the in-progress
+// forwards, the transfer would be double created with the receiver via
+// the handleIsAlive fn
+export const inProgressCreations: { [channelAddr: string]: string[] } = {};
+
 export async function setupListeners(
-  routerPublicIdentifier: string,
-  routerSignerAddress: string,
+  routerSigner: IChannelSigner,
+  chainAddresses: ChainAddresses,
   nodeService: INodeService,
   store: IRouterStore,
   chainReader: IVectorChainReader,
@@ -54,7 +76,15 @@ export async function setupListeners(
 ): Promise<void> {
   const method = "setupListeners";
   const methodId = getRandomBytes32();
-  logger.debug({ method, methodId, routerPublicIdentifier, routerSignerAddress }, "Method started");
+  logger.debug(
+    {
+      method,
+      methodId,
+      routerPublicIdentifier: routerSigner.publicIdentifier,
+      routerSignerAddress: routerSigner.address,
+    },
+    "Method started",
+  );
 
   nodeService.on(EngineEvents.SETUP, async (data) => {
     openChannels.inc({
@@ -122,14 +152,23 @@ export async function setupListeners(
         assetId,
         chainId,
       });
+      // Add to processing
+      inProgressCreations[data.channelAddress] = [
+        ...(inProgressCreations[data.channelAddress] ?? []),
+        data.transfer.transferId,
+      ];
       const res = await forwardTransferCreation(
         data,
-        routerPublicIdentifier,
-        routerSignerAddress,
+        routerSigner.publicIdentifier,
+        routerSigner.address,
         nodeService,
         store,
         logger,
         chainReader,
+      );
+      // Remove from processing
+      inProgressCreations[data.channelAddress] = inProgressCreations[data.channelAddress].filter(
+        (t) => t !== data.transfer.transferId,
       );
       if (res.isError) {
         const { receiverAmount } = res.getError()?.context;
@@ -165,7 +204,7 @@ export async function setupListeners(
         return false;
       }
 
-      if (data.transfer.initiator === routerSignerAddress) {
+      if (data.transfer.initiator === routerSigner.address) {
         logger.info(
           { initiator: data.transfer.initiator },
           "Not forwarding transfer which was initiated by our node, doing nothing",
@@ -173,9 +212,9 @@ export async function setupListeners(
         return false;
       }
 
-      if (!meta.path[0].recipient || meta.path[0].recipient === routerPublicIdentifier) {
+      if (!meta.path[0].recipient || meta.path[0].recipient === routerSigner.publicIdentifier) {
         logger.warn(
-          { path: meta.path[0], publicIdentifier: routerPublicIdentifier },
+          { path: meta.path[0], publicIdentifier: routerSigner.publicIdentifier },
           "Not forwarding transfer with no path to follow",
         );
         return false;
@@ -190,8 +229,8 @@ export async function setupListeners(
     async (data: ConditionalTransferResolvedPayload) => {
       const res = await forwardTransferResolution(
         data,
-        routerPublicIdentifier,
-        routerSignerAddress,
+        routerSigner.publicIdentifier,
+        routerSigner.address,
         nodeService,
         store,
         logger,
@@ -254,7 +293,7 @@ export async function setupListeners(
       const response = await adjustCollateral(
         transferSenderResolutionChannelAddress,
         transferSenderResolutionAssetId,
-        routerPublicIdentifier,
+        routerSigner.publicIdentifier,
         nodeService,
         chainReader,
         logger,
@@ -298,7 +337,7 @@ export async function setupListeners(
 
       // If we are the receiver of this transfer, do nothing
       // (indicates a sender-side resolve)
-      if (data.transfer.responder === routerSignerAddress) {
+      if (data.transfer.responder === routerSigner.address) {
         logger.info({ routingId: data.transfer.meta.routingId }, "Nothing to reclaim");
         return false;
       }
@@ -317,7 +356,7 @@ export async function setupListeners(
     logger.debug({ method, methodId, event: data }, "Handling event");
     const channelRes = await nodeService.getStateChannel({
       channelAddress: data.channelAddress,
-      publicIdentifier: routerPublicIdentifier,
+      publicIdentifier: routerSigner.publicIdentifier,
     });
     if (channelRes.isError) {
       logger.error(
@@ -376,7 +415,7 @@ export async function setupListeners(
     const res = await requestCollateral(
       channel as FullChannelState,
       data.assetId,
-      routerPublicIdentifier,
+      routerSigner.publicIdentifier,
       nodeService,
       chainReader,
       logger,
@@ -429,8 +468,8 @@ export async function setupListeners(
   nodeService.on(EngineEvents.IS_ALIVE, async (data) => {
     const res = await handleIsAlive(
       data,
-      routerPublicIdentifier,
-      routerSignerAddress,
+      routerSigner.publicIdentifier,
+      routerSigner.address,
       nodeService,
       store,
       chainReader,
@@ -447,8 +486,8 @@ export async function setupListeners(
   /////////////////////////////////
   ///// Messaging responses //////
   ///////////////////////////////
-  await messagingService.onReceiveRouterConfigMessage(routerPublicIdentifier, async (request, from, inbox) => {
-    const method = "configureSubscriptions";
+  await messagingService.onReceiveRouterConfigMessage(routerSigner.publicIdentifier, async (request, from, inbox) => {
+    const method = "onReceiveRouterConfigMessage";
     const methodId = getRandomBytes32();
     logger.debug({ method, methodId }, "Method started");
     if (request.isError) {
@@ -464,6 +503,230 @@ export async function setupListeners(
       .filter((x) => !!x);
     await messagingService.respondToRouterConfigMessage(inbox, Result.ok({ supportedChains, allowedSwaps }));
     logger.debug({ method, methodId }, "Method complete");
+  });
+
+  await messagingService.onReceiveTransferQuoteMessage(routerSigner.publicIdentifier, async (request, from, inbox) => {
+    const method = "onReceiveTransferQuoteMessage";
+    const methodId = getRandomBytes32();
+    logger.debug({ method, methodId }, "Method started");
+    if (request.isError) {
+      logger.error(
+        { error: request.getError()!.toJson(), from, method, methodId },
+        "Received error, shouldn't happen!",
+      );
+      return;
+    }
+    const {
+      amount,
+      assetId,
+      chainId,
+      recipient: _recipient,
+      recipientChainId: _recipientChainId,
+      recipientAssetId: _recipientAssetId,
+    } = request.getValue();
+
+    const recipient = _recipient ?? routerSigner.publicIdentifier;
+    const recipientChainId = _recipientChainId ?? chainId;
+    const recipientAssetId = _recipientAssetId ?? assetId;
+
+    const isSwap = recipientChainId !== chainId || recipientAssetId !== assetId;
+    const supported = isSwap
+      ? getMatchingSwap(assetId, chainId, recipientAssetId, recipientChainId)
+      : getRebalanceProfile(recipientChainId, recipientAssetId);
+
+    if (supported.isError || !supported.getValue()) {
+      // transfer of this chain/asset not supported
+      await messagingService.respondToTransferQuoteMessage(
+        inbox,
+        Result.fail(
+          new QuoteError(QuoteError.reasons.TransferNotSupported, {
+            recipient,
+            recipientChainId,
+            recipientAssetId,
+            assetId,
+            chainId,
+            sender: from,
+          }),
+        ),
+      );
+      return;
+    }
+
+    const supportedChains = Object.keys(config.chainProviders);
+    if (!supportedChains.includes(chainId.toString()) || !supportedChains.includes(recipientChainId.toString())) {
+      // recipient or sender chain not supported
+      await messagingService.respondToTransferQuoteMessage(
+        inbox,
+        Result.fail(
+          new QuoteError(QuoteError.reasons.ChainNotSupported, {
+            supportedChains,
+            recipient,
+            recipientChainId,
+            recipientAssetId,
+            assetId,
+            chainId,
+            sender: from,
+          }),
+        ),
+      );
+      return;
+    }
+
+    const [senderChannelRes, recipientChannelRes] = await Promise.all([
+      nodeService.getStateChannelByParticipants({ counterparty: from, chainId }),
+      nodeService.getStateChannelByParticipants({
+        chainId: recipientChainId,
+        counterparty: recipient === routerSigner.publicIdentifier ? from : recipient,
+      }),
+    ]);
+
+    if (senderChannelRes.isError || recipientChannelRes.isError) {
+      // return error to counterparty
+      await messagingService.respondToTransferQuoteMessage(
+        inbox,
+        Result.fail(
+          new QuoteError(QuoteError.reasons.CouldNotGetChannel, {
+            senderChannelError: senderChannelRes.isError ? jsonifyError(senderChannelRes.getError()!) : undefined,
+            recipientChannelError: senderChannelRes.isError ? jsonifyError(recipientChannelRes.getError()!) : undefined,
+            recipient,
+            recipientChainId,
+            recipientAssetId,
+            assetId,
+            chainId,
+            sender: from,
+          }),
+        ),
+      );
+      return;
+    }
+
+    const getEmptyChannel = async (
+      counterparty: string,
+      chainId: number,
+    ): Promise<Result<FullChannelState, QuoteError>> => {
+      const alice = getSignerAddressFromPublicIdentifier(routerSigner.publicIdentifier);
+      const bob = getSignerAddressFromPublicIdentifier(counterparty);
+      const channelAddress = await chainReader.getChannelAddress(
+        alice,
+        bob,
+        chainAddresses[chainId].channelFactoryAddress,
+        chainId,
+      );
+      if (channelAddress.isError) {
+        return Result.fail(
+          new QuoteError(QuoteError.reasons.CouldNotGetChannelAddress, {
+            chainServiceError: jsonifyError(channelAddress.getError()!),
+            recipient,
+            recipientChainId,
+            recipientAssetId,
+            assetId,
+            chainId,
+            sender: from,
+          }),
+        );
+      }
+      return Result.ok({
+        nonce: 1,
+        channelAddress: channelAddress.getValue(),
+        timeout: DEFAULT_CHANNEL_TIMEOUT.toString(),
+        alice,
+        bob,
+        balances: [],
+        processedDepositsA: [],
+        processedDepositsB: [],
+        assetIds: [],
+        defundNonces: [],
+        merkleRoot: HashZero,
+        latestUpdate: {} as any,
+        networkContext: {
+          chainId,
+          channelFactoryAddress: chainAddresses[chainId].channelFactoryAddress,
+          transferRegistryAddress: chainAddresses[chainId].transferRegistryAddress,
+        },
+        aliceIdentifier: routerSigner.publicIdentifier,
+        bobIdentifier: counterparty,
+        inDispute: false,
+      });
+    };
+
+    let senderChannel = senderChannelRes.getValue() as FullChannelState | undefined;
+    if (!senderChannel) {
+      const placeholder = await getEmptyChannel(from, chainId);
+      if (placeholder.isError) {
+        await messagingService.respondToTransferQuoteMessage(inbox, Result.fail(placeholder.getError()!));
+        return;
+      }
+      senderChannel = placeholder.getValue();
+    }
+    let recipientChannel = recipientChannelRes.getValue() as FullChannelState | undefined;
+    if (!recipientChannel) {
+      const placeholder = await getEmptyChannel(recipient, chainId);
+      if (placeholder.isError) {
+        await messagingService.respondToTransferQuoteMessage(inbox, Result.fail(placeholder.getError()!));
+        return;
+      }
+      recipientChannel = placeholder.getValue();
+    }
+    const fee = await calculateFeeAmount(
+      BigNumber.from(amount),
+      assetId,
+      senderChannel,
+      recipientAssetId,
+      recipientChannel,
+      chainReader,
+      routerSigner.publicIdentifier,
+      logger,
+    );
+    if (fee.isError) {
+      await messagingService.respondToTransferQuoteMessage(
+        inbox,
+        Result.fail(
+          new QuoteError(QuoteError.reasons.CouldNotGetFee, {
+            feeError: jsonifyError(fee.getError()!),
+            recipient,
+            recipientChainId,
+            recipientAssetId,
+            assetId,
+            chainId,
+            sender: from,
+          }),
+        ),
+      );
+      return;
+    }
+    const quote = {
+      assetId,
+      amount,
+      chainId,
+      routerIdentifier: routerSigner.publicIdentifier,
+      recipient,
+      recipientChainId,
+      recipientAssetId,
+      fee: fee.getValue().toString(),
+      expiry: (Date.now() + 30_000).toString(), // valid for next 2 blocks
+    };
+    const toSign = hashTransferQuote(quote);
+    try {
+      const signature = await routerSigner.signMessage(toSign);
+      await messagingService.respondToTransferQuoteMessage(inbox, Result.ok({ ...quote, signature }));
+    } catch (e) {
+      await messagingService.respondToTransferQuoteMessage(
+        inbox,
+        Result.fail(
+          new QuoteError(QuoteError.reasons.CouldNotSignQuote, {
+            error: jsonifyError(e),
+            recipient,
+            recipientChainId,
+            recipientAssetId,
+            assetId,
+            chainId,
+            sender: from,
+            fee: quote.fee,
+            expiry: quote.expiry,
+          }),
+        ),
+      );
+    }
   });
 
   logger.debug({ method, methodId }, "Method complete");

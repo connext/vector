@@ -34,6 +34,7 @@ import {
   getSignerAddressFromPublicIdentifier,
   getRandomBytes32,
   getParticipant,
+  hashWithdrawalQuote,
 } from "@connext/vector-utils";
 import pino from "pino";
 import Ajv from "ajv";
@@ -81,6 +82,7 @@ export class VectorEngine implements IVectorEngine {
     chainAddresses: ChainAddresses,
     logger: pino.BaseLogger,
     skipCheckIn: boolean,
+    gasSubsidyPercentage: number,
     validationService?: IExternalValidation,
   ): Promise<VectorEngine> {
     const vector = await Vector.connect(
@@ -103,7 +105,7 @@ export class VectorEngine implements IVectorEngine {
       lock,
       logger.child({ module: "VectorEngine" }),
     );
-    await engine.setupListener();
+    await engine.setupListener(gasSubsidyPercentage);
     logger.debug({}, "Setup engine listeners");
     if (!skipCheckIn) {
       sendIsAlive(engine.signer, engine.messaging, engine.store, engine.chainService, engine.logger);
@@ -128,7 +130,7 @@ export class VectorEngine implements IVectorEngine {
   //    - yes && my withdrawal: make sure transaction hash is included in
   //      the meta (verify tx)
 
-  private async setupListener(): Promise<void> {
+  private async setupListener(gasSubsidyPercentage: number): Promise<void> {
     await setupEngineListeners(
       this.evts,
       this.chainService,
@@ -141,6 +143,7 @@ export class VectorEngine implements IVectorEngine {
       this.setup.bind(this),
       this.acquireRestoreLocks.bind(this),
       this.releaseRestoreLocks.bind(this),
+      gasSubsidyPercentage,
     );
   }
 
@@ -194,7 +197,78 @@ export class VectorEngine implements IVectorEngine {
   private async getConfig(): Promise<
     Result<ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_getConfig], EngineError>
   > {
-    return Result.ok([{ index: 0, publicIdentifier: this.publicIdentifier, signerAddress: this.signerAddress }]);
+    return Result.ok([
+      {
+        index: 0,
+        publicIdentifier: this.publicIdentifier,
+        signerAddress: this.signerAddress,
+        chainAddresses: this.chainAddresses,
+      },
+    ]);
+  }
+
+  private async getTransferQuote(
+    params: EngineParams.GetTransferQuote,
+  ): Promise<Result<ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_getTransferQuote], EngineError>> {
+    const validate = ajv.compile(EngineParams.GetTransferQuoteSchema);
+    const valid = validate(params);
+    if (!valid) {
+      return Result.fail(
+        new RpcError(RpcError.reasons.InvalidParams, "", this.publicIdentifier, {
+          invalidParamsError: validate.errors?.map((e) => e.message).join(","),
+          invalidParams: params,
+        }),
+      );
+    }
+    const { routerIdentifier, ...message } = params;
+    return this.messaging.sendTransferQuoteMessage(Result.ok(message), routerIdentifier, this.publicIdentifier);
+  }
+
+  private async getWithdrawalQuote(
+    params: EngineParams.GetWithdrawalQuote,
+  ): Promise<Result<ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_getWithdrawalQuote], EngineError>> {
+    const validate = ajv.compile(EngineParams.GetWithdrawalQuoteSchema);
+    const valid = validate(params);
+    if (!valid) {
+      return Result.fail(
+        new RpcError(RpcError.reasons.InvalidParams, "", this.publicIdentifier, {
+          invalidParamsError: validate.errors?.map((e) => e.message).join(","),
+          invalidParams: params,
+        }),
+      );
+    }
+    const channelRes = await this.getChannelState({ channelAddress: params.channelAddress });
+    if (channelRes.isError) {
+      return Result.fail(channelRes.getError()!);
+    }
+    const channel = channelRes.getValue();
+    if (!channel) {
+      return Result.fail(new RpcError(RpcError.reasons.ChannelNotFound, params.channelAddress, this.publicIdentifier));
+    }
+
+    if (this.publicIdentifier === channel.aliceIdentifier) {
+      try {
+        // return 0 for quoted fee if you are alice (since you are the submitter)
+        const quote = {
+          channelAddress: params.channelAddress,
+          amount: params.amount,
+          assetId: params.assetId,
+          fee: "0",
+          expiry: (Date.now() + 30_000).toString(),
+        };
+        const signature = await this.signer.signMessage(hashWithdrawalQuote(quote));
+        return Result.ok({ ...quote, signature });
+      } catch (e) {
+        return Result.fail(
+          new RpcError(RpcError.reasons.SigningFailed, params.channelAddress, this.publicIdentifier, {
+            signingError: jsonifyError(e),
+          }),
+        );
+      }
+    }
+
+    // you are not alice, send request to channel counterparty
+    return this.messaging.sendWithdrawalQuoteMessage(Result.ok(params), channel.aliceIdentifier, this.publicIdentifier);
   }
 
   private async getRouterConfig(
@@ -503,7 +577,6 @@ export class VectorEngine implements IVectorEngine {
         channelFactoryAddress: this.chainAddresses[params.chainId].channelFactoryAddress,
         transferRegistryAddress: this.chainAddresses[params.chainId].transferRegistryAddress,
         chainId: params.chainId,
-        providerUrl: chainProviders.getValue()[params.chainId],
       },
       meta: params.meta,
     });
@@ -732,9 +805,9 @@ export class VectorEngine implements IVectorEngine {
     const createResult = await convertConditionalTransferParams(
       params,
       this.signer,
-      channel!,
-      this.chainAddresses,
+      channel,
       this.chainService,
+      this.messaging,
     );
     if (createResult.isError) {
       return Result.fail(createResult.getError()!);
@@ -829,6 +902,7 @@ export class VectorEngine implements IVectorEngine {
       channel,
       this.chainAddresses,
       this.chainService,
+      this.messaging,
     );
     if (createResult.isError) {
       return Result.fail(createResult.getError()!);

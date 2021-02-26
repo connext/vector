@@ -12,8 +12,8 @@
     "test": "ts-mocha --check-leaks --exit --timeout 60000 'src/**/*.spec.ts'"
   },
   "dependencies": {
-    "@connext/vector-types": "0.1.17",
-    "@connext/vector-utils": "0.1.17",
+    "@connext/vector-types": "0.2.0-beta.0",
+    "@connext/vector-utils": "0.2.0-beta.0",
     "@sinclair/typebox": "0.12.7",
     "crypto": "1.0.1",
     "fastify": "3.8.0",
@@ -33,7 +33,7 @@
     "copy-webpack-plugin": "6.2.1",
     "mocha": "8.2.0",
     "nodemon": "2.0.6",
-    "pino-pretty": "4.3.0",
+    "pino-pretty": "4.5.0",
     "ts-loader": "8.0.7",
     "ts-mocha": "8.0.0",
     "ts-node": "9.0.0",

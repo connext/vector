@@ -36,8 +36,6 @@ export interface IServerNodeStore extends IEngineStore {
   registerSubscription<T extends EngineEvent>(publicIdentifier: string, event: T, url: string): Promise<void>;
   getSubscription<T extends EngineEvent>(publicIdentifier: string, event: T): Promise<string | undefined>;
   getSubscriptions(publicIdentifier: string): Promise<{ [event: string]: string }>;
-  setMnemonic(mnemonic: string): Promise<void>;
-  getMnemonic(): Promise<string | undefined>;
   setNodeIndex(index: number, publicIdentifier: string): Promise<void>;
   getNodeIndexes(): Promise<{ index: number; publicIdentifier: string }[]>;
   removeNodeIndexes(): Promise<void>;
@@ -116,7 +114,6 @@ const convertChannelEntityToFullChannelState = (
             chainId: BigNumber.from(channelEntity.chainId).toNumber(),
             channelFactoryAddress: channelEntity.channelFactoryAddress,
             transferRegistryAddress: channelEntity.transferRegistryAddress,
-            providerUrl: channelEntity.providerUrl,
           },
           timeout: channelEntity.timeout,
         } as SetupUpdateDetails;
@@ -167,7 +164,6 @@ const convertChannelEntityToFullChannelState = (
       chainId: BigNumber.from(channelEntity.chainId).toNumber(),
       channelFactoryAddress: channelEntity.channelFactoryAddress,
       transferRegistryAddress: channelEntity.transferRegistryAddress,
-      providerUrl: channelEntity.providerUrl,
     },
     nonce: channelEntity.nonce,
     alice: channelEntity.participantA,
@@ -730,7 +726,6 @@ export class PrismaStore implements IServerNodeStore {
         nonce: channelState.nonce,
         participantA: channelState.alice,
         participantB: channelState.bob,
-        providerUrl: channelState.networkContext.providerUrl,
         publicIdentifierA: channelState.aliceIdentifier,
         publicIdentifierB: channelState.bobIdentifier,
         timeout: channelState.timeout,
@@ -967,7 +962,6 @@ export class PrismaStore implements IServerNodeStore {
       nonce: channel.nonce,
       participantA: channel.alice,
       participantB: channel.bob,
-      providerUrl: channel.networkContext.providerUrl,
       publicIdentifierA: channel.aliceIdentifier,
       publicIdentifierB: channel.bobIdentifier,
       timeout: channel.timeout,
@@ -1126,29 +1120,6 @@ export class PrismaStore implements IServerNodeStore {
     }
 
     return transfers.map(convertTransferEntityToFullTransferState);
-  }
-
-  async setMnemonic(mnemonic: string): Promise<void> {
-    await this.prisma.configuration.upsert({
-      where: {
-        id: 0,
-      },
-      create: {
-        id: 0,
-        mnemonic,
-      },
-      update: {
-        mnemonic,
-      },
-    });
-  }
-
-  async getMnemonic(): Promise<string | undefined> {
-    const config = await this.prisma.configuration.findUnique({ where: { id: 0 } });
-    if (!config) {
-      return undefined;
-    }
-    return config.mnemonic;
   }
 
   async setNodeIndex(index: number, publicIdentifier: string): Promise<void> {

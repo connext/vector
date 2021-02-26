@@ -25,6 +25,7 @@ import { BrowserStore } from "./services/store";
 import { BrowserLockService } from "./services/lock";
 import { DirectProvider, IframeChannelProvider, IRpcChannelProvider } from "./channelProvider";
 import { BrowserNodeError } from "./errors";
+export * from "./constants";
 
 export type BrowserNodeSignerConfig = {
   natsUrl?: string;
@@ -137,6 +138,7 @@ export class BrowserNode implements INodeService {
       config.chainAddresses!,
       config.logger.child({ module: "VectorEngine" }),
       false,
+      100,
     );
     node.channelProvider = new DirectProvider(engine);
     node.publicIdentifier = config.signer.publicIdentifier;
@@ -145,20 +147,26 @@ export class BrowserNode implements INodeService {
   }
 
   // method for non-signer based apps to connect to iframe
-  async init(): Promise<void> {
+  async init(params: { signature?: string; signer?: string } = {}): Promise<void> {
     // TODO: validate config
     const method = "init";
     this.logger.debug({ method }, "Method started");
     const iframeSrc = this.iframeSrc ?? "https://wallet.connext.network";
-    this.logger.info({ method, iframeSrc }, "Connecting with iframe provider");
+    this.logger.info(
+      { method, iframeSrc, signer: params.signer, signature: params.signature },
+      "Connecting with iframe provider",
+    );
     this.channelProvider = await IframeChannelProvider.connect({
       src: iframeSrc,
       id: "connext-iframe",
     });
+    this.logger.info({ method }, "Authenticating Connext");
     const rpc = constructRpcRequest("connext_authenticate", {
       chainProviders: this.chainProviders,
       chainAddresses: this.chainAddresses,
       messagingUrl: this.messagingUrl,
+      signature: params.signature,
+      signer: params.signer,
     });
     const auth = await this.channelProvider.send(rpc);
     this.logger.info({ method, response: auth }, "Received response from auth method");
@@ -267,6 +275,18 @@ export class BrowserNode implements INodeService {
       const rpc = constructRpcRequest<"chan_getChannelStates">(ChannelRpcMethods.chan_getChannelStates, {});
       const res = await this.channelProvider!.send(rpc);
       return Result.ok(res.map((chan: FullChannelState) => chan.channelAddress));
+    } catch (e) {
+      return Result.fail(e);
+    }
+  }
+
+  async getTransferQuote(
+    params: OptionalPublicIdentifier<NodeParams.TransferQuote>,
+  ): Promise<Result<NodeResponses.TransferQuote, BrowserNodeError>> {
+    try {
+      const rpc = constructRpcRequest<"chan_getTransferQuote">(ChannelRpcMethods.chan_getTransferQuote, params);
+      const res = await this.channelProvider!.send(rpc);
+      return Result.ok(res);
     } catch (e) {
       return Result.fail(e);
     }
@@ -437,6 +457,18 @@ export class BrowserNode implements INodeService {
         transferId: (res.latestUpdate.details as CreateUpdateDetails).transferId,
         routingId: (res.latestUpdate.details as CreateUpdateDetails).meta?.routingId,
       });
+    } catch (e) {
+      return Result.fail(e);
+    }
+  }
+
+  async getWithdrawalQuote(
+    params: OptionalPublicIdentifier<NodeParams.WithdrawalQuote>,
+  ): Promise<Result<NodeResponses.WithdrawalQuote, BrowserNodeError>> {
+    try {
+      const rpc = constructRpcRequest<"chan_getWithdrawalQuote">(ChannelRpcMethods.chan_getWithdrawalQuote, params);
+      const res = await this.channelProvider!.send(rpc);
+      return Result.ok(res);
     } catch (e) {
       return Result.fail(e);
     }

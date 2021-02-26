@@ -2,7 +2,9 @@ import { DEFAULT_TRANSFER_TIMEOUT, NodeParams, TransferNames } from "@connext/ve
 import { expect, getRandomBytes32, mkAddress, mkPublicIdentifier } from "@connext/vector-utils";
 
 import { PrismaStore, RouterUpdateStatus, RouterUpdateType } from "../../services/store";
-import { config } from "../../config";
+import { getConfig } from "../../config";
+
+const config = getConfig();
 
 describe("Router store", () => {
   let store: PrismaStore;
@@ -66,7 +68,7 @@ describe("Router store", () => {
     await Promise.all(toQueue.map((entry) => store.queueUpdate(channelAddress, entry.type, entry.updateData)));
 
     // verify
-    const pending = await store.getQueuedUpdates(channelAddress, RouterUpdateStatus.PENDING);
+    const pending = await store.getQueuedUpdates(channelAddress, [RouterUpdateStatus.PENDING]);
     expect(pending.length).to.be.eq(toQueue.length);
     pending.map((s) => {
       const expected = toQueue.find((t) => {
@@ -93,7 +95,7 @@ describe("Router store", () => {
     // test other statuses
     for (const status of [RouterUpdateStatus.PROCESSING, RouterUpdateStatus.COMPLETE, RouterUpdateStatus.FAILED]) {
       await store.setUpdateStatus(pending[0].id, status);
-      const updated = await store.getQueuedUpdates(channelAddress, status);
+      const updated = await store.getQueuedUpdates(channelAddress, [status]);
       expect(updated).to.be.deep.eq([{ ...pending[0], status }]);
     }
   });

@@ -58,6 +58,7 @@ describe("VectorEngine", () => {
       chainAddresses,
       log,
       false,
+      100,
     );
     expect(engine).to.be.instanceOf(VectorEngine);
   });
@@ -72,6 +73,7 @@ describe("VectorEngine", () => {
       chainAddresses,
       log,
       false,
+      100,
       {
         validateInbound: (update, state, transfer) => Promise.resolve(Result.ok(undefined)),
         validateOutbound: (params, state, transfer) => Promise.resolve(Result.ok(undefined)),
@@ -161,6 +163,7 @@ describe("VectorEngine", () => {
           chainAddresses,
           log,
           false,
+          100,
         );
         const rpc: EngineParams.RpcRequest = { ...test.overrides } as any;
         try {
@@ -199,6 +202,7 @@ describe("VectorEngine", () => {
             chainAddresses,
             log,
             false,
+            100,
           );
           const rpc: EngineParams.RpcRequest = { id: 1, jsonrpc: "2.0", ...test.overrides } as any;
           try {
@@ -825,6 +829,7 @@ describe("VectorEngine", () => {
             chainAddresses,
             log,
             false,
+            100,
           );
           const rpc: EngineParams.RpcRequest = { id: 1, jsonrpc: "2.0", ...test.overrides } as any;
           try {
