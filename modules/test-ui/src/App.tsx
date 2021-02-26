@@ -704,7 +704,8 @@ function App() {
                             routerIdentifier: routerPublicIdentifier,
                             recipient: values.recipient,
                             recipientAssetId: values.recipientAssetId || undefined,
-                            recipientChainId: values.recipientChainId || undefined,
+                            recipientChainId:
+                              values.recipientChainId === "" ? undefined : parseInt(values.recipientChainId),
                           });
                           console.log(
                             "transferFee: ",
