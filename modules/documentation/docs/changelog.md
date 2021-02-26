@@ -2,7 +2,7 @@
 
 ## Next Release
 
-## 0.1.18-beta.2
+## 0.2.0-beta.0
 
 - \[router\] Add fee collection config
 - \[engine\] Add fees automatically on transfer and withdrawals
