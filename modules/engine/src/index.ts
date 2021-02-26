@@ -802,13 +802,7 @@ export class VectorEngine implements IVectorEngine {
     this.logger.info({ channel, method, methodId }, "Pre-transfer channel");
 
     // First, get translated `create` params using the passed in conditional transfer ones
-    const createResult = await convertConditionalTransferParams(
-      params,
-      this.signer,
-      channel!,
-      this.chainAddresses,
-      this.chainService,
-    );
+    const createResult = await convertConditionalTransferParams(params, this.signer, channel, this.chainService);
     if (createResult.isError) {
       return Result.fail(createResult.getError()!);
     }

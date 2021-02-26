@@ -127,7 +127,7 @@ describe("ParamConverter", () => {
           providerUrl,
         },
       });
-      const ret = await convertConditionalTransferParams(params, signerA, channelState, chainAddresses, chainReader);
+      const ret = await convertConditionalTransferParams(params, signerA, channelState, chainReader);
       expect(ret.isError).to.be.true;
       const err = ret.getError();
       expect(err?.message).to.be.eq(ParameterConversionError.reasons.FailedToGetRegisteredTransfer);
@@ -151,7 +151,7 @@ describe("ParamConverter", () => {
           providerUrl,
         },
       });
-      const ret = await convertConditionalTransferParams(params, signerA, channelState, chainAddresses, chainReader);
+      const ret = await convertConditionalTransferParams(params, signerA, channelState, chainReader);
       expect(ret.isError).to.be.true;
       const err = ret.getError();
       expect(err?.message).to.be.eq(ParameterConversionError.reasons.FailedToGetRegisteredTransfer);
@@ -172,7 +172,7 @@ describe("ParamConverter", () => {
         },
       });
 
-      const ret = await convertConditionalTransferParams(params, signerB, channelState, chainAddresses, chainReader);
+      const ret = await convertConditionalTransferParams(params, signerB, channelState, chainReader);
 
       expect(ret.isError).to.be.true;
       const err = ret.getError();
@@ -222,8 +222,8 @@ describe("ParamConverter", () => {
       });
 
       const result = isUserA
-        ? await convertConditionalTransferParams(params, signerA, channelState, chainAddresses, chainReader)
-        : await convertConditionalTransferParams(params, signerB, channelState, chainAddresses, chainReader);
+        ? await convertConditionalTransferParams(params, signerA, channelState, chainReader)
+        : await convertConditionalTransferParams(params, signerB, channelState, chainReader);
 
       return result;
     };

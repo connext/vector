@@ -29,7 +29,6 @@ export async function convertConditionalTransferParams(
   params: EngineParams.ConditionalTransfer,
   signer: IChannelSigner,
   channel: FullChannelState,
-  chainAddresses: ChainAddresses,
   chainReader: IVectorChainReader,
 ): Promise<Result<CreateTransferParams, EngineError>> {
   const { channelAddress, amount, assetId, recipient, details, type, timeout, meta: providedMeta } = params;
