@@ -479,7 +479,7 @@ server.post<{ Body: NodeParams.RequestSetup }>(
     });
     try {
       const result = await engine.request<"chan_requestSetup">(rpc);
-      logger.info({ result }, "Request collateral completed");
+      logger.info({ result }, "Request setup completed");
       return reply.status(200).send({ ...result, channelAddress: result.channelAddress });
     } catch (e) {
       logger.error({ error: jsonifyError(e) });

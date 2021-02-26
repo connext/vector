@@ -218,7 +218,7 @@ const PostSetupBodySchema = Type.Intersect([
   Type.Object({ publicIdentifier: TPublicIdentifier }),
 ]);
 
-const PostSetupResponseSchema = { 200: TFullChannelState };
+const PostSetupResponseSchema = BasicChannelServerResponseSchema;
 
 // POST REQUEST SETUP
 const PostRequestSetupBodySchema = PostSetupBodySchema;
