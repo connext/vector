@@ -18,7 +18,7 @@ const config = getConfig();
 const testName = "Router fees";
 const { log } = vectorUtils.getTestLoggers(testName, config.logLevel ?? ("info" as any));
 
-describe.only(testName, () => {
+describe(testName, () => {
   let ethReader: Sinon.SinonStubbedInstance<VectorChainReader>;
   let getRebalanceProfileStub: Sinon.SinonStub;
   let getSwappedAmountStub: Sinon.SinonStub;
