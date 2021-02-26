@@ -94,8 +94,9 @@ export const calculateFeeAmount = async (
         startingAmount: transferAmount.toString(),
         staticFees: staticFees.toString(),
         withStaticFees: staticFees.add(transferAmount).toString(),
+        gasSubsidyPercentage,
       },
-      "Method complete",
+      "Method complete, gas is subsidized",
     );
     return Result.ok(staticFees);
   }

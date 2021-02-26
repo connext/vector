@@ -52,7 +52,6 @@ export const getDecimals = async (chainId: string, assetId: string): Promise<num
   }
   let decimals = 18;
   try {
-    console.log("trying to call contract.decimals");
     decimals = await contract.decimals();
   } catch (e) {
     // default to 18
@@ -69,7 +68,6 @@ export const parseBalanceToNumber = async (
   if (assetId === AddressZero) {
     return parseFloat(formatEther(toFormat));
   }
-  console.log("trying to parseBalance");
   const decimals = await getDecimals(chainId, assetId);
   return parseFloat(formatUnits(toFormat, decimals));
 };
