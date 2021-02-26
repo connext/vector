@@ -58,8 +58,8 @@ export const calculateFeeAmount = async (
     return Result.ok(BigNumber.from(0));
   }
 
-  const toChainId = toChannel.networkContext.chainId;
   const fromChainId = fromChannel.networkContext.chainId;
+  const toChainId = toChannel.networkContext.chainId;
   // Get fee values from config
   const fees = getSwapFees(fromAssetId, fromChainId, toAssetId, toChainId);
   if (fees.isError) {
@@ -205,10 +205,10 @@ export const calculateFeeAmount = async (
   const normalizedCollateralFromAsset = isSwap
     ? await getSwappedAmount(
         normalizedCollateralToAsset.getValue().toString(),
-        toAssetId,
-        toChainId,
         fromAssetId,
         fromChainId,
+        toAssetId,
+        toChainId,
       )
     : Result.ok(normalizedCollateralToAsset.getValue().toString());
   if (normalizedCollateralFromAsset.isError) {
