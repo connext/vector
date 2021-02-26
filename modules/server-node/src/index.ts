@@ -479,7 +479,7 @@ server.post<{ Body: NodeParams.RequestSetup }>(
     });
     try {
       const result = await engine.request<"chan_requestSetup">(rpc);
-      logger.info({ result }, "Request collateral completed");
+      logger.info({ result }, "Request setup completed");
       return reply.status(200).send({ ...result, channelAddress: result.channelAddress });
     } catch (e) {
       logger.error({ error: jsonifyError(e) });
@@ -754,6 +754,7 @@ server.post<{ Body: NodeParams.ConditionalTransfer }>(
         channelAddress: res.channelAddress,
         transferId: (res.latestUpdate.details as CreateUpdateDetails).transferId,
         routingId: (res.latestUpdate.details as CreateUpdateDetails).meta?.routingId,
+        channel: res,
       } as NodeResponses.ConditionalTransfer);
     } catch (e) {
       logger.error({ error: jsonifyError(e) });
@@ -787,6 +788,7 @@ server.post<{ Body: NodeParams.ResolveTransfer }>(
       return reply.status(200).send({
         channelAddress: res.channelAddress,
         transferId: (res.latestUpdate.details as ResolveUpdateDetails).transferId,
+        channel: res,
       } as NodeResponses.ResolveTransfer);
     } catch (e) {
       logger.error({ error: jsonifyError(e) });

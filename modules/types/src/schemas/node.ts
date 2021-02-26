@@ -223,7 +223,7 @@ const PostSetupResponseSchema = BasicChannelServerResponseSchema;
 // POST REQUEST SETUP
 const PostRequestSetupBodySchema = PostSetupBodySchema;
 
-const PostRequestSetupResponseSchema = BasicChannelServerResponseSchema;
+const PostRequestSetupResponseSchema = { 200: TFullChannelState };
 
 // POST DEPOSIT
 const PostDepositBodySchema = Type.Intersect([
@@ -231,7 +231,7 @@ const PostDepositBodySchema = Type.Intersect([
   Type.Object({ publicIdentifier: TPublicIdentifier }),
 ]);
 
-const PostDepositResponseSchema = BasicChannelServerResponseSchema;
+const PostDepositResponseSchema = { 200: TFullChannelState };
 
 // POST DEPOSIT
 const PostRequestCollateralBodySchema = Type.Intersect([
@@ -239,7 +239,7 @@ const PostRequestCollateralBodySchema = Type.Intersect([
   Type.Object({ publicIdentifier: TPublicIdentifier }),
 ]);
 
-const PostRequestCollateralResponseSchema = BasicChannelServerResponseSchema;
+const PostRequestCollateralResponseSchema = { 200: TFullChannelState };
 
 // POST SEND DEPOSIT TX
 const PostSendDepositTxBodySchema = Type.Object({
@@ -262,7 +262,14 @@ const PostConditionalTransferBodySchema = Type.Intersect([
   Type.Object({ publicIdentifier: TPublicIdentifier }),
 ]);
 
-const PostConditionalTransferResponseSchema = BasicTransferServerResponseSchema;
+const PostConditionalTransferResponseSchema = {
+  200: {
+    channelAddress: TAddress,
+    transferId: TBytes32,
+    routingId: TBytes32,
+    channel: TFullChannelState,
+  },
+};
 
 // POST RESOLVE CONDITIONAL TRANSFER
 const PostResolveTransferBodySchema = Type.Intersect([
@@ -270,7 +277,13 @@ const PostResolveTransferBodySchema = Type.Intersect([
   Type.Object({ publicIdentifier: TPublicIdentifier }),
 ]);
 
-const PostResolveTransferResponseSchema = BasicTransferServerResponseSchema;
+const PostResolveTransferResponseSchema = {
+  200: {
+    channelAddress: TAddress,
+    transferId: TBytes32,
+    channel: TFullChannelState,
+  },
+};
 
 // POST WITHDRAW TRANSFER
 const PostWithdrawTransferBodySchema = Type.Intersect([
@@ -283,6 +296,7 @@ const PostWithdrawTransferResponseSchema = {
     channelAddress: TAddress,
     transferId: TBytes32,
     transactionHash: Type.Optional(TBytes32),
+    channel: TFullChannelState,
   }),
 };
 
@@ -305,9 +319,7 @@ const PostRestoreStateBodySchema = Type.Intersect([
 ]);
 
 const PostRestoreStateResponseSchema = {
-  200: Type.Object({
-    channelAddress: TAddress,
-  }),
+  200: TFullChannelState,
 };
 
 // CREATE NODE

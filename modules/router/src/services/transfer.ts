@@ -30,7 +30,7 @@ export const attemptTransferWithCollateralization = async (
   logger: BaseLogger,
   requireOnline = true,
   errorContext?: ForwardTransferCreationErrorContext,
-): Promise<Result<NodeResponses.ConditionalTransfer | undefined, ForwardTransferCreationError>> => {
+): Promise<Result<any | undefined, ForwardTransferCreationError>> => {
   const method = "attemptTransferWithCollateralization";
   const methodId = getRandomBytes32();
   logger.debug(

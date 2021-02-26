@@ -140,8 +140,8 @@ export class Agent {
     if (createRes.isError) {
       throw createRes.getError()!;
     }
-    logger.debug({ ...createRes.getValue() }, "Created transfer");
-    return { ...createRes.getValue(), preImage, routingId };
+    logger.debug({ ...(createRes.getValue() as any) }, "Created transfer");
+    return { ...(createRes.getValue() as any), preImage, routingId };
   }
 
   async resolveHashlockTransfer(
@@ -159,8 +159,8 @@ export class Agent {
     if (resolveRes.isError) {
       throw resolveRes.getError()!;
     }
-    logger.debug({ ...resolveRes.getValue() }, "Resolved transfer");
-    return { ...resolveRes.getValue()!, preImage };
+    logger.debug({ ...(resolveRes.getValue() as any) }, "Resolved transfer");
+    return { ...(resolveRes.getValue() as any), preImage };
   }
 
   async fundChannelToTarget(assetId: string, target: BigNumber): Promise<void> {

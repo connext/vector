@@ -35,7 +35,7 @@ describe(testName, () => {
     node = Sinon.createStubInstance(RestServerNodeService);
     node.conditionalTransfer.resolves(Result.ok({} as any));
     node.sendDepositTx.resolves(Result.ok({ txHash: getRandomBytes32() }));
-    node.reconcileDeposit.resolves(Result.ok({ channelAddress: mkAddress() }));
+    node.reconcileDeposit.resolves(Result.ok(createTestChannelState("deposit").channel));
 
     chainReader = Sinon.createStubInstance(VectorChainReader);
     chainReader.getTotalDepositedA.resolves(Result.ok(BigNumber.from(0)));
@@ -258,7 +258,9 @@ describe(testName, () => {
         ],
       });
       node.getStateChannel.resolves(Result.ok(channel));
-      node.withdraw.resolves(Result.ok({ channelAddress: channel.channelAddress, transferId: getRandomBytes32() }));
+      node.withdraw.resolves(
+        Result.ok({ channelAddress: channel.channelAddress, transferId: getRandomBytes32(), channel }),
+      );
       const res = await adjustCollateral(
         channel.channelAddress,
         AddressZero,
@@ -331,7 +333,9 @@ describe(testName, () => {
       const profile = { ...ethProfile, target: "0" };
       getRebalanceProfile.returns(Result.ok(profile));
       node.getStateChannel.resolves(Result.ok(channel));
-      node.withdraw.resolves(Result.ok({ channelAddress: channel.channelAddress, transferId: getRandomBytes32() }));
+      node.withdraw.resolves(
+        Result.ok({ channelAddress: channel.channelAddress, transferId: getRandomBytes32(), channel }),
+      );
       const res = await adjustCollateral(
         channel.channelAddress,
         AddressZero,
