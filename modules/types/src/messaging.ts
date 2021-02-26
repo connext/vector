@@ -22,6 +22,7 @@ export interface IBasicMessaging {
   request(subject: string, timeout: number, data: any): Promise<any>;
 }
 
+type TransferQuoteRequest = Omit<EngineParams.GetTransferQuote, "routerIdentifier">;
 export interface IMessagingService extends IBasicMessaging {
   onReceiveLockMessage(
     myPublicIdentifier: string,
@@ -162,7 +163,7 @@ export interface IMessagingService extends IBasicMessaging {
     numRetries?: number,
   ): Promise<Result<NodeResponses.GetRouterConfig, RouterError | MessagingError>>;
   sendTransferQuoteMessage(
-    quoteRequest: Result<Omit<EngineParams.GetTransferQuote, "routerIdentifier">, VectorError>,
+    quoteRequest: Result<TransferQuoteRequest, VectorError>,
     to: string,
     from: string,
     timeout?: number,

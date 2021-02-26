@@ -256,7 +256,19 @@ export async function forwardTransferCreation(
       );
     }
     try {
-      const recovered = await recoverAddressFromChannelMessage(hashTransferQuote(quote), quote.signature);
+      const recovered = await recoverAddressFromChannelMessage(
+        hashTransferQuote({
+          ...quote, // use our values by default
+          routerIdentifier: routerPublicIdentifier,
+          assetId: senderTransfer.assetId,
+          amount: senderAmount,
+          chainId: senderTransfer.chainId,
+          recipient: recipientIdentifier,
+          recipientAssetId,
+          recipientChainId,
+        }),
+        quote.signature,
+      );
       if (recovered !== routerSignerAddress) {
         throw new Error(`Failed to recover signature. Expected ${routerSignerAddress}, got ${recovered}`);
       }

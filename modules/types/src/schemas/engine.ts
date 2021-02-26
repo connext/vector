@@ -13,6 +13,7 @@ import {
   TIntegerString,
   TransferResolverSchema,
   WithdrawalQuoteSchema,
+  TransferQuoteSchema,
 } from "./basic";
 
 ////////////////////////////////////////
@@ -127,8 +128,9 @@ const CreateConditionalTransferParamsSchema = Type.Object({
   recipientAssetId: Type.Optional(TAddress),
   timeout: Type.Optional(TIntegerString),
   meta: Type.Optional(TBasicMeta),
-  type: Type.String(), // Type.Union([TransferNameSchema, TAddress]),
+  type: Type.String(),
   details: Type.Dict(Type.Any()), // initial state w.o balance object
+  quote: Type.Optional(TransferQuoteSchema),
 });
 
 // Resolve conditional transfer engine params
