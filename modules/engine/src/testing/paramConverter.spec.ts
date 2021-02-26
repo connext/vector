@@ -22,6 +22,8 @@ import {
   getRandomIdentifier,
   mkAddress,
   ChannelSigner,
+  NatsMessagingService,
+  mkPublicIdentifier,
 } from "@connext/vector-utils";
 import { expect } from "chai";
 import Sinon from "sinon";
@@ -60,32 +62,38 @@ describe("ParamConverter", () => {
   let chainReader: Sinon.SinonStubbedInstance<VectorChainReader>;
   let signerA: Sinon.SinonStubbedInstance<ChannelSigner>;
   let signerB: Sinon.SinonStubbedInstance<ChannelSigner>;
+  let messaging: Sinon.SinonStubbedInstance<NatsMessagingService>;
 
-  beforeEach(() => {
+  const setDefaultStubs = (registryInfo: RegisteredTransfer = transferRegisteredInfo) => {
     chainReader = Sinon.createStubInstance(VectorChainReader);
     signerA = Sinon.createStubInstance(ChannelSigner);
     signerB = Sinon.createStubInstance(ChannelSigner);
+    messaging = Sinon.createStubInstance(NatsMessagingService);
 
     signerA.signMessage.resolves("success");
     signerB.signMessage.resolves("success");
+    signerA.publicIdentifier = mkPublicIdentifier("vectorAAA");
+    signerB.publicIdentifier = mkPublicIdentifier("vectorBBB");
+    signerA.address = mkAddress("0xaaa");
+    signerB.address = mkAddress("0xeee");
+
     chainReader.getBlockNumber.resolves(Result.ok<number>(110));
-  });
+    chainReader.getRegisteredTransferByName.resolves(Result.ok<RegisteredTransfer>(registryInfo));
+    chainReader.getRegisteredTransferByDefinition.resolves(Result.ok<RegisteredTransfer>(registryInfo));
+  };
 
   afterEach(() => Sinon.restore());
 
   describe("convertConditionalTransferParams", () => {
-    beforeEach(() => {
-      chainReader.getRegisteredTransferByName.resolves(Result.ok<RegisteredTransfer>(transferRegisteredInfo));
-
-      chainReader.getRegisteredTransferByDefinition.resolves(Result.ok<RegisteredTransfer>(transferRegisteredInfo));
-    });
+    const transferFee = "5";
 
     const generateParams = (bIsRecipient = false): EngineParams.ConditionalTransfer => {
+      setDefaultStubs();
       const hashlockState: Omit<HashlockTransferState, "balance"> = {
         lockHash: getRandomBytes32(),
         expiry: "45000",
       };
-      return {
+      const params = {
         channelAddress: mkAddress("0xa"),
         amount: "8",
         assetId: mkAddress("0x0"),
@@ -100,14 +108,33 @@ describe("ParamConverter", () => {
           routingId: getRandomBytes32(),
         },
       };
+      setMessagingStub(params, !bIsRecipient);
+      return params;
+    };
+
+    const setMessagingStub = (submittedParams, isUserA = false) => {
+      messaging.sendTransferQuoteMessage.resolves(
+        Result.ok({
+          routerIdentifier: signerA.publicIdentifier,
+          chainId,
+          amount: submittedParams.amount,
+          assetId: submittedParams.assetId,
+          recipient: submittedParams.recipient ?? (isUserA ? signerA.publicIdentifier : signerB.publicIdentifier),
+          recipientChainId: submittedParams.recipientChainId ?? chainId,
+          recipientAssetId: submittedParams.recipientAssetId ?? submittedParams.assetId,
+          fee: transferFee,
+          expiry: (Date.now() + 30_000).toString(),
+          signature: "success",
+        }),
+      );
     };
 
     it("should fail if params.type is a name and chainReader.getRegisteredTransferByName fails", async () => {
+      const params = generateParams();
       const chainErr = new ChainError("Failure");
       chainReader.getRegisteredTransferByName.resolves(Result.fail(chainErr));
-      const params: any = generateParams();
       // Set incorrect type
-      params.conditionType = "FailingTest";
+      params.type = "FailingTest";
       const { channel: channelState } = createTestChannelState(UpdateType.deposit, {
         channelAddress: params.channelAddress,
         networkContext: {
@@ -116,7 +143,7 @@ describe("ParamConverter", () => {
           providerUrl,
         },
       });
-      const ret = await convertConditionalTransferParams(params, signerA, channelState, chainAddresses, chainReader);
+      const ret = await convertConditionalTransferParams(params, signerA, channelState, chainReader, messaging);
       expect(ret.isError).to.be.true;
       const err = ret.getError();
       expect(err?.message).to.be.eq(ParameterConversionError.reasons.FailedToGetRegisteredTransfer);
@@ -127,9 +154,9 @@ describe("ParamConverter", () => {
     });
 
     it("should fail if params.type is an address and chainReader.getRegisteredTransferByDefinition fails", async () => {
+      const params = generateParams();
       const chainErr = new ChainError("Failure");
       chainReader.getRegisteredTransferByDefinition.resolves(Result.fail(chainErr));
-      const params: any = generateParams();
       // Set incorrect type
       params.type = getRandomAddress();
       const { channel: channelState } = createTestChannelState(UpdateType.deposit, {
@@ -140,7 +167,7 @@ describe("ParamConverter", () => {
           providerUrl,
         },
       });
-      const ret = await convertConditionalTransferParams(params, signerA, channelState, chainAddresses, chainReader);
+      const ret = await convertConditionalTransferParams(params, signerA, channelState, chainReader, messaging);
       expect(ret.isError).to.be.true;
       const err = ret.getError();
       expect(err?.message).to.be.eq(ParameterConversionError.reasons.FailedToGetRegisteredTransfer);
@@ -161,18 +188,18 @@ describe("ParamConverter", () => {
         },
       });
 
-      const ret = await convertConditionalTransferParams(params, signerB, channelState, chainAddresses, chainReader);
+      const ret = await convertConditionalTransferParams(params, signerB, channelState, chainReader, messaging);
 
       expect(ret.isError).to.be.true;
       const err = ret.getError();
       expect(err?.message).to.be.eq(ParameterConversionError.reasons.CannotSendToSelf);
       expect(err?.context.channelAddress).to.be.eq(channelState.channelAddress);
-      expect(err?.context.publicIdentifier).to.be.eq(signerA.publicIdentifier);
+      expect(err?.context.publicIdentifier).to.be.eq(signerB.publicIdentifier);
       expect(err?.context.params).to.be.deep.eq(params);
     });
 
     const runTest = (params: any, result: CreateTransferParams, isUserA: boolean) => {
-      expect(result).to.deep.eq({
+      expect(result).to.containSubset({
         channelAddress: params.channelAddress,
         balance: {
           amount: [params.amount, "0"],
@@ -195,6 +222,17 @@ describe("ParamConverter", () => {
               recipient: params.recipient,
             },
           ],
+          quote: {
+            fee: isUserA ? "0" : transferFee,
+            routerIdentifier: signerA.publicIdentifier,
+            amount: params.amount,
+            assetId: params.assetId,
+            chainId,
+            recipientAssetId: params.recipientAssetId,
+            recipientChainId: params.recipientChainId,
+            recipient: params.recipient,
+            signature: isUserA ? undefined : "success",
+          },
           ...params.meta!,
         },
       });
@@ -209,10 +247,11 @@ describe("ParamConverter", () => {
           providerUrl,
         },
       });
+      setMessagingStub(params, isUserA);
 
       const result = isUserA
-        ? await convertConditionalTransferParams(params, signerA, channelState, chainAddresses, chainReader)
-        : await convertConditionalTransferParams(params, signerB, channelState, chainAddresses, chainReader);
+        ? await convertConditionalTransferParams(params, signerA, channelState, chainReader, messaging)
+        : await convertConditionalTransferParams(params, signerB, channelState, chainReader, messaging);
 
       return result;
     };
@@ -223,49 +262,49 @@ describe("ParamConverter", () => {
       if (user === "A") {
         isUserA = true;
       }
-      const baseParams = generateParams();
 
       describe(`should work for ${user}`, () => {
         it("should work with provided params.recipientChainId", async () => {
-          const params = { ...baseParams, recipientChainId: 2 };
+          const params = { ...generateParams(), recipientChainId: 2 };
 
           const result = await testSetup(params, isUserA);
-          await runTest(params, result.getValue(), isUserA);
+          runTest(params, result.getValue(), isUserA);
         });
+
         it("should work with default params.recipientChainId", async () => {
-          const params = { ...baseParams, recipientChainId: undefined };
+          const params = { ...generateParams(), recipientChainId: undefined };
 
           const result = await testSetup(params, isUserA);
 
-          const expectedParams = { ...baseParams, recipientChainId: chainId };
+          const expectedParams = { ...params, recipientChainId: chainId };
           runTest(expectedParams, result.getValue(), isUserA);
         });
         it("should work with provided params.timeout", async () => {
-          const params = { ...baseParams, timeout: "100000" };
+          const params = { ...generateParams(), timeout: "100000" };
           const result = await testSetup(params, isUserA);
           runTest(params, result.getValue(), isUserA);
         });
         it("should work with default params.timeout", async () => {
-          const params = { ...baseParams, timeout: undefined };
+          const params = { ...generateParams(), timeout: undefined };
 
           const result = await testSetup(params, isUserA);
 
-          const expectedParams = { ...baseParams, timeout: DEFAULT_TRANSFER_TIMEOUT.toString() };
+          const expectedParams = { ...params, timeout: DEFAULT_TRANSFER_TIMEOUT.toString() };
           runTest(expectedParams, result.getValue(), isUserA);
         });
         it("should work with provided params.recipientAssetId", async () => {
-          const params = { ...baseParams, recipientAssetId: AddressZero };
+          const params = { ...generateParams(), recipientAssetId: AddressZero };
 
           const result = await testSetup(params, isUserA);
           runTest(params, result.getValue(), isUserA);
         });
         it("should work with provided params.assetId", async () => {
-          const params = { ...baseParams, assetId: AddressZero };
+          const params = { ...generateParams(), assetId: AddressZero };
           const result = await testSetup(params, isUserA);
           runTest(params, result.getValue(), isUserA);
         });
         it("should work with in-channel recipient", async () => {
-          const params = { ...baseParams };
+          const params = { ...generateParams() };
           const result = await testSetup(params, isUserA);
           runTest(params, result.getValue(), isUserA);
         });
@@ -287,13 +326,13 @@ describe("ParamConverter", () => {
           runTest(params, result.getValue(), isUserA);
         });
         it("should work when params.type is a name", async () => {
-          const params = { ...baseParams, type: TransferNames.Withdraw };
+          const params = { ...generateParams(), type: TransferNames.Withdraw };
 
           const result = await testSetup(params, isUserA);
-          await runTest(params, result.getValue(), isUserA);
+          runTest(params, result.getValue(), isUserA);
         });
         it("should work when params.type is an address (transferDefinition)", async () => {
-          const params = { ...baseParams, type: getRandomBytes32() };
+          const params = { ...generateParams(), type: getRandomBytes32() };
 
           const result = await testSetup(params, isUserA);
           runTest(params, result.getValue(), isUserA);
@@ -304,6 +343,7 @@ describe("ParamConverter", () => {
 
   describe("convertResolveConditionParams", () => {
     const generateParams = (): EngineParams.ResolveTransfer => {
+      setDefaultStubs();
       return {
         channelAddress: mkAddress("0xa"),
         transferId: getRandomBytes32(),
@@ -337,23 +377,19 @@ describe("ParamConverter", () => {
   });
 
   describe("convertWithdrawParams", () => {
+    const quoteFee = "3";
     const generateParams = () => {
-      return {
+      setDefaultStubs(withdrawRegisteredInfo);
+      const params = {
         channelAddress: mkAddress("0xa"),
         amount: "8",
         assetId: mkAddress("0x0"),
         recipient: mkAddress("0xb"),
-        fee: "1",
         callTo: AddressZero,
         callData: "0x",
       };
+      return params;
     };
-
-    beforeEach(() => {
-      chainReader.getRegisteredTransferByName.resolves(Result.ok<RegisteredTransfer>(withdrawRegisteredInfo));
-
-      chainReader.getRegisteredTransferByDefinition.resolves(Result.ok<RegisteredTransfer>(withdrawRegisteredInfo));
-    });
 
     const generateChainData = (params, channel) => {
       const commitment = new WithdrawCommitment(
@@ -377,9 +413,21 @@ describe("ParamConverter", () => {
           providerUrl,
         },
       });
+      if (!isUserA) {
+        messaging.sendWithdrawalQuoteMessage.resolves(
+          Result.ok({
+            channelAddress: params.channelAddress,
+            amount: params.amount,
+            assetId: params.assetId,
+            fee: quoteFee,
+            expiry: (Date.now() + 30_000).toString(),
+            signature: "success",
+          }),
+        );
+      }
       const result = isUserA
-        ? await convertWithdrawParams(params, signerA, channelState, chainAddresses, chainReader)
-        : await convertWithdrawParams(params, signerB, channelState, chainAddresses, chainReader);
+        ? await convertWithdrawParams(params, signerA, channelState, chainAddresses, chainReader, messaging)
+        : await convertWithdrawParams(params, signerB, channelState, chainAddresses, chainReader, messaging);
 
       return { channelState, result };
     };
@@ -392,10 +440,15 @@ describe("ParamConverter", () => {
     ) => {
       const withdrawHash = generateChainData(params, channelState);
       const signature = isUserA ? await signerA.signMessage(withdrawHash) : await signerB.signMessage(withdrawHash);
-      expect(result).to.deep.eq({
+      expect(result).to.containSubset({
         channelAddress: channelState.channelAddress,
         balance: {
-          amount: [BigNumber.from(params.amount).add(params.fee).toString(), "0"],
+          amount: [
+            BigNumber.from(params.amount)
+              .add(isUserA ? "0" : quoteFee)
+              .toString(),
+            "0",
+          ],
           to: isUserA
             ? [getAddress(params.recipient), channelState.bob]
             : [getAddress(params.recipient), channelState.alice],
@@ -404,19 +457,35 @@ describe("ParamConverter", () => {
         transferDefinition: withdrawRegisteredInfo.definition,
         transferInitialState: {
           initiatorSignature: signature,
-          initiator: signerA.address,
-          responder: signerB.address,
+          initiator: isUserA ? signerA.address : signerB.address,
+          responder: isUserA ? signerB.address : signerA.address,
           data: withdrawHash,
           nonce: channelState.nonce.toString(),
-          fee: params.fee ?? "0",
+          fee: isUserA ? "0" : quoteFee,
           callTo: params.callTo ?? AddressZero,
           callData: params.callData ?? "0x",
         },
         timeout: DEFAULT_TRANSFER_TIMEOUT.toString(),
         meta: {
           withdrawNonce: channelState.nonce.toString(),
+          quote: isUserA
+            ? {
+                channelAddress: params.channelAddress,
+                amount: params.amount,
+                assetId: params.assetId,
+                fee: "0",
+              }
+            : {
+                channelAddress: params.channelAddress,
+                amount: params.amount,
+                assetId: params.assetId,
+                fee: "3",
+              },
         },
       });
+      if (!isUserA) {
+        expect(result.meta.quote.signature).to.be.ok;
+      }
     };
 
     it("should fail if signer fails to sign message", async () => {
@@ -427,6 +496,7 @@ describe("ParamConverter", () => {
       expect(result.isError).to.be.true;
       expect(result.getError()).to.contain(new Error(`${signerA.publicIdentifier} failed to sign: fail`));
     });
+
     it("should fail if it cannot get registry information", async () => {
       const params = generateParams();
       const chainErr = new ChainError("Failure");
@@ -444,54 +514,39 @@ describe("ParamConverter", () => {
 
     const users = ["A", "B"];
     for (const user of users) {
-      let isUserA = false;
-      if (user === "A") {
-        isUserA = true;
-      }
-      const baseParams = generateParams();
+      const isUserA = user === "A";
 
       describe(`should work for ${user}`, () => {
-        it("should work with provided params.fee", async () => {
-          const params = { ...baseParams, fee: "2" };
-
-          const { channelState, result } = await testSetup(params, true);
-
-          await runTest(params, channelState, result.getValue(), isUserA);
-        });
-        it("should work without provided params.fee", async () => {
-          const params = { ...baseParams, fee: undefined };
-
-          const { channelState, result } = await testSetup(params, true);
-          const expectedParams = { ...baseParams, fee: "0" };
-          await runTest(expectedParams, channelState, result.getValue(), isUserA);
-        });
         it("should work with provided params.callTo", async () => {
-          const params = { ...baseParams, callTo: AddressZero };
+          const params = { ...generateParams(), callTo: AddressZero };
 
-          const { channelState, result } = await testSetup(params, true);
+          const { channelState, result } = await testSetup(params, isUserA);
 
           await runTest(params, channelState, result.getValue(), isUserA);
         });
-        it("should work without provided params.callTo", async () => {
-          const params = { ...baseParams, callTo: undefined };
 
-          const { channelState, result } = await testSetup(params, true);
-          const expectedParams = { ...baseParams, callTo: AddressZero };
+        it("should work without provided params.callTo", async () => {
+          const params = { ...generateParams(), callTo: undefined };
+
+          const { channelState, result } = await testSetup(params, isUserA);
+          const expectedParams = { ...generateParams(), callTo: AddressZero };
           await runTest(expectedParams, channelState, result.getValue(), isUserA);
         });
-        it("should work with provided params.callData", async () => {
-          const params = { ...baseParams, callData: "0x" };
 
-          const { channelState, result } = await testSetup(params, true);
+        it("should work with provided params.callData", async () => {
+          const params = { ...generateParams(), callData: "0x" };
+
+          const { channelState, result } = await testSetup(params, isUserA);
 
           await runTest(params, channelState, result.getValue(), isUserA);
         });
+
         it("should work without provided params.callData", async () => {
-          const params = { ...baseParams, callData: undefined };
+          const params = { ...generateParams(), callData: undefined };
 
-          const { channelState, result } = await testSetup(params, true);
+          const { channelState, result } = await testSetup(params, isUserA);
 
-          const expectedParams = { ...baseParams, callData: "0x" };
+          const expectedParams = { ...generateParams(), callData: "0x" };
           await runTest(expectedParams, channelState, result.getValue(), isUserA);
         });
       });

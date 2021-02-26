@@ -61,7 +61,6 @@ describe(testName, () => {
     const depositAmt = utils.parseEther("0.0001");
     const transferAmt = utils.parseEther("0.00005");
     const withdrawAmt = utils.parseEther("0.00005");
-    const carolFee = "10";
 
     const carolRogerPostSetup = await setup(carolService, rogerService, chainId1);
     const daveRogerPostSetup = await setup(daveService, rogerService, chainId1);
@@ -76,14 +75,7 @@ describe(testName, () => {
       transferAmt,
     );
     // withdraw to signing address
-    await withdraw(
-      carolService,
-      carolRogerPostSetup.channelAddress,
-      assetId,
-      withdrawAmt.sub(carolFee),
-      carolService.signerAddress,
-      carolFee,
-    );
+    await withdraw(carolService, carolRogerPostSetup.channelAddress, assetId, withdrawAmt, carolService.signerAddress);
     // withdraw to delegated recipient
     await withdraw(daveService, daveRogerPostSetup.channelAddress, assetId, withdrawAmt, Wallet.createRandom().address);
   });

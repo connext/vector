@@ -16,9 +16,11 @@ import { Type, Static } from "@sinclair/typebox";
 import axios from "axios";
 import { BaseLogger } from "pino";
 
-import { config } from "./config";
-import { AutoRebalanceServiceError } from "./errors";
-import { parseBalanceToNumber, rebalancedTokens } from "./metrics";
+import { getConfig } from "../config";
+import { AutoRebalanceServiceError } from "../errors";
+import { parseBalanceToNumber, rebalancedTokens } from "../metrics";
+
+const config = getConfig();
 
 const DEFAULT_REBALANCE_THRESHOLD = 20;
 const MIN_INTERVAL = 1_800_000;
@@ -98,11 +100,13 @@ export const rebalanceIfNeeded = async (
       ),
     );
   }
+  console.log("***** here0");
   const fromAssetBalanceNumber = await parseBalanceToNumber(
     fromAssetBalance.getValue(),
     swap.fromChainId.toString(),
     swap.fromAssetId,
   );
+  console.log("here1");
 
   const toAssetBalance = await chainService.getOnchainBalance(swap.toAssetId, wallet.address, swap.toChainId);
   if (toAssetBalance.isError) {
@@ -120,6 +124,7 @@ export const rebalanceIfNeeded = async (
     swap.toChainId.toString(),
     swap.toAssetId,
   );
+  console.log("here2");
 
   // should be within 1/2 of total balance + threshold
   const totalBalance = fromAssetBalanceNumber + toAssetBalanceNumber;

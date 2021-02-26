@@ -42,7 +42,6 @@ export const TNetworkContext = Type.Intersect([
   TContractAddresses,
   Type.Object({
     chainId: TChainId,
-    providerUrl: TUrl,
   }),
 ]);
 
@@ -55,6 +54,9 @@ export const AllowedSwapSchema = Type.Object({
   hardcodedRate: TDecimalString,
   rebalancerUrl: Type.Optional(Type.String({ format: "uri" })),
   rebalanceThresholdPct: Type.Optional(Type.Number({ minimum: 0, maximum: 100 })),
+  percentageFee: Type.Optional(Type.Number({ minimum: 0, maximum: 100 })),
+  flatFee: Type.Optional(TIntegerString),
+  gasSubsidyPercentage: Type.Optional(Type.Number({ minimum: 0, maximum: 100 })),
 });
 export type AllowedSwap = Static<typeof AllowedSwapSchema>;
 
@@ -178,3 +180,28 @@ export const TFullChannelState = Type.Object({
 });
 
 export type TFullChannelState = Static<typeof TFullChannelState>;
+
+// Quote schemas
+export const TransferQuoteSchema = Type.Object({
+  routerIdentifier: TPublicIdentifier,
+  amount: TIntegerString,
+  assetId: TAddress,
+  chainId: TChainId,
+  recipient: TPublicIdentifier,
+  recipientChainId: TChainId,
+  recipientAssetId: TAddress,
+  fee: TIntegerString,
+  expiry: TIntegerString,
+  signature: Type.Optional(TSignature),
+});
+export type TransferQuote = Static<typeof TransferQuoteSchema>;
+
+export const WithdrawalQuoteSchema = Type.Object({
+  channelAddress: TAddress,
+  amount: TIntegerString,
+  assetId: TAddress,
+  fee: TIntegerString,
+  expiry: TIntegerString,
+  signature: Type.Optional(TSignature),
+});
+export type WithdrawalQuote = Static<typeof WithdrawalQuoteSchema>;

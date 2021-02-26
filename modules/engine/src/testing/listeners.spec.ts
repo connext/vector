@@ -247,6 +247,7 @@ describe(testName, () => {
       signer: IChannelSigner = bob,
       withdrawer: IChannelSigner = alice,
       withdrawalRecipient: Address = alice.address,
+      gasSubsidyPercentage = 100,
     ) => {
       // Create the withdrawal data
       // Responder is always the withdrawer's counterparty
@@ -305,6 +306,7 @@ describe(testName, () => {
         () => Promise.resolve(Result.ok({} as any)),
         acquireRestoreLockStub,
         releaseRestoreLockStub,
+        gasSubsidyPercentage,
       );
 
       // Create a promise that will resolve once the event is emitted
@@ -424,6 +426,7 @@ describe(testName, () => {
         () => Promise.resolve(Result.ok({} as any)),
         acquireRestoreLockStub,
         releaseRestoreLockStub,
+        50,
       );
 
       // Create a promise that will resolve once the event is emitted
@@ -521,6 +524,7 @@ describe(testName, () => {
         chainService as IVectorChainService,
         getEngineEvtContainer(),
         log,
+        50,
       );
 
       expect(vector.resolve.getCall(0).args[0]).to.containSubset({

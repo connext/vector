@@ -36,18 +36,28 @@ const VectorRouterConfigSchema = Type.Object({
   rebalanceProfiles: Type.Array(RebalanceProfileSchema),
   mnemonic: Type.Optional(Type.String()),
   autoRebalanceInterval: Type.Optional(Type.Number({ minimum: 1_800_000 })),
+  basePercentageFee: Type.Optional(Type.Number({ minimum: 0, maximum: 100 })),
+  baseFlatFee: Type.Optional(TIntegerString),
+  baseGasSubsidyPercentage: Type.Optional(Type.Number({ minimum: 0, maximum: 100 })),
 });
 
-type VectorRouterConfig = Static<typeof VectorRouterConfigSchema>;
-const dbUrl = process.env.VECTOR_DATABASE_URL;
-let vectorConfig: VectorRouterConfig;
+export type VectorRouterConfig = Static<typeof VectorRouterConfigSchema>;
 
-const mnemonicEnv = process.env.VECTOR_MNEMONIC;
-try {
-  vectorConfig = JSON.parse(process.env.VECTOR_CONFIG!);
-} catch (e) {
-  throw new Error(`VECTOR_CONFIG contains invalid JSON: ${e.message}`);
-}
+export const getEnvConfig = (): { dbUrl?: string; mnemonicEnv?: string; vectorConfig: VectorRouterConfig } => {
+  let vectorConfig: VectorRouterConfig;
+  try {
+    vectorConfig = JSON.parse(process.env.VECTOR_CONFIG!);
+  } catch (e) {
+    throw new Error(`VECTOR_CONFIG contains invalid JSON: ${e.message}`);
+  }
+  return {
+    dbUrl: process.env.VECTOR_DATABASE_URL,
+    mnemonicEnv: process.env.VECTOR_MNEMONIC,
+    vectorConfig,
+  };
+};
+
+const { dbUrl, mnemonicEnv, vectorConfig } = getEnvConfig();
 const mnemonic = mnemonicEnv || vectorConfig.mnemonic;
 
 // Set defaults
@@ -64,6 +74,13 @@ if (!valid) {
 
 // checksum allowed swaps + rebalance profiles
 vectorConfig.allowedSwaps = vectorConfig.allowedSwaps.map((s) => {
+  // sanity check:
+  // dynamicGasFees can only be assessed if `toChainId` or `fromChainId`
+  // is 1
+  if (s.toChainId !== 1 && s.fromChainId !== 1 && typeof s.gasSubsidyPercentage !== "undefined") {
+    throw new Error(`Cannot dynamically assess gas fees for non-mainnet swaps`);
+  }
+
   return { ...s, fromAssetId: getAddress(s.fromAssetId), toAssetId: getAddress(s.toAssetId) };
 });
 vectorConfig.rebalanceProfiles = vectorConfig.rebalanceProfiles.map((profile) => {
@@ -84,8 +101,10 @@ vectorConfig.rebalanceProfiles = vectorConfig.rebalanceProfiles.map((profile) =>
   };
 });
 
-export const config = {
+const config = {
   dbUrl,
   ...vectorConfig,
   mnemonic,
 } as Omit<VectorRouterConfig, "mnemonic"> & { mnemonic: string };
+
+export const getConfig = (): Omit<VectorRouterConfig, "mnemonic"> & { mnemonic: string } => config;

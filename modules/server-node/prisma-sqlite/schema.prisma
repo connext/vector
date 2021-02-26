@@ -37,7 +37,6 @@ model Channel {
   channelFactoryAddress   String
   transferRegistryAddress String
   chainId                 String
-  providerUrl             String
   latestUpdate            Update?
   inDispute               Boolean
 

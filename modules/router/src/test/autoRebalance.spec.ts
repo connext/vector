@@ -8,8 +8,11 @@ import { BigNumber } from "@ethersproject/bignumber";
 import { parseEther } from "@ethersproject/units";
 import axios from "axios";
 
-import { rebalanceIfNeeded } from "../autoRebalance";
-import { config } from "../config";
+import { rebalanceIfNeeded } from "../services/autoRebalance";
+import { getConfig } from "../config";
+import * as metrics from "../metrics";
+
+const config = getConfig();
 
 const testName = "Auto Rebalance";
 const { log } = getTestLoggers(testName, config.logLevel as any);
@@ -27,6 +30,7 @@ describe(testName, () => {
       1337: Sinon.createStubInstance(JsonRpcProvider),
       1338: Sinon.createStubInstance(JsonRpcProvider),
     };
+    const parseBalanceStub = Sinon.stub(metrics, "getDecimals").resolves(18);
 
     mockAxios = Sinon.stub(axios, "post");
   });
@@ -50,6 +54,7 @@ describe(testName, () => {
       rebalancerUrl: "http://example.com",
     };
     const result = await rebalanceIfNeeded(swap, log, wallet, chainReader as any, hydratedProviders);
+    console.log("****** result", result);
     expect(result.getError()).to.not.be.ok;
     expect(result.getValue()).to.deep.eq({});
   });

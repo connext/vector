@@ -256,7 +256,6 @@ export const withdraw = async (
   assetId: string,
   amount: BigNumber,
   withdrawRecipient: string,
-  fee = "0",
 ): Promise<FullChannelState> => {
   // Get pre-withdraw channel balances
   const preWithdrawChannel = (await withdrawer.getStateChannel({ channelAddress })).getValue() as FullChannelState;
@@ -275,7 +274,6 @@ export const withdraw = async (
     amount: amount.toString(),
     assetId,
     recipient: withdrawRecipient,
-    fee,
     meta: { reason: "Test withdrawal" },
   });
   expect(withdrawalRes.getError()).to.be.undefined;
@@ -289,7 +287,7 @@ export const withdraw = async (
   const postWithdrawRecipient = await getOnchainBalance(assetId, withdrawRecipient, provider);
 
   // Verify balance changes
-  expect(BigNumber.from(preWithdrawCarol).sub(amount.add(fee))).to.be.eq(postWithdrawBalance);
+  expect(BigNumber.from(preWithdrawCarol).sub(amount)).to.be.eq(postWithdrawBalance);
   // using gte here because roger could collateralize
   expect(postWithdrawMultisig.gte(BigNumber.from(preWithdrawMultisig).sub(amount))).to.be.true;
   if (withdrawerAliceOrBob === "alice") {

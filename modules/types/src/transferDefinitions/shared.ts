@@ -1,5 +1,7 @@
+import { NodeResponses } from "../schemas";
 import { Address } from "../basic";
 import { Values } from "../error";
+import { tidy } from "../utils";
 
 import {
   HashlockTransferName,
@@ -52,3 +54,15 @@ export type RegisteredTransfer = {
   name: string;
   encodedCancel: string;
 };
+
+export const TransferQuoteEncoding = tidy(`tuple(
+  string routerIdentifier,
+  uint256 amount,
+  address assetId,
+  uint256 chainId,
+  string recipient,
+  uint256 recipientChainId,
+  address recipientAssetId,
+  uint256 fee,
+  uint256 expiry
+)`);

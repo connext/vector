@@ -20,7 +20,12 @@ import {
 import Ajv from "ajv";
 import { BaseLogger } from "pino";
 import { BigNumber } from "@ethersproject/bignumber";
-import { getRandomBytes32, getSignerAddressFromPublicIdentifier } from "@connext/vector-utils";
+import {
+  getRandomBytes32,
+  getSignerAddressFromPublicIdentifier,
+  hashTransferQuote,
+  recoverAddressFromChannelMessage,
+} from "@connext/vector-utils";
 import { AddressZero } from "@ethersproject/constants";
 import { getAddress } from "@ethersproject/address";
 
@@ -33,6 +38,7 @@ import {
   transferWithCollateralization,
 } from "./services/transfer";
 import { inProgressCreations } from "./listener";
+import { shouldChargeFees } from "./services/config";
 
 const ajv = new Ajv();
 
@@ -148,9 +154,10 @@ export async function forwardTransferCreation(
     channelAddress: senderChannelAddress,
     initiator,
     transferTimeout,
+    chainId: senderChainId,
   } = senderTransfer;
   const meta = { ...untypedMeta } as RouterSchemas.RouterMeta & any;
-  const { routingId } = meta ?? {};
+  const { routingId, quote } = meta ?? {};
   const [path] = meta.path ?? [];
   const recipientIdentifier = path?.recipient;
   if (!routingId || !path || !recipientIdentifier) {
@@ -200,16 +207,125 @@ export async function forwardTransferCreation(
       ),
     );
   }
-  const senderChainId = senderChannel.networkContext.chainId;
 
   // Defaults
   const recipientAssetId = path.recipientAssetId ?? senderAssetId;
   const requireOnline = meta.requireOnline ?? false;
   const recipientChainId = path.recipientChainId ?? senderChainId;
 
-  // Below, we figure out the correct params needed for the receiver's channel. This includes
-  // potential swaps/crosschain stuff
-  let recipientAmount = senderAmount;
+  // Check if fees should be charged
+  const quoteRequired = shouldChargeFees(senderAssetId, senderChainId, recipientAssetId, recipientChainId);
+  if (quoteRequired.isError) {
+    return cancelSenderTransferAndReturnError(
+      routingId,
+      senderTransfer,
+      ForwardTransferCreationError.reasons.ConfigError,
+      "",
+      {
+        shouldChargeFeesError: jsonifyError(quoteRequired.getError()!),
+      },
+    );
+  }
+  if (quoteRequired.getValue()) {
+    logger.info({ quote, methodId, method }, "Quote required for transfer");
+    // Enforce quote present in meta, not expired, and properly signed
+    const validateQuote = ajv.compile(NodeResponses.TransferQuoteSchema[200]);
+    const valid = validateQuote(quote);
+    if (!valid) {
+      return cancelSenderTransferAndReturnError(
+        routingId,
+        senderTransfer,
+        ForwardTransferCreationError.reasons.QuoteError,
+        "",
+        {
+          quoteError: `Malformed: ${validateQuote.errors?.join(",")}`,
+          quote,
+        },
+      );
+    }
+    if (parseInt(quote.expiry) < Date.now()) {
+      return cancelSenderTransferAndReturnError(
+        routingId,
+        senderTransfer,
+        ForwardTransferCreationError.reasons.QuoteError,
+        "",
+        {
+          quoteError: "Quote expired",
+          quote,
+        },
+      );
+    }
+    try {
+      const recovered = await recoverAddressFromChannelMessage(
+        hashTransferQuote({
+          ...quote, // use our values by default
+          routerIdentifier: routerPublicIdentifier,
+          assetId: senderTransfer.assetId,
+          amount: senderAmount,
+          chainId: senderTransfer.chainId,
+          recipient: recipientIdentifier,
+          recipientAssetId,
+          recipientChainId,
+        }),
+        quote.signature,
+      );
+      if (recovered !== routerSignerAddress) {
+        throw new Error(`Failed to recover signature. Expected ${routerSignerAddress}, got ${recovered}`);
+      }
+    } catch (e) {
+      return cancelSenderTransferAndReturnError(
+        routingId,
+        senderTransfer,
+        ForwardTransferCreationError.reasons.QuoteError,
+        "",
+        {
+          quoteError: `Recovery failed: ${e.message}`,
+          quote,
+        },
+      );
+    }
+  }
+
+  // Pull the receiver channel from db
+  const recipientChannelRes = await nodeService.getStateChannelByParticipants({
+    publicIdentifier: routerPublicIdentifier,
+    counterparty: recipientIdentifier,
+    chainId: recipientChainId,
+  });
+  if (recipientChannelRes.isError) {
+    return cancelSenderTransferAndReturnError(
+      routingId,
+      senderTransfer,
+      ForwardTransferCreationError.reasons.RecipientChannelNotFound,
+      "",
+      {
+        storeError: recipientChannelRes.getError()!.toJson(),
+        recipientChainId,
+        recipientIdentifier,
+      },
+    );
+  }
+  const recipientChannel = recipientChannelRes.getValue() as FullChannelState | undefined;
+  if (!recipientChannel) {
+    return cancelSenderTransferAndReturnError(
+      routingId,
+      senderTransfer,
+      ForwardTransferCreationError.reasons.RecipientChannelNotFound,
+      "",
+      {
+        participants: [routerPublicIdentifier, recipientIdentifier],
+        chainId: recipientChainId,
+      },
+    );
+  }
+
+  // Below, we figure out the correct params needed for the receiver's channel.
+  // This includes potential swaps/crosschain stuff
+  let recipientAmount = !quoteRequired.getValue()
+    ? senderAmount
+    : BigNumber.from(senderAmount).sub(quote.fee).isNegative()
+    ? "0"
+    : BigNumber.from(senderAmount).sub(quote.fee).toString();
   if (recipientAssetId !== senderAssetId || recipientChainId !== senderChainId) {
     logger.info(
       {
@@ -251,39 +367,6 @@ export async function forwardTransferCreation(
         senderAmount,
       },
       "Inflight swap calculated",
-    );
-  }
-
-  // Next, get the recipient's channel and figure out whether it needs to be collateralized
-  const recipientChannelRes = await nodeService.getStateChannelByParticipants({
-    publicIdentifier: routerPublicIdentifier,
-    counterparty: recipientIdentifier,
-    chainId: recipientChainId,
-  });
-  if (recipientChannelRes.isError) {
-    return cancelSenderTransferAndReturnError(
-      routingId,
-      senderTransfer,
-      ForwardTransferCreationError.reasons.RecipientChannelNotFound,
-      "",
-      {
-        storeError: recipientChannelRes.getError()!.toJson(),
-        recipientChainId,
-        recipientIdentifier,
-      },
-    );
-  }
-  const recipientChannel = recipientChannelRes.getValue() as FullChannelState | undefined;
-  if (!recipientChannel) {
-    return cancelSenderTransferAndReturnError(
-      routingId,
-      senderTransfer,
-      ForwardTransferCreationError.reasons.RecipientChannelNotFound,
-      "",
-      {
-        participants: [routerPublicIdentifier, recipientIdentifier],
-        chainId: recipientChainId,
-      },
     );
   }
 

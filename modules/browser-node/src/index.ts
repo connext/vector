@@ -138,6 +138,7 @@ export class BrowserNode implements INodeService {
       config.chainAddresses!,
       config.logger.child({ module: "VectorEngine" }),
       false,
+      100,
     );
     node.channelProvider = new DirectProvider(engine);
     node.publicIdentifier = config.signer.publicIdentifier;
@@ -274,6 +275,18 @@ export class BrowserNode implements INodeService {
       const rpc = constructRpcRequest<"chan_getChannelStates">(ChannelRpcMethods.chan_getChannelStates, {});
       const res = await this.channelProvider!.send(rpc);
       return Result.ok(res.map((chan: FullChannelState) => chan.channelAddress));
+    } catch (e) {
+      return Result.fail(e);
+    }
+  }
+
+  async getTransferQuote(
+    params: OptionalPublicIdentifier<NodeParams.TransferQuote>,
+  ): Promise<Result<NodeResponses.TransferQuote, BrowserNodeError>> {
+    try {
+      const rpc = constructRpcRequest<"chan_getTransferQuote">(ChannelRpcMethods.chan_getTransferQuote, params);
+      const res = await this.channelProvider!.send(rpc);
+      return Result.ok(res);
     } catch (e) {
       return Result.fail(e);
     }
@@ -444,6 +457,18 @@ export class BrowserNode implements INodeService {
         transferId: (res.latestUpdate.details as CreateUpdateDetails).transferId,
         routingId: (res.latestUpdate.details as CreateUpdateDetails).meta?.routingId,
       });
+    } catch (e) {
+      return Result.fail(e);
+    }
+  }
+
+  async getWithdrawalQuote(
+    params: OptionalPublicIdentifier<NodeParams.WithdrawalQuote>,
+  ): Promise<Result<NodeResponses.WithdrawalQuote, BrowserNodeError>> {
+    try {
+      const rpc = constructRpcRequest<"chan_getWithdrawalQuote">(ChannelRpcMethods.chan_getWithdrawalQuote, params);
+      const res = await this.channelProvider!.send(rpc);
+      return Result.ok(res);
     } catch (e) {
       return Result.fail(e);
     }
