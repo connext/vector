@@ -1,5 +1,16 @@
-import { VectorChainReader } from "@connext/vector-contracts";
-import { Result, REDUCED_GAS_PRICE } from "@connext/vector-types";
+import {
+  REDUCED_GAS_PRICE,
+  Balance,
+  ChainError,
+  ChainProviders,
+  ChannelDispute,
+  FullTransferState,
+  HydratedProviders,
+  IVectorChainReader,
+  RegisteredTransfer,
+  Result,
+  WithdrawCommitmentJson,
+} from "@connext/vector-types";
 import { BigNumber } from "@ethersproject/bignumber";
 import { AddressZero } from "@ethersproject/constants";
 import Sinon from "sinon";
@@ -8,17 +19,18 @@ import axios from "axios";
 import { expect, getTestLoggers, mkAddress } from "./test";
 import { normalizeFee, getExchangeRateInEth, FeeCalculationError } from "./fees";
 import { calculateExchangeWad, inverse } from "./math";
+import { TransactionRequest } from "@ethersproject/providers";
 
 const testName = "Fees utils";
 const { log } = getTestLoggers(testName);
 
 describe(testName, () => {
   let coinGeckoStub: Sinon.SinonStub;
-  let ethReader: Sinon.SinonStubbedInstance<VectorChainReader>;
+  let ethReader: Sinon.SinonStubbedInstance<MockChainReader>;
 
   beforeEach(async () => {
     coinGeckoStub = Sinon.stub(axios, "get");
-    ethReader = Sinon.createStubInstance(VectorChainReader);
+    ethReader = Sinon.createStubInstance(MockChainReader);
   });
 
   afterEach(() => {
@@ -94,3 +106,109 @@ describe(testName, () => {
     });
   });
 });
+
+// Create a mock class of chain reader so sinon can stub it without
+// making a circular dependency of the `@connext/vector-contracts`
+// module
+class MockChainReader implements IVectorChainReader {
+  getTotalDepositedA(channelAddress: string, chainId: number, assetId: string): Promise<Result<BigNumber, ChainError>> {
+    throw new Error("Method not implemented.");
+  }
+  getTotalDepositedB(channelAddress: string, chainId: number, assetId: string): Promise<Result<BigNumber, ChainError>> {
+    throw new Error("Method not implemented.");
+  }
+  getChannelFactoryBytecode(channelFactoryAddress: string, chainId: number): Promise<Result<string, ChainError>> {
+    throw new Error("Method not implemented.");
+  }
+  getChannelMastercopyAddress(channelFactoryAddress: string, chainId: number): Promise<Result<string, ChainError>> {
+    throw new Error("Method not implemented.");
+  }
+  getDecimals(assetId: string, chainId: number): Promise<Result<number, ChainError>> {
+    throw new Error("Method not implemented.");
+  }
+  getChannelAddress(
+    initiator: string,
+    responder: string,
+    channelFactoryAddress: string,
+    chainId: number,
+  ): Promise<Result<string, ChainError>> {
+    throw new Error("Method not implemented.");
+  }
+  getRegisteredTransferByName(
+    name: string,
+    transferRegistry: string,
+    chainId: number,
+    bytecode?: string,
+  ): Promise<Result<RegisteredTransfer, ChainError>> {
+    throw new Error("Method not implemented.");
+  }
+  getRegisteredTransferByDefinition(
+    definition: string,
+    transferRegistry: string,
+    chainId: number,
+    bytecode?: string,
+  ): Promise<Result<RegisteredTransfer, ChainError>> {
+    throw new Error("Method not implemented.");
+  }
+  getRegisteredTransfers(
+    transferRegistry: string,
+    chainId: number,
+    bytecode?: string,
+  ): Promise<Result<RegisteredTransfer[], ChainError>> {
+    throw new Error("Method not implemented.");
+  }
+  getChainProviders(): Result<ChainProviders, ChainError> {
+    throw new Error("Method not implemented.");
+  }
+  getHydratedProviders(): Result<HydratedProviders, ChainError> {
+    throw new Error("Method not implemented.");
+  }
+  create(
+    initialState: any,
+    balance: Balance,
+    transferDefinition: string,
+    transferRegistryAddress: string,
+    chainId: number,
+    bytecode?: string,
+  ): Promise<Result<boolean, ChainError>> {
+    throw new Error("Method not implemented.");
+  }
+  resolve(transfer: FullTransferState<any>, chainId: number, bytecode?: string): Promise<Result<Balance, ChainError>> {
+    throw new Error("Method not implemented.");
+  }
+  getCode(address: string, chainId: number): Promise<Result<string, ChainError>> {
+    throw new Error("Method not implemented.");
+  }
+  getBlockNumber(chainId: number): Promise<Result<number, ChainError>> {
+    throw new Error("Method not implemented.");
+  }
+  getGasPrice(chainId: number): Promise<Result<BigNumber, ChainError>> {
+    throw new Error("Method not implemented.");
+  }
+  estimateGas(chainId: number, transaction: TransactionRequest): Promise<Result<BigNumber, ChainError>> {
+    throw new Error("Method not implemented.");
+  }
+  getTokenAllowance(
+    tokenAddress: string,
+    owner: string,
+    spender: string,
+    chainId: number,
+  ): Promise<Result<BigNumber, ChainError>> {
+    throw new Error("Method not implemented.");
+  }
+  getChannelDispute(channelAddress: string, chainId: number): Promise<Result<ChannelDispute | undefined, ChainError>> {
+    throw new Error("Method not implemented.");
+  }
+  getSyncing(
+    chainId: number,
+  ): Promise<Result<boolean | { startingBlock: string; currentBlock: string; highestBlock: string }, ChainError>> {
+    throw new Error("Method not implemented.");
+  }
+  getWithdrawalTransactionRecord(
+    withdrawData: WithdrawCommitmentJson,
+    channelAddress: string,
+    chainId: number,
+  ): Promise<Result<boolean, ChainError>> {
+    throw new Error("Method not implemented.");
+  }
+}
