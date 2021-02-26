@@ -18,6 +18,7 @@ import { config } from "./config";
 
 function App() {
   const [node, setNode] = useState<BrowserNode>();
+  const [routerPublicIdentifier, setRouterPublicIdentifier] = useState<string>();
   const [channels, setChannels] = useState<FullChannelState[]>([]);
   const [selectedChannel, setSelectedChannel] = useState<FullChannelState>();
   const [showCustomIframe, setShowCustomIframe] = useState<boolean>(false);
@@ -40,11 +41,12 @@ function App() {
   const connectNode = async (
     iframeSrc: string,
     supportedChains: number[],
-    routerPublicIdentifier: string,
+    _routerPublicIdentifier: string,
     loginProvider: "none" | "metamask" | "magic",
   ): Promise<BrowserNode> => {
     try {
       setConnectLoading(true);
+      setRouterPublicIdentifier(_routerPublicIdentifier);
       const chainProviders = {};
       supportedChains.forEach((chain) => {
         chainProviders[chain] = config.chainProviders[chain];
@@ -52,7 +54,7 @@ function App() {
       const client = new BrowserNode({
         supportedChains,
         iframeSrc,
-        routerPublicIdentifier,
+        routerPublicIdentifier: _routerPublicIdentifier,
         chainProviders,
         chainAddresses: config.chainAddresses,
         messagingUrl: config.messagingUrl,
@@ -91,7 +93,7 @@ function App() {
         console.warn("Attempting restore from router");
         for (const supportedChain of supportedChains) {
           const channelRes = await client.getStateChannelByParticipants({
-            counterparty: routerPublicIdentifier,
+            counterparty: _routerPublicIdentifier,
             chainId: supportedChain,
           });
           if (channelRes.isError) {
@@ -99,7 +101,7 @@ function App() {
           }
           if (!channelRes.getValue()) {
             const restoreChannelState = await client.restoreState({
-              counterpartyIdentifier: routerPublicIdentifier,
+              counterpartyIdentifier: _routerPublicIdentifier,
               chainId: supportedChain,
             });
             if (restoreChannelState.isError) {
@@ -177,8 +179,9 @@ function App() {
   const reconnectNode = async (
     supportedChains: number[],
     iframeSrc = "http://localhost:3030",
-    routerPublicIdentifier = "vector8Uz1BdpA9hV5uTm6QUv5jj1PsUyCH8m8ciA94voCzsxVmrBRor",
+    _routerPublicIdentifier = "vector8Uz1BdpA9hV5uTm6QUv5jj1PsUyCH8m8ciA94voCzsxVmrBRor",
   ) => {
+    setRouterPublicIdentifier(_routerPublicIdentifier);
     setConnectLoading(true);
     try {
       const chainProviders = {};
@@ -189,7 +192,7 @@ function App() {
       const client = new BrowserNode({
         supportedChains,
         iframeSrc,
-        routerPublicIdentifier,
+        routerPublicIdentifier: _routerPublicIdentifier,
         chainProviders,
       });
       await client.init();
@@ -681,7 +684,54 @@ function App() {
                       <Input />
                     </Form.Item>
 
-                    <Form.Item wrapperCol={{ offset: 6 }}>
+                    <Form.Item label="Transfer Fee" name="transferFee">
+                      <Input disabled />
+                    </Form.Item>
+
+                    <Form.Item label="Withdrawal Fee" name="withdrawalFee">
+                      <Input disabled />
+                    </Form.Item>
+
+                    <Form.Item wrapperCol={{ offset: 6, span: 16 }}>
+                      <Button
+                        onClick={async () => {
+                          const values = transferForm.getFieldsValue();
+                          console.log("Calculating fees: ", values);
+                          const transferFee = await node.getTransferQuote({
+                            amount: values.amount,
+                            assetId: values.assetId,
+                            chainId: selectedChannel?.networkContext.chainId,
+                            routerIdentifier: routerPublicIdentifier,
+                            recipient: values.recipient,
+                            recipientAssetId: values.recipientAssetId || undefined,
+                            recipientChainId: values.recipientChainId || undefined,
+                          });
+                          console.log(
+                            "transferFee: ",
+                            transferFee.isError ? transferFee.getError() : transferFee.getValue(),
+                          );
+
+                          const withdrawalFee = await node.getWithdrawalQuote({
+                            amount: values.amount,
+                            assetId: values.assetId,
+                            channelAddress: selectedChannel?.channelAddress,
+                          });
+                          console.log(
+                            "withdrawalFee: ",
+                            withdrawalFee.isError ? withdrawalFee.getError() : withdrawalFee.getValue(),
+                          );
+
+                          if (!transferFee.isError && !withdrawalFee.isError) {
+                            transferForm.setFieldsValue({
+                              transferFee: transferFee.getValue().fee,
+                              withdrawalFee: withdrawalFee.getValue().fee,
+                            });
+                          }
+                        }}
+                      >
+                        Calculate Fees
+                      </Button>
+
                       <Button type="primary" htmlType="submit" loading={transferLoading}>
                         Transfer
                       </Button>
