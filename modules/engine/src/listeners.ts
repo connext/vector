@@ -461,7 +461,7 @@ export async function setupEngineListeners(
       return;
     }
 
-    const normalizedFee =
+    const normalizedGasCost =
       channel.networkContext.chainId === 1 || TESTNETS_WITH_FEES.includes(channel.networkContext.chainId) // fromAsset MUST be on mainnet or hardcoded
         ? await normalizeFee(
             ethFee,
@@ -474,28 +474,39 @@ export async function setupEngineListeners(
           )
         : Result.ok(Zero);
 
-    if (normalizedFee.isError) {
+    if (normalizedGasCost.isError) {
       await messaging.respondToWithdrawalQuoteMessage(
         inbox,
         Result.fail(
           new WithdrawQuoteError(WithdrawQuoteError.reasons.ExchangeRateError, signer.publicIdentifier, request, {
-            error: jsonifyError(normalizedFee.getError()!),
+            error: jsonifyError(normalizedGasCost.getError()!),
           }),
         ),
       );
       return;
     }
+
+    const fee = normalizedGasCost
+      .getValue()
+      .mul(100 - gasSubsidyPercentage)
+      .div(100);
+
     logger.info(
-      { normalizedFee: normalizedFee.toString(), assetId: request.assetId, method, methodId },
+      {
+        normalizedGasCost: normalizedGasCost.toString(),
+        fee: fee.toString(),
+        assetId: request.assetId,
+        method,
+        methodId,
+      },
       "Withdrawal fee",
     );
-
     // Sign the quote + return to user
     const quote = {
       channelAddress: request.channelAddress,
       amount: request.amount,
       assetId: request.assetId,
-      fee: normalizedFee.getValue().toString(),
+      fee: fee.toString(),
       expiry: (Date.now() + 30_000).toString(),
     };
     try {
