@@ -109,8 +109,8 @@ describe(testName, () => {
     });
 
     it("should not apply gas fees if neither from or to chain have chain id = 1", async () => {
-      fromChannel.networkContext.chainId = 1337;
-      toChannel.networkContext.chainId = 1337;
+      fromChannel.networkContext.chainId = 1427;
+      toChannel.networkContext.chainId = 1427;
       getSwappedAmountStub.resolves(Result.ok(0));
       const result = await feesService.calculateFeeAmount(
         transferAmount,
@@ -153,7 +153,7 @@ describe(testName, () => {
       fees.percentageFee = 0;
       fees.flatFee = "0";
       getFeesStub.returns(Result.ok(fees));
-      fromChannel.networkContext.chainId = 1337;
+      fromChannel.networkContext.chainId = 1427;
 
       const result = await feesService.calculateFeeAmount(
         transferAmount,
