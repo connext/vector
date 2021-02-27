@@ -17,6 +17,7 @@ import {
   IVectorChainReader,
   EngineError,
   jsonifyError,
+  IMessagingService,
 } from "@connext/vector-types";
 import { BigNumber } from "@ethersproject/bignumber";
 import { AddressZero } from "@ethersproject/constants";
@@ -28,8 +29,8 @@ export async function convertConditionalTransferParams(
   params: EngineParams.ConditionalTransfer,
   signer: IChannelSigner,
   channel: FullChannelState,
-  chainAddresses: ChainAddresses,
   chainReader: IVectorChainReader,
+  messaging: IMessagingService,
 ): Promise<Result<CreateTransferParams, EngineError>> {
   const { channelAddress, amount, assetId, recipient, details, type, timeout, meta: providedMeta } = params;
 
@@ -58,11 +59,86 @@ export async function convertConditionalTransferParams(
   // set for the higher level modules to parse
   let baseRoutingMeta: RouterSchemas.RouterMeta | undefined = undefined;
   if (recipient && getSignerAddressFromPublicIdentifier(recipient) !== channelCounterparty) {
+    // Get a quote if it is not provided
+    // NOTE: this explicitly assumes that the channel.alice is the
+    // router identifier.
+    let quote = params.quote;
+    if (!quote) {
+      const quoteRes =
+        signer.publicIdentifier !== channel.aliceIdentifier
+          ? await messaging.sendTransferQuoteMessage(
+              Result.ok({
+                amount: params.amount,
+                assetId: params.assetId,
+                chainId: channel.networkContext.chainId,
+                recipient,
+                recipientChainId,
+                recipientAssetId,
+              }),
+              channel.aliceIdentifier,
+              signer.publicIdentifier,
+            )
+          : Result.ok({
+              signature: undefined,
+              chainId: channel.networkContext.chainId,
+              routerIdentifier: signer.publicIdentifier,
+              amount: params.amount,
+              assetId: params.assetId,
+              recipient,
+              recipientChainId,
+              recipientAssetId,
+              fee: "0",
+              expiry: (Date.now() + 30_000).toString(),
+            });
+      if (quoteRes.isError) {
+        return Result.fail(
+          new ParameterConversionError(
+            ParameterConversionError.reasons.CouldNotGetQuote,
+            channelAddress,
+            signer.publicIdentifier,
+            { params, quoteError: jsonifyError(quoteRes.getError()!) },
+          ),
+        );
+      }
+      quote = quoteRes.getValue();
+    }
+    const fee = BigNumber.from(quote.fee);
+    if (fee.gte(params.amount)) {
+      return Result.fail(
+        new ParameterConversionError(
+          ParameterConversionError.reasons.FeeGreaterThanAmount,
+          channelAddress,
+          signer.publicIdentifier,
+          { params, quote },
+        ),
+      );
+    }
+    const now = Date.now();
+    if (parseInt(quote.expiry) <= now) {
+      return Result.fail(
+        new ParameterConversionError(
+          ParameterConversionError.reasons.QuoteExpired,
+          channelAddress,
+          signer.publicIdentifier,
+          { params, quote, now },
+        ),
+      );
+    }
     const requireOnline = providedMeta?.requireOnline ?? true; // true by default
     baseRoutingMeta = {
       requireOnline,
       routingId: providedMeta?.routingId ?? getRandomBytes32(),
       path: [{ recipient, recipientChainId, recipientAssetId }],
+      quote: {
+        ...quote, // use our own values by default
+        routerIdentifier: channel.aliceIdentifier,
+        amount: params.amount,
+        assetId: params.assetId,
+        chainId: channel.networkContext.chainId,
+        recipient,
+        recipientChainId,
+        recipientAssetId,
+      },
     };
   }
 
@@ -134,8 +210,9 @@ export async function convertWithdrawParams(
   channel: FullChannelState,
   chainAddresses: ChainAddresses,
   chainReader: IVectorChainReader,
+  messaging: IMessagingService,
 ): Promise<Result<CreateTransferParams, EngineError>> {
-  const { channelAddress, fee, callTo, callData, meta } = params;
+  const { channelAddress, callTo, callData, meta } = params;
   const assetId = getAddress(params.assetId);
   const recipient = getAddress(params.recipient);
 
@@ -151,8 +228,74 @@ export async function convertWithdrawParams(
     );
   }
 
+  // If it is a no-op, throw
+  const noCall = !callTo || callTo === AddressZero;
+  if (params.amount === "0" && noCall) {
+    return Result.fail(
+      new ParameterConversionError(ParameterConversionError.reasons.NoOp, channelAddress, signer.publicIdentifier, {
+        params,
+      }),
+    );
+  }
+
+  // If you are not alice, request a quote
+  let quote = params.quote;
+  if (!quote) {
+    const quoteRes =
+      signer.publicIdentifier !== channel.aliceIdentifier
+        ? await messaging.sendWithdrawalQuoteMessage(
+            Result.ok({ channelAddress: channel.channelAddress, amount: params.amount, assetId: params.assetId }),
+            channel.aliceIdentifier,
+            signer.publicIdentifier,
+          )
+        : Result.ok({
+            // use hardcoded values
+            channelAddress: channel.channelAddress,
+            amount: params.amount,
+            assetId: params.assetId,
+            fee: "0",
+            expiry: (Date.now() + 30_000).toString(),
+          });
+
+    if (quoteRes.isError) {
+      return Result.fail(
+        new ParameterConversionError(
+          ParameterConversionError.reasons.CouldNotGetQuote,
+          channelAddress,
+          signer.publicIdentifier,
+          { params, quoteError: jsonifyError(quoteRes.getError()!) },
+        ),
+      );
+    }
+    quote = quoteRes.getValue();
+  }
+
+  const fee = BigNumber.from(quote.fee);
+  if (fee.gte(params.amount)) {
+    return Result.fail(
+      new ParameterConversionError(
+        ParameterConversionError.reasons.FeeGreaterThanAmount,
+        channelAddress,
+        signer.publicIdentifier,
+        { params, quote },
+      ),
+    );
+  }
+
+  const now = Date.now();
+  if (parseInt(quote.expiry) <= now) {
+    return Result.fail(
+      new ParameterConversionError(
+        ParameterConversionError.reasons.QuoteExpired,
+        channelAddress,
+        signer.publicIdentifier,
+        { params, quote, now },
+      ),
+    );
+  }
+
   // If there is a fee being charged, add the fee to the amount.
-  const amount = fee ? BigNumber.from(params.amount).add(fee).toString() : params.amount;
+  const amount = fee.add(params.amount).toString();
 
   const commitment = new WithdrawCommitment(
     channel.channelAddress,
@@ -194,7 +337,7 @@ export async function convertWithdrawParams(
     responder: channelCounterparty,
     data: commitment.hashToSign(),
     nonce: channel.nonce.toString(),
-    fee: fee ?? "0",
+    fee: fee.toString(),
     callTo: callTo ?? AddressZero,
     callData: callData ?? "0x",
   };
@@ -230,6 +373,12 @@ export async function convertWithdrawParams(
     // Note: we MUST include withdrawNonce in meta. The counterparty will NOT have the same nonce on their end otherwise.
     meta: {
       ...(meta ?? {}),
+      quote: {
+        ...quote, // use our own values by default
+        channelAddress,
+        amount: params.amount,
+        assetId: params.assetId,
+      },
       withdrawNonce: channel.nonce.toString(),
     },
   });

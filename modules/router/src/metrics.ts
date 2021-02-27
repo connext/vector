@@ -7,7 +7,9 @@ import { formatEther, formatUnits } from "@ethersproject/units";
 import { Wallet } from "@ethersproject/wallet";
 import { Counter, Gauge } from "prom-client";
 
-import { config } from "./config";
+import { getConfig } from "./config";
+
+const config = getConfig();
 
 //////////////////////////
 ///// Router Metrics /////
@@ -86,7 +88,7 @@ export const onchainLiquidity = new Gauge({
         const chainInfo: ChainInfo = await getChainInfo(Number(chainId));
         const baseAssetName: string = getAssetName(Number(chainId), AddressZero);
         this.set(
-          { chainName: chainInfo.name, chainId, assetName: baseAssetName, assetId: AddressZero },
+          { chainName: chainInfo?.name ?? chainId, chainId, assetName: baseAssetName, assetId: AddressZero },
           parseFloat(formatEther(balance)),
         );
 
@@ -96,7 +98,7 @@ export const onchainLiquidity = new Gauge({
             const balance = await config.contract.balanceOf(signerAddress);
             const assetName: string = getAssetName(Number(chainId), assetId);
             const toSet = await parseBalanceToNumber(balance, chainId, assetId);
-            this.set({ chainName: chainInfo.name, chainId, assetName, assetId }, toSet);
+            this.set({ chainName: chainInfo?.name ?? chainId, chainId, assetName, assetId }, toSet);
           }),
         );
       }),

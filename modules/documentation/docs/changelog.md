@@ -2,12 +2,23 @@
 
 ## Next Release
 
+## 0.2.0-beta.1
+
+- \[router\] Fix fees bug
+## 0.2.0-beta.0
+
+- \[router\] Add fee collection config
+- \[engine\] Add fees automatically on transfer and withdrawals
+- \[engine\] Add fees for withdrawal
+
 ## 0.1.18-beta.1
 
 - \[router\] Clean up hanging transfers on reconnect
+
 ## 0.1.18-beta.0
 
 - \[browser-node\] Beta feature: Sign in with login providers: Metamask + Magic.Link
+
 ## 0.1.17
 
 - \[router\] Fix collateral bug

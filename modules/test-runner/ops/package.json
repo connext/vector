@@ -4,6 +4,6 @@
   "dependencies": {
     "mocha": "8.2.1",
     "nyc": "15.1.0",
-    "pino-pretty": "4.3.0"
+    "pino-pretty": "4.5.0"
   }
 }

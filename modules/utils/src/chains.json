@@ -61,8 +61,8 @@
       "0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174": "USDC",
       "0xA1c57f48F0Deb89f569dFbE6E2B7f46D33606fD4": "MANA",
       "0x8f3Cf7ad23Cd3CaDbD9735AFf958023239c6A063": "DAI",
-      "0xb33eaad8d922b1083446dc23f610c2567fb5180f": "UNI",
-      "0xc2132d05d31c914a87c6611c10748aeb04b58e8f": "USDT"
+      "0xb33EaAd8d922B1083446DC23f610c2567fB5180f": "UNI",
+      "0xc2132D05D31c914a87C6611C10748AEb04B58e8F": "USDT"
     },
     "rpc": ["https://rpc-mainnet.matic.network", "wss://ws-mainnet.matic.network"],
     "faucets": [],
@@ -179,9 +179,9 @@
     "nativeCurrency": { "name": "Binance Chain Native Token", "symbol": "BNB", "decimals": 18 },
     "assetId": {
       "0x0000000000000000000000000000000000000000": "BNB",
-      "0x55d398326f99059ff775485246999027b3197955": "USDT",
-      "0xbf5140a22578168fd562dccf235e5d43a02ce9b1": "UNI",
-      "0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d": "USDC"
+      "0x55d398326f99059fF775485246999027B3197955": "USDT",
+      "0xBf5140A22578168FD562DCcF235E5D43A02ce9B1": "UNI",
+      "0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d": "USDC"
     },
     "rpc": [
       "https://bsc-dataseed1.binance.org",
@@ -211,9 +211,9 @@
     "nativeCurrency": { "name": "xDAI", "symbol": "xDAI", "decimals": 18 },
     "assetId": {
       "0x0000000000000000000000000000000000000000": "XDAI",
-      "0x4ecaba5870353805a9f068101a40e0f32ed605c6": "USDT",
-      "0x4537e328bf7e4efa29d05caea260d7fe26af9d74": "UNI",
-      "0xddafbb505ad214d7b80b1f830fccc89b60fb7a83": "USDC",
+      "0x4ECaBa5870353805a9F068101A40E0f32ed605C6": "USDT",
+      "0x4537e328Bf7e4eFA29D05CAeA260D7fE26af9D74": "UNI",
+      "0xDDAfbb505ad214D7b80b1f830fcCc89B60fb7A83": "USDC",
       "0x44fA8E6f47987339850636F88629646662444217": "DAI"
     },
     "rpc": [

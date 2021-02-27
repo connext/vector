@@ -54,7 +54,6 @@ export function createTestUpdateParams<T extends UpdateType>(
         timeout: "1200",
         networkContext: {
           chainId: 2,
-          providerUrl: "http://eth.com",
           channelFactoryAddress: mkAddress("0xccccddddaaaaaffff"),
           transferRegistryAddress: mkAddress("0xdddeffff2222"),
         },
@@ -132,7 +131,6 @@ export function createTestChannelUpdate<T extends UpdateType>(
           chainId: 1337,
           channelFactoryAddress: mkAddress("0xccccddddaaaaaffff"),
           transferRegistryAddress: mkAddress("0xffffeeeeeecccc"),
-          providerUrl: "http://localhost:8545",
         },
         timeout: "1",
       } as SetupUpdateDetails;
@@ -221,7 +219,6 @@ export function createTestChannelState<T extends UpdateType = typeof UpdateType.
           chainId: 1337,
           channelFactoryAddress: mkAddress("0xccccddddaaaaaffff"),
           transferRegistryAddress: mkAddress("0xcc22233323132"),
-          providerUrl: "http://localhost:8545",
           ...(networkContextOverride ?? {}),
         };
 

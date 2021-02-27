@@ -37,7 +37,6 @@ model Channel {
   channelFactoryAddress   String
   transferRegistryAddress String
   chainId                 String
-  providerUrl             String
   latestUpdate            Update?
   inDispute               Boolean
 
@@ -197,7 +196,6 @@ model OnchainTransaction {
 
 model Configuration {
   id       Int    @id
-  mnemonic String @unique
 
   @@map(name: "configuration")
 }

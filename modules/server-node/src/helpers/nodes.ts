@@ -81,6 +81,7 @@ export const createNode = async (
     config.chainAddresses,
     logger.child({ module: "VectorEngine" }),
     skipCheckIn,
+    config.baseGasSubsidyPercentage,
     undefined,
   );
 

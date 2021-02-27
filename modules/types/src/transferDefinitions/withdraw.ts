@@ -1,4 +1,5 @@
 import { SignatureString, Address, Bytes32 } from "../basic";
+import { NodeResponses } from "../schemas";
 import { tidy } from "../utils";
 
 export const WithdrawName = "Withdraw";
@@ -47,3 +48,11 @@ export type WithdrawCommitmentJson = {
   callData: string;
   transactionHash?: string;
 };
+
+export const WithdrawalQuoteEncoding = tidy(`tuple(
+  address channelAddress,
+  uint256 amount,
+  address assetId,
+  uint256 fee,
+  uint256 expiry
+)`);

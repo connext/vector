@@ -25,13 +25,15 @@ import {
 import { collectDefaultMetrics, register } from "prom-client";
 import { Wallet } from "ethers";
 
-import { config } from "./config";
+import { getConfig } from "./config";
 import { IRouter, Router } from "./router";
 import { PrismaStore } from "./services/store";
 import { NatsRouterMessagingService } from "./services/messaging";
-import { autoRebalanceTask, startAutoRebalanceTask } from "./autoRebalance";
+import { autoRebalanceTask, startAutoRebalanceTask } from "./services/autoRebalance";
 import { wallet } from "./metrics";
 import { ServerError } from "./errors";
+
+const config = getConfig();
 
 const routerPort = 8000;
 const routerBase = `http://router:${routerPort}`;
@@ -130,9 +132,22 @@ server.addHook("onReady", async () => {
     true,
   );
 
+  if (nodeService.publicIdentifier !== signer.publicIdentifier) {
+    throw new Error("Router signer misconfigured, node and router have different identifiers");
+  }
+
+  const nodeConfigs = await nodeService.getConfig();
+  if (nodeConfigs.isError) {
+    throw nodeConfigs.getError();
+  }
+  const nodeConfig = nodeConfigs.getValue().find((c) => c.publicIdentifier === signer.publicIdentifier);
+  if (!nodeConfig) {
+    throw new Error("Router node config not available");
+  }
+
   router = await Router.connect(
-    nodeService.publicIdentifier,
-    nodeService.signerAddress,
+    signer,
+    nodeConfig.chainAddresses,
     nodeService,
     chainService,
     store,

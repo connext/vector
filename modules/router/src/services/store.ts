@@ -1,7 +1,9 @@
 import { NodeParams } from "@connext/vector-types";
 
 import { PrismaClient } from "../generated/db-client";
-import { config } from "../config";
+import { getConfig } from "../config";
+
+const config = getConfig();
 
 export const RouterUpdateStatus = {
   COMPLETE: "COMPLETE",

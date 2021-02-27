@@ -70,7 +70,6 @@ describe("applyUpdate", () => {
   const channelAddress = mkAddress("0xccc");
   const networkContext: NetworkContext = {
     chainId,
-    providerUrl,
     channelFactoryAddress: mkAddress("0xaaabbbcccc"),
     transferRegistryAddress: mkAddress("0xddddeeeeefffff44444"),
   };

@@ -12,14 +12,32 @@ import {
   TChainId,
   TIntegerString,
   TransferResolverSchema,
+  WithdrawalQuoteSchema,
+  TransferQuoteSchema,
 } from "./basic";
 
 ////////////////////////////////////////
 // Engine API Parameter schemas
 
 // The engine takes in user-friendly channel transition parameters
-// from the rpc, converts them to proper protocol parameters,
-// and returns the protocol response.
+// from the rpc, converts them to proper protocol/message parameters,
+// and returns the protocol/message response.
+
+const GetWithdrawalQuoteParamsSchema = Type.Object({
+  amount: TIntegerString,
+  assetId: TAddress,
+  channelAddress: TAddress,
+});
+
+const GetTransferQuoteParamsSchema = Type.Object({
+  routerIdentifier: TPublicIdentifier,
+  amount: TIntegerString,
+  assetId: TAddress,
+  chainId: TChainId,
+  recipient: Type.Optional(TPublicIdentifier),
+  recipientChainId: Type.Optional(TChainId),
+  recipientAssetId: Type.Optional(TAddress),
+});
 
 const GetRouterConfigParamsSchema = Type.Object({
   routerIdentifier: TPublicIdentifier,
@@ -110,8 +128,9 @@ const CreateConditionalTransferParamsSchema = Type.Object({
   recipientAssetId: Type.Optional(TAddress),
   timeout: Type.Optional(TIntegerString),
   meta: Type.Optional(TBasicMeta),
-  type: Type.String(), // Type.Union([TransferNameSchema, TAddress]),
+  type: Type.String(),
   details: Type.Dict(Type.Any()), // initial state w.o balance object
+  quote: Type.Optional(TransferQuoteSchema),
 });
 
 // Resolve conditional transfer engine params
@@ -128,7 +147,7 @@ const WithdrawParamsSchema = Type.Object({
   amount: TIntegerString,
   assetId: TAddress,
   recipient: TAddress,
-  fee: Type.Optional(TIntegerString),
+  quote: Type.Optional(WithdrawalQuoteSchema),
   callTo: Type.Optional(TAddress),
   callData: Type.Optional(Type.String()),
   meta: Type.Optional(TBasicMeta),
@@ -257,4 +276,10 @@ export namespace EngineParams {
 
   export const DefundTransferSchema = DefundTransferParamsSchema;
   export type DefundTransfer = Static<typeof DefundTransferParamsSchema>;
+
+  export const GetTransferQuoteSchema = GetTransferQuoteParamsSchema;
+  export type GetTransferQuote = Static<typeof GetTransferQuoteParamsSchema>;
+
+  export const GetWithdrawalQuoteSchema = GetWithdrawalQuoteParamsSchema;
+  export type GetWithdrawalQuote = Static<typeof GetWithdrawalQuoteParamsSchema>;
 }

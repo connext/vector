@@ -6,10 +6,10 @@ import {
   Result,
   TransferNames,
   WithdrawCommitmentJson,
+  REDUCED_GAS_PRICE,
 } from "@connext/vector-types";
 import { getRandomBytes32 } from "@connext/vector-utils";
 import { HashZero, AddressZero } from "@ethersproject/constants";
-import { parseUnits } from "@ethersproject/units";
 
 import { logger } from "..";
 import { ResubmitWithdrawalError } from "../helpers/errors";
@@ -325,10 +325,9 @@ export const submitMainnetWithdrawalsIfNeeded = async (
 
   // submit all unsubmitted if gas price is < 150 gwei
   // otherwise, only submit old withdrawals
-  const MAX_GAS_PRICE = parseUnits("150", "gwei");
-  const submitAll = gasPrice.getValue().lte(MAX_GAS_PRICE);
+  const submitAll = gasPrice.getValue().lte(REDUCED_GAS_PRICE);
   logger.info(
-    { method, methodId, gasPrice: gasPrice.getValue().toString(), maxGasPrice: MAX_GAS_PRICE.toString() },
+    { method, methodId, gasPrice: gasPrice.getValue().toString(), maxGasPrice: REDUCED_GAS_PRICE.toString() },
     "Got gas price",
   );
 
