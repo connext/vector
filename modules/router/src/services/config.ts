@@ -25,10 +25,7 @@ export const getMatchingSwap = (
   toChainId: number,
 ): Result<AllowedSwap, ConfigServiceError> => {
   const fromAsset = getAddress(fromAssetId);
-  console.log("fromAsset: ", fromAsset);
   const toAsset = getAddress(toAssetId);
-  console.log("toAsset: ", toAsset);
-  console.log("getConfig().allowedSwaps: ", getConfig().allowedSwaps);
   const swap = getConfig().allowedSwaps.find(
     (s) =>
       s.fromAssetId === fromAsset &&
