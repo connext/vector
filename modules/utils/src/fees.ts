@@ -73,7 +73,7 @@ export const normalizeFee = async (
     }
     gasPrice = gasPriceRes.getValue();
   }
-  const feeWithGasPrice = fee.mul(gasPrice!);
+  const feeWithGasPrice = fee.mul(gasPrice);
 
   if (desiredFeeAssetId === AddressZero) {
     logger.info({ method, methodId }, "Eth detected, exchange rate not required");
