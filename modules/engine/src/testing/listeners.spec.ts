@@ -543,7 +543,7 @@ describe(testName, () => {
     });
   });
 
-  describe.only("getWithdrawalQuote", () => {
+  describe("getWithdrawalQuote", () => {
     // Declare mocks
     let store: Sinon.SinonStubbedInstance<MemoryStoreService>;
     let signer: Sinon.SinonStubbedInstance<ChannelSigner>;
