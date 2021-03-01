@@ -5,6 +5,7 @@ import {
   FullChannelState,
   INodeService,
   TransferNames,
+  TransferQuote,
 } from "@connext/vector-types";
 import { BigNumber, providers, utils, Wallet } from "ethers";
 
@@ -168,7 +169,7 @@ export const transfer = async (
   senderAssetId: string,
   amount: BigNumber,
   receiverChainId?: number,
-): Promise<{ senderChannel: FullChannelState; receiverChannel: FullChannelState }> => {
+): Promise<{ senderChannel: FullChannelState; receiverChannel: FullChannelState; transferQuote: TransferQuote }> => {
   const senderChannel = (
     await sender.getStateChannel({ channelAddress: senderChannelAddress })
   ).getValue()! as FullChannelState;
@@ -184,9 +185,8 @@ export const transfer = async (
   const lockHash = utils.soliditySha256(["bytes32"], [preImage]);
   const routingId = getRandomBytes32();
 
-  const senderCreatePromise = sender.waitFor(EngineEvents.CONDITIONAL_TRANSFER_CREATED, 30_000);
-  const receiverCreatePromise = receiver.waitFor(EngineEvents.CONDITIONAL_TRANSFER_CREATED, 30_000);
-  const transferRes = await sender.conditionalTransfer({
+  // Generate transfer params
+  const params = {
     publicIdentifier: sender.publicIdentifier,
     amount: amount.toString(),
     assetId: senderAssetId,
@@ -201,7 +201,23 @@ export const transfer = async (
     },
     recipient: receiver.publicIdentifier,
     recipientChainId: receiverChainId,
+  };
+
+  // Get transfer quote
+  const quote = await sender.getTransferQuote({
+    amount: params.amount,
+    assetId: params.assetId,
+    chainId: senderChannel.networkContext.chainId,
+    routerIdentifier: senderChannel.aliceIdentifier,
+    recipient: params.recipient,
+    recipientChainId: params.recipientChainId,
   });
+  expect(quote.getError()).to.not.be.ok;
+  const amountForwarded = amount.sub(quote.getValue().fee);
+
+  const senderCreatePromise = sender.waitFor(EngineEvents.CONDITIONAL_TRANSFER_CREATED, 30_000);
+  const receiverCreatePromise = receiver.waitFor(EngineEvents.CONDITIONAL_TRANSFER_CREATED, 30_000);
+  const transferRes = await sender.conditionalTransfer(params);
   expect(transferRes.getError()).to.not.be.ok;
 
   const senderChannelAfterTransfer = (
@@ -246,8 +262,12 @@ export const transfer = async (
   ).getValue()! as FullChannelState;
 
   const daveAfterResolve = getBalanceForAssetId(receiverChannelAfterResolve, senderAssetId, receiverAliceOrBob);
-  expect(daveAfterResolve).to.be.eq(BigNumber.from(receiverBefore).add(amount));
-  return { senderChannel: senderChannelAfterTransfer, receiverChannel: receiverChannelAfterResolve };
+  expect(daveAfterResolve).to.be.eq(BigNumber.from(receiverBefore).add(amountForwarded));
+  return {
+    senderChannel: senderChannelAfterTransfer,
+    receiverChannel: receiverChannelAfterResolve,
+    transferQuote: quote.getValue(),
+  };
 };
 
 export const withdraw = async (
@@ -266,6 +286,15 @@ export const withdraw = async (
   const preWithdrawCarol = getBalanceForAssetId(preWithdrawChannel, assetId, withdrawerAliceOrBob);
   const preWithdrawMultisig = await getOnchainBalance(assetId, preWithdrawChannel.channelAddress, provider);
   const preWithdrawRecipient = await getOnchainBalance(assetId, withdrawRecipient, provider);
+
+  // Get withdrawal quote
+  const quote = await withdrawer.getWithdrawalQuote({
+    amount: amount.toString(),
+    assetId,
+    channelAddress,
+  });
+  expect(quote.getError()).to.not.be.ok;
+  const amountWithdrawn = amount.sub(quote.getValue().fee);
 
   // Perform withdrawal
   const withdrawalRes = await withdrawer.withdraw({
@@ -289,13 +318,13 @@ export const withdraw = async (
   // Verify balance changes
   expect(BigNumber.from(preWithdrawCarol).sub(amount)).to.be.eq(postWithdrawBalance);
   // using gte here because roger could collateralize
-  expect(postWithdrawMultisig.gte(BigNumber.from(preWithdrawMultisig).sub(amount))).to.be.true;
+  expect(postWithdrawMultisig.gte(BigNumber.from(preWithdrawMultisig).sub(amountWithdrawn))).to.be.true;
   if (withdrawerAliceOrBob === "alice") {
     // use "above" because Alice sends withdrawal for Bob
     // TODO: calculate gas
     expect(postWithdrawRecipient).to.be.above(preWithdrawRecipient as any); // chai matchers arent getting this
   } else {
-    expect(postWithdrawRecipient).to.be.eq(amount.add(preWithdrawRecipient));
+    expect(postWithdrawRecipient).to.be.eq(amountWithdrawn.add(preWithdrawRecipient));
   }
   return postWithdrawChannel;
 };
