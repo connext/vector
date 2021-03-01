@@ -512,7 +512,7 @@ export async function getWithdrawalQuote(
   // Sign the quote + return to user
   const quote = {
     channelAddress: request.channelAddress,
-    amount: BigNumber.from(request.amount).sub(fee).toString(),
+    amount: fee.gt(request.amount) ? "0" : BigNumber.from(request.amount).sub(fee).toString(), // hash of negative value fails
     assetId: request.assetId,
     fee: fee.toString(),
     expiry: (Date.now() + 30_000).toString(),
