@@ -427,24 +427,8 @@ export async function setupEngineListeners(
     const gasEstimate =
       code.getValue() !== "0x" ? GAS_ESTIMATES.withdraw : GAS_ESTIMATES.withdraw.add(GAS_ESTIMATES.createChannel);
 
-    // Get the gas price
-    const gasPrice = await chainService.getGasPrice(channel.networkContext.chainId);
-    if (gasPrice.isError) {
-      await messaging.respondToWithdrawalQuoteMessage(
-        inbox,
-        Result.fail(
-          new WithdrawQuoteError(WithdrawQuoteError.reasons.ChainServiceFailure, signer.publicIdentifier, request, {
-            chainServiceMethod: "getGasPrice",
-            error: jsonifyError(gasPrice.getError()!),
-          }),
-        ),
-      );
-      return;
-    }
-
     // Get the fee in eth
-    const ethFee = gasEstimate.mul(gasPrice.getValue());
-    logger.info({ ethFee: ethFee.toString(), method, methodId }, "Estimated gas fee");
+    logger.info({ gasEstimate: gasEstimate.toString(), method, methodId }, "Estimated gas fee");
 
     // Convert ethFee to price in given `assetId`
     const assetDecimals = await chainService.getDecimals(request.assetId, channel.networkContext.chainId);
@@ -464,7 +448,7 @@ export async function setupEngineListeners(
     const normalizedGasCost =
       channel.networkContext.chainId === 1 || TESTNETS_WITH_FEES.includes(channel.networkContext.chainId) // fromAsset MUST be on mainnet or hardcoded
         ? await normalizeFee(
-            ethFee,
+            gasEstimate,
             18,
             request.assetId,
             assetDecimals.getValue(),
@@ -486,14 +470,17 @@ export async function setupEngineListeners(
       return;
     }
 
+    console.log("normalizedGasCost: ", normalizedGasCost.getValue().toString());
+    console.log("gasSubsidyPercentage: ", gasSubsidyPercentage);
     const fee = normalizedGasCost
       .getValue()
       .mul(100 - gasSubsidyPercentage)
       .div(100);
 
+    console.log("fee: ", fee.toString());
     logger.info(
       {
-        normalizedGasCost: normalizedGasCost.toString(),
+        normalizedGasCost: normalizedGasCost.getValue().toString(),
         fee: fee.toString(),
         assetId: request.assetId,
         method,

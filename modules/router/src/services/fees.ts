@@ -268,7 +268,7 @@ export const calculateEstimatedGasFee = async (
   routerPublicIdentifier: string,
   logger: BaseLogger,
 ): Promise<Result<{ [channelAddress: string]: BigNumber }, FeeError>> => {
-  const method = "calculateDynamicFee";
+  const method = "calculateEstimatedGasFee";
   const methodId = getRandomBytes32();
   logger.info(
     {
