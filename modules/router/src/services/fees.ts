@@ -6,13 +6,7 @@ import {
   Result,
   REDUCED_GAS_PRICE,
 } from "@connext/vector-types";
-import {
-  getBalanceForAssetId,
-  getParticipant,
-  getRandomBytes32,
-  TESTNETS_WITH_FEES,
-  normalizeFee,
-} from "@connext/vector-utils";
+import { getBalanceForAssetId, getParticipant, getRandomBytes32, TESTNETS_WITH_FEES } from "@connext/vector-utils";
 import { BigNumber } from "@ethersproject/bignumber";
 import { AddressZero, Zero } from "@ethersproject/constants";
 import { BaseLogger } from "pino";
@@ -126,6 +120,13 @@ export const calculateFeeAmount = async (
     return Result.fail(gasFeesRes.getError()!);
   }
   const gasFees = gasFeesRes.getValue();
+  logger.debug(
+    {
+      reclaimGasFees: gasFees[fromChannel.channelAddress].toString(),
+      collateralizeGasFees: gasFees[toChannel.channelAddress].toString(),
+    },
+    "Calculated gas fees",
+  );
 
   // Get decimals for base asset + fees
   let fromAssetDecimals: number | undefined = undefined;
@@ -234,6 +235,7 @@ export const calculateFeeAmount = async (
       methodId,
       startingAmount: transferAmount.toString(),
       staticFees: staticFees.toString(),
+      dynamicGasFees: dynamic.toString(),
       normalizedGasFees: normalizedGasFees.toString(),
       totalFees: totalFees.toString(),
       withFees: BigNumber.from(transferAmount).sub(totalFees).toString(),
@@ -270,7 +272,7 @@ export const calculateEstimatedGasFee = async (
 ): Promise<Result<{ [channelAddress: string]: BigNumber }, FeeError>> => {
   const method = "calculateEstimatedGasFee";
   const methodId = getRandomBytes32();
-  logger.info(
+  logger.debug(
     {
       method,
       methodId,
@@ -388,6 +390,13 @@ export const calculateEstimatedGasFee = async (
       { method, methodId, routerBalance: routerBalance.toString(), amountToSend: amountToSend.toString() },
       "Channel is collateralized",
     );
+    logger.debug(
+      {
+        method,
+        methodId,
+      },
+      "Method complete",
+    );
     return Result.ok({
       [fromChannel.channelAddress]: fromChannelFee,
       [toChannel.channelAddress]: Zero,
@@ -407,6 +416,13 @@ export const calculateEstimatedGasFee = async (
   // If participant is bob, then you don't need to worry about deploying
   // the channel contract
   if (participantToChannel === "bob") {
+    logger.debug(
+      {
+        method,
+        methodId,
+      },
+      "Method complete",
+    );
     return Result.ok({
       [fromChannel.channelAddress]: fromChannelFee,
       [toChannel.channelAddress]: GAS_ESTIMATES.depositBob,
@@ -424,6 +440,14 @@ export const calculateEstimatedGasFee = async (
       }),
     );
   }
+  logger.debug(
+    {
+      method,
+      methodId,
+    },
+    "Method complete",
+  );
+
   return Result.ok({
     [fromChannel.channelAddress]: fromChannelFee,
     [toChannel.channelAddress]:
