@@ -472,9 +472,6 @@ export async function getWithdrawalQuote(
     );
   }
 
-  // Get the fee in eth
-  const ethFee = gasEstimate.mul(gasPrice.getValue());
-
   // Convert ethFee to price in given `assetId`
   const assetDecimals = await chainService.getDecimals(request.assetId, channel.networkContext.chainId);
   if (assetDecimals.isError) {
@@ -489,7 +486,7 @@ export async function getWithdrawalQuote(
   const normalizedGasCost =
     channel.networkContext.chainId === 1 || TESTNETS_WITH_FEES.includes(channel.networkContext.chainId) // fromAsset MUST be on mainnet or hardcoded
       ? await normalizeGasFees(
-          ethFee,
+          gasEstimate,
           18,
           request.assetId,
           assetDecimals.getValue(),
