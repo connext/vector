@@ -6,6 +6,5 @@
   },
   "logLevel": "info",
   "messagingUrl": "",
-  "production": false,
-  "baseGasSubsidyPercentage": 50
+  "production": false
 }

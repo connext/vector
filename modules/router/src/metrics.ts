@@ -159,6 +159,13 @@ export const forwardedTransferSize = new Gauge({
   labelNames: ["assetId", "chainId"] as const,
 });
 
+// Track fees charged on transfers
+export const feesCollected = new Counter({
+  name: "router_fees",
+  help: "router_fees_help",
+  labelNames: ["assetId", "chainId"] as const,
+});
+
 //////////////////////////
 ///// Transaction metrics
 // TODO: any gas labels on txs? gas price?

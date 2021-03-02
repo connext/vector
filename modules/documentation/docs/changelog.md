@@ -2,6 +2,13 @@
 
 ## Next Release
 
+## 0.2.0-beta.3
+
+- \[router\] Fix fees bugs
+- \[node\] Remove fees from default config
+- \[router,engine\] Fast exit if no fees configured
+- \[utils\] Check for lower-cased token addresses from coingecko
+
 ## 0.2.0-beta.2
 
 - \[router\] Fix fees bugs
