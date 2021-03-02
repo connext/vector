@@ -44,6 +44,7 @@ import {
   forwardedTransferSize,
   forwardedTransferVolume,
   attemptedTransfer,
+  feesCollected,
 } from "./metrics";
 import { calculateFeeAmount } from "./services/fees";
 import { QuoteError } from "./errors";
@@ -181,6 +182,17 @@ export async function setupListeners(
         return logger.error(
           { method: "forwardTransferCreation", error: jsonifyError(res.getError()!) },
           "Error forwarding transfer",
+        );
+      }
+      // Increment fees (taken in sender chain/asset)
+      const { assetId: senderAsset, chainId: senderChain } = data.transfer;
+      if (meta.quote) {
+        feesCollected.inc(
+          {
+            chainId,
+            assetId,
+          },
+          await parseBalanceToNumber(meta.quote.fee, senderChain.toString(), senderAsset),
         );
       }
       const created = res.getValue();
@@ -461,8 +473,17 @@ export async function setupListeners(
       return;
     }
     const balance = getBalanceForAssetId(channel, data.assetId, participant);
-    const parsed = await parseBalanceToNumber(balance, channel.networkContext.chainId.toString(), data.assetId);
-    offchainLiquidity.set({ assetId: data.assetId, chainId: channel.networkContext.chainId }, parsed);
+    const chainId = channel.networkContext.chainId;
+    const parsed = await parseBalanceToNumber(balance, chainId.toString(), data.assetId);
+    offchainLiquidity.set({ assetId: data.assetId, chainId }, parsed);
+
+    // increment fees iff alice
+    if (participant === "alice" && data.transfer.meta.quote) {
+      feesCollected.inc(
+        { chainId, assetId: data.assetId },
+        await parseBalanceToNumber(data.transfer.transferState.fee, chainId.toString(), data.assetId),
+      );
+    }
   });
 
   nodeService.on(EngineEvents.IS_ALIVE, async (data) => {
