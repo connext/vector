@@ -120,7 +120,7 @@ export const getExchangeRateInEth = async (
         }),
       );
     }
-    return Result.ok(response.data[tokenAddress].eth ?? response.data[tokenAddress.toLowerCase()].eth);
+    return Result.ok(response.data[tokenAddress]?.eth! ?? response.data[tokenAddress.toLowerCase()]?.eth!);
   } catch (e) {
     logAxiosError(logger, e);
     return Result.fail(
