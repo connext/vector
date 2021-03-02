@@ -2,6 +2,10 @@
 
 ## Next Release
 
+## 0.2.0-beta.3
+
+- \[router\] Fix fees bugs
+
 ## 0.2.0-beta.2
 
 - \[router\] Fix fees bugs
