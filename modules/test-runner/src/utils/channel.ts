@@ -4,6 +4,7 @@ import {
   EngineEvents,
   FullChannelState,
   INodeService,
+  Result,
   TransferNames,
   TransferQuote,
 } from "@connext/vector-types";
@@ -204,14 +205,30 @@ export const transfer = async (
   };
 
   // Get transfer quote
-  const quote = await sender.getTransferQuote({
-    amount: params.amount,
-    assetId: params.assetId,
-    chainId: senderChannel.networkContext.chainId,
-    routerIdentifier: senderChannel.aliceIdentifier,
-    recipient: params.recipient,
-    recipientChainId: params.recipientChainId,
-  });
+  const transferInChannel =
+    (senderAliceOrBob === "bob" && receiver.publicIdentifier === senderChannel.aliceIdentifier) ||
+    (senderAliceOrBob === "alice" && receiver.publicIdentifier === senderChannel.bobIdentifier);
+  const quote = transferInChannel
+    ? Result.ok({
+        signature: undefined,
+        chainId: senderChannel.networkContext.chainId,
+        routerIdentifier: sender.publicIdentifier,
+        amount: params.amount,
+        assetId: params.assetId,
+        recipient: receiver.publicIdentifier,
+        recipientChainId: senderChannel.networkContext.chainId,
+        recipientAssetId: senderAssetId,
+        fee: "0",
+        expiry: (Date.now() + 30_000).toString(),
+      })
+    : await sender.getTransferQuote({
+        amount: params.amount,
+        assetId: params.assetId,
+        chainId: senderChannel.networkContext.chainId,
+        routerIdentifier: senderChannel.aliceIdentifier,
+        recipient: params.recipient,
+        recipientChainId: params.recipientChainId,
+      });
   expect(quote.getError()).to.not.be.ok;
   const amountForwarded = amount.sub(quote.getValue().fee);
 

@@ -370,13 +370,16 @@ export const calculateEstimatedGasFee = async (
   }
   const routerBalance = getBalanceForAssetId(toChannel, toAssetId, participantToChannel);
   // get the amount you would send
-  const converted = await getSwappedAmount(
-    amountToSend.toString(),
-    fromAssetId,
-    fromChannel.networkContext.chainId,
-    toAssetId,
-    toChannel.networkContext.chainId,
-  );
+  const isSwap = fromAssetId !== toAssetId || fromChannel.networkContext.chainId !== toChannel.networkContext.chainId;
+  const converted = isSwap
+    ? await getSwappedAmount(
+        amountToSend.toString(),
+        fromAssetId,
+        fromChannel.networkContext.chainId,
+        toAssetId,
+        toChannel.networkContext.chainId,
+      )
+    : Result.ok(amountToSend.toString());
   if (converted.isError) {
     return Result.fail(
       new FeeError(FeeError.reasons.ConversionError, {
