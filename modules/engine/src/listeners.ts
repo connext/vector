@@ -512,7 +512,7 @@ export async function getWithdrawalQuote(
   // Sign the quote + return to user
   const quote = {
     channelAddress: request.channelAddress,
-    amount: request.amount,
+    amount: fee.gt(request.amount) ? "0" : BigNumber.from(request.amount).sub(fee).toString(), // hash of negative value fails
     assetId: request.assetId,
     fee: fee.toString(),
     expiry: (Date.now() + 30_000).toString(),
@@ -1073,6 +1073,7 @@ export const resolveWithdrawal = async (
   const relevantChain = transfer.chainId === 1 || TESTNETS_WITH_FEES.includes(transfer.chainId);
   if (gasSubsidyPercentage !== 100 && signer.address === channelState.alice && relevantChain) {
     const cancelWithdrawal = async (cancellationReason: string) => {
+      logger.warn({ cancellationReason, transferId, channelAddress, method, methodId }, "Cancelling withdrawal");
       const resolveRes = await vector.resolve({
         transferResolver: { responderSignature: mkSig("0x0") },
         transferId,
@@ -1114,9 +1115,13 @@ export const resolveWithdrawal = async (
         fee,
         expiry: quote.expiry,
       };
-      const recovered = await recoverAddressFromChannelMessage(quote.signature, hashWithdrawalQuote(recreated));
+      const recovered = await recoverAddressFromChannelMessage(hashWithdrawalQuote(recreated), quote.signature);
       if (recovered !== channelState.alice) {
-        throw new Error(`Got ${recovered} expected ${channelState.alice} on ${safeJsonStringify(recreated)}`);
+        throw new Error(
+          `Got ${recovered} expected ${channelState.alice} on ${safeJsonStringify(
+            recreated,
+          )}. (Quote: ${safeJsonStringify(quote)})`,
+        );
       }
     } catch (e) {
       await cancelWithdrawal(`Withdrawal quote recovery failed: ${e.message}`);
@@ -1175,7 +1180,7 @@ export const resolveWithdrawal = async (
       });
     } else {
       // log the transaction error, try to resolve with an undefined hash
-      logger.warn({ error: withdrawalResponse.getError()!.message, method }, "Failed to submit tx");
+      logger.error({ error: withdrawalResponse.getError()!.message, method }, "Failed to submit tx");
     }
   }
   commitment.addTransaction(transactionHash);

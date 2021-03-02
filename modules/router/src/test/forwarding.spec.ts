@@ -32,7 +32,8 @@ import { getAddress } from "@ethersproject/address";
 
 import { PrismaStore } from "../services/store";
 import { forwardTransferCreation } from "../forwarding";
-import * as configService from "../config";
+import * as config from "../config";
+import * as configService from "../services/config";
 import * as swapService from "../services/swap";
 import * as transferService from "../services/transfer";
 import { ForwardTransferCreationError } from "../errors";
@@ -40,7 +41,7 @@ import * as collateralService from "../services/collateral";
 
 const testName = "Forwarding";
 
-const realConfig = configService.getEnvConfig();
+const realConfig = config.getEnvConfig();
 const { log: logger } = getTestLoggers(testName, realConfig.vectorConfig.logLevel as any);
 
 type TransferCreatedTestContext = {
@@ -62,6 +63,7 @@ describe(testName, () => {
     let cancelTransfer: Sinon.SinonStub;
     let justInTimeCollateral: Sinon.SinonStub;
     let getConfig: Sinon.SinonStub;
+    let shouldChargeFees: Sinon.SinonStub;
 
     const routerPublicIdentifier = mkPublicIdentifier("vectorRRR");
     const aliceIdentifier = mkPublicIdentifier("vectorA");
@@ -139,6 +141,7 @@ describe(testName, () => {
           },
         ],
       });
+      shouldChargeFees.returns(Result.ok(false));
       // get sender channel
       node.getStateChannel.onFirstCall().resolves(Result.ok(senderChannel));
       // get swapped amount (optional)
@@ -286,7 +289,8 @@ describe(testName, () => {
 
       justInTimeCollateral = Sinon.stub(collateralService, "justInTimeCollateral");
 
-      getConfig = Sinon.stub(configService, "getConfig");
+      getConfig = Sinon.stub(config, "getConfig");
+      shouldChargeFees = Sinon.stub(configService, "shouldChargeFees");
     });
 
     afterEach(() => {
@@ -295,7 +299,7 @@ describe(testName, () => {
     });
 
     // Successful forwards
-    it("successfully forwards a transfer creation with no swaps, no cross-chain and no collateralization", async () => {
+    it("successfully forwards a transfer creation with no swaps, no cross-chain no collateralization, no fees", async () => {
       const ctx = prepEnv();
       const result = await forwardTransferCreation(
         ctx.event,

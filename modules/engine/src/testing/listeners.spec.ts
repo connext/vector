@@ -567,6 +567,7 @@ describe(testName, () => {
     const setupMocks = (
       channel: FullChannelState = createTestChannelState(UpdateType.deposit, { networkContext: { chainId: 1 } })
         .channel,
+      _withdrawAmount = withdrawAmount,
     ) => {
       // Store methods
       store.getChannelState.resolves(channel);
@@ -585,7 +586,7 @@ describe(testName, () => {
       // generate request
       const request = {
         channelAddress: channel.channelAddress,
-        amount: withdrawAmount.toString(),
+        amount: _withdrawAmount.toString(),
         assetId: AddressZero,
       };
       return { channel, request };
@@ -669,12 +670,24 @@ describe(testName, () => {
       });
     });
 
-    it("should return nonzero-valued signed quote if gasSubsidyPercentage != 100 and chain is fee-compatible", async () => {
+    it("should return nonzero-valued signed quote if gasSubsidyPercentage != 100 and chain is fee-compatible when fee is gt amount", async () => {
       const { request } = setupMocks();
       const result = await getWithdrawalQuote(request, 50, signer, store, chainService as IVectorChainService, log);
-      expect(result.isError).to.be.false;
+      expect(result.getError()).to.be.undefined;
       expect(result.getValue()).to.containSubset({
         ...request,
+        amount: "0",
+        fee: normalizedFee.div(2).toString(),
+      });
+    });
+
+    it("should return nonzero-valued signed quote if gasSubsidyPercentage != 100 and chain is fee-compatible when fee is lt amount", async () => {
+      const { request } = setupMocks(undefined, normalizedFee);
+      const result = await getWithdrawalQuote(request, 50, signer, store, chainService as IVectorChainService, log);
+      expect(result.getError()).to.be.undefined;
+      expect(result.getValue()).to.containSubset({
+        ...request,
+        amount: BigNumber.from(request.amount).sub(normalizedFee.div(2)).toString(),
         fee: normalizedFee.div(2).toString(),
       });
     });

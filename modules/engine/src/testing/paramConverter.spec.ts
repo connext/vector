@@ -518,14 +518,16 @@ describe("ParamConverter", () => {
       return params;
     };
 
-    const generateChainData = (params, channel) => {
+    const generateChainData = (params, channel, isUserA) => {
       const commitment = new WithdrawCommitment(
         channel.channelAddress,
         channel.alice,
         channel.bob,
         params.recipient,
         params.assetId,
-        params.amount,
+        BigNumber.from(params.amount)
+          .sub(isUserA ? "0" : quoteFee)
+          .toString(),
         channel.nonce.toString(),
       );
       return commitment.hashToSign();
@@ -565,17 +567,12 @@ describe("ParamConverter", () => {
       result: CreateTransferParams,
       isUserA: boolean,
     ) => {
-      const withdrawHash = generateChainData(params, channelState);
+      const withdrawHash = generateChainData(params, channelState, isUserA);
       const signature = isUserA ? await signerA.signMessage(withdrawHash) : await signerB.signMessage(withdrawHash);
       expect(result).to.containSubset({
         channelAddress: channelState.channelAddress,
         balance: {
-          amount: [
-            BigNumber.from(params.amount)
-              .add(isUserA ? "0" : quoteFee)
-              .toString(),
-            "0",
-          ],
+          amount: [params.amount, "0"],
           to: isUserA
             ? [getAddress(params.recipient), channelState.bob]
             : [getAddress(params.recipient), channelState.alice],
@@ -604,9 +601,9 @@ describe("ParamConverter", () => {
               }
             : {
                 channelAddress: params.channelAddress,
-                amount: params.amount,
+                amount: BigNumber.from(params.amount).sub(quoteFee).toString(),
                 assetId: params.assetId,
-                fee: "3",
+                fee: quoteFee,
               },
         },
       });

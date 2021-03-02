@@ -109,7 +109,7 @@ export async function convertConditionalTransferParams(
           ParameterConversionError.reasons.FeeGreaterThanAmount,
           channelAddress,
           signer.publicIdentifier,
-          { params, quote },
+          { quote },
         ),
       );
     }
@@ -294,8 +294,8 @@ export async function convertWithdrawParams(
     );
   }
 
-  // If there is a fee being charged, add the fee to the amount.
-  const amount = fee.add(params.amount).toString();
+  // If there is a fee being charged, recalculate the amount
+  const amount = BigNumber.from(params.amount).sub(fee).toString();
 
   const commitment = new WithdrawCommitment(
     channel.channelAddress,
@@ -303,8 +303,9 @@ export async function convertWithdrawParams(
     channel.bob,
     params.recipient,
     assetId,
-    // Important: Use params.amount here which doesn't include fee!!
-    params.amount,
+    // Important: Use amount here which doesn't include fee!!
+    // Should be the amount that will be withdrawn to user
+    amount.toString(),
     // Use channel nonce as a way to keep withdraw hashes unique
     channel.nonce.toString(),
     callTo,
@@ -363,7 +364,7 @@ export async function convertWithdrawParams(
   return Result.ok({
     channelAddress,
     balance: {
-      amount: [amount, "0"],
+      amount: [params.amount, "0"],
       to: [recipient, channelCounterparty],
     },
     assetId,
@@ -376,7 +377,7 @@ export async function convertWithdrawParams(
       quote: {
         ...quote, // use our own values by default
         channelAddress,
-        amount: params.amount,
+        amount,
         assetId: params.assetId,
       },
       withdrawNonce: channel.nonce.toString(),
