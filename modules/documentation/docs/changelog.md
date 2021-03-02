@@ -2,6 +2,16 @@
 
 ## Next Release
 
+## 0.2.0-beta.2
+
+- \[router\] Fix fees bugs
+- \[engine\] Add fees tests
+- \[test-runner\] Fix tests to work with fees
+
+## 0.2.0-beta.1
+
+- \[router\] Fix fees bug
+
 ## 0.2.0-beta.0
 
 - \[router\] Add fee collection config

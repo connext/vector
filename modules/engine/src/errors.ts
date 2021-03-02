@@ -99,7 +99,7 @@ export class ParameterConversionError extends EngineError {
 
   static readonly reasons = {
     CannotSendToSelf: "An initiator cannot be a receiver on the same chain",
-    CouldNotGetQuote: "Failed to get quote for withdrawal",
+    CouldNotGetQuote: "Failed to get quote",
     CouldNotSignWithdrawal: "Failed to sign withdrawal commitment",
     FailedToGetRegisteredTransfer: "Could not get transfer registry information",
     FeeGreaterThanAmount: "Fees charged are greater than amount",

@@ -153,6 +153,133 @@ describe("ParamConverter", () => {
       expect(err?.context.registryError).to.be.deep.eq(jsonifyError(chainErr));
     });
 
+    it("should fail if bob is sending and cannot get quote from alice", async () => {
+      const params = generateParams();
+      const err = new Error("fail");
+      messaging.sendTransferQuoteMessage.resolves(Result.fail(err) as any);
+      const { channel: channelState } = createTestChannelState(UpdateType.deposit, {
+        channelAddress: params.channelAddress,
+        networkContext: {
+          ...chainAddresses[chainId],
+          chainId,
+          providerUrl,
+        },
+      });
+      const ret = await convertConditionalTransferParams(params, signerA, channelState, chainReader, messaging);
+      expect(ret.isError).to.be.true;
+      expect(ret.getError()?.message).to.be.eq(ParameterConversionError.reasons.CouldNotGetQuote);
+      expect(ret.getError()?.context.quoteError.message).to.be.eq("fail");
+    });
+
+    it("should use the params.quote if it is provided", async () => {
+      const params = generateParams();
+      const { channel: channelState } = createTestChannelState(UpdateType.deposit, {
+        channelAddress: params.channelAddress,
+        networkContext: {
+          ...chainAddresses[chainId],
+          chainId,
+          providerUrl,
+        },
+      });
+      params.quote = {
+        signature: undefined,
+        chainId,
+        routerIdentifier: channelState.aliceIdentifier,
+        amount: params.amount,
+        assetId: params.assetId,
+        recipient: params.recipient!,
+        recipientChainId: params.recipientChainId!,
+        recipientAssetId: params.recipientAssetId!,
+        fee: "0",
+        expiry: (Date.now() + 30_000).toString(),
+      };
+      const ret = await convertConditionalTransferParams(params, signerA, channelState, chainReader, messaging);
+      expect(ret.isError).to.be.false;
+      expect(ret.getValue().meta.quote).to.be.deep.eq(params.quote);
+      expect(messaging.sendTransferQuoteMessage.callCount).to.be.eq(0);
+    });
+
+    it("should return an unsigned quote if requester is channel.aliceIdentifier", async () => {
+      const params = generateParams();
+      const { channel: channelState } = createTestChannelState(UpdateType.deposit, {
+        channelAddress: params.channelAddress,
+        networkContext: {
+          ...chainAddresses[chainId],
+          chainId,
+          providerUrl,
+        },
+      });
+      signerA.publicIdentifier = channelState.aliceIdentifier;
+      const ret = await convertConditionalTransferParams(params, signerA, channelState, chainReader, messaging);
+      expect(ret.isError).to.be.false;
+      expect(ret.getValue().meta.quote).to.containSubset({
+        signature: undefined,
+        chainId: channelState.networkContext.chainId,
+        routerIdentifier: signerA.publicIdentifier,
+        amount: params.amount,
+        assetId: params.assetId,
+        recipient: params.recipient!,
+        recipientChainId: params.recipientChainId!,
+        recipientAssetId: params.recipientAssetId!,
+        fee: "0",
+      });
+      expect(messaging.sendTransferQuoteMessage.callCount).to.be.eq(0);
+    });
+
+    it("should fail if quote is expired", async () => {
+      const params = generateParams();
+      const { channel: channelState } = createTestChannelState(UpdateType.deposit, {
+        channelAddress: params.channelAddress,
+        networkContext: {
+          ...chainAddresses[chainId],
+          chainId,
+          providerUrl,
+        },
+      });
+      params.quote = {
+        signature: undefined,
+        chainId,
+        routerIdentifier: channelState.aliceIdentifier,
+        amount: params.amount,
+        assetId: params.assetId,
+        recipient: params.recipient!,
+        recipientChainId: params.recipientChainId!,
+        recipientAssetId: params.recipientAssetId!,
+        fee: "0",
+        expiry: (Date.now() - 30_000).toString(),
+      };
+      const ret = await convertConditionalTransferParams(params, signerA, channelState, chainReader, messaging);
+      expect(ret.isError).to.be.true;
+      expect(ret.getError()?.message).to.be.eq(ParameterConversionError.reasons.QuoteExpired);
+    });
+
+    it("should fail if quote.fee is larger than transfer amount", async () => {
+      const params = generateParams();
+      const { channel: channelState } = createTestChannelState(UpdateType.deposit, {
+        channelAddress: params.channelAddress,
+        networkContext: {
+          ...chainAddresses[chainId],
+          chainId,
+          providerUrl,
+        },
+      });
+      params.quote = {
+        signature: undefined,
+        chainId,
+        routerIdentifier: channelState.aliceIdentifier,
+        amount: params.amount,
+        assetId: params.assetId,
+        recipient: params.recipient!,
+        recipientChainId: params.recipientChainId!,
+        recipientAssetId: params.recipientAssetId!,
+        fee: "10000000",
+        expiry: (Date.now() + 30_000).toString(),
+      };
+      const ret = await convertConditionalTransferParams(params, signerA, channelState, chainReader, messaging);
+      expect(ret.isError).to.be.true;
+      expect(ret.getError()?.message).to.be.eq(ParameterConversionError.reasons.FeeGreaterThanAmount);
+    });
+
     it("should fail if params.type is an address and chainReader.getRegisteredTransferByDefinition fails", async () => {
       const params = generateParams();
       const chainErr = new ChainError("Failure");
@@ -391,14 +518,16 @@ describe("ParamConverter", () => {
       return params;
     };
 
-    const generateChainData = (params, channel) => {
+    const generateChainData = (params, channel, isUserA) => {
       const commitment = new WithdrawCommitment(
         channel.channelAddress,
         channel.alice,
         channel.bob,
         params.recipient,
         params.assetId,
-        params.amount,
+        BigNumber.from(params.amount)
+          .sub(isUserA ? "0" : quoteFee)
+          .toString(),
         channel.nonce.toString(),
       );
       return commitment.hashToSign();
@@ -438,17 +567,12 @@ describe("ParamConverter", () => {
       result: CreateTransferParams,
       isUserA: boolean,
     ) => {
-      const withdrawHash = generateChainData(params, channelState);
+      const withdrawHash = generateChainData(params, channelState, isUserA);
       const signature = isUserA ? await signerA.signMessage(withdrawHash) : await signerB.signMessage(withdrawHash);
       expect(result).to.containSubset({
         channelAddress: channelState.channelAddress,
         balance: {
-          amount: [
-            BigNumber.from(params.amount)
-              .add(isUserA ? "0" : quoteFee)
-              .toString(),
-            "0",
-          ],
+          amount: [params.amount, "0"],
           to: isUserA
             ? [getAddress(params.recipient), channelState.bob]
             : [getAddress(params.recipient), channelState.alice],
@@ -477,9 +601,9 @@ describe("ParamConverter", () => {
               }
             : {
                 channelAddress: params.channelAddress,
-                amount: params.amount,
+                amount: BigNumber.from(params.amount).sub(quoteFee).toString(),
                 assetId: params.assetId,
-                fee: "3",
+                fee: quoteFee,
               },
         },
       });

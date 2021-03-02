@@ -340,7 +340,7 @@ export async function forwardTransferCreation(
       "Detected inflight swap",
     );
     const swapRes = await getSwappedAmount(
-      senderAmount,
+      recipientAmount,
       senderAssetId,
       senderChainId,
       recipientAssetId,

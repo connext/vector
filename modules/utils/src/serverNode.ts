@@ -412,7 +412,12 @@ export class RestServerNodeService implements INodeService {
   getWithdrawalQuote(
     params: OptionalPublicIdentifier<NodeParams.WithdrawalQuote>,
   ): Promise<Result<NodeResponses.WithdrawalQuote, NodeError>> {
-    throw new Error("not implemented");
+    return this.executeHttpRequest<NodeResponses.WithdrawalQuote>(
+      `withdraw/quote`,
+      "post",
+      params,
+      NodeParams.WithdrawalQuoteSchema,
+    );
   }
 
   signUtilityMessage(

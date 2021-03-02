@@ -587,7 +587,9 @@ export async function setupListeners(
         Result.fail(
           new QuoteError(QuoteError.reasons.CouldNotGetChannel, {
             senderChannelError: senderChannelRes.isError ? jsonifyError(senderChannelRes.getError()!) : undefined,
-            recipientChannelError: senderChannelRes.isError ? jsonifyError(recipientChannelRes.getError()!) : undefined,
+            recipientChannelError: recipientChannelRes.isError
+              ? jsonifyError(recipientChannelRes.getError()!)
+              : undefined,
             recipient,
             recipientChainId,
             recipientAssetId,

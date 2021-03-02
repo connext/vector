@@ -22,8 +22,8 @@ export class FeeCalculationError extends VectorError {
 }
 
 // Some testnets will have hardcoded fees for easier testing
-// [rinkeby, goerli, kovan, mumbai]
-export const TESTNETS_WITH_FEES = [4, 5, 42, 80001];
+// [rinkeby, goerli, kovan, mumbai, local, local]
+export const TESTNETS_WITH_FEES = [4, 5, 42, 80001, 1337, 1338];
 
 // function to calculate gas fee amount multiplied by gas price in the
 // toAsset units. some caveats:
@@ -73,7 +73,7 @@ export const normalizeFee = async (
     }
     gasPrice = gasPriceRes.getValue();
   }
-  const feeWithGasPrice = fee.mul(gasPrice!);
+  const feeWithGasPrice = fee.mul(gasPrice);
 
   if (desiredFeeAssetId === AddressZero) {
     logger.info({ method, methodId }, "Eth detected, exchange rate not required");
