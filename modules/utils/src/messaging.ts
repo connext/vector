@@ -375,7 +375,7 @@ export class NatsMessagingService extends NatsBasicMessagingService implements I
     restoreData: Result<{ chainId: number } | { channelAddress: string }, EngineError>,
     to: string,
     from: string,
-    timeout?: number,
+    timeout = 30_000,
     numRetries?: number,
   ): Promise<Result<{ channel: FullChannelState; activeTransfers: FullTransferState[] } | void, EngineError>> {
     return this.sendMessageWithRetries(
@@ -502,7 +502,7 @@ export class NatsMessagingService extends NatsBasicMessagingService implements I
     isAlive: Result<{ channelAddress: string; skipCheckIn?: boolean }, VectorError>,
     to: string,
     from: string,
-    timeout?: number,
+    timeout = 30_000,
     numRetries?: number,
   ): Promise<Result<{ channelAddress: string }, VectorError>> {
     return this.sendMessageWithRetries(isAlive, "isalive", to, from, timeout, numRetries, "sendIsAliveMessage");
@@ -529,7 +529,7 @@ export class NatsMessagingService extends NatsBasicMessagingService implements I
     configRequest: Result<void, VectorError>,
     to: string,
     from: string,
-    timeout?: number,
+    timeout = 30_000,
     numRetries?: number,
   ): Promise<Result<NodeResponses.GetRouterConfig, RouterError | MessagingError>> {
     return this.sendMessageWithRetries(
@@ -549,7 +549,7 @@ export class NatsMessagingService extends NatsBasicMessagingService implements I
     quoteRequest: Result<Omit<EngineParams.GetTransferQuote, "routerIdentifier">, VectorError>,
     to: string,
     from: string,
-    timeout?: number,
+    timeout = 30_000,
     numRetries?: number,
   ): Promise<Result<NodeResponses.TransferQuote, RouterError | MessagingError>> {
     return this.sendMessageWithRetries(
@@ -569,7 +569,7 @@ export class NatsMessagingService extends NatsBasicMessagingService implements I
     quoteRequest: Result<EngineParams.GetWithdrawalQuote, NodeError>,
     to: string,
     from: string,
-    timeout?: number,
+    timeout = 30_000,
     numRetries?: number,
   ): Promise<Result<NodeResponses.WithdrawalQuote, NodeError | MessagingError>> {
     return this.sendMessageWithRetries(

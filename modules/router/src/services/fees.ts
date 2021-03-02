@@ -64,12 +64,7 @@ export const calculateFeeAmount = async (
     );
   }
   const { flatFee, percentageFee, gasSubsidyPercentage } = fees.getValue();
-  if (flatFee === "0" && percentageFee === 0 && gasSubsidyPercentage === 100) {
-    // No fees configured
-    return Result.ok(Zero);
-  }
-  const isSwap = fromChainId !== toChainId || fromAssetId !== toAssetId;
-  logger.debug(
+  logger.info(
     {
       method,
       methodId,
@@ -79,6 +74,11 @@ export const calculateFeeAmount = async (
     },
     "Got fee rates",
   );
+  if (flatFee === "0" && percentageFee === 0 && gasSubsidyPercentage === 100) {
+    // No fees configured
+    return Result.ok(Zero);
+  }
+  const isSwap = fromChainId !== toChainId || fromAssetId !== toAssetId;
 
   // Calculate fees only on starting amount and update
   const feeFromPercent = transferAmount.mul(percentageFee).div(100);
