@@ -439,6 +439,32 @@ export async function getWithdrawalQuote(
   chainService: IVectorChainService,
   logger: BaseLogger,
 ): Promise<Result<WithdrawalQuote, WithdrawQuoteError>> {
+  // Helper to sign the quote + return to user
+  const createAndSignQuote = async (_fee: BigNumber): Promise<Result<WithdrawalQuote, WithdrawQuoteError>> => {
+    const quote = {
+      channelAddress: request.channelAddress,
+      amount: _fee.gt(request.amount) ? "0" : BigNumber.from(request.amount).sub(_fee).toString(), // hash of negative value fails
+      assetId: request.assetId,
+      fee: _fee.toString(),
+      expiry: (Date.now() + 30_000).toString(),
+    };
+    try {
+      const signature = await signer.signMessage(hashWithdrawalQuote(quote));
+      return Result.ok({ ...quote, signature });
+    } catch (e) {
+      return Result.fail(
+        new WithdrawQuoteError(WithdrawQuoteError.reasons.SignatureFailure, signer.publicIdentifier, request, {
+          error: jsonifyError(e),
+        }),
+      );
+    }
+  };
+
+  // Exit early if no fees
+  if (gasSubsidyPercentage === 100) {
+    return createAndSignQuote(Zero);
+  }
+
   // Get channel from store
   const channel = await store.getChannelState(request.channelAddress);
   if (!channel) {
@@ -509,24 +535,7 @@ export async function getWithdrawalQuote(
     .mul(100 - gasSubsidyPercentage)
     .div(100);
 
-  // Sign the quote + return to user
-  const quote = {
-    channelAddress: request.channelAddress,
-    amount: fee.gt(request.amount) ? "0" : BigNumber.from(request.amount).sub(fee).toString(), // hash of negative value fails
-    assetId: request.assetId,
-    fee: fee.toString(),
-    expiry: (Date.now() + 30_000).toString(),
-  };
-  try {
-    const signature = await signer.signMessage(hashWithdrawalQuote(quote));
-    return Result.ok({ ...quote, signature });
-  } catch (e) {
-    return Result.fail(
-      new WithdrawQuoteError(WithdrawQuoteError.reasons.SignatureFailure, signer.publicIdentifier, request, {
-        error: jsonifyError(e),
-      }),
-    );
-  }
+  return createAndSignQuote(fee);
 }
 
 export async function resolveExistingWithdrawals(

@@ -49,7 +49,7 @@ export const calculateFeeAmount = async (
   // If recipient is router, i.e. fromChannel ===  toChannel, then the
   // fee amount is 0 because no fees are taken without forwarding
   if (toChannel.channelAddress === fromChannel.channelAddress) {
-    return Result.ok(BigNumber.from(0));
+    return Result.ok(Zero);
   }
 
   const fromChainId = fromChannel.networkContext.chainId;
@@ -64,6 +64,10 @@ export const calculateFeeAmount = async (
     );
   }
   const { flatFee, percentageFee, gasSubsidyPercentage } = fees.getValue();
+  if (flatFee === "0" && percentageFee === 0 && gasSubsidyPercentage === 100) {
+    // No fees configured
+    return Result.ok(Zero);
+  }
   const isSwap = fromChainId !== toChainId || fromAssetId !== toAssetId;
   logger.debug(
     {
