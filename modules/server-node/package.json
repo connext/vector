@@ -20,7 +20,7 @@
     "@connext/vector-utils": "0.2.0-beta.4",
     "@ethersproject/wallet": "5.0.11",
     "@prisma/client": "2.18.0",
-    "@sinclair/typebox": "0.12.9",
+    "@sinclair/typebox": "0.12.7",
     "ajv": "7.1.1",
     "axios": "0.21.1",
     "core-js": "3.9.1",
