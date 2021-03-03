@@ -1,7 +1,6 @@
 import "@nomiclabs/hardhat-waffle";
 import "hardhat-deploy";
 import "hardhat-deploy-ethers";
-import "hardhat-typechain";
 import "@nomiclabs/hardhat-etherscan";
 
 import { HardhatUserConfig } from "hardhat/types";

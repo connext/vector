@@ -117,9 +117,9 @@ model Transfer {
   // transactions for withdrawals
   // has onchainTransactionId always if withdrawal
   // has OnchainTransaction relation IFF we submitted (and have tx record)
-  onchainTransactionId  String?
-  transactionHash       String?
-  onchainTransaction    OnchainTransaction? @relation(name: "Transaction", fields: [transactionHash], references: [transactionHash])
+  onchainTransactionId String?
+  transactionHash      String?
+  onchainTransaction   OnchainTransaction? @relation(name: "Transaction", fields: [transactionHash], references: [transactionHash])
 
   // balance
   amountA String
@@ -192,10 +192,11 @@ model OnchainTransaction {
 
   @@unique([transactionHash, chainId])
   @@map(name: "onchain_transaction")
+  Transfer Transfer[] @relation("Transaction")
 }
 
 model Configuration {
-  id       Int    @id
+  id Int @id
 
   @@map(name: "configuration")
 }

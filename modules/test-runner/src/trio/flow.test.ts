@@ -98,7 +98,7 @@ describe.skip(testName, () => {
   });
 
   it("carol can transfer ETH back and forth", () => {
-    return new Promise(async (resolve) => {
+    return new Promise<void>(async (resolve) => {
       const assetId = constants.AddressZero;
       const depositAmt = utils.parseEther("0.25");
       const channelRes = await carolService.getStateChannelByParticipants({
@@ -144,7 +144,7 @@ describe.skip(testName, () => {
       preImages[routingId] = preImage;
 
       let paymentsReceived = 0;
-      await carolService.on(
+      carolService.on(
         EngineEvents.CONDITIONAL_TRANSFER_CREATED,
         async (data) => {
           paymentsReceived += 1;
@@ -192,7 +192,7 @@ describe.skip(testName, () => {
         (data) => data.transfer.initiator !== carol,
       );
 
-      await daveService.on(
+      daveService.on(
         EngineEvents.CONDITIONAL_TRANSFER_CREATED,
         async (data) => {
           logger.info(`Dave received transfer: ${data.transfer.meta?.routingId}`);

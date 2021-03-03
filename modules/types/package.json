@@ -15,17 +15,17 @@
     "build": "rm -rf dist && tsc && rollup -c"
   },
   "dependencies": {
-    "@ethersproject/abstract-provider": "5.0.7",
-    "@ethersproject/abstract-signer": "5.0.9",
-    "@ethersproject/bignumber": "5.0.12",
-    "@ethersproject/providers": "5.0.15",
+    "@ethersproject/abstract-provider": "5.0.9",
+    "@ethersproject/abstract-signer": "5.0.13",
+    "@ethersproject/bignumber": "5.0.14",
+    "@ethersproject/providers": "5.0.23",
     "@sinclair/typebox": "0.12.7",
     "evt": "1.9.12"
   },
   "devDependencies": {
-    "ethers": "5.0.21",
-    "rollup": "2.32.1",
-    "rollup-plugin-typescript2": "0.28.0",
-    "typescript": "4.0.5"
+    "ethers": "5.0.31",
+    "rollup": "2.40.0",
+    "rollup-plugin-typescript2": "0.30.0",
+    "typescript": "4.2.2"
   }
 }
