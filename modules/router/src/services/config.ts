@@ -25,10 +25,7 @@ export const getMatchingSwap = (
   toChainId: number,
 ): Result<AllowedSwap, ConfigServiceError> => {
   const fromAsset = getAddress(fromAssetId);
-  console.log("fromAsset: ", fromAsset);
   const toAsset = getAddress(toAssetId);
-  console.log("toAsset: ", toAsset);
-  console.log("getConfig().allowedSwaps: ", getConfig().allowedSwaps);
   const swap = getConfig().allowedSwaps.find(
     (s) =>
       s.fromAssetId === fromAsset &&
@@ -69,13 +66,13 @@ export const getSwapFees = (
   let gasSubsidyPercentage = getConfig().baseGasSubsidyPercentage ?? 100;
   if (fromChainId !== toChainId || fromAssetId !== toAssetId) {
     const swapRes = getMatchingSwap(fromAssetId, fromChainId, toAssetId, toChainId);
-    if (swapRes.isError) {
+    if (swapRes.isError && swapRes.getError()?.message !== ConfigServiceError.reasons.UnableToFindSwap) {
       return Result.fail(swapRes.getError()!);
     }
-    const swap = swapRes.getValue();
-    flatFee = swap.flatFee ?? flatFee;
-    percentageFee = swap.percentageFee ?? percentageFee;
-    gasSubsidyPercentage = swap.gasSubsidyPercentage ?? gasSubsidyPercentage;
+    const swap = swapRes.isError ? undefined : swapRes.getValue();
+    flatFee = swap?.flatFee ?? flatFee;
+    percentageFee = swap?.percentageFee ?? percentageFee;
+    gasSubsidyPercentage = swap?.gasSubsidyPercentage ?? gasSubsidyPercentage;
   }
   return Result.ok({
     flatFee,

@@ -2,9 +2,27 @@
 
 ## Next Release
 
+## 0.2.0-beta.4
+
+- \[config\] - Remove config overrides with defaults
+
+## 0.2.0-beta.3
+
+- \[router\] Fix fees bugs
+- \[node\] Remove fees from default config
+- \[router,engine\] Fast exit if no fees configured
+- \[utils\] Check for lower-cased token addresses from coingecko
+
+## 0.2.0-beta.2
+
+- \[router\] Fix fees bugs
+- \[engine\] Add fees tests
+- \[test-runner\] Fix tests to work with fees
+
 ## 0.2.0-beta.1
 
 - \[router\] Fix fees bug
+
 ## 0.2.0-beta.0
 
 - \[router\] Add fee collection config

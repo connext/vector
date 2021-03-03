@@ -18,7 +18,7 @@ if [[ ! -f "$root/node.config.json" ]]
 then cp "$root/ops/config/node.default.json" "$root/node.config.json"
 fi
 
-config=$(cat "$root/ops/config/node.default.json" "$root/node.config.json" | jq -s '.[0] + .[1]')
+config=$(cat "$root/node.config.json" | jq -s '.[0] + .[1]')
 
 function getConfig {
   value=$(echo "$config" | jq ".$1" | tr -d '"')

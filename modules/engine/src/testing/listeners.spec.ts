@@ -20,6 +20,9 @@ import {
   RegisteredTransfer,
   TransferNames,
   IVectorChainService,
+  FullChannelState,
+  ChainError,
+  EngineParams,
 } from "@connext/vector-types";
 import {
   getTestLoggers,
@@ -36,6 +39,8 @@ import {
   mkHash,
   MemoryMessagingService,
   PartialFullChannelState,
+  ChannelSigner,
+  mkSig,
 } from "@connext/vector-utils";
 import { Vector } from "@connext/vector-protocol";
 import { Evt } from "evt";
@@ -45,10 +50,12 @@ import { BigNumber } from "@ethersproject/bignumber";
 import { hexlify } from "@ethersproject/bytes";
 import { randomBytes } from "@ethersproject/random";
 
-import { resolveExistingWithdrawals, setupEngineListeners } from "../listeners";
-import { getEngineEvtContainer } from "../utils";
+import { getWithdrawalQuote, resolveExistingWithdrawals, setupEngineListeners } from "../listeners";
+import * as utils from "../utils";
+const { getEngineEvtContainer } = utils;
 
 import { env } from "./env";
+import { WithdrawQuoteError } from "../errors";
 
 const testName = "Engine listeners unit";
 const { log } = getTestLoggers(testName, env.logLevel);
@@ -532,6 +539,156 @@ describe(testName, () => {
         transferId: transfer.transferId,
         channelAddress: channel.channelAddress,
         meta: transfer.meta,
+      });
+    });
+  });
+
+  describe("getWithdrawalQuote", () => {
+    // Declare mocks
+    let store: Sinon.SinonStubbedInstance<MemoryStoreService>;
+    let signer: Sinon.SinonStubbedInstance<ChannelSigner>;
+    let chainService: Sinon.SinonStubbedInstance<IVectorChainService>;
+    let normalizeFeeStub: Sinon.SinonStub;
+
+    // Test constants
+    const gasPrice = BigNumber.from(125);
+    const normalizedFee = BigNumber.from(4500);
+    const withdrawAmount = BigNumber.from(130);
+
+    beforeEach(() => {
+      store = Sinon.createStubInstance(MemoryStoreService);
+      signer = Sinon.createStubInstance(ChannelSigner);
+      chainService = Sinon.createStubInstance(VectorChainService);
+      normalizeFeeStub = Sinon.stub(utils, "normalizeGasFees");
+    });
+
+    afterEach(() => Sinon.restore());
+
+    const setupMocks = (
+      channel: FullChannelState = createTestChannelState(UpdateType.deposit, { networkContext: { chainId: 1 } })
+        .channel,
+      _withdrawAmount = withdrawAmount,
+    ) => {
+      // Store methods
+      store.getChannelState.resolves(channel);
+
+      // Chain service methods
+      chainService.getCode.resolves(Result.ok(getRandomBytes32()));
+      chainService.getGasPrice.resolves(Result.ok(gasPrice));
+      chainService.getDecimals.resolves(Result.ok(18));
+
+      // Signer methods
+      signer.signMessage.resolves(mkSig());
+
+      // normalizeFee
+      normalizeFeeStub.resolves(Result.ok(normalizedFee));
+
+      // generate request
+      const request = {
+        channelAddress: channel.channelAddress,
+        amount: _withdrawAmount.toString(),
+        assetId: AddressZero,
+      };
+      return { channel, request };
+    };
+
+    const runErrorTest = async (
+      request: EngineParams.GetWithdrawalQuote,
+      errorMessage: string,
+      contextSubset: any = {},
+    ) => {
+      const result = await getWithdrawalQuote(request, 45, signer, store, chainService as IVectorChainService, log);
+      expect(result.isError).to.be.true;
+      expect(result.getError()?.message).to.be.eq(errorMessage);
+      expect(result.getError()?.context).to.containSubset(contextSubset);
+    };
+
+    it("should fail if channel does not exist", async () => {
+      const { request } = setupMocks();
+      store.getChannelState.resolves(undefined);
+
+      await runErrorTest(request, WithdrawQuoteError.reasons.ChannelNotFound);
+    });
+
+    it("should fail if chainService.getCode fails", async () => {
+      const { request } = setupMocks();
+      chainService.getCode.resolves(Result.fail(new ChainError("fail")));
+
+      await runErrorTest(request, WithdrawQuoteError.reasons.ChainServiceFailure, { chainServiceMethod: "getCode" });
+    });
+
+    it("should fail if chainService.getGasPrice fails", async () => {
+      const { request } = setupMocks();
+      chainService.getGasPrice.resolves(Result.fail(new ChainError("fail")));
+
+      await runErrorTest(request, WithdrawQuoteError.reasons.ChainServiceFailure, {
+        chainServiceMethod: "getGasPrice",
+      });
+    });
+
+    it("should fail if chainService.getDecimals fails", async () => {
+      const { request } = setupMocks();
+      chainService.getDecimals.resolves(Result.fail(new ChainError("fail")));
+
+      await runErrorTest(request, WithdrawQuoteError.reasons.ChainServiceFailure, {
+        chainServiceMethod: "getDecimals",
+      });
+    });
+
+    it("should fail if normalizeFee fails", async () => {
+      const { request } = setupMocks();
+      normalizeFeeStub.resolves(Result.fail(new Error("fail")));
+
+      await runErrorTest(request, WithdrawQuoteError.reasons.ExchangeRateError);
+    });
+
+    it("should fail if signer.signMessage", async () => {
+      const { request } = setupMocks();
+      signer.signMessage.rejects(new Error("fail"));
+
+      await runErrorTest(request, WithdrawQuoteError.reasons.SignatureFailure);
+    });
+
+    it("should return zero-valued signed quote if gasSubsidyPercentage is 100", async () => {
+      const { request } = setupMocks();
+      const result = await getWithdrawalQuote(request, 100, signer, store, chainService as IVectorChainService, log);
+      expect(result.isError).to.be.false;
+      expect(result.getValue()).to.containSubset({
+        ...request,
+        fee: "0",
+      });
+    });
+
+    it("should return zero-valued signed quote if chain is not fee-compatible", async () => {
+      const channel = createTestChannelState(UpdateType.deposit, { networkContext: { chainId: 1234567 } }).channel;
+      const { request } = setupMocks(channel);
+      const result = await getWithdrawalQuote(request, 100, signer, store, chainService as IVectorChainService, log);
+      expect(result.isError).to.be.false;
+      expect(result.getValue()).to.containSubset({
+        ...request,
+        fee: "0",
+      });
+    });
+
+    it("should return nonzero-valued signed quote if gasSubsidyPercentage != 100 and chain is fee-compatible when fee is gt amount", async () => {
+      const { request } = setupMocks();
+      const result = await getWithdrawalQuote(request, 50, signer, store, chainService as IVectorChainService, log);
+      expect(result.getError()).to.be.undefined;
+      expect(result.getValue()).to.containSubset({
+        ...request,
+        amount: "0",
+        fee: normalizedFee.div(2).toString(),
+      });
+    });
+
+    it("should return nonzero-valued signed quote if gasSubsidyPercentage != 100 and chain is fee-compatible when fee is lt amount", async () => {
+      const { request } = setupMocks(undefined, normalizedFee);
+      const result = await getWithdrawalQuote(request, 50, signer, store, chainService as IVectorChainService, log);
+      expect(result.getError()).to.be.undefined;
+      expect(result.getValue()).to.containSubset({
+        ...request,
+        amount: BigNumber.from(request.amount).sub(normalizedFee.div(2)).toString(),
+        fee: normalizedFee.div(2).toString(),
       });
     });
   });

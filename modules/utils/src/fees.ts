@@ -73,7 +73,7 @@ export const normalizeFee = async (
     }
     gasPrice = gasPriceRes.getValue();
   }
-  const feeWithGasPrice = fee.mul(gasPrice!);
+  const feeWithGasPrice = fee.mul(gasPrice);
 
   if (desiredFeeAssetId === AddressZero) {
     logger.info({ method, methodId }, "Eth detected, exchange rate not required");
@@ -111,7 +111,7 @@ export const getExchangeRateInEth = async (
   try {
     const response = await axios.get<{ [token: string]: { eth: number } }>(uri);
     logger.info({ uri, response: response.data }, "Got exchange rate");
-    if (!response.data[tokenAddress]?.eth) {
+    if (!response.data[tokenAddress]?.eth && !response.data[tokenAddress.toLowerCase()]?.eth) {
       return Result.fail(
         new FeeCalculationError(FeeCalculationError.reasons.ExchangeRateError, {
           message: "Could not find rate in response",
@@ -120,7 +120,7 @@ export const getExchangeRateInEth = async (
         }),
       );
     }
-    return Result.ok(response.data[tokenAddress].eth);
+    return Result.ok(response.data[tokenAddress]?.eth! ?? response.data[tokenAddress.toLowerCase()]?.eth!);
   } catch (e) {
     logAxiosError(logger, e);
     return Result.fail(

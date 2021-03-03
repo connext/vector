@@ -23,8 +23,7 @@ then cp "$root/ops/config/router.default.json" "$root/router.config.json"
 fi
 
 config=$(
-  cat "$root/ops/config/node.default.json" "$root/ops/config/router.default.json" \
-  | cat - "$root/node.config.json" "$root/router.config.json" \
+  cat "$root/node.config.json" "$root/router.config.json" \
   | jq -s '.[0] + .[1] + .[2] + .[3]'
 )
 

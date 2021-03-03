@@ -33,6 +33,8 @@ import {
   Values,
   jsonifyError,
   GAS_ESTIMATES,
+  WithdrawalQuote,
+  IVectorStore,
 } from "@connext/vector-types";
 import {
   getRandomBytes32,
@@ -42,6 +44,7 @@ import {
   recoverAddressFromChannelMessage,
   safeJsonStringify,
   mkSig,
+  FeeCalculationError,
 } from "@connext/vector-utils";
 import { getAddress } from "@ethersproject/address";
 import { BigNumber } from "@ethersproject/bignumber";
@@ -51,6 +54,7 @@ import Pino, { BaseLogger } from "pino";
 import { IsAliveError, RestoreError, WithdrawQuoteError } from "./errors";
 
 import { EngineEvtContainer } from "./index";
+import { normalizeGasFees } from "./utils";
 
 export async function setupEngineListeners(
   evts: EngineEvtContainer,
@@ -396,133 +400,17 @@ export async function setupEngineListeners(
     }
     const request = quoteRequest.getValue();
     logger.info({ ...request, method, methodId }, "Calculating quote");
-
-    // Get channel from store
-    const channel = await store.getChannelState(request.channelAddress);
-    if (!channel) {
-      await messaging.respondToWithdrawalQuoteMessage(
-        inbox,
-        Result.fail(
-          new WithdrawQuoteError(WithdrawQuoteError.reasons.ChannelNotFound, signer.publicIdentifier, request),
-        ),
-      );
-      return;
-    }
-
-    // First check to see if the channel is deployed
-    const code = await chainService.getCode(request.channelAddress, channel.networkContext.chainId);
-    if (code.isError) {
-      await messaging.respondToWithdrawalQuoteMessage(
-        inbox,
-        Result.fail(
-          new WithdrawQuoteError(WithdrawQuoteError.reasons.ChainServiceFailure, signer.publicIdentifier, request, {
-            chainServiceMethod: "getCode",
-            error: jsonifyError(code.getError()!),
-          }),
-        ),
-      );
-      return;
-    }
-
-    const gasEstimate =
-      code.getValue() !== "0x" ? GAS_ESTIMATES.withdraw : GAS_ESTIMATES.withdraw.add(GAS_ESTIMATES.createChannel);
-
-    // Get the gas price
-    const gasPrice = await chainService.getGasPrice(channel.networkContext.chainId);
-    if (gasPrice.isError) {
-      await messaging.respondToWithdrawalQuoteMessage(
-        inbox,
-        Result.fail(
-          new WithdrawQuoteError(WithdrawQuoteError.reasons.ChainServiceFailure, signer.publicIdentifier, request, {
-            chainServiceMethod: "getGasPrice",
-            error: jsonifyError(gasPrice.getError()!),
-          }),
-        ),
-      );
-      return;
-    }
-
-    // Get the fee in eth
-    const ethFee = gasEstimate.mul(gasPrice.getValue());
-    logger.info({ ethFee: ethFee.toString(), method, methodId }, "Estimated gas fee");
-
-    // Convert ethFee to price in given `assetId`
-    const assetDecimals = await chainService.getDecimals(request.assetId, channel.networkContext.chainId);
-    if (assetDecimals.isError) {
-      await messaging.respondToWithdrawalQuoteMessage(
-        inbox,
-        Result.fail(
-          new WithdrawQuoteError(WithdrawQuoteError.reasons.ChainServiceFailure, signer.publicIdentifier, request, {
-            chainServiceMethod: "getDecimals",
-            error: jsonifyError(assetDecimals.getError()!),
-          }),
-        ),
-      );
-      return;
-    }
-
-    const normalizedGasCost =
-      channel.networkContext.chainId === 1 || TESTNETS_WITH_FEES.includes(channel.networkContext.chainId) // fromAsset MUST be on mainnet or hardcoded
-        ? await normalizeFee(
-            ethFee,
-            18,
-            request.assetId,
-            assetDecimals.getValue(),
-            channel.networkContext.chainId,
-            chainService,
-            logger,
-          )
-        : Result.ok(Zero);
-
-    if (normalizedGasCost.isError) {
-      await messaging.respondToWithdrawalQuoteMessage(
-        inbox,
-        Result.fail(
-          new WithdrawQuoteError(WithdrawQuoteError.reasons.ExchangeRateError, signer.publicIdentifier, request, {
-            error: jsonifyError(normalizedGasCost.getError()!),
-          }),
-        ),
-      );
-      return;
-    }
-
-    const fee = normalizedGasCost
-      .getValue()
-      .mul(100 - gasSubsidyPercentage)
-      .div(100);
-
-    logger.info(
-      {
-        normalizedGasCost: normalizedGasCost.toString(),
-        fee: fee.toString(),
-        assetId: request.assetId,
-        method,
-        methodId,
-      },
-      "Withdrawal fee",
+    const calculatedQuote = await getWithdrawalQuote(
+      request,
+      gasSubsidyPercentage,
+      signer,
+      store,
+      chainService,
+      logger,
     );
-    // Sign the quote + return to user
-    const quote = {
-      channelAddress: request.channelAddress,
-      amount: request.amount,
-      assetId: request.assetId,
-      fee: fee.toString(),
-      expiry: (Date.now() + 30_000).toString(),
-    };
-    try {
-      const signature = await signer.signMessage(hashWithdrawalQuote(quote));
-      await messaging.respondToWithdrawalQuoteMessage(inbox, Result.ok({ ...quote, signature }));
-    } catch (e) {
-      await messaging.respondToWithdrawalQuoteMessage(
-        inbox,
-        Result.fail(
-          new WithdrawQuoteError(WithdrawQuoteError.reasons.SignatureFailure, signer.publicIdentifier, request, {
-            error: jsonifyError(e),
-          }),
-        ),
-      );
-    }
-    logger.info({ quote, method, methodId }, "Method complete");
+    await messaging.respondToWithdrawalQuoteMessage(inbox, calculatedQuote);
+
+    logger.info({ quote: calculatedQuote.toJson(), method, methodId }, "Method complete");
   });
 
   ////////////////////////////
@@ -541,6 +429,113 @@ export async function setupEngineListeners(
   chainService.on(EngineEvents.TRANSACTION_FAILED, (data) => {
     evts[EngineEvents.TRANSACTION_FAILED].post({ ...data, publicIdentifier: signer.publicIdentifier });
   });
+}
+
+export async function getWithdrawalQuote(
+  request: EngineParams.GetWithdrawalQuote,
+  gasSubsidyPercentage: number,
+  signer: IChannelSigner,
+  store: IVectorStore,
+  chainService: IVectorChainService,
+  logger: BaseLogger,
+): Promise<Result<WithdrawalQuote, WithdrawQuoteError>> {
+  // Helper to sign the quote + return to user
+  const createAndSignQuote = async (_fee: BigNumber): Promise<Result<WithdrawalQuote, WithdrawQuoteError>> => {
+    const quote = {
+      channelAddress: request.channelAddress,
+      amount: _fee.gt(request.amount) ? "0" : BigNumber.from(request.amount).sub(_fee).toString(), // hash of negative value fails
+      assetId: request.assetId,
+      fee: _fee.toString(),
+      expiry: (Date.now() + 30_000).toString(),
+    };
+    try {
+      const signature = await signer.signMessage(hashWithdrawalQuote(quote));
+      return Result.ok({ ...quote, signature });
+    } catch (e) {
+      return Result.fail(
+        new WithdrawQuoteError(WithdrawQuoteError.reasons.SignatureFailure, signer.publicIdentifier, request, {
+          error: jsonifyError(e),
+        }),
+      );
+    }
+  };
+
+  // Exit early if no fees
+  if (gasSubsidyPercentage === 100) {
+    return createAndSignQuote(Zero);
+  }
+
+  // Get channel from store
+  const channel = await store.getChannelState(request.channelAddress);
+  if (!channel) {
+    return Result.fail(
+      new WithdrawQuoteError(WithdrawQuoteError.reasons.ChannelNotFound, signer.publicIdentifier, request),
+    );
+  }
+
+  // First check to see if the channel is deployed
+  const code = await chainService.getCode(request.channelAddress, channel.networkContext.chainId);
+  if (code.isError) {
+    return Result.fail(
+      new WithdrawQuoteError(WithdrawQuoteError.reasons.ChainServiceFailure, signer.publicIdentifier, request, {
+        chainServiceMethod: "getCode",
+        error: jsonifyError(code.getError()!),
+      }),
+    );
+  }
+
+  const gasEstimate =
+    code.getValue() !== "0x" ? GAS_ESTIMATES.withdraw : GAS_ESTIMATES.withdraw.add(GAS_ESTIMATES.createChannel);
+
+  // Get the gas price
+  const gasPrice = await chainService.getGasPrice(channel.networkContext.chainId);
+  if (gasPrice.isError) {
+    return Result.fail(
+      new WithdrawQuoteError(WithdrawQuoteError.reasons.ChainServiceFailure, signer.publicIdentifier, request, {
+        chainServiceMethod: "getGasPrice",
+        error: jsonifyError(gasPrice.getError()!),
+      }),
+    );
+  }
+
+  // Convert ethFee to price in given `assetId`
+  const assetDecimals = await chainService.getDecimals(request.assetId, channel.networkContext.chainId);
+  if (assetDecimals.isError) {
+    return Result.fail(
+      new WithdrawQuoteError(WithdrawQuoteError.reasons.ChainServiceFailure, signer.publicIdentifier, request, {
+        chainServiceMethod: "getDecimals",
+        error: jsonifyError(assetDecimals.getError()!),
+      }),
+    );
+  }
+
+  const normalizedGasCost =
+    channel.networkContext.chainId === 1 || TESTNETS_WITH_FEES.includes(channel.networkContext.chainId) // fromAsset MUST be on mainnet or hardcoded
+      ? await normalizeGasFees(
+          gasEstimate,
+          18,
+          request.assetId,
+          assetDecimals.getValue(),
+          channel.networkContext.chainId,
+          chainService,
+          logger,
+        )
+      : Result.ok(Zero);
+
+  if (normalizedGasCost.isError) {
+    return Result.fail(
+      new WithdrawQuoteError(WithdrawQuoteError.reasons.ExchangeRateError, signer.publicIdentifier, request, {
+        error: jsonifyError(normalizedGasCost.getError()!),
+      }),
+    );
+  }
+
+  const fee = normalizedGasCost
+    .getValue()
+    .mul(100 - gasSubsidyPercentage)
+    .div(100);
+
+  return createAndSignQuote(fee);
 }
 
 export async function resolveExistingWithdrawals(
@@ -1087,6 +1082,7 @@ export const resolveWithdrawal = async (
   const relevantChain = transfer.chainId === 1 || TESTNETS_WITH_FEES.includes(transfer.chainId);
   if (gasSubsidyPercentage !== 100 && signer.address === channelState.alice && relevantChain) {
     const cancelWithdrawal = async (cancellationReason: string) => {
+      logger.warn({ cancellationReason, transferId, channelAddress, method, methodId }, "Cancelling withdrawal");
       const resolveRes = await vector.resolve({
         transferResolver: { responderSignature: mkSig("0x0") },
         transferId,
@@ -1128,9 +1124,13 @@ export const resolveWithdrawal = async (
         fee,
         expiry: quote.expiry,
       };
-      const recovered = await recoverAddressFromChannelMessage(quote.signature, hashWithdrawalQuote(recreated));
+      const recovered = await recoverAddressFromChannelMessage(hashWithdrawalQuote(recreated), quote.signature);
       if (recovered !== channelState.alice) {
-        throw new Error(`Got ${recovered} expected ${channelState.alice} on ${safeJsonStringify(recreated)}`);
+        throw new Error(
+          `Got ${recovered} expected ${channelState.alice} on ${safeJsonStringify(
+            recreated,
+          )}. (Quote: ${safeJsonStringify(quote)})`,
+        );
       }
     } catch (e) {
       await cancelWithdrawal(`Withdrawal quote recovery failed: ${e.message}`);
@@ -1189,7 +1189,7 @@ export const resolveWithdrawal = async (
       });
     } else {
       // log the transaction error, try to resolve with an undefined hash
-      logger.warn({ error: withdrawalResponse.getError()!.message, method }, "Failed to submit tx");
+      logger.error({ error: withdrawalResponse.getError()!.message, method }, "Failed to submit tx");
     }
   }
   commitment.addTransaction(transactionHash);
