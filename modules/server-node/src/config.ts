@@ -2,7 +2,7 @@ import { deployments } from "@connext/vector-contracts";
 import { VectorNodeConfig, VectorNodeConfigSchema } from "@connext/vector-types";
 import Ajv from "ajv";
 
-const ajv = new Ajv({ strict: false });
+const ajv = new Ajv();
 
 const mnemonicEnv = process.env.VECTOR_MNEMONIC;
 const dbUrl = process.env.VECTOR_DATABASE_URL;

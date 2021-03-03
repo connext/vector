@@ -40,7 +40,7 @@ import {
 import { inProgressCreations } from "./listener";
 import { shouldChargeFees } from "./services/config";
 
-const ajv = new Ajv({ strict: false });
+const ajv = new Ajv();
 
 export async function forwardTransferCreation(
   data: ConditionalTransferCreatedPayload,

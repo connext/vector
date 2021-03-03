@@ -26,7 +26,7 @@ import { hashChannelCommitment, validateChannelUpdateSignatures } from "@connext
 import Ajv from "ajv";
 import { BaseLogger, Level } from "pino";
 
-const ajv = new Ajv({ strict: false });
+const ajv = new Ajv();
 
 // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
 export const validateSchema = (obj: any, schema: any): undefined | string => {

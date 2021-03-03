@@ -51,7 +51,7 @@ import { QuoteError } from "./errors";
 
 const config = getConfig();
 
-const ajv = new Ajv({ strict: false });
+const ajv = new Ajv();
 
 export type ChainJsonProviders = {
   [k: string]: JsonRpcProvider;
