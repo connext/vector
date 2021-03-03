@@ -2,6 +2,10 @@
 
 ## Next Release
 
+## 0.2.0-beta.4
+
+- \[config\] - Remove config overrides with defaults
+
 ## 0.2.0-beta.3
 
 - \[router\] Fix fees bugs
