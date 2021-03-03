@@ -15,7 +15,6 @@ COPY src.sol src.sol
 COPY src.ts src.ts
 COPY artifacts artifacts
 COPY dist dist
-COPY typechain typechain
 RUN find dist -type f -name "*.ts"  -exec rm {} \;
 RUN find dist -type f -name "*.map" -exec rm {} \;
 ENTRYPOINT ["bash", "entry.sh"]
