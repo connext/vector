@@ -52,7 +52,7 @@ import { setupEngineListeners } from "./listeners";
 import { getEngineEvtContainer } from "./utils";
 import { sendIsAlive } from "./isAlive";
 
-export const ajv = new Ajv();
+export const ajv = new Ajv({ strict: false });
 
 export type EngineEvtContainer = { [K in EngineEvent]: Evt<EngineEventMap[K]> };
 

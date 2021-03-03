@@ -4,7 +4,7 @@ import Ajv from "ajv";
 import { getAddress } from "@ethersproject/address";
 import { BigNumber } from "@ethersproject/bignumber";
 
-const ajv = new Ajv();
+const ajv = new Ajv({ strict: false });
 
 const RebalanceProfileSchema = Type.Object({
   chainId: TChainId,

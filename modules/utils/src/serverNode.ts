@@ -15,7 +15,7 @@ import Axios from "axios";
 import { Evt, VoidCtx } from "evt";
 import { BaseLogger } from "pino";
 
-const ajv = new Ajv();
+const ajv = new Ajv({ strict: false });
 
 export type EventCallbackConfig = {
   [event in keyof EngineEventMap]: {
