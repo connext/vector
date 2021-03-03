@@ -27,7 +27,7 @@
     "@ethersproject/solidity": "5.0.9",
     "@ethersproject/wallet": "5.0.11",
     "@sinclair/typebox": "0.12.7",
-    "ajv": "7.1.1",
+    "ajv": "6.12.6",
     "axios": "0.21.1",
     "dexie": "3.0.3",
     "merkletreejs": "0.2.13",
