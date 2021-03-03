@@ -21,7 +21,7 @@ then cp "$root/ops/config/${stack}.default.json" "$root/${stack}.config.json"
 fi
 
 config=$(
-  cat "$root/ops/config/$stack.default.json" "$root/$stack.config.json" | jq -s '.[0] + .[1]'
+  cat "$root/$stack.config.json" | jq -s '.[0] + .[1]'
 )
 
 function getConfig {
