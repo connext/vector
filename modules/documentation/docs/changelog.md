@@ -2,6 +2,9 @@
 
 ## Next Release
 
+## 0.2.0-beta.5
+
+- \[router, node\] - Bump up default fee expiry, make configurable
 ## 0.2.0-beta.4
 
 - \[config\] - Remove config overrides with defaults

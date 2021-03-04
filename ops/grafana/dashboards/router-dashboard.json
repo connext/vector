@@ -15,7 +15,7 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
-  "id": null,
+  "id": 1,
   "links": [],
   "panels": [
     {
@@ -90,7 +90,7 @@
         "showHeader": true,
         "sortBy": []
       },
-      "pluginVersion": "7.4.1",
+      "pluginVersion": "7.4.3",
       "targets": [
         {
           "expr": "router_onchain_liquidity",
@@ -165,7 +165,7 @@
       "options": {
         "showHeader": true
       },
-      "pluginVersion": "7.4.1",
+      "pluginVersion": "7.4.3",
       "targets": [
         {
           "expr": "router_channels",
@@ -236,7 +236,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.4.1",
+      "pluginVersion": "7.4.3",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -372,7 +372,7 @@
         "showHeader": true,
         "sortBy": []
       },
-      "pluginVersion": "7.4.1",
+      "pluginVersion": "7.4.3",
       "targets": [
         {
           "expr": "router_offchain_liquidity",
@@ -410,60 +410,204 @@
       "type": "table"
     },
     {
-      "aliasColors": {},
-      "bars": false,
-      "dashLength": 10,
-      "dashes": false,
       "datasource": "Prometheus",
+      "description": "Router volume over the last week",
       "fieldConfig": {
         "defaults": {
-          "color": {},
+          "color": {
+            "mode": "thresholds"
+          },
           "custom": {},
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "{assetId=\"0x0F5D2fB29fb7d3CFeE444a200298f468908cC942\", chainId=\"1\", instance=\"router:8000\", job=\"router\"}"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Mainnet Mana"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "{assetId=\"0x8f3Cf7ad23Cd3CaDbD9735AFf958023239c6A063\", chainId=\"137\", instance=\"router:8000\", job=\"router\"}"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Matic Dai"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "{assetId=\"0xA1c57f48F0Deb89f569dFbE6E2B7f46D33606fD4\", chainId=\"137\", instance=\"router:8000\", job=\"router\"}"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Matic Mana"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "{assetId=\"0x6B175474E89094C44Da98b954EedeAC495271d0F\", chainId=\"1\", instance=\"router:8000\", job=\"router\"}"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Mainnet Dai"
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 15
+      },
+      "id": 14,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": ["lastNotNull"],
+          "fields": "",
+          "values": false
+        },
+        "text": {},
+        "textMode": "auto"
+      },
+      "pluginVersion": "7.4.3",
+      "targets": [
+        {
+          "expr": "increase(router_transfer_volume[7d])",
+          "interval": "",
+          "legendFormat": "",
+          "queryType": "randomWalk",
+          "refId": "A"
+        }
+      ],
+      "title": "Weekly Volume",
+      "type": "stat"
+    },
+    {
+      "datasource": "Prometheus",
+      "description": "Volume of router over the last 24 hours",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {},
+          "mappings": [],
           "thresholds": {
             "mode": "absolute",
             "steps": []
           },
           "unit": "short"
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "{assetId=\"0x6B175474E89094C44Da98b954EedeAC495271d0F\", chainId=\"1\", instance=\"router:8000\", job=\"router\"}"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Mainnet Dai"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "{assetId=\"0x0F5D2fB29fb7d3CFeE444a200298f468908cC942\", chainId=\"1\", instance=\"router:8000\", job=\"router\"}"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Mainnet Mana"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "{assetId=\"0x8f3Cf7ad23Cd3CaDbD9735AFf958023239c6A063\", chainId=\"137\", instance=\"router:8000\", job=\"router\"}"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Matic Dai"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "{assetId=\"0xA1c57f48F0Deb89f569dFbE6E2B7f46D33606fD4\", chainId=\"137\", instance=\"router:8000\", job=\"router\"}"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Matic Mana"
+              }
+            ]
+          }
+        ]
       },
-      "fill": 1,
-      "fillGradient": 0,
       "gridPos": {
         "h": 8,
-        "w": 20,
-        "x": 0,
+        "w": 10,
+        "x": 12,
         "y": 15
       },
-      "hiddenSeries": false,
       "id": 12,
-      "legend": {
-        "avg": false,
-        "current": false,
-        "max": false,
-        "min": false,
-        "show": true,
-        "total": false,
-        "values": false
-      },
-      "lines": true,
-      "linewidth": 1,
-      "nullPointMode": "null",
       "options": {
-        "alertThreshold": true
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": ["lastNotNull"],
+          "fields": "",
+          "values": false
+        },
+        "text": {},
+        "textMode": "auto"
       },
-      "percentage": false,
-      "pluginVersion": "7.4.1",
-      "pointradius": 2,
-      "points": false,
-      "renderer": "flot",
-      "seriesOverrides": [],
-      "spaceLength": 10,
-      "stack": false,
-      "steppedLine": false,
+      "pluginVersion": "7.4.3",
       "targets": [
         {
-          "expr": "sum by (chainId, assetId) (router_transfer_volume)",
+          "expr": "increase(router_transfer_volume[24h])",
           "instant": false,
           "interval": "",
           "legendFormat": "",
@@ -471,46 +615,10 @@
           "refId": "A"
         }
       ],
-      "thresholds": [],
       "timeFrom": null,
-      "timeRegions": [],
       "timeShift": null,
-      "title": "Total Volume",
-      "tooltip": {
-        "shared": true,
-        "sort": 0,
-        "value_type": "individual"
-      },
-      "type": "graph",
-      "xaxis": {
-        "buckets": null,
-        "mode": "time",
-        "name": null,
-        "show": true,
-        "values": []
-      },
-      "yaxes": [
-        {
-          "format": "short",
-          "label": null,
-          "logBase": 1,
-          "max": null,
-          "min": null,
-          "show": true
-        },
-        {
-          "format": "short",
-          "label": null,
-          "logBase": 1,
-          "max": null,
-          "min": null,
-          "show": true
-        }
-      ],
-      "yaxis": {
-        "align": false,
-        "alignLevel": null
-      }
+      "title": "24h Volume",
+      "type": "stat"
     },
     {
       "datasource": "Prometheus",
@@ -550,7 +658,7 @@
       "options": {
         "showHeader": true
       },
-      "pluginVersion": "7.4.1",
+      "pluginVersion": "7.4.3",
       "targets": [
         {
           "expr": "sum by (chainId) (router_gas_consumed)",
@@ -618,7 +726,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.4.1",
+      "pluginVersion": "7.4.3",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -698,5 +806,5 @@
   "timezone": "",
   "title": "Router Main",
   "uid": "Oe5I2JcGk",
-  "version": 2
+  "version": 4
 }
