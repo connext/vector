@@ -4,6 +4,8 @@ import Ajv from "ajv";
 import { getAddress } from "@ethersproject/address";
 import { BigNumber } from "@ethersproject/bignumber";
 
+export const DEFAULT_FEE_EXPIRY = 300_000;
+
 const ajv = new Ajv();
 
 const RebalanceProfileSchema = Type.Object({
@@ -39,6 +41,7 @@ const VectorRouterConfigSchema = Type.Object({
   basePercentageFee: Type.Optional(Type.Number({ minimum: 0, maximum: 100 })),
   baseFlatFee: Type.Optional(TIntegerString),
   baseGasSubsidyPercentage: Type.Optional(Type.Number({ minimum: 0, maximum: 100 })),
+  feeQuoteExpiry: Type.Optional(Type.Number({ minimum: 15_000 })),
 });
 
 export type VectorRouterConfig = Static<typeof VectorRouterConfigSchema>;

@@ -446,7 +446,7 @@ export async function getWithdrawalQuote(
       amount: _fee.gt(request.amount) ? "0" : BigNumber.from(request.amount).sub(_fee).toString(), // hash of negative value fails
       assetId: request.assetId,
       fee: _fee.toString(),
-      expiry: (Date.now() + 30_000).toString(),
+      expiry: (Date.now() + 300_000).toString(), // TODO: make this configurable
     };
     try {
       const signature = await signer.signMessage(hashWithdrawalQuote(quote));
