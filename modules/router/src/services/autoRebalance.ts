@@ -8,6 +8,7 @@ import {
   TBytes32,
   TIntegerString,
   MinimalTransaction,
+  CheckStatusParams,
 } from "@connext/vector-types";
 import { getRandomBytes32 } from "@connext/vector-utils";
 import { BigNumber } from "@ethersproject/bignumber";
@@ -83,15 +84,14 @@ export const rebalanceIfNeeded = async (
   chainService: VectorChainReader,
   hydratedProviders: HydratedProviders,
   store: IRouterStore,
-): Promise<Result<{ txHash?: string }, AutoRebalanceServiceError>> => {
+): Promise<Result<undefined, AutoRebalanceServiceError>> => {
   const method = "rebalanceIfNeeded";
   const methodId = getRandomBytes32();
   if (!swap.rebalancerUrl) {
     logger.debug({ method, intervalId: methodId, swap }, "No rebalancer configured for swap, doing nothing");
-    return Result.ok({});
+    return Result.ok(undefined);
   }
   logger.info({ method, intervalId: methodId, swap }, "Checking if rebalance is needed");
-  const fromProvider = hydratedProviders[swap.fromChainId];
   const rebalanceThreshold = swap.rebalanceThresholdPct ? swap.rebalanceThresholdPct : DEFAULT_REBALANCE_THRESHOLD;
 
   const fromAssetBalance = await chainService.getOnchainBalance(swap.fromAssetId, wallet.address, swap.fromChainId);
@@ -156,7 +156,7 @@ export const rebalanceIfNeeded = async (
       },
       "No rebalance required",
     );
-    return Result.ok({});
+    return Result.ok(undefined);
   }
 
   const amountToSendNumber = fromAssetBalanceNumber - midpoint;
@@ -246,7 +246,7 @@ export const rebalanceIfNeeded = async (
       return Result.fail(completedHash.getError()!);
     }
     if (!completedHash.getValue().complete) {
-      return Result.ok();
+      return Result.ok(undefined);
     }
     // save status
     latest = {
@@ -256,6 +256,7 @@ export const rebalanceIfNeeded = async (
     };
     await store.saveLatestRebalance(latest);
   }
+  return Result.ok(undefined);
 };
 
 // TODO: add rebalance txs to metrics/db
@@ -266,7 +267,7 @@ export const approveRebalance = async (
   wallet: Wallet,
   logger: BaseLogger,
   methodId: string = getRandomBytes32(),
-): Result<string | undefined, AutoRebalanceServiceError> => {
+): Promise<Result<string | undefined, AutoRebalanceServiceError>> => {
   const method = "approveRebalance";
   logger.debug({ method, methodId, swap, amount: amount.toString() }, "Method started");
 
@@ -339,7 +340,7 @@ export const executeRebalance = async (
   wallet: Wallet,
   logger: BaseLogger,
   methodId: string = getRandomBytes32(),
-): Result<string, AutoRebalanceServiceError> => {
+): Promise<Result<string, AutoRebalanceServiceError>> => {
   // execute rebalance
   const method = "executeRebalance";
   logger.debug({ method, methodId, swap, amount: amount.toString() }, "Method started");
@@ -405,9 +406,9 @@ export const completeRebalance = async (
   wallet: Wallet,
   logger: BaseLogger,
   methodId: string = getRandomBytes32(),
-): Result<{ transactionHash?: string; complete: boolean }, AutoRebalanceServiceError> => {
+): Promise<Result<{ transactionHash?: string; complete: boolean }, AutoRebalanceServiceError>> => {
   // complete/check rebalance status
-  const method = "executeRebalance";
+  const method = "completeRebalance";
   logger.debug({ method, methodId, swap, amount: amount.toString() }, "Method started");
   try {
     // check status
@@ -470,7 +471,7 @@ const sendTransaction = async (
   logger: BaseLogger,
   method: string = "sendTransaction",
   methodId: string = getRandomBytes32(),
-) => {
+): Promise<string> => {
   const fromProvider = providers[chainId];
   if (!fromProvider) {
     throw new Error(`No provider for chain ${chainId}, cannot send tx`);

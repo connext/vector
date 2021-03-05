@@ -1,3 +1,4 @@
+export * from "./autoRebalance";
 export * from "./basic";
 export * from "./config";
 export * from "./engine";

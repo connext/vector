@@ -11,16 +11,18 @@ import axios from "axios";
 import { rebalanceIfNeeded } from "../services/autoRebalance";
 import { getConfig } from "../config";
 import * as metrics from "../metrics";
+import { PrismaStore } from "../services/store";
 
 const config = getConfig();
 
 const testName = "Auto Rebalance";
 const { log } = getTestLoggers(testName, config.logLevel as any);
-describe(testName, () => {
+describe.only(testName, () => {
   let chainReader: Sinon.SinonStubbedInstance<VectorChainReader>;
   let wallet: Sinon.SinonStubbedInstance<Wallet>;
   let hydratedProviders: { [chainId: number]: Sinon.SinonStubbedInstance<JsonRpcProvider> };
   let mockAxios: Sinon.SinonStubbedInstance<any>;
+  let store: Sinon.SinonStubbedInstance<PrismaStore>;
 
   beforeEach(async () => {
     wallet = Sinon.createStubInstance(Wallet);
@@ -33,6 +35,8 @@ describe(testName, () => {
     const parseBalanceStub = Sinon.stub(metrics, "getDecimals").resolves(18);
 
     mockAxios = Sinon.stub(axios, "post");
+
+    store = Sinon.createStubInstance(PrismaStore);
   });
 
   afterEach(() => {
@@ -53,7 +57,7 @@ describe(testName, () => {
       rebalanceThresholdPct: 20,
       rebalancerUrl: "http://example.com",
     };
-    const result = await rebalanceIfNeeded(swap, log, wallet, chainReader as any, hydratedProviders);
+    const result = await rebalanceIfNeeded(swap, log, wallet, chainReader as any, hydratedProviders, store);
     console.log("****** result", result);
     expect(result.getError()).to.not.be.ok;
     expect(result.getValue()).to.deep.eq({});
@@ -72,7 +76,7 @@ describe(testName, () => {
       rebalanceThresholdPct: 20,
       rebalancerUrl: "http://example.com",
     };
-    const result = await rebalanceIfNeeded(swap, log, wallet, chainReader as any, hydratedProviders);
+    const result = await rebalanceIfNeeded(swap, log, wallet, chainReader as any, hydratedProviders, store);
     expect(result.getError()).to.not.be.ok;
     expect(result.getValue()).to.deep.eq({});
   });
@@ -104,7 +108,7 @@ describe(testName, () => {
       rebalanceThresholdPct: 20,
       rebalancerUrl: "http://example.com",
     };
-    const result = await rebalanceIfNeeded(swap, log, wallet, chainReader as any, hydratedProviders);
+    const result = await rebalanceIfNeeded(swap, log, wallet, chainReader as any, hydratedProviders, store);
     expect(result.getError()).to.not.be.ok;
     expect(result.getValue()).to.deep.eq({
       txHash: hash,
