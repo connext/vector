@@ -11,6 +11,7 @@ import {
   DEFAULT_CHANNEL_TIMEOUT,
   ChainAddresses,
   IChannelSigner,
+  DEFAULT_FEE_EXPIRY,
 } from "@connext/vector-types";
 import {
   getBalanceForAssetId,
@@ -726,7 +727,7 @@ export async function setupListeners(
       recipientChainId,
       recipientAssetId,
       fee: fee.getValue().toString(),
-      expiry: (Date.now() + 30_000).toString(), // valid for next 2 blocks
+      expiry: (Date.now() + (getConfig().feeQuoteExpiry ?? DEFAULT_FEE_EXPIRY)).toString(), // valid for next 2 blocks
     };
     const toSign = hashTransferQuote(quote);
     try {

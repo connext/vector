@@ -39,6 +39,7 @@ const VectorRouterConfigSchema = Type.Object({
   basePercentageFee: Type.Optional(Type.Number({ minimum: 0, maximum: 100 })),
   baseFlatFee: Type.Optional(TIntegerString),
   baseGasSubsidyPercentage: Type.Optional(Type.Number({ minimum: 0, maximum: 100 })),
+  feeQuoteExpiry: Type.Optional(Type.Number({ minimum: 15_000 })),
 });
 
 export type VectorRouterConfig = Static<typeof VectorRouterConfigSchema>;

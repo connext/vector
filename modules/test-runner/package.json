@@ -13,29 +13,29 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@connext/vector-contracts": "0.2.0-beta.3",
-    "@connext/vector-types": "0.2.0-beta.3",
-    "@connext/vector-utils": "0.2.0-beta.3",
-    "@ethereum-waffle/chai": "3.2.2",
-    "@types/chai": "4.2.14",
+    "@connext/vector-contracts": "0.2.0-beta.6",
+    "@connext/vector-types": "0.2.0-beta.6",
+    "@connext/vector-utils": "0.2.0-beta.6",
+    "@ethereum-waffle/chai": "3.3.0",
+    "@types/chai": "4.2.15",
     "@types/chai-as-promised": "7.1.3",
     "@types/chai-subset": "1.3.3",
-    "@types/mocha": "8.0.3",
+    "@types/mocha": "8.2.1",
     "axios": "0.21.1",
     "babel-loader": "8.1.0",
     "copy-webpack-plugin": "6.2.1",
-    "ethers": "5.0.21",
+    "ethers": "5.0.31",
     "evt": "1.9.12",
-    "fastify": "3.8.0",
+    "fastify": "3.13.0",
     "p-queue": "6.6.2",
     "ts-loader": "8.0.7",
     "ts-mocha": "8.0.0",
-    "ts-node": "9.0.0",
-    "typescript": "4.0.5",
+    "ts-node": "9.1.1",
+    "typescript": "4.2.2",
     "webpack": "4.44.2",
     "webpack-cli": "4.1.0"
   },
   "devDependencies": {
-    "pino-pretty": "4.5.0"
+    "pino-pretty": "4.6.0"
   }
 }

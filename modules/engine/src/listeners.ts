@@ -35,16 +35,15 @@ import {
   GAS_ESTIMATES,
   WithdrawalQuote,
   IVectorStore,
+  DEFAULT_FEE_EXPIRY,
 } from "@connext/vector-types";
 import {
   getRandomBytes32,
   TESTNETS_WITH_FEES,
-  normalizeFee,
   hashWithdrawalQuote,
   recoverAddressFromChannelMessage,
   safeJsonStringify,
   mkSig,
-  FeeCalculationError,
 } from "@connext/vector-utils";
 import { getAddress } from "@ethersproject/address";
 import { BigNumber } from "@ethersproject/bignumber";
@@ -446,7 +445,7 @@ export async function getWithdrawalQuote(
       amount: _fee.gt(request.amount) ? "0" : BigNumber.from(request.amount).sub(_fee).toString(), // hash of negative value fails
       assetId: request.assetId,
       fee: _fee.toString(),
-      expiry: (Date.now() + 30_000).toString(),
+      expiry: (Date.now() + DEFAULT_FEE_EXPIRY).toString(), // TODO: make this configurable
     };
     try {
       const signature = await signer.signMessage(hashWithdrawalQuote(quote));

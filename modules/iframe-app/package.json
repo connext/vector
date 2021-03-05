@@ -3,23 +3,23 @@
   "version": "0.0.1",
   "private": true,
   "dependencies": {
-    "@connext/vector-browser-node": "0.2.0-beta.3",
-    "@connext/vector-types": "0.2.0-beta.3",
-    "@connext/vector-utils": "0.2.0-beta.3",
-    "@ethersproject/bytes": "5.0.8",
-    "@ethersproject/hdnode": "5.0.7",
-    "@ethersproject/keccak256": "5.0.6",
-    "@ethersproject/random": "5.0.6",
-    "@ethersproject/strings": "5.0.7",
-    "@ethersproject/wallet": "5.0.9",
-    "@types/node": "14.14.6",
+    "@connext/vector-browser-node": "0.2.0-beta.6",
+    "@connext/vector-types": "0.2.0-beta.6",
+    "@connext/vector-utils": "0.2.0-beta.6",
+    "@ethersproject/bytes": "5.0.10",
+    "@ethersproject/hdnode": "5.0.9",
+    "@ethersproject/keccak256": "5.0.8",
+    "@ethersproject/random": "5.0.8",
+    "@ethersproject/strings": "5.0.9",
+    "@ethersproject/wallet": "5.0.11",
+    "@types/node": "14.14.31",
     "@types/react": "16.9.53",
     "@types/react-dom": "16.9.8",
-    "pino": "6.7.0",
+    "pino": "6.11.1",
     "react": "17.0.1",
     "react-dom": "17.0.1",
     "react-scripts": "3.4.3",
-    "typescript": "4.0.5"
+    "typescript": "4.2.2"
   },
   "scripts": {
     "start": "BROWSER=none PORT=3030 react-scripts start",
@@ -46,6 +46,6 @@
     ]
   },
   "devDependencies": {
-    "@types/pino": "6.3.3"
+    "@types/pino": "6.3.6"
   }
 }
