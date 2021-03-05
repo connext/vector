@@ -1,4 +1,4 @@
-import { NodeParams } from "@connext/vector-types";
+import { NodeParams, AllowedSwap } from "@connext/vector-types";
 
 import { PrismaClient } from "../generated/db-client";
 import { getConfig } from "../config";
@@ -31,6 +31,25 @@ export type RouterStoredUpdate<T extends RouterUpdateType> = {
   payload: RouterStoredUpdatePayload[T];
   status: RouterUpdateStatus;
 };
+
+export const RouterRebalanceStatus = {
+  APPROVED: "APPROVED",
+  COMPLETE: "COMPLETE",
+  EXECUTED: "EXECUTED",
+  // PROCESSING: "PROCESSING",
+} as const;
+export type RouterRebalanceStatus = keyof typeof RouterRebalanceStatus;
+
+export type RouterRebalanceRecord = {
+  id: string;
+  swap: AllowedSwap;
+  status: RouterRebalanceStatus;
+  approveHash?: string;
+  executeHash?: string;
+  completeHash?: string;
+  // createdAt
+  // updatedAt
+};
 export interface IRouterStore {
   getQueuedUpdates(
     channelAddress: string,
@@ -43,6 +62,8 @@ export interface IRouterStore {
     status?: RouterUpdateStatus,
   ): Promise<void>;
   setUpdateStatus(updateId: string, status: RouterUpdateStatus, context?: string): Promise<void>;
+  getLatestRebalance(swap: AllowedSwap): Promise<RouterRebalanceRecord | undefined>;
+  saveLatestRebalance(record: RouterRebalanceRecord): Promise<void>;
 }
 export class PrismaStore implements IRouterStore {
   public prisma: PrismaClient;
@@ -110,5 +131,13 @@ export class PrismaStore implements IRouterStore {
         context,
       },
     });
+  }
+
+  getLatestRebalance(swap: AllowedSwap): Promise<RouterRebalanceRecord | undefined> {
+    throw new Error("Method not implemented.");
+  }
+
+  saveLatestRebalance(record: RouterRebalanceRecord): Promise<void> {
+    throw new Error("Method not implemented.");
   }
 }
