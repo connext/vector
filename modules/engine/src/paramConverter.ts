@@ -18,6 +18,7 @@ import {
   EngineError,
   jsonifyError,
   IMessagingService,
+  DEFAULT_FEE_EXPIRY,
 } from "@connext/vector-types";
 import { BigNumber } from "@ethersproject/bignumber";
 import { AddressZero } from "@ethersproject/constants";
@@ -88,7 +89,7 @@ export async function convertConditionalTransferParams(
               recipientChainId,
               recipientAssetId,
               fee: "0",
-              expiry: (Date.now() + 30_000).toString(),
+              expiry: (Date.now() + DEFAULT_FEE_EXPIRY).toString(),
             });
       if (quoteRes.isError) {
         return Result.fail(
@@ -103,7 +104,7 @@ export async function convertConditionalTransferParams(
       quote = quoteRes.getValue();
     }
     const fee = BigNumber.from(quote.fee);
-    if (fee.gte(params.amount)) {
+    if (fee.gt(params.amount)) {
       return Result.fail(
         new ParameterConversionError(
           ParameterConversionError.reasons.FeeGreaterThanAmount,
@@ -254,7 +255,7 @@ export async function convertWithdrawParams(
             amount: params.amount,
             assetId: params.assetId,
             fee: "0",
-            expiry: (Date.now() + 30_000).toString(),
+            expiry: (Date.now() + DEFAULT_FEE_EXPIRY).toString(),
           });
 
     if (quoteRes.isError) {
@@ -271,7 +272,7 @@ export async function convertWithdrawParams(
   }
 
   const fee = BigNumber.from(quote.fee);
-  if (fee.gte(params.amount)) {
+  if (fee.gt(params.amount)) {
     return Result.fail(
       new ParameterConversionError(
         ParameterConversionError.reasons.FeeGreaterThanAmount,

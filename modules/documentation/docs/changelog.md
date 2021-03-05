@@ -5,6 +5,7 @@
 ## 0.2.0-beta.6
 
 - \[engine\] Only error if fees > amount, not fees >= amount
+- \[types, router, engine\] Use `DEFAULT_FEE_EXPIRY` from types package
 
 ## 0.2.0-beta.5
 

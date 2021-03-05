@@ -4,8 +4,6 @@ import Ajv from "ajv";
 import { getAddress } from "@ethersproject/address";
 import { BigNumber } from "@ethersproject/bignumber";
 
-export const DEFAULT_FEE_EXPIRY = 300_000;
-
 const ajv = new Ajv();
 
 const RebalanceProfileSchema = Type.Object({
