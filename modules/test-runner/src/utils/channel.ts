@@ -248,6 +248,8 @@ export const transfer = async (
   const [senderCreate, receiverCreate] = await Promise.all([senderCreatePromise, receiverCreatePromise]);
   expect(senderCreate).to.be.ok;
   expect(receiverCreate).to.be.ok;
+  expect(senderCreate?.transfer.balance.amount).to.be.deep.eq([amount.toString(), "0"]);
+  expect(receiverCreate?.transfer.balance.amount).to.be.deep.eq([amountForwarded.toString(), "0"]);
 
   const receiverTransferRes = await receiver.getTransferByRoutingId({
     channelAddress: receiverChannel.channelAddress,
@@ -270,6 +272,7 @@ export const transfer = async (
   expect(resolveRes.getError()).to.not.be.ok;
   const receiverResolve = await receiverResolvePromise;
   expect(receiverResolve).to.be.ok;
+  expect(receiverResolve?.transfer.balance.amount).to.be.deep.eq(["0", amountForwarded.toString()]);
 
   const receiverChannelAfterResolve = (
     await receiver.getStateChannel({

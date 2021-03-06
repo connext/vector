@@ -77,6 +77,10 @@ describe(testName, () => {
     expect(bobEvent.updatedTransfer).to.containSubset(aliceSanitized);
     expect(bobEvent.updatedTransfers).to.not.containSubset([aliceSanitized]);
     expect(aliceEvent.updatedTransfer!.transferResolver.preImage).to.be.a("string");
+    expect(aliceEvent.updatedTransfer?.balance.amount[0]).to.be.eq("0");
+    expect(aliceEvent.updatedTransfer?.balance.amount[1]).to.be.eq(transfer.balance.amount[0]);
+    expect(bobEvent.updatedTransfer?.balance.amount[0]).to.be.eq("0");
+    expect(bobEvent.updatedTransfer?.balance.amount[1]).to.be.eq(transfer.balance.amount[0]);
   };
 
   const resolveTransferBob = async (transfer: FullTransferState): Promise<void> => {
@@ -91,9 +95,13 @@ describe(testName, () => {
     expect(bobEvent.updatedTransfer).to.containSubset(aliceSanitized);
     expect(bobEvent.updatedTransfers).to.not.containSubset([aliceSanitized]);
     expect(aliceEvent.updatedTransfer!.transferResolver.preImage).to.be.a("string");
+    expect(aliceEvent.updatedTransfer?.balance.amount[0]).to.be.eq("0");
+    expect(aliceEvent.updatedTransfer?.balance.amount[1]).to.be.eq(transfer.balance.amount[0]);
+    expect(bobEvent.updatedTransfer?.balance.amount[0]).to.be.eq("0");
+    expect(bobEvent.updatedTransfer?.balance.amount[1]).to.be.eq(transfer.balance.amount[0]);
   };
 
-  it("should work for alice resolving an eth transfer", async () => {
+  it.only("should work for alice resolving an eth transfer", async () => {
     const { transfer } = await createTransfer(channelAddress, alice, bob, assetId, transferAmount);
 
     await resolveTransferAlice(transfer);
