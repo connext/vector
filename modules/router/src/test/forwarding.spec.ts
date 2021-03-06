@@ -204,6 +204,7 @@ describe(testName, () => {
       // Verify call stack
       expect(getSwappedAmount.callCount).to.be.eq(swapCallCount);
       expect(node.conditionalTransfer.callCount).to.be.eq(1);
+      const { balance, ...details } = senderTransfer.transferState;
       const expected = {
         channelAddress: receiverChannel.channelAddress,
         amount:
@@ -212,7 +213,7 @@ describe(testName, () => {
         timeout: BigNumber.from(senderTransfer.transferTimeout).sub(TRANSFER_DECREMENT).toString(),
         type: event.conditionType,
         publicIdentifier: routerPublicIdentifier,
-        details: { ...senderTransfer.transferState },
+        details,
         meta: {
           senderIdentifier: ctx.senderChannel.bobIdentifier,
           ...(senderTransfer.meta ?? {}),
