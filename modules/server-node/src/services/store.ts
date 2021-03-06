@@ -219,7 +219,13 @@ const convertTransferEntityToFullTransferState = (
     channelNonce: transfer!.channelNonce,
     transferEncodings: transfer.createUpdate!.transferEncodings!.split("$"),
     transferId: transfer.createUpdate!.transferId!,
-    transferState: JSON.parse(transfer.createUpdate!.transferInitialState!),
+    transferState: {
+      balance: {
+        amount: [transfer.createUpdate!.transferAmountA!, transfer.createUpdate!.transferAmountB],
+        to: [transfer.createUpdate!.transferToA, transfer.createUpdate!.transferToB],
+      },
+      ...JSON.parse(transfer.createUpdate!.transferInitialState!),
+    },
     transferTimeout: transfer.createUpdate!.transferTimeout!,
     meta: transfer.createUpdate!.meta ? JSON.parse(transfer.createUpdate!.meta) : undefined,
     transferResolver: transfer.resolveUpdate?.transferResolver

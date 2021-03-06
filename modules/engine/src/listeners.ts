@@ -862,7 +862,10 @@ async function handleWithdrawalTransferResolution(
     return;
   }
 
-  const withdrawalAmount = event.updatedTransfer.balance.amount
+  // withdrawals burn the balance on resolve, so the only
+  // reliable way to get a withdrawal amount is
+  // via the initial balance in the transfer state
+  const withdrawalAmount = event.updatedTransfer.transferState.balance.amount
     .reduce((prev, curr) => prev.add(curr), BigNumber.from(0))
     .sub(event.updatedTransfer.transferState.fee);
 
@@ -1044,12 +1047,14 @@ export const resolveWithdrawal = async (
   const {
     meta,
     assetId,
-    balance,
     initiatorIdentifier,
     transferId,
-    transferState: { nonce, initiatorSignature, fee, initiator, responder, callTo, callData },
+    transferState: { nonce, initiatorSignature, fee, initiator, responder, callTo, callData, balance },
   } = transfer;
 
+  // withdrawals burn the balance on resolve, so the only
+  // reliable way to get a withdrawal amount is
+  // via the initial balance in the transfer state
   const withdrawalAmount = balance.amount.reduce((prev, curr) => prev.add(curr), BigNumber.from(0)).sub(fee);
   logger.debug({ withdrawalAmount: withdrawalAmount.toString(), initiator, responder, fee }, "Withdrawal info");
 
@@ -1221,5 +1226,8 @@ export const resolveWithdrawal = async (
   }
 
   // Withdrawal successfully resolved
-  logger.info({ method, amount: withdrawalAmount.toString(), assetId: transfer.assetId, fee }, "Withdrawal resolved");
+  logger.info(
+    { method, amount: withdrawalAmount.toString(), assetId: transfer.assetId, fee, transactionHash },
+    "Withdrawal resolved",
+  );
 };
