@@ -193,6 +193,7 @@ export function applyUpdate<T extends UpdateType>(
         ...transfer,
         transferState: { ...transfer.transferState, balance: { ...finalTransferBalance } },
         transferResolver: { ...transferResolver },
+        balance: finalTransferBalance!,
         meta: {
           ...(transfer.meta ?? {}),
           ...(meta ?? {}),
