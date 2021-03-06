@@ -101,7 +101,7 @@ describe(testName, () => {
     expect(bobEvent.updatedTransfer?.balance.amount[1]).to.be.eq(transfer.balance.amount[0]);
   };
 
-  it.only("should work for alice resolving an eth transfer", async () => {
+  it("should work for alice resolving an eth transfer", async () => {
     const { transfer } = await createTransfer(channelAddress, alice, bob, assetId, transferAmount);
 
     await resolveTransferAlice(transfer);
