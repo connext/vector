@@ -216,6 +216,7 @@ export async function convertWithdrawParams(
   const { channelAddress, callTo, callData, meta } = params;
   const assetId = getAddress(params.assetId);
   const recipient = getAddress(params.recipient);
+  const bobSubmits = params.bobSubmits ?? false;
 
   // If recipient is AddressZero, throw
   if (recipient === AddressZero) {
@@ -243,7 +244,7 @@ export async function convertWithdrawParams(
   let quote = params.quote;
   if (!quote) {
     const quoteRes =
-      signer.publicIdentifier !== channel.aliceIdentifier
+      signer.publicIdentifier !== channel.aliceIdentifier && !bobSubmits
         ? await messaging.sendWithdrawalQuoteMessage(
             Result.ok({ channelAddress: channel.channelAddress, amount: params.amount, assetId: params.assetId }),
             channel.aliceIdentifier,
@@ -382,6 +383,7 @@ export async function convertWithdrawParams(
         assetId: params.assetId,
       },
       withdrawNonce: channel.nonce.toString(),
+      bobSubmits,
     },
   });
 }

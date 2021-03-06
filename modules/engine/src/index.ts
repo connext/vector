@@ -1,3 +1,4 @@
+import { WithdrawCommitment } from "@connext/vector-contracts";
 import { Vector } from "@connext/vector-protocol";
 import { EXTRA_GAS_PRICE } from "@connext/vector-contracts";
 import {
@@ -27,6 +28,8 @@ import {
   VectorError,
   jsonifyError,
   ChainError,
+  MinimalTransaction,
+  WithdrawCommitmentJson,
 } from "@connext/vector-types";
 import {
   generateMerkleTreeData,
@@ -908,6 +911,7 @@ export class VectorEngine implements IVectorEngine {
       return Result.fail(createResult.getError()!);
     }
     const createParams = createResult.getValue();
+    const bobSubmits = createParams.meta.bobSubmits ?? false;
     const protocolRes = await this.vector.create(createParams);
     if (protocolRes.isError) {
       return Result.fail(protocolRes.getError()!);
@@ -917,6 +921,7 @@ export class VectorEngine implements IVectorEngine {
     this.logger.info({ channelAddress: params.channelAddress, transferId }, "Withdraw transfer created");
 
     let transactionHash: string | undefined = undefined;
+    let transaction: MinimalTransaction | undefined = undefined;
     const timeout = 90_000;
     try {
       const event = await this.evts[WITHDRAWAL_RECONCILED_EVENT].attachOnce(
@@ -925,11 +930,37 @@ export class VectorEngine implements IVectorEngine {
       );
       transactionHash = event.transactionHash;
     } catch (e) {
-      this.logger.warn({ channelAddress: params.channelAddress, transferId, timeout }, "Withdraw tx not submitted");
+      this.logger.warn(
+        { channelAddress: params.channelAddress, transferId, timeout, bobSubmits },
+        "Withdraw tx not processed properly",
+      );
+    }
+
+    if (bobSubmits) {
+      let commitment: WithdrawCommitmentJson | undefined;
+      try {
+        // return the transaction hash
+        commitment = await this.store.getWithdrawalCommitment(transferId);
+      } catch (e) {
+        return Result.fail(
+          new RpcError(RpcError.reasons.StoreMethodFailed, channel.channelAddress, this.signer.publicIdentifier, {
+            storeMethod: "getWithdrawalCommitment",
+            error: e.message,
+          }),
+        );
+      }
+      if (!commitment) {
+        return Result.fail(
+          new RpcError(RpcError.reasons.EngineMethodFailure, channel.channelAddress, this.signer.publicIdentifier, {
+            message: "No commitment found for withdrawal",
+          }),
+        );
+      }
+      transaction = (await WithdrawCommitment.fromJson(commitment)).getSignedTransaction();
     }
 
     this.logger.info({ channel: res, method, methodId }, "Method complete");
-    return Result.ok({ channel: res, transactionHash });
+    return Result.ok({ channel: res, transactionHash, transaction });
   }
 
   private async decrypt(encrypted: string): Promise<Result<string, EngineError>> {

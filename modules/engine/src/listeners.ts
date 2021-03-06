@@ -930,6 +930,8 @@ async function handleWithdrawalTransferResolution(
   // Try to submit the transaction to chain IFF you are alice
   // Otherwise, alice should have submitted the tx (hash is in meta)
   if (signer.address !== alice) {
+    // Store the double signed commitment
+    await store.saveWithdrawalCommitment(transferId, commitment.toJson());
     // Withdrawal resolution meta will include the transaction hash,
     // post to EVT here
     evts[WITHDRAWAL_RECONCILED_EVENT].post({
@@ -940,8 +942,6 @@ async function handleWithdrawalTransferResolution(
       transactionHash: meta?.transactionHash,
       meta: event.updatedTransfer.meta,
     });
-    // Store the double signed commitment
-    await store.saveWithdrawalCommitment(transferId, commitment.toJson());
     logger.info({ method, methodId, withdrawalAmount: withdrawalAmount.toString(), assetId }, "Completed");
     return;
   }
@@ -1051,6 +1051,9 @@ export const resolveWithdrawal = async (
     transferId,
     transferState: { nonce, initiatorSignature, fee, initiator, responder, callTo, callData, balance },
   } = transfer;
+
+  // determine whether or not alice should submit
+  const bobSubmits = meta.bobSubmits ?? false;
 
   // withdrawals burn the balance on resolve, so the only
   // reliable way to get a withdrawal amount is
@@ -1170,7 +1173,7 @@ export const resolveWithdrawal = async (
   // update until the transaction is properly submitted onchain (enforced
   // via injected validation)
   let transactionHash: string | undefined = undefined;
-  if (signer.address === alice) {
+  if (signer.address === alice && !bobSubmits) {
     // Submit withdrawal to chain
     logger.info(
       { method, withdrawalAmount: withdrawalAmount.toString(), channelAddress },

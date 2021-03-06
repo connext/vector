@@ -151,6 +151,7 @@ const WithdrawParamsSchema = Type.Object({
   callTo: Type.Optional(TAddress),
   callData: Type.Optional(Type.String()),
   meta: Type.Optional(TBasicMeta),
+  bobSubmits: Type.Optional(Type.Boolean()),
 });
 
 //////////////////
