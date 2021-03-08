@@ -228,7 +228,7 @@ describe(testName, () => {
         channelFactoryAddress: chainAddresses[chainId].channelFactoryAddress,
         chainId,
         transferEncodings: [stateEncoding, resolverEncoding],
-        transferState: initialState,
+        transferState: { balance, ...initialState },
         transferResolver: undefined,
         meta: { test: "meta" },
         inDispute: false,

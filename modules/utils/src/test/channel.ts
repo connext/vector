@@ -247,7 +247,10 @@ export function createTestChannelState<T extends UpdateType = typeof UpdateType.
     transfer.transferResolver =
       type === "resolve" ? (latestUpdate.details as ResolveUpdateDetails).transferResolver : undefined;
     transfer.transferState =
-      (latestUpdate.details as CreateUpdateDetails).transferInitialState ?? transfer.transferState;
+      {
+        balance: (latestUpdate.details as CreateUpdateDetails).balance,
+        ...(latestUpdate.details as CreateUpdateDetails).transferInitialState,
+      } ?? transfer.transferState;
     transfer.transferTimeout =
       (latestUpdate.details as CreateUpdateDetails).transferTimeout ?? transfer.transferTimeout;
     transfer.chainId = networkContext.chainId;

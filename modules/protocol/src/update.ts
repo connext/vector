@@ -156,7 +156,7 @@ export function applyUpdate<T extends UpdateType>(
         transferEncodings,
         transferTimeout,
         initialStateHash: hashTransferState(transferInitialState, transferEncodings[0]),
-        transferState: transferInitialState,
+        transferState: { balance: transferBalance, ...transferInitialState },
         channelFactoryAddress: previousState!.networkContext.channelFactoryAddress,
         chainId: previousState!.networkContext.chainId,
         transferResolver: undefined,
@@ -191,8 +191,8 @@ export function applyUpdate<T extends UpdateType>(
       };
       const resolvedTransfer = {
         ...transfer,
-        transferState: { ...transfer.transferState, balance: { ...finalTransferBalance } },
         transferResolver: { ...transferResolver },
+        balance: finalTransferBalance!,
         meta: {
           ...(transfer.meta ?? {}),
           ...(meta ?? {}),
