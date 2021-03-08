@@ -173,9 +173,6 @@ export async function setupListeners(
         (t) => t !== data.transfer.transferId,
       );
       if (res.isError) {
-        const { receiverAmount } = res.getError()?.context;
-        // TODO: if we did *not* cancel sender side transfer, should we
-        // increment?
         failedTransfer.inc({
           assetId,
           chainId,
@@ -446,7 +443,7 @@ export async function setupListeners(
   });
 
   nodeService.on(EngineEvents.DEPOSIT_RECONCILED, async (data) => {
-    // TODO: do we want this to be updated on withdrawal as well
+    // TODO: do we want this to be updated on withdrawal as well #442
     const channelRes = await nodeService.getStateChannel({ channelAddress: data.channelAddress });
     if (channelRes.isError) {
       logger.warn({ ...channelRes.getError()?.toJson() }, "Failed to get channel");
