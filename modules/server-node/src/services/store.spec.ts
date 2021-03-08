@@ -629,7 +629,13 @@ describe("store", () => {
     const createState = createTestChannelState("create", {}, { transferId });
     await store.saveChannelState(createState.channel, createState.transfer);
     let transferFromStore = await store.getTransferState(createState.transfer.transferId);
-    expect(transferFromStore).to.deep.eq(createState.transfer);
+    expect(transferFromStore).to.deep.eq({
+      ...createState.transfer,
+      transferState: {
+        balance: (createState.channel.latestUpdate as ChannelUpdate<typeof UpdateType.create>).details.balance,
+        ...createState.transfer.transferState,
+      },
+    });
 
     const resolveState = createTestChannelState("resolve", { nonce: createState.channel.nonce + 1 }, { transferId });
 

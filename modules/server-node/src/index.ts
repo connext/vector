@@ -848,11 +848,14 @@ server.post<{ Body: NodeParams.Withdraw }>(
     }
     const rpc = constructRpcRequest(ChannelRpcMethods.chan_withdraw, request.body);
     try {
-      const { channel, transactionHash } = await engine.request<typeof ChannelRpcMethods.chan_withdraw>(rpc);
+      const { channel, transactionHash, transaction } = await engine.request<typeof ChannelRpcMethods.chan_withdraw>(
+        rpc,
+      );
       return reply.status(200).send({
         channelAddress: channel.channelAddress,
         transferId: (channel.latestUpdate.details as ResolveUpdateDetails).transferId,
         transactionHash,
+        transaction,
       } as NodeResponses.Withdraw);
     } catch (e) {
       logger.error({ error: jsonifyError(e) });

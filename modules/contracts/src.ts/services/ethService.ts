@@ -446,6 +446,15 @@ export class EthereumChainService extends EthereumChainReader implements IVector
       return Result.fail(multisigRes.getError()!);
     }
 
+    this.log.info(
+      {
+        method,
+        methodId,
+        chainId: channelState.networkContext.chainId,
+      },
+      "Getting gas price",
+    );
+
     const gasPriceRes = await this.getGasPrice(channelState.networkContext.chainId);
     if (gasPriceRes.isError) {
       Result.fail(gasPriceRes.getError()!);

@@ -1,3 +1,4 @@
+import { MinimalTransaction } from "./chain";
 import { FullTransferState, FullChannelState, ChainAddresses } from "./channel";
 import { ChainProviders } from "./network";
 import { EngineParams, NodeResponses } from "./schemas";
@@ -109,7 +110,11 @@ export type ChannelRpcMethodsResponsesMap = {
   [ChannelRpcMethods.chan_createTransfer]: FullChannelState;
   [ChannelRpcMethods.chan_resolveTransfer]: FullChannelState;
   [ChannelRpcMethods.chan_restoreState]: FullChannelState;
-  [ChannelRpcMethods.chan_withdraw]: { channel: FullChannelState; transactionHash?: string };
+  [ChannelRpcMethods.chan_withdraw]: {
+    channel: FullChannelState;
+    transactionHash?: string;
+    transaction?: MinimalTransaction;
+  };
   [ChannelRpcMethods.chan_subscribe]: any;
   [ChannelRpcMethods.chan_unsubscribeAll]: any;
   [ChannelRpcMethods.connext_authenticate]: {

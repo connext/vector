@@ -2,9 +2,20 @@
 
 ## Next Release
 
+## 0.2.0-beta.7
+
+- [engine] Fix transfer event balances
+- [engine] Allow Bob to specify submitting their own withdrawals
+
+## 0.2.0-beta.6
+
+- \[engine\] Only error if fees > amount, not fees >= amount
+- \[types, router, engine\] Use `DEFAULT_FEE_EXPIRY` from types package
+
 ## 0.2.0-beta.5
 
-- \[router, node\] - Bump up default fee expiry, make configurable
+- \[router, node\] Bump up default fee expiry, make configurable
+
 ## 0.2.0-beta.4
 
 - \[config\] - Remove config overrides with defaults

@@ -11,6 +11,7 @@ import {
   DEFAULT_CHANNEL_TIMEOUT,
   ChainAddresses,
   IChannelSigner,
+  DEFAULT_FEE_EXPIRY,
 } from "@connext/vector-types";
 import {
   getBalanceForAssetId,
@@ -30,7 +31,7 @@ import { forwardTransferCreation, forwardTransferResolution, handleIsAlive } fro
 import { IRouterStore } from "./services/store";
 import { getMatchingSwap, getRebalanceProfile } from "./services/config";
 import { IRouterMessagingService } from "./services/messaging";
-import { DEFAULT_FEE_EXPIRY, getConfig } from "./config";
+import { getConfig } from "./config";
 import {
   openChannels,
   transactionAttempt,

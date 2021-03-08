@@ -23,3 +23,6 @@ export const AUTODEPLOY_CHAIN_IDS = [ARBITRUM_TESTNET_1_CHAIN_ID];
 
 // Used by alice nodes to submit their withdrawals when gas is low
 export const REDUCED_GAS_PRICE = parseUnits("125", "gwei");
+
+// When a quote will expire
+export const DEFAULT_FEE_EXPIRY = 300_000;
