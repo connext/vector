@@ -911,7 +911,7 @@ export class VectorEngine implements IVectorEngine {
       return Result.fail(createResult.getError()!);
     }
     const createParams = createResult.getValue();
-    const bobSubmits = createParams.meta.bobSubmits ?? false;
+    const initiatorSubmits = createParams.meta.initiatorSubmits ?? false;
     const protocolRes = await this.vector.create(createParams);
     if (protocolRes.isError) {
       return Result.fail(protocolRes.getError()!);
@@ -931,12 +931,12 @@ export class VectorEngine implements IVectorEngine {
       transactionHash = event.transactionHash;
     } catch (e) {
       this.logger.warn(
-        { channelAddress: params.channelAddress, transferId, timeout, bobSubmits },
+        { channelAddress: params.channelAddress, transferId, timeout, initiatorSubmits },
         "Withdraw tx not processed properly",
       );
     }
 
-    if (bobSubmits) {
+    if (initiatorSubmits) {
       let commitment: WithdrawCommitmentJson | undefined;
       try {
         // return the transaction hash
@@ -959,7 +959,7 @@ export class VectorEngine implements IVectorEngine {
       transaction = (await WithdrawCommitment.fromJson(commitment)).getSignedTransaction();
     }
 
-    this.logger.info({ channel: res, method, methodId }, "Method complete");
+    this.logger.info({ channel: res, method, methodId, transactionHash, transaction }, "Method complete");
     return Result.ok({ channel: res, transactionHash, transaction });
   }
 

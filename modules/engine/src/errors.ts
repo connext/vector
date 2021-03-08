@@ -98,6 +98,7 @@ export class ParameterConversionError extends EngineError {
   static readonly type = "ParameterConversionError";
 
   static readonly reasons = {
+    BobDoesntSubmitAlice: "Bob cannot submit Alice's withdrawals",
     CannotSendToSelf: "An initiator cannot be a receiver on the same chain",
     CouldNotGetQuote: "Failed to get quote",
     CouldNotSignWithdrawal: "Failed to sign withdrawal commitment",

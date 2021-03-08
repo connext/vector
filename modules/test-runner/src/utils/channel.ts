@@ -296,6 +296,7 @@ export const withdraw = async (
   assetId: string,
   amount: BigNumber,
   withdrawRecipient: string,
+  initiatorSubmits: boolean = false,
 ): Promise<FullChannelState> => {
   // Get pre-withdraw channel balances
   const preWithdrawChannel = (await withdrawer.getStateChannel({ channelAddress })).getValue() as FullChannelState;
@@ -314,21 +315,32 @@ export const withdraw = async (
     channelAddress,
   });
   expect(quote.getError()).to.not.be.ok;
-  const amountWithdrawn = amount.sub(quote.getValue().fee);
+  const amountWithdrawn = amount.sub(initiatorSubmits ? 0 : quote.getValue().fee);
 
   // Perform withdrawal
-  const withdrawalRes = await withdrawer.withdraw({
+  const baseParams = {
     publicIdentifier: withdrawer.publicIdentifier,
     channelAddress,
     amount: amount.toString(),
     assetId,
     recipient: withdrawRecipient,
     meta: { reason: "Test withdrawal" },
-  });
+  };
+  const withdrawParams = initiatorSubmits ? { ...baseParams, initiatorSubmits } : { ...baseParams };
+  const withdrawalRes = await withdrawer.withdraw(withdrawParams);
   expect(withdrawalRes.getError()).to.be.undefined;
-  const { transactionHash } = withdrawalRes.getValue()!;
-  expect(transactionHash).to.be.ok;
-  await provider.waitForTransaction(transactionHash!);
+  if (initiatorSubmits) {
+    const { transaction } = withdrawalRes.getValue();
+    expect(transaction).to.be.ok;
+    console.log("transaction", transaction);
+    // submit to chain
+    const tx = await wallet1.sendTransaction({ to: transaction!.to, value: 0, data: transaction!.data });
+    await tx.wait();
+  } else {
+    const { transactionHash } = withdrawalRes.getValue()!;
+    expect(transactionHash).to.be.ok;
+    await provider.waitForTransaction(transactionHash!);
+  }
 
   const postWithdrawChannel = (await withdrawer.getStateChannel({ channelAddress })).getValue()! as FullChannelState;
   const postWithdrawBalance = getBalanceForAssetId(postWithdrawChannel, assetId, withdrawerAliceOrBob);
@@ -336,6 +348,7 @@ export const withdraw = async (
   const postWithdrawRecipient = await getOnchainBalance(assetId, withdrawRecipient, provider);
 
   // Verify balance changes
+  console.log("asserting in-channel change");
   expect(BigNumber.from(preWithdrawCarol).sub(amount)).to.be.eq(postWithdrawBalance);
   // using gte here because roger could collateralize
   expect(postWithdrawMultisig.gte(BigNumber.from(preWithdrawMultisig).sub(amountWithdrawn))).to.be.true;
@@ -344,6 +357,7 @@ export const withdraw = async (
     // TODO: calculate gas
     expect(postWithdrawRecipient).to.be.above(preWithdrawRecipient as any); // chai matchers arent getting this
   } else {
+    console.log("asserting recipient balance");
     expect(postWithdrawRecipient).to.be.eq(amountWithdrawn.add(preWithdrawRecipient));
   }
   return postWithdrawChannel;

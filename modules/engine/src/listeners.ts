@@ -1053,7 +1053,7 @@ export const resolveWithdrawal = async (
   } = transfer;
 
   // determine whether or not alice should submit
-  const bobSubmits = meta.bobSubmits ?? false;
+  const initiatorSubmits = meta.initiatorSubmits ?? false;
 
   // withdrawals burn the balance on resolve, so the only
   // reliable way to get a withdrawal amount is
@@ -1087,7 +1087,7 @@ export const resolveWithdrawal = async (
   // Verify fee is present, signed correctly, and not expired IFF configured and
   // channel is on proper chain
   const relevantChain = transfer.chainId === 1 || TESTNETS_WITH_FEES.includes(transfer.chainId);
-  if (gasSubsidyPercentage !== 100 && signer.address === channelState.alice && relevantChain) {
+  if (gasSubsidyPercentage !== 100 && signer.address === channelState.alice && relevantChain && !initiatorSubmits) {
     const cancelWithdrawal = async (cancellationReason: string) => {
       logger.warn({ cancellationReason, transferId, channelAddress, method, methodId }, "Cancelling withdrawal");
       const resolveRes = await vector.resolve({
@@ -1173,7 +1173,7 @@ export const resolveWithdrawal = async (
   // update until the transaction is properly submitted onchain (enforced
   // via injected validation)
   let transactionHash: string | undefined = undefined;
-  if (signer.address === alice && !bobSubmits) {
+  if (signer.address === alice && !initiatorSubmits) {
     // Submit withdrawal to chain
     logger.info(
       { method, withdrawalAmount: withdrawalAmount.toString(), channelAddress },
