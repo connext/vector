@@ -2,6 +2,11 @@
 
 ## Next Release
 
+## 0.2.0-beta.7
+
+- [engine] Fix transfer event balances
+- [engine] Allow Bob to specify submitting their own withdrawals
+
 ## 0.2.0-beta.6
 
 - \[engine\] Only error if fees > amount, not fees >= amount
