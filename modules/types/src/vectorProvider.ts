@@ -107,6 +107,8 @@ export type ChannelRpcMethodsResponsesMap = {
   [ChannelRpcMethods.chan_getTransfers]: FullTransferState[];
   [ChannelRpcMethods.chan_getTransferState]: FullTransferState | undefined;
   [ChannelRpcMethods.chan_getRegisteredTransfers]: RegisteredTransfer[];
+  [ChannelRpcMethods.chan_getWithdrawalCommitment]: NodeResponses.GetWithdrawalCommitment;
+  [ChannelRpcMethods.chan_getWithdrawalCommitmentByTransactionHash]: NodeResponses.GetWithdrawalCommitmentByTransactionHash;
   [ChannelRpcMethods.chan_setup]: FullChannelState;
   [ChannelRpcMethods.chan_requestSetup]: FullChannelState;
   [ChannelRpcMethods.chan_deposit]: FullChannelState;

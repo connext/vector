@@ -64,6 +64,14 @@ export interface INodeService {
     params: OptionalPublicIdentifier<NodeParams.GetRegisteredTransfers>,
   ): Promise<Result<NodeResponses.GetRegisteredTransfers, NodeError>>;
 
+  getWithdrawalCommitment(
+    params: OptionalPublicIdentifier<NodeParams.GetWithdrawalCommitment>,
+  ): Promise<Result<NodeResponses.GetWithdrawalCommitment, NodeError>>;
+
+  getWithdrawalCommitmentByTransactionHash(
+    params: OptionalPublicIdentifier<NodeParams.GetWithdrawalCommitmentByTransactionHash>,
+  ): Promise<Result<NodeResponses.GetWithdrawalCommitmentByTransactionHash, NodeError>>;
+
   createNode(params: NodeParams.CreateNode): Promise<Result<NodeResponses.CreateNode, NodeError>>;
 
   setup(
