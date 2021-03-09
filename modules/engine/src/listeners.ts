@@ -438,11 +438,13 @@ export async function getWithdrawalQuote(
   chainService: IVectorChainService,
   logger: BaseLogger,
 ): Promise<Result<WithdrawalQuote, WithdrawQuoteError>> {
+  const receiveExactAmount = request.receiveExactAmount ?? false;
   // Helper to sign the quote + return to user
   const createAndSignQuote = async (_fee: BigNumber): Promise<Result<WithdrawalQuote, WithdrawQuoteError>> => {
+    const withdrawalAmount = receiveExactAmount ? BigNumber.from(request.amount).add(_fee) : request.amount;
     const quote = {
       channelAddress: request.channelAddress,
-      amount: _fee.gt(request.amount) ? "0" : BigNumber.from(request.amount).sub(_fee).toString(), // hash of negative value fails
+      amount: _fee.gt(withdrawalAmount) ? "0" : BigNumber.from(withdrawalAmount).sub(_fee).toString(), // hash of negative value fails
       assetId: request.assetId,
       fee: _fee.toString(),
       expiry: (Date.now() + DEFAULT_FEE_EXPIRY).toString(), // TODO: make this configurable #436

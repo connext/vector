@@ -542,11 +542,13 @@ export async function setupListeners(
       recipient: _recipient,
       recipientChainId: _recipientChainId,
       recipientAssetId: _recipientAssetId,
+      receiveExactAmount: _receiveExactAmount,
     } = request.getValue();
 
     const recipient = _recipient ?? routerSigner.publicIdentifier;
     const recipientChainId = _recipientChainId ?? chainId;
     const recipientAssetId = _recipientAssetId ?? assetId;
+    const receiveExactAmount = _receiveExactAmount ?? false;
 
     const isSwap = recipientChainId !== chainId || recipientAssetId !== assetId;
     const supported = isSwap
@@ -688,8 +690,9 @@ export async function setupListeners(
       }
       recipientChannel = placeholder.getValue();
     }
-    const fee = await calculateFeeAmount(
+    const feeRes = await calculateFeeAmount(
       BigNumber.from(amount),
+      receiveExactAmount,
       assetId,
       senderChannel,
       recipientAssetId,
@@ -698,12 +701,12 @@ export async function setupListeners(
       routerSigner.publicIdentifier,
       logger,
     );
-    if (fee.isError) {
+    if (feeRes.isError) {
       await messagingService.respondToTransferQuoteMessage(
         inbox,
         Result.fail(
           new QuoteError(QuoteError.reasons.CouldNotGetFee, {
-            feeError: jsonifyError(fee.getError()!),
+            feeError: jsonifyError(feeRes.getError()!),
             recipient,
             recipientChainId,
             recipientAssetId,
@@ -715,15 +718,16 @@ export async function setupListeners(
       );
       return;
     }
+    const { fee, amount: quoteAmount } = feeRes.getValue();
     const quote = {
       assetId,
-      amount,
+      amount: quoteAmount.toString(),
       chainId,
       routerIdentifier: routerSigner.publicIdentifier,
       recipient,
       recipientChainId,
       recipientAssetId,
-      fee: fee.getValue().toString(),
+      fee: fee.toString(),
       expiry: (Date.now() + (getConfig().feeQuoteExpiry ?? DEFAULT_FEE_EXPIRY)).toString(), // valid for next 2 blocks
     };
     const toSign = hashTransferQuote(quote);

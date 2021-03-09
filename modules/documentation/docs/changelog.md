@@ -2,6 +2,8 @@
 
 ## Next Release
 
+- \[engine, router\] Allow users to specify if they want to receive an exact amount when requesting a quote
+
 ## 0.2.0-beta.7
 
 - [engine] Fix transfer event balances
