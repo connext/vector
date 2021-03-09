@@ -272,7 +272,7 @@ export class Vector implements IVectorProtocol {
     );
 
     // sync latest state before starting
-    // TODO: skipping this, if it works, consider just not awaiting the promise so the rest of startup can continue
+    // TODO: skipping this, if it works, consider just not awaiting the promise so the rest of startup can continue #440
     if (!this.skipCheckIn) {
       const channels = await this.storeService.getChannelStates();
       const providers = this.chainReader.getChainProviders();
@@ -286,7 +286,7 @@ export class Vector implements IVectorProtocol {
       // First check on current dispute status of all channels onchain
       // Since we have no way of knowing the last time the protocol
       // connected, we must check this on startup
-      // TODO: is there a better way to do this?
+      // TODO: is there a better way to do this? #440
       await Promise.all(
         channels.map(async (channel) => {
           if (!supportedChains.includes(channel.networkContext.chainId)) {
@@ -313,7 +313,7 @@ export class Vector implements IVectorProtocol {
           }
           try {
             // save dispute record
-            // TODO: implement recovery from dispute
+            // TODO: implement recovery from dispute #438
             await this.storeService.saveChannelDispute({ ...channel, inDispute: true }, dispute);
           } catch (e) {
             this.logger.error(

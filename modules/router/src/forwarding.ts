@@ -420,6 +420,7 @@ export async function forwardTransferCreation(
   const error = transferRes.getError()!;
   logger.error({ ...jsonifyError(error) }, "Failed to forward transfer");
   if (error.context.shouldCancelSender) {
+    console.log("********* cancelling");
     return cancelSenderTransferAndReturnError(
       routingId,
       senderTransfer,

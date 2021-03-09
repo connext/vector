@@ -10,7 +10,7 @@ import { getContract, createChannel } from "../utils";
 
 import { EthereumChainReader } from "./ethReader";
 
-// TODO: check whether result is valid, not just whether it exists
+// TODO: check whether result is valid, not just whether it exists #432
 describe("EthereumChainReader", function () {
   this.timeout(120_000);
   const assetId = AddressZero;

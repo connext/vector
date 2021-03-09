@@ -75,7 +75,7 @@ export class BrowserNode implements INodeService {
       config.logger = pino({ name: config.signer.publicIdentifier });
     }
     const node = new BrowserNode({ logger: config.logger, chainProviders: config.chainProviders });
-    // TODO: validate schema
+    // TODO: validate schema GH issue #429
     config.logger.info(
       { method: "connect", publicIdentifier: config.signer.publicIdentifier, signerAddress: config.signer.address },
       "Connecting with provided signer",
@@ -148,7 +148,7 @@ export class BrowserNode implements INodeService {
 
   // method for non-signer based apps to connect to iframe
   async init(params: { signature?: string; signer?: string } = {}): Promise<void> {
-    // TODO: validate config
+    // TODO: validate config GH issue #429
     const method = "init";
     this.logger.debug({ method }, "Method started");
     const iframeSrc = this.iframeSrc ?? "https://wallet.connext.network";

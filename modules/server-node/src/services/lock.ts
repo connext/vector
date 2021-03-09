@@ -38,7 +38,6 @@ export class LockService implements ILockService {
       async (lockRequest: Result<LockInformation, NodeError>, from: string, inbox: string) => {
         if (lockRequest.isError) {
           // Handle a lock failure here
-          // TODO: is there anything that has to happen here?
           this.log.error(
             {
               method: "onReceiveLockMessage",

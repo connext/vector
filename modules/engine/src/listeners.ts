@@ -445,7 +445,7 @@ export async function getWithdrawalQuote(
       amount: _fee.gt(request.amount) ? "0" : BigNumber.from(request.amount).sub(_fee).toString(), // hash of negative value fails
       assetId: request.assetId,
       fee: _fee.toString(),
-      expiry: (Date.now() + DEFAULT_FEE_EXPIRY).toString(), // TODO: make this configurable
+      expiry: (Date.now() + DEFAULT_FEE_EXPIRY).toString(), // TODO: make this configurable #436
     };
     try {
       const signature = await signer.signMessage(hashWithdrawalQuote(quote));
@@ -717,8 +717,6 @@ async function handleConditionalTransferCreation(
     logger.warn({ transferId, routingId, meta: transfer.meta }, "Cannot route transfer");
     return;
   }
-
-  // TODO: add automatic resolution for given transfer types
 }
 
 async function handleConditionalTransferResolution(
@@ -1146,8 +1144,6 @@ export const resolveWithdrawal = async (
     logger.info({ quote, method, methodId }, "Withdrawal fees verified");
   }
 
-  // TODO: should inject validation to make sure that a withdrawal transfer
-  // is properly signed before its been merged into your channel
   const commitment = new WithdrawCommitment(
     channelAddress,
     alice,
@@ -1168,10 +1164,6 @@ export const resolveWithdrawal = async (
   // Alice may or may not charge a fee for this service, and both parties
   // are welcome to submit the commitment if the other party does not.
 
-  // TODO: if bob is the withdrawal creator and alice has charged a fee
-  // for submitting the withdrawal, bob will refuse to sign the resolve
-  // update until the transaction is properly submitted onchain (enforced
-  // via injected validation)
   let transactionHash: string | undefined = undefined;
   if (signer.address === alice && !initiatorSubmits) {
     // Submit withdrawal to chain

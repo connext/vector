@@ -153,11 +153,6 @@ export class EthereumChainService extends EthereumChainReader implements IVector
       return Result.fail(new ChainError(ChainError.reasons.ResolverNeeded));
     }
 
-    // TODO: should this be checked? is there some other option?
-    if (transferState.balance.amount[1] !== "0") {
-      return Result.fail(new ChainError(ChainError.reasons.NotInitialState));
-    }
-
     const encodedState = encodeTransferState(transferState.transferState, transferState.transferEncodings[0]);
     const encodedResolver = encodeTransferResolver(transferState.transferResolver, transferState.transferEncodings[1]);
 
@@ -632,7 +627,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
     reason: TransactionReason,
     txFn: () => Promise<undefined | TransactionResponse>,
   ): Promise<Result<TransactionResponse | undefined, ChainError>> {
-    // TODO: add retries on specific errors
+    // TODO: add retries on specific errors #347
     try {
       const response = await this.queue.add(async () => {
         const response = await txFn();
@@ -653,7 +648,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
         });
         // Register callbacks for saving tx, then return
         response
-          .wait() // TODO: confirmation blocks?
+          .wait() // TODO: confirmation blocks? #434
           .then((receipt) => {
             if (receipt.status === 0) {
               this.log.error({ method: "sendTxAndParseResponse", receipt }, "Transaction reverted");
