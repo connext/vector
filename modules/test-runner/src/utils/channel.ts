@@ -8,7 +8,7 @@ import {
   TransferNames,
   TransferQuote,
 } from "@connext/vector-types";
-import { BigNumber, providers, utils, Wallet } from "ethers";
+import { BigNumber, constants, providers, utils, Wallet } from "ethers";
 
 import { env } from "./env";
 import { getOnchainBalance } from "./ethereum";
@@ -329,17 +329,18 @@ export const withdraw = async (
   const withdrawParams = initiatorSubmits ? { ...baseParams, initiatorSubmits } : { ...baseParams };
   const withdrawalRes = await withdrawer.withdraw(withdrawParams);
   expect(withdrawalRes.getError()).to.be.undefined;
+  let gasConsumed: BigNumber = BigNumber.from(0);
   if (initiatorSubmits) {
     const { transaction } = withdrawalRes.getValue();
     expect(transaction).to.be.ok;
-    console.log("transaction", transaction);
     // submit to chain
     const tx = await wallet1.sendTransaction({ to: transaction!.to, value: 0, data: transaction!.data });
     await tx.wait();
   } else {
     const { transactionHash } = withdrawalRes.getValue()!;
     expect(transactionHash).to.be.ok;
-    await provider.waitForTransaction(transactionHash!);
+    const receipt = await provider.waitForTransaction(transactionHash!);
+    gasConsumed = receipt.gasUsed.mul(await provider.getGasPrice());
   }
 
   const postWithdrawChannel = (await withdrawer.getStateChannel({ channelAddress })).getValue()! as FullChannelState;
@@ -348,16 +349,18 @@ export const withdraw = async (
   const postWithdrawRecipient = await getOnchainBalance(assetId, withdrawRecipient, provider);
 
   // Verify balance changes
-  console.log("asserting in-channel change");
   expect(BigNumber.from(preWithdrawCarol).sub(amount)).to.be.eq(postWithdrawBalance);
   // using gte here because roger could collateralize
   expect(postWithdrawMultisig.gte(BigNumber.from(preWithdrawMultisig).sub(amountWithdrawn))).to.be.true;
-  if (withdrawerAliceOrBob === "alice") {
+  if (
+    withdrawerAliceOrBob === "alice" &&
+    withdrawRecipient.toLowerCase() === preWithdrawChannel.alice.toLowerCase() &&
+    assetId === constants.AddressZero
+  ) {
     // use "above" because Alice sends withdrawal for Bob
     // TODO: calculate gas
     expect(postWithdrawRecipient).to.be.above(preWithdrawRecipient as any); // chai matchers arent getting this
   } else {
-    console.log("asserting recipient balance");
     expect(postWithdrawRecipient).to.be.eq(amountWithdrawn.add(preWithdrawRecipient));
   }
   return postWithdrawChannel;

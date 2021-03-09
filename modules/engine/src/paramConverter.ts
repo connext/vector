@@ -146,7 +146,7 @@ export async function convertConditionalTransferParams(
   // TODO: transfers should be allowed to go to participants outside of the
   // channel (i.e. some dispute recovery address). This should be passed in
   // via the transfer params as a `recoveryAddress` variable
-  // const transferStateRecipient = recipient ? getSignerAddressFromPublicIdentifier(recipient) : channelCounterparty;
+  // const transferStateRecipient = recipient ? getSignerAddressFromPublicIdentifier(recipient) : channelCounterparty; #437
 
   // Get the transfer information from the chain reader
   const registryRes = !type.startsWith(`0x`)
@@ -219,7 +219,7 @@ export async function convertWithdrawParams(
   const initiatorSubmits = params.initiatorSubmits ?? false;
 
   // TODO: refactor to always determine who submits based on the
-  // `initiatorSubmits` flag.
+  // `initiatorSubmits` flag. #428
   if (initiatorSubmits && signer.address === channel.alice) {
     return Result.fail(
       new ParameterConversionError(

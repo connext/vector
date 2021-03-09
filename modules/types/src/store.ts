@@ -36,7 +36,7 @@ export interface IVectorStore {
     channelDispute: ChannelDispute,
     transferDispute?: TransferDispute,
   ): Promise<void>;
-  // TODO: full disputes
+  // TODO: full disputes #445
   // getChannelDispute(channelAddress: string): Promise<ChannelDispute | undefined>;
   // getTransferDispute(transferAddress: string): Promise<TransferDispute | undefined>;
 }

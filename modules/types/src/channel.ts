@@ -3,7 +3,6 @@ import { BalanceEncoding } from "./contracts";
 import { TransferResolver, TransferState } from "./transferDefinitions";
 import { tidy } from "./utils";
 
-// TODO: Use the standard here and replace all non-signer addresses everywhere
 export type ContextualAddress = {
   address: Address;
   chainId: number;
@@ -140,7 +139,7 @@ export interface CoreTransferState {
 }
 
 export type FullTransferState<M extends TransferMeta = any> = CoreTransferState & {
-  channelFactoryAddress: string; // networkContext? TODO: remove
+  channelFactoryAddress: string;
   chainId: number;
   transferEncodings: string[]; // Initial state encoding, resolver encoding
   transferState: any;

@@ -140,8 +140,7 @@ function App() {
         console.log("Received EngineEvents.DEPOSIT_RECONCILED: ", data);
         await updateChannel(client, data.channelAddress);
       });
-      // TODO: this is required bc the event handlers are keyed on Date.now()
-      // await delay(10);
+
       client.on(EngineEvents.CONDITIONAL_TRANSFER_CREATED, async (data) => {
         console.log("Received EngineEvents.CONDITIONAL_TRANSFER_CREATED: ", data);
         if (data.transfer.responder !== client.signerAddress) {
