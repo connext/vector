@@ -80,6 +80,22 @@ Content-Type: application/json
 }
 
 ##############
+### Get Transfer Fee Quote
+POST {{nodeUrl}}/transfers/quote
+Content-Type: application/json
+
+{
+  "routerIdentifier": "{{rogerPublicIdentifier}}",
+  "publicIdentifier": "{{carolPublicIdentifier}}",
+  "amount": "1000000",
+  "assetId": "0x0000000000000000000000000000000000000000",
+  "chainId": 137,
+  "recipient": "{{davePublicIdentifier}}",
+  "recipientChainId": 1,
+  "recipientAssetId": "0x7D1AfA7B718fb893dB30A3aBc0Cfc608AaCfeBB0"
+}
+
+##############
 ### Get Transfer By Id
 GET {{nodeUrl}}/{{nodePublicIdentifier}}/transfers/{{transferId}}
 
