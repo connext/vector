@@ -2,6 +2,8 @@
 
 ## Next Release
 
+## 0.2.0-beta.9
+
 - \[engine\] Add `transaction` to `WITHDRAWAL_RESOLVED` event
 - \[node\] Make `transaction` a non-optional return value
 
