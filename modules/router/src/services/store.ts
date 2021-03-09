@@ -51,6 +51,7 @@ export type RouterRebalanceRecord = {
   // updatedAt
 };
 export interface IRouterStore {
+  // QueuedUpdates store methods.
   getQueuedUpdates(
     channelAddress: string,
     statuses: RouterUpdateStatus[],
@@ -64,6 +65,7 @@ export interface IRouterStore {
   setUpdateStatus(updateId: string, status: RouterUpdateStatus, context?: string): Promise<void>;
   getLatestRebalance(swap: AllowedSwap): Promise<RouterRebalanceRecord | undefined>;
   saveLatestRebalance(record: RouterRebalanceRecord): Promise<void>;
+  updateLatestRebalance(record: RouterRebalanceRecord): Promise<void>;
 }
 export class PrismaStore implements IRouterStore {
   public prisma: PrismaClient;
@@ -133,11 +135,87 @@ export class PrismaStore implements IRouterStore {
     });
   }
 
-  getLatestRebalance(swap: AllowedSwap): Promise<RouterRebalanceRecord | undefined> {
-    throw new Error("Method not implemented.");
+  async getLatestRebalance(swap: AllowedSwap): Promise<RouterRebalanceRecord | undefined> {
+    return new Promise<RouterRebalanceRecord | undefined>((resolve, reject) => {
+      // Do we need the orderBy / findFirst ? According to schema, the query should result in only
+      // 1 unique entry being returned (if found).
+      this.prisma.autoRebalance.findFirst({
+        orderBy: [
+          {
+            createdAt: "desc"
+          }
+        ],
+        where: {
+          fromAssetId: swap.fromAssetId.toString(),
+          toAssetId: swap.toAssetId.toString(),
+          fromChainId: swap.fromChainId.toString(),
+          toChainId: swap.toChainId.toString()
+        }
+      }).then((result) => {
+        if (result) {
+          resolve({
+            id: result.id,
+            swap: swap,
+            status: result.status as RouterRebalanceStatus,
+            approveHash: result.approveHash ? result.approveHash : undefined,
+            executeHash: result.executeHash ? result.executeHash : undefined,
+            completeHash: result.completeHash ? result.completeHash : undefined,
+          })
+        }
+      }).catch((error) => {
+        reject(error);
+      })
+    });
   }
 
-  saveLatestRebalance(record: RouterRebalanceRecord): Promise<void> {
-    throw new Error("Method not implemented.");
+  // TODO: Make this an 'upsert' operation and remove need for update fn below.
+  async saveLatestRebalance(record: RouterRebalanceRecord): Promise<void> {
+    await this.prisma.autoRebalance.create({
+      data: {
+        id: record.id,
+        status: record.status,
+        approveHash: record.approveHash,
+        executeHash: record.executeHash,
+        completeHash: record.completeHash,
+        fromChainId: record.swap.fromChainId.toString(),
+        toChainId: record.swap.toChainId.toString(),
+        fromAssetId: record.swap.fromAssetId.toString(),
+        toAssetId: record.swap.toAssetId.toString(),
+        priceType: record.swap.priceType.toString(),
+        hardcodedRate: record.swap.hardcodedRate,
+        rebalancerUrl: record.swap.rebalancerUrl,
+        rebalanceThresholdPct: record.swap.rebalanceThresholdPct,
+        percentageFee: record.swap.percentageFee,
+        flatFee: record.swap.flatFee,
+        gasSubsidyPercentage: record.swap.gasSubsidyPercentage
+      },
+    });
   }
+
+  async updateLatestRebalance(record: RouterRebalanceRecord): Promise<void> {
+    // Getting current time to mark 'updatedAt' for record.
+    const timeElapsed = Date.now();
+    const now = new Date(timeElapsed);
+    await this.prisma.autoRebalance.update({
+      where: {
+        id: record.id
+      },
+      data: {
+        // Update the 'updatedAt' time.
+        updatedAt: now,
+        // Core data updates:
+        // TODO: Should all of these items be updatable?
+        status: record.status,
+        approveHash: record.approveHash,
+        executeHash: record.executeHash,
+        completeHash: record.completeHash,
+        rebalancerUrl: record.swap.rebalancerUrl,
+        rebalanceThresholdPct: record.swap.rebalanceThresholdPct,
+        percentageFee: record.swap.percentageFee,
+        flatFee: record.swap.flatFee,
+        gasSubsidyPercentage: record.swap.gasSubsidyPercentage
+      },
+    });
+  }
+
 }
