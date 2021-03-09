@@ -1,0 +1,1173 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+      
+      <link rel="shortcut icon" href="../../assets/favicon.png">
+      <meta name="generator" content="mkdocs-1.1.2, mkdocs-material-7.0.5">
+    
+    
+      
+        <title>Configuring and Deploying a Routing Vector Node - Connext Documentation</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.77f3fd56.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.7fa14f5b.min.css">
+        
+          
+          
+          <meta name="theme-color" content="">
+        
+      
+    
+    
+    
+      
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Proxima+Nova:300,400,400i,700%7C&display=fallback">
+        <style>:root{--md-text-font-family:"Proxima Nova";--md-code-font-family:""}</style>
+      
+    
+    
+    
+    
+      
+    
+    
+  </head>
+  
+  
+    
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="" data-md-color-primary="#002868" data-md-color-accent="#fca311">
+      
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#configuring-and-deploying-a-routing-vector-node" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="Connext Documentation" class="md-header__button md-logo" aria-label="Connext Documentation">
+      
+  <img src="../../assets/logo.png" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3V6m0 5h18v2H3v-2m0 5h18v2H3v-2z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Connext Documentation
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Configuring and Deploying a Routing Vector Node
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    <div class="md-header__options">
+      
+    </div>
+    
+      <label class="md-header__button md-icon" for="__search">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5z"/></svg>
+      </label>
+      
+<div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" data-md-state="active" required>
+      <label class="md-search__icon md-icon" for="__search">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5z"/></svg>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+      </label>
+      <button type="reset" class="md-search__icon md-icon" aria-label="Clear" tabindex="-1">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z"/></svg>
+      </button>
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+    
+      <div class="md-header__source">
+        
+<a href="https://github.com/connext/vector/" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path d="M439.55 236.05L244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81z"/></svg>
+  </div>
+  <div class="md-source__repository">
+    connext/vector
+  </div>
+</a>
+      </div>
+    
+  </nav>
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-tabs__inner md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+
+
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        Intro
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+
+
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../quickStart/serverNode/" class="md-tabs__link">
+        Quick Start
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+
+
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../node/basics/" class="md-tabs__link">
+        Node Guides
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+    
+  
+
+
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../basics/" class="md-tabs__link md-tabs__link--active">
+        Router Guides
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+
+
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../reference/nodeAPI/" class="md-tabs__link">
+        Reference
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+
+
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../changelog/" class="md-tabs__link">
+        Changelog
+      </a>
+    </li>
+  
+
+      
+    </ul>
+  </div>
+</nav>
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="Connext Documentation" class="md-nav__button md-logo" aria-label="Connext Documentation">
+      
+  <img src="../../assets/logo.png" alt="logo">
+
+    </a>
+    Connext Documentation
+  </label>
+  
+    <div class="md-nav__source">
+      
+<a href="https://github.com/connext/vector/" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path d="M439.55 236.05L244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81z"/></svg>
+  </div>
+  <div class="md-source__repository">
+    connext/vector
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+      
+
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_1" type="checkbox" id="__nav_1" >
+      
+      <label class="md-nav__link" for="__nav_1">
+        Intro
+        <span class="md-nav__icon md-icon"></span>
+      </label>
+      <nav class="md-nav" aria-label="Intro" data-md-level="1">
+        <label class="md-nav__title" for="__nav_1">
+          <span class="md-nav__icon md-icon"></span>
+          Intro
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        Welcome
+      </a>
+    </li>
+  
+
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_2" type="checkbox" id="__nav_2" >
+      
+      <label class="md-nav__link" for="__nav_2">
+        Quick Start
+        <span class="md-nav__icon md-icon"></span>
+      </label>
+      <nav class="md-nav" aria-label="Quick Start" data-md-level="1">
+        <label class="md-nav__title" for="__nav_2">
+          <span class="md-nav__icon md-icon"></span>
+          Quick Start
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../quickStart/serverNode/" class="md-nav__link">
+        Server Node Quick Start
+      </a>
+    </li>
+  
+
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../quickStart/browserNode/" class="md-nav__link">
+        Browser Node Quick Start
+      </a>
+    </li>
+  
+
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_3" type="checkbox" id="__nav_3" >
+      
+      <label class="md-nav__link" for="__nav_3">
+        Node Guides
+        <span class="md-nav__icon md-icon"></span>
+      </label>
+      <nav class="md-nav" aria-label="Node Guides" data-md-level="1">
+        <label class="md-nav__title" for="__nav_3">
+          <span class="md-nav__icon md-icon"></span>
+          Node Guides
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../node/basics/" class="md-nav__link">
+        Basics
+      </a>
+    </li>
+  
+
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../node/configure/" class="md-nav__link">
+        Configuration and Deployment
+      </a>
+    </li>
+  
+
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../node/transfers/" class="md-nav__link">
+        Transfers
+      </a>
+    </li>
+  
+
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../node/events/" class="md-nav__link">
+        Events
+      </a>
+    </li>
+  
+
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+    
+  
+  
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_4" type="checkbox" id="__nav_4" checked>
+      
+      <label class="md-nav__link" for="__nav_4">
+        Router Guides
+        <span class="md-nav__icon md-icon"></span>
+      </label>
+      <nav class="md-nav" aria-label="Router Guides" data-md-level="1">
+        <label class="md-nav__title" for="__nav_4">
+          <span class="md-nav__icon md-icon"></span>
+          Router Guides
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../basics/" class="md-nav__link">
+        Basics
+      </a>
+    </li>
+  
+
+          
+            
+  
+  
+    
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" data-md-toggle="toc" type="checkbox" id="__toc">
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          Configuring and Deploying a Routing Vector Node
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        Configuring and Deploying a Routing Vector Node
+      </a>
+      
+        
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#machine-setup" class="md-nav__link">
+    Machine Setup
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#contract-deployment" class="md-nav__link">
+    Contract Deployment
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#configuring-the-router" class="md-nav__link">
+    Configuring the Router
+  </a>
+  
+    <nav class="md-nav" aria-label="Configuring the Router">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#router-configuration-keys" class="md-nav__link">
+    Router Configuration Keys
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#setting-up-supported-chains" class="md-nav__link">
+    Setting Up Supported Chains
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#setting-up-supported-assets" class="md-nav__link">
+    Setting Up Supported Assets
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#spinning-up-the-router" class="md-nav__link">
+    Spinning Up the Router
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../chains/" class="md-nav__link">
+        Adding a Chain
+      </a>
+    </li>
+  
+
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_5" type="checkbox" id="__nav_5" >
+      
+      <label class="md-nav__link" for="__nav_5">
+        Reference
+        <span class="md-nav__icon md-icon"></span>
+      </label>
+      <nav class="md-nav" aria-label="Reference" data-md-level="1">
+        <label class="md-nav__title" for="__nav_5">
+          <span class="md-nav__icon md-icon"></span>
+          Reference
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/nodeAPI/" class="md-nav__link">
+        Node API Reference
+      </a>
+    </li>
+  
+
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/hostedNodes/" class="md-nav__link">
+        List of Hosted Routing Nodes
+      </a>
+    </li>
+  
+
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_6" type="checkbox" id="__nav_6" >
+      
+      <label class="md-nav__link" for="__nav_6">
+        Changelog
+        <span class="md-nav__icon md-icon"></span>
+      </label>
+      <nav class="md-nav" aria-label="Changelog" data-md-level="1">
+        <label class="md-nav__title" for="__nav_6">
+          <span class="md-nav__icon md-icon"></span>
+          Changelog
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../changelog/" class="md-nav__link">
+        Vector Changelog
+      </a>
+    </li>
+  
+
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#machine-setup" class="md-nav__link">
+    Machine Setup
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#contract-deployment" class="md-nav__link">
+    Contract Deployment
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#configuring-the-router" class="md-nav__link">
+    Configuring the Router
+  </a>
+  
+    <nav class="md-nav" aria-label="Configuring the Router">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#router-configuration-keys" class="md-nav__link">
+    Router Configuration Keys
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#setting-up-supported-chains" class="md-nav__link">
+    Setting Up Supported Chains
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#setting-up-supported-assets" class="md-nav__link">
+    Setting Up Supported Assets
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#spinning-up-the-router" class="md-nav__link">
+    Spinning Up the Router
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          <div class="md-content" data-md-component="content">
+            <article class="md-content__inner md-typeset">
+              
+                
+                  <a href="https://github.com/connext/vector/edit/master/docs/router/configure.md" title="Edit this page" class="md-content__button md-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20.71 7.04c.39-.39.39-1.04 0-1.41l-2.34-2.34c-.37-.39-1.02-.39-1.41 0l-1.84 1.83 3.75 3.75M3 17.25V21h3.75L17.81 9.93l-3.75-3.75L3 17.25z"/></svg>
+                  </a>
+                
+                
+                <h1 id="configuring-and-deploying-a-routing-vector-node">Configuring and Deploying a Routing Vector Node<a class="headerlink" href="#configuring-and-deploying-a-routing-vector-node" title="Permanent link">&para;</a></h1>
+<p>This guide will take you through the e2e process of configuring and deploying a router.</p>
+<h2 id="machine-setup">Machine Setup<a class="headerlink" href="#machine-setup" title="Permanent link">&para;</a></h2>
+<div class="admonition info">
+<p class="admonition-title">Info</p>
+<p>If you're planning to launch an instance on your local machine or to a non-Ubuntu OS, you can skip this section and instead install the following dependencies yourself:
+- <code>make</code>: Probably already installed, otherwise install w <code>brew install make</code> or <code>apt install make</code> or similar.
+- <code>jq</code>: Probably not installed yet, install w <code>brew install jq</code> or <code>apt install jq</code> or similar.
+- <code>docker</code>: See the <a href="https://www.docker.com/">docker website</a> for installation instructions.</p>
+</div>
+<p>First step: get a server via AWS or DigitalOcean or setup some hardware at home. For best results, use the most recent LTS version of Ubuntu &amp; make sure it has at least 32GB of disk space. Note this new server's IP address (we'll call this <code>$SERVER_IP</code>). Make sure it's able to connect to the internet via ports 80, 443, 4221, and 4222 (no action required on DigitalOcean, Security Group config needs to be setup properly on AWS).</p>
+<p>We won't need to ssh into this server right away, most of the setup will be done locally. Start by cloning the repo to your local machine if you haven't already and <code>cd</code> into it.</p>
+<div class="highlight"><pre><span></span><code>git clone git@github.com:connext/vector.git
+<span class="nb">cd</span> vector
+</code></pre></div>
+<p>Every Vector node needs access to a hot wallet, you should generate a fresh mnemonic for your node's wallet that isn't used anywhere else. You can generate a new mnemonic from a node console with ethers by doing something like this: <code>require('ethers').Wallet.createRandom()</code>. Alternatively, you can generate one <a href="https://iancoleman.io/bip39/">here</a>.</p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>We have a mnemonic hardcoded throughout our repo which is great to use in local testnets: <code>candy maple ... sweet treat</code>. If you try to use this mnemonic on a public testnet, it's possible that someone else is trying to use it at the same time. In the case where two nodes try to use the same mnemonic, vector will fail in unpredictable ways. To avoid encountering hard to debug errors, make sure you are using a private mnemonic that only you know, even on testnets.</p>
+</div>
+<p>Save this mnemonic somewhere safe and copy it to your clipboard. From your local machine, run:</p>
+<div class="highlight"><pre><span></span><code><span class="nv">SSH_KEY</span><span class="o">=</span><span class="nv">$HOME</span>/.ssh/id_rsa bash ops/server-setup.sh <span class="nv">$SERVER_IP</span>
+</code></pre></div>
+<div class="admonition info">
+<p class="admonition-title">Info</p>
+<p><code>$HOME/.ssh/id_rsa</code> is the default <code>SSH_KEY</code>, if this is the key you'll use to access <code>$SERVER_IP</code> then you don't need to supply it explicitly</p>
+</div>
+<p>The script should automatically do the following tasks to set up the environment:</p>
+<ol>
+<li>Install all required dependencies.</li>
+<li>Securely store your mnemonic as a <a href="https://docs.docker.com/engine/swarm/secrets/">docker secret</a></li>
+<li>Clone the Vector repo</li>
+</ol>
+<p>This script is idempotent which means you can run it over and over again w/out causing any problems. In fact, re-running it every month or so will help keep things up-to-date (you can skip inputting the mnemonic on subsequent runs).</p>
+<p>For convenience's sake, we recommend adding an entry to your ssh config to easily access this server. Add something that looks like the following to <code>$HOME/.ssh/config</code>:</p>
+<div class="highlight"><pre><span></span><code>Host new-vector
+  Hostname <span class="nv">$SERVER_IP</span>
+  User ubuntu
+  IdentityFile ~/.ssh/id_rsa
+  ServerAliveInterval <span class="m">120</span>
+</code></pre></div>
+<p>Now you can login to your new server with just <code>ssh new-vector</code>.</p>
+<h2 id="contract-deployment">Contract Deployment<a class="headerlink" href="#contract-deployment" title="Permanent link">&para;</a></h2>
+<p>Before moving any further, you should first ensure that the required Vector contracts are deployed to your chain.</p>
+<div class="admonition info">
+<p class="admonition-title">Info</p>
+<p>Deploying contracts only needs to happen once per chain. If you want to use Vector on a new chain, the easiest thing to do is message the Connext team on Discord &amp; ask us to add support for the new chain. This lets us save the deployment data in a place where everyone can access it &amp; avoids duplicate deployments. If you want to deploy things yourself (or are a member of the Connext team looking for a refresher), read on.</p>
+</div>
+<p>We use <a href="https://hardhat.org/plugins/hardhat-deploy.html"><code>hardhat-deploy</code></a> which manages all of our contract deployment data in <code>modules/contracts/deployments/</code>. You should check inside this folder as well as in <code>modules/contracts/hardhat.config.ts</code> to see whether your chain is supported yet.</p>
+<p>If not, you'll need to manually edit the hardhat config file to add support. You can mostly copy/paste one of the other network configurations but make sure that you've updated the network name &amp; chain id.</p>
+<p>After editing hardhat config, run <code>make ethprovider</code> to ensure our hardhat cli script is using the most up-to-date info.</p>
+<p>We have a helper script for running hardhat tasks at <code>ops/hardhat.sh</code>, use this like you'd use the hardhat cli.</p>
+<div class="admonition info">
+<p class="admonition-title">Info</p>
+<p>You can also bypass the fancy dockerized ops by running <code>cd modules/contracts &amp;&amp; npm install &amp;&amp; npm run build &amp;&amp; hardhat &lt;task_name&gt;</code>.</p>
+</div>
+<p>To deploy contracts, run something like this:</p>
+<div class="highlight"><pre><span></span><code> <span class="nb">export</span> <span class="nv">MNEMONIC</span><span class="o">=</span><span class="s2">&quot;candy maple cake sugar pudding cream honey rich smooth crumble sweet treat&quot;</span>
+ <span class="nb">export</span> <span class="nv">ETH_PROVIDER_URL</span><span class="o">=</span><span class="s2">&quot;https://eth-rinkeby.alchemyapi.io/jsonrpc/123apikey</span>
+<span class="s2">bash ops/hardhat.sh deploy --network rinkeby</span>
+</code></pre></div>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>Make sure the mnemonic cli argument is wrapped in double quotes to ensure it's all interpreted as one argument. Additionally, make sure you put a space in front of any commands that include important secrets to prevent them from being saved to your bash history.</p>
+</div>
+<p>In the above command, <code>$mnemonic</code> controls a funded account on whatever chain you plan to deploy to, and <code>$ethProvider</code> is a provider URL for the same chain (e.g. an Infura url including an API key). Any newly deployed contracts will have their addresses added to <code>modules/contracts/deployments/&lt;networkname&gt;/</code>. Make sure you either commit these changes or submit a PR so that the rest of the world can use these newly deployed contracts too.</p>
+<div class="admonition info">
+<p class="admonition-title">Info</p>
+<p>The account that deploys the contracts does not need to be the same one as your vector node's hot wallet.</p>
+</div>
+<h2 id="configuring-the-router">Configuring the Router<a class="headerlink" href="#configuring-the-router" title="Permanent link">&para;</a></h2>
+<p>After setting up dependencies, ssh into the server and enter the Vector repo:</p>
+<div class="highlight"><pre><span></span><code>ssh new-vector
+<span class="nb">cd</span> vector
+</code></pre></div>
+<p>As we mentioned on the <a href="../basics/">Router Basics</a> page, the router sits on top of a <code>server-node</code> and consumes its gRPC interface. This means that configuring a router is an extension of configuring a normal <code>server-node</code>!</p>
+<h3 id="router-configuration-keys">Router Configuration Keys<a class="headerlink" href="#router-configuration-keys" title="Permanent link">&para;</a></h3>
+<p>Default router configuration can be found in <code>ops/config/router.default.json</code>. To setup your custom config, start out by copying this file to <code>router.config.json</code>:</p>
+<div class="highlight"><pre><span></span><code>cp ops/config/router.default.json router.config.json
+</code></pre></div>
+<p>(or you can run <code>make config</code>, a helper that copies all default config files to the project root)</p>
+<p>The router's node can be configured by adding any of the following keys to <code>router.config.json</code>:</p>
+<table>
+<thead>
+<tr>
+<th align="center">Key</th>
+<th align="center">Type</th>
+<th align="right">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="center"><code>chainAddresses</code></td>
+<td align="center"><code>object</code></td>
+<td align="right">Specifies the addresses of all relevant contracts, keyed by  <code>chainId</code>.</td>
+</tr>
+<tr>
+<td align="center"><code>chainProviders</code></td>
+<td align="center"><code>object</code></td>
+<td align="right">Specifies the URL to use to connect to each chain's provider, keyed by  <code>chainId</code></td>
+</tr>
+<tr>
+<td align="center"><code>logLevel</code></td>
+<td align="center"><code>string</code></td>
+<td align="right">One of <code>"debug"</code>, <code>"info"</code>, <code>"warn"</code>, <code>"error"</code> to specify the maximum log level that will be printed.</td>
+</tr>
+<tr>
+<td align="center"><code>messagingUrl</code></td>
+<td align="center"><code>string</code></td>
+<td align="right">The url used to connect to the messaging service. This will eventually be defaulted in prod-mode to a global service.</td>
+</tr>
+<tr>
+<td align="center"><code>port</code></td>
+<td align="center"><code>number</code></td>
+<td align="right">The port number on which the stack should be exposed to the outside world.</td>
+</tr>
+<tr>
+<td align="center"><code>allowedSwaps</code></td>
+<td align="center"><code>object</code></td>
+<td align="right">Specifies which swaps are allowed &amp; how swap rates are determined.</td>
+</tr>
+<tr>
+<td align="center"><code>rebalanceProfiles</code></td>
+<td align="center"><code>object</code></td>
+<td align="right">Specifies the thresholds &amp; target while collateralizing some <code>assetId</code> on some <code>chainId</code> .</td>
+</tr>
+<tr>
+<td align="center"><code>awsAccessId</code></td>
+<td align="center"><code>string</code></td>
+<td align="right">An API KEY id that specifies credentials for a remote AWS S3 bucket for storing db backups</td>
+</tr>
+<tr>
+<td align="center"><code>awsAccessKey</code></td>
+<td align="center"><code>string</code></td>
+<td align="right">An API KEY secret that to authenticate on a remote AWS S3 bucket for storing db backups.</td>
+</tr>
+<tr>
+<td align="center"><code>production</code></td>
+<td align="center"><code>boolean</code></td>
+<td align="right">If <code>false</code>, ops will automatically build anything that isn't available locally. If `true, nothing will be built locally.</td>
+</tr>
+<tr>
+<td align="center"><code>logDnaKey</code></td>
+<td align="center"><code>string</code></td>
+<td align="right">An API KEY secret that is used to connect to logdna for parsing and viewing router logs.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="setting-up-supported-chains">Setting Up Supported Chains<a class="headerlink" href="#setting-up-supported-chains" title="Permanent link">&para;</a></h3>
+<p>To add support for one or many chains on this router, add a <code>chainAddresses</code> and <code>chainProviders</code> key to the <code>router.config.json</code> file in the root of the vector repo:</p>
+<div class="highlight"><pre><span></span><code>nano router.config.json
+</code></pre></div>
+<p>Recall that you deployed contracts to the chain(s) you want to support <a href="#contract-deployment">earlier in this guide</a>. If you open up your <code>address-book.json</code>, you should find deployed addresses for your chain indexed by <a href="https://chainid.network">chainId</a>. Copy them over into the config file like below. Also, plug in a providerURL into your <code>chainProvider</code>s object indexed at the same chainId.</p>
+<div class="highlight"><pre><span></span><code><span class="err">//</span> <span class="err">Example</span> <span class="err">Addresses</span>
+<span class="nt">&quot;chainAddresses&quot;</span><span class="p">:</span> <span class="p">{</span>
+    <span class="nt">&quot;4&quot;</span><span class="p">:</span> <span class="p">{</span>
+      <span class="nt">&quot;channelFactoryAddress&quot;</span><span class="p">:</span> <span class="s2">&quot;0xF12b5dd4EAD5F743C6BaA640B0216200e89B60Da&quot;</span><span class="p">,</span>
+      <span class="nt">&quot;channelMastercopyAddress&quot;</span><span class="p">:</span> <span class="s2">&quot;0x8CdaF0CD259887258Bc13a92C0a6dA92698644C0&quot;</span><span class="p">,</span>
+      <span class="nt">&quot;transferRegistryAddress&quot;</span><span class="p">:</span> <span class="s2">&quot;0x345cA3e014Aaf5dcA488057592ee47305D9B3e10&quot;</span><span class="p">,</span>
+    <span class="p">}</span>
+  <span class="p">},</span>
+  <span class="nt">&quot;chainProviders&quot;</span><span class="p">:</span> <span class="p">{</span>
+    <span class="nt">&quot;4&quot;</span><span class="p">:</span> <span class="s2">&quot;https://rinkeby.infura.io/abc123&quot;</span>
+  <span class="p">},</span>
+</code></pre></div>
+<div class="admonition tip">
+<p class="admonition-title">Tip</p>
+<p>You can support as many evm-compatible chains as you'd like in the above so long as they have a chainId and you have a provider for that chain!</p>
+</div>
+<h3 id="setting-up-supported-assets">Setting Up Supported Assets<a class="headerlink" href="#setting-up-supported-assets" title="Permanent link">&para;</a></h3>
+<p>Routers need to explicitly configure their supported assets. We do this by setting up a <code>rebalanceProfile</code> for each asset we want to support.</p>
+<p>In order to forward transfers, routers first need to have liquidity (i.e. collateral) in the recipient-side channel to route a transfer over. A <code>rebalanceProfile</code> defines parameters around minimum, maximum, and targete liquidity amounts for a given asset. We cover this in more depth in our <a href="./managingCollateral.md">Managing Collateral</a> section.</p>
+<p>An example profile just for Eth looks like the following. Note that we use a combination of <code>chainId</code> and <code>assetId</code> to represent a given asset (where <code>0x0</code> is the "base" asset of the chain):</p>
+<div class="highlight"><pre><span></span><code><span class="err">//</span> <span class="err">E.g.</span> <span class="err">E</span><span class="kc">t</span><span class="err">h</span>
+<span class="p">{</span>
+    <span class="nt">&quot;chainId&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
+    <span class="nt">&quot;assetId&quot;</span><span class="p">:</span> <span class="s2">&quot;0x0000000000000000000000000000000000000000&quot;</span><span class="p">,</span> 
+    <span class="nt">&quot;reclaimThreshold&quot;</span><span class="p">:</span> <span class="s2">&quot;200000000000000000&quot;</span><span class="p">,</span>
+    <span class="nt">&quot;target&quot;</span><span class="p">:</span> <span class="s2">&quot;100000000000000000&quot;</span><span class="p">,</span>
+    <span class="nt">&quot;collateralizeThreshold&quot;</span><span class="p">:</span> <span class="s2">&quot;50000000000000000&quot;</span>
+<span class="p">},</span>
+</code></pre></div>
+<p>You can add profiles by setting them under the <code>rebalanceProfile</code> key in your <code>router.config.json</code>:</p>
+<div class="highlight"><pre><span></span><code><span class="nt">&quot;rebalanceProfiles&quot;</span><span class="p">:</span> <span class="p">[</span>
+    <span class="p">{</span>
+      <span class="nt">&quot;chainId&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
+      <span class="nt">&quot;assetId&quot;</span><span class="p">:</span> <span class="s2">&quot;0x0000000000000000000000000000000000000000&quot;</span><span class="p">,</span>
+      <span class="nt">&quot;reclaimThreshold&quot;</span><span class="p">:</span> <span class="s2">&quot;200000000000000000&quot;</span><span class="p">,</span>
+      <span class="nt">&quot;target&quot;</span><span class="p">:</span> <span class="s2">&quot;100000000000000000&quot;</span><span class="p">,</span>
+      <span class="nt">&quot;collateralizeThreshold&quot;</span><span class="p">:</span> <span class="s2">&quot;50000000000000000&quot;</span>
+    <span class="p">},</span>
+    <span class="p">{</span>
+      <span class="nt">&quot;chainId&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
+      <span class="nt">&quot;assetId&quot;</span><span class="p">:</span> <span class="s2">&quot;0x8f0483125FCb9aaAEFA9209D8E9d7b9C8B9Fb90F&quot;</span><span class="p">,</span>
+      <span class="nt">&quot;reclaimThreshold&quot;</span><span class="p">:</span> <span class="s2">&quot;2000000000000000000&quot;</span><span class="p">,</span>
+      <span class="nt">&quot;target&quot;</span><span class="p">:</span> <span class="s2">&quot;1000000000000000000&quot;</span><span class="p">,</span>
+      <span class="nt">&quot;collateralizeThreshold&quot;</span><span class="p">:</span> <span class="s2">&quot;500000000000000000&quot;</span>
+    <span class="p">},</span>
+<span class="p">]</span>
+</code></pre></div>
+<p>Connext routers also support in-flight swaps when forwarding transfers! In other words, a router can receive a transfer in $ETH and forward it in $DAI so long as an <code>allowedSwap</code> exists for that pair.</p>
+<p>To allow swapping between the two assets above, you can set the following up under the <code>allowedSwaps</code> key in your <code>router.config.json</code>:</p>
+<div class="highlight"><pre><span></span><code>  <span class="nt">&quot;allowedSwaps&quot;</span><span class="p">:</span> <span class="p">[</span>
+    <span class="p">{</span>
+      <span class="nt">&quot;fromChainId&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
+      <span class="nt">&quot;toChainId&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
+      <span class="nt">&quot;fromAssetId&quot;</span><span class="p">:</span> <span class="s2">&quot;0x0000000000000000000000000000000000000000&quot;</span><span class="p">,</span>
+      <span class="nt">&quot;toAssetId&quot;</span><span class="p">:</span> <span class="s2">&quot;0x8f0483125FCb9aaAEFA9209D8E9d7b9C8B9Fb90F&quot;</span><span class="p">,</span>
+      <span class="nt">&quot;priceType&quot;</span><span class="p">:</span> <span class="s2">&quot;hardcoded&quot;</span><span class="p">,</span>
+      <span class="nt">&quot;hardcodedRate&quot;</span><span class="p">:</span> <span class="s2">&quot;1&quot;</span>
+    <span class="p">},</span>
+    <span class="p">{</span>
+      <span class="nt">&quot;fromChainId&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
+      <span class="nt">&quot;toChainId&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
+      <span class="nt">&quot;fromAssetId&quot;</span><span class="p">:</span> <span class="s2">&quot;0x8f0483125FCb9aaAEFA9209D8E9d7b9C8B9Fb90F&quot;</span><span class="p">,</span>
+      <span class="nt">&quot;toAssetId&quot;</span><span class="p">:</span> <span class="s2">&quot;0x0000000000000000000000000000000000000000&quot;</span><span class="p">,</span>
+      <span class="nt">&quot;priceType&quot;</span><span class="p">:</span> <span class="s2">&quot;hardcoded&quot;</span><span class="p">,</span>
+      <span class="nt">&quot;hardcodedRate&quot;</span><span class="p">:</span> <span class="s2">&quot;1&quot;</span>
+    <span class="p">}</span>
+  <span class="p">],</span>
+</code></pre></div>
+<div class="admonition tip">
+<p class="admonition-title">Tip</p>
+<p>Above, we're setting default values for rebalance profiles and allowed swaps. In reality, these values (especially swap rates) likely need to be continuously updated at runtime every time period and/or on a per-channel basis. We go over how to plug in data sources for rates and profiles in our <a href="./managingCollateral.md">Managing Collateral</a> section.</p>
+</div>
+<h2 id="spinning-up-the-router">Spinning Up the Router<a class="headerlink" href="#spinning-up-the-router" title="Permanent link">&para;</a></h2>
+<p>Now that we have our configuration complete, we can spin up the router!</p>
+<p>This part is pretty easy - in the root of the vector repo, do:</p>
+<div class="highlight"><pre><span></span><code>make restart-router
+</code></pre></div>
+<div class="admonition tip">
+<p class="admonition-title">Tip</p>
+<p><code>make start-$STACK</code> is optimized for development &amp; will build everything that's out of date before starting the stack. <code>make restart-$STACK</code> on the other hand, won't try to build anything before starting the stack so is better to use in production.</p>
+</div>
+                
+              
+              
+                
+
+
+              
+            </article>
+          </div>
+        </div>
+      </main>
+      
+        
+<footer class="md-footer">
+  
+    <nav class="md-footer__inner md-grid" aria-label="Footer">
+      
+        <a href="../basics/" class="md-footer__link md-footer__link--prev" rel="prev">
+          <div class="md-footer__button md-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+          </div>
+          <div class="md-footer__title">
+            <div class="md-ellipsis">
+              <span class="md-footer__direction">
+                Previous
+              </span>
+              Basics
+            </div>
+          </div>
+        </a>
+      
+      
+        <a href="../chains/" class="md-footer__link md-footer__link--next" rel="next">
+          <div class="md-footer__title">
+            <div class="md-ellipsis">
+              <span class="md-footer__direction">
+                Next
+              </span>
+              Adding a Chain
+            </div>
+          </div>
+          <div class="md-footer__button md-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11H4z"/></svg>
+          </div>
+        </a>
+      
+    </nav>
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-footer-copyright">
+        
+        Made with
+        <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+          Material for MkDocs
+        </a>
+        
+      </div>
+      
+  <div class="md-footer-social">
+    
+      
+      
+        
+        
+      
+      <a href="https://github.com/connext" target="_blank" rel="noopener" title="github.com" class="md-footer-social__link">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg>
+      </a>
+    
+      
+      
+        
+        
+      
+      <a href="https://twitter.com/ConnextNetwork" target="_blank" rel="noopener" title="twitter.com" class="md-footer-social__link">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path d="M459.37 151.716c.325 4.548.325 9.097.325 13.645 0 138.72-105.583 298.558-298.558 298.558-59.452 0-114.68-17.219-161.137-47.106 8.447.974 16.568 1.299 25.34 1.299 49.055 0 94.213-16.568 130.274-44.832-46.132-.975-84.792-31.188-98.112-72.772 6.498.974 12.995 1.624 19.818 1.624 9.421 0 18.843-1.3 27.614-3.573-48.081-9.747-84.143-51.98-84.143-102.985v-1.299c13.969 7.797 30.214 12.67 47.431 13.319-28.264-18.843-46.781-51.005-46.781-87.391 0-19.492 5.197-37.36 14.294-52.954 51.655 63.675 129.3 105.258 216.365 109.807-1.624-7.797-2.599-15.918-2.599-24.04 0-57.828 46.782-104.934 104.934-104.934 30.213 0 57.502 12.67 76.67 33.137 23.715-4.548 46.456-13.32 66.599-25.34-7.798 24.366-24.366 44.833-46.132 57.827 21.117-2.273 41.584-8.122 60.426-16.243-14.292 20.791-32.161 39.308-52.628 54.253z"/></svg>
+      </a>
+    
+      
+      
+        
+        
+      
+      <a href="https://medium.com/connext" target="_blank" rel="noopener" title="medium.com" class="md-footer-social__link">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path d="M0 32v448h448V32H0zm372.2 106.1l-24 23c-2.1 1.6-3.1 4.2-2.7 6.7v169.3c-.4 2.6.6 5.2 2.7 6.7l23.5 23v5.1h-118V367l24.3-23.6c2.4-2.4 2.4-3.1 2.4-6.7V199.8l-67.6 171.6h-9.1L125 199.8v115c-.7 4.8 1 9.7 4.4 13.2l31.6 38.3v5.1H71.2v-5.1l31.6-38.3c3.4-3.5 4.9-8.4 4.1-13.2v-133c.4-3.7-1-7.3-3.8-9.8L75 138.1V133h87.3l67.4 148L289 133.1h83.2v5z"/></svg>
+      </a>
+    
+      
+      
+        
+        
+      
+      <a href="https://discord.gg/FTxQc8C" target="_blank" rel="noopener" title="discord.gg" class="md-footer-social__link">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path d="M297.216 243.2c0 15.616-11.52 28.416-26.112 28.416-14.336 0-26.112-12.8-26.112-28.416s11.52-28.416 26.112-28.416c14.592 0 26.112 12.8 26.112 28.416zm-119.552-28.416c-14.592 0-26.112 12.8-26.112 28.416s11.776 28.416 26.112 28.416c14.592 0 26.112-12.8 26.112-28.416.256-15.616-11.52-28.416-26.112-28.416zM448 52.736V512c-64.494-56.994-43.868-38.128-118.784-107.776l13.568 47.36H52.48C23.552 451.584 0 428.032 0 398.848V52.736C0 23.552 23.552 0 52.48 0h343.04C424.448 0 448 23.552 448 52.736zm-72.96 242.688c0-82.432-36.864-149.248-36.864-149.248-36.864-27.648-71.936-26.88-71.936-26.88l-3.584 4.096c43.52 13.312 63.744 32.512 63.744 32.512-60.811-33.329-132.244-33.335-191.232-7.424-9.472 4.352-15.104 7.424-15.104 7.424s21.248-20.224 67.328-33.536l-2.56-3.072s-35.072-.768-71.936 26.88c0 0-36.864 66.816-36.864 149.248 0 0 21.504 37.12 78.08 38.912 0 0 9.472-11.52 17.152-21.248-32.512-9.728-44.8-30.208-44.8-30.208 3.766 2.636 9.976 6.053 10.496 6.4 43.21 24.198 104.588 32.126 159.744 8.96 8.96-3.328 18.944-8.192 29.44-15.104 0 0-12.8 20.992-46.336 30.464 7.68 9.728 16.896 20.736 16.896 20.736 56.576-1.792 78.336-38.912 78.336-38.912z"/></svg>
+      </a>
+    
+  </div>
+
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    <script id="__config" type="application/json">{"base": "../..", "features": ["navigation.tabs"], "translations": {"clipboard.copy": "Copy to clipboard", "clipboard.copied": "Copied to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.placeholder": "Type to start searching", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.term.missing": "Missing"}, "search": "../../assets/javascripts/workers/search.fb4a9340.min.js", "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.5cf3e710.min.js"></script>
+      
+    
+  </body>
+</html>
