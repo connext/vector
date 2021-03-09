@@ -484,6 +484,7 @@ export class BrowserNode implements INodeService {
         channelAddress: res.channel.channelAddress,
         transferId: (res.channel.latestUpdate.details as CreateUpdateDetails).transferId,
         transactionHash: res.transactionHash,
+        transaction: res.transaction,
       });
     } catch (e) {
       return Result.fail(e);
