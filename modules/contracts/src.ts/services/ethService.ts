@@ -405,9 +405,13 @@ export class EthereumChainService extends EthereumChainReader implements IVector
     }
 
     this.log.info({ sender, method, methodId, channel: channelState.channelAddress }, "Sending withdraw tx to chain");
+    const gasEstimateRes = await this.estimateGas(channelState.networkContext.chainId, minTx);
+    if (gasEstimateRes.isError) {
+      return Result.fail(gasEstimateRes.getError()!);
+    }
+    const _gas = gasEstimateRes.getValue();
+    const gas = _gas.add(EXTRA_GAS);
     return this.sendTxWithRetries(channelState.channelAddress, TransactionReason.withdraw, async () => {
-      const _gas = GAS_ESTIMATES.withdraw;
-      const gas = _gas.add(EXTRA_GAS);
       return signer.sendTransaction({ ...minTx, gasPrice, gasLimit: gas });
     }) as Promise<Result<TransactionResponse, ChainError>>;
   }
