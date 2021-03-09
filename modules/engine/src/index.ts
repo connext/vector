@@ -1,4 +1,3 @@
-import { WithdrawCommitment } from "@connext/vector-contracts";
 import { Vector } from "@connext/vector-protocol";
 import { EXTRA_GAS_PRICE } from "@connext/vector-contracts";
 import {
@@ -29,7 +28,7 @@ import {
   jsonifyError,
   ChainError,
   MinimalTransaction,
-  WithdrawCommitmentJson,
+  WITHDRAWAL_RESOLVED_EVENT,
 } from "@connext/vector-types";
 import {
   generateMerkleTreeData,
@@ -921,7 +920,7 @@ export class VectorEngine implements IVectorEngine {
       const [resolved, reconciled] = await Promise.all([
         this.evts[WITHDRAWAL_RESOLVED_EVENT].attachOnce(
           timeout,
-          (data) => data.channelAddress === params.channelAddress && data.trasfer.transferId === transferId,
+          (data) => data.channelAddress === params.channelAddress && data.transfer.transferId === transferId,
         ),
         this.evts[WITHDRAWAL_RECONCILED_EVENT].attachOnce(
           timeout,
