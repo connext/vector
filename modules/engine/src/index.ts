@@ -27,6 +27,8 @@ import {
   VectorError,
   jsonifyError,
   ChainError,
+  MinimalTransaction,
+  WITHDRAWAL_RESOLVED_EVENT,
 } from "@connext/vector-types";
 import {
   generateMerkleTreeData,
@@ -123,12 +125,6 @@ export class VectorEngine implements IVectorEngine {
   get signerAddress(): string {
     return this.vector.signerAddress;
   }
-
-  // TODO: create injected validation that handles submitting transactions
-  // IFF there was a fee involved. Should:
-  // - check if fee > 0
-  //    - yes && my withdrawal: make sure transaction hash is included in
-  //      the meta (verify tx)
 
   private async setupListener(gasSubsidyPercentage: number): Promise<void> {
     await setupEngineListeners(
@@ -908,6 +904,7 @@ export class VectorEngine implements IVectorEngine {
       return Result.fail(createResult.getError()!);
     }
     const createParams = createResult.getValue();
+    const initiatorSubmits = createParams.meta.initiatorSubmits ?? false;
     const protocolRes = await this.vector.create(createParams);
     if (protocolRes.isError) {
       return Result.fail(protocolRes.getError()!);
@@ -917,19 +914,30 @@ export class VectorEngine implements IVectorEngine {
     this.logger.info({ channelAddress: params.channelAddress, transferId }, "Withdraw transfer created");
 
     let transactionHash: string | undefined = undefined;
+    let transaction: MinimalTransaction | undefined = undefined;
     const timeout = 90_000;
     try {
-      const event = await this.evts[WITHDRAWAL_RECONCILED_EVENT].attachOnce(
-        timeout,
-        (data) => data.channelAddress === params.channelAddress && data.transferId === transferId,
-      );
-      transactionHash = event.transactionHash;
+      const [resolved, reconciled] = await Promise.all([
+        this.evts[WITHDRAWAL_RESOLVED_EVENT].attachOnce(
+          timeout,
+          (data) => data.channelAddress === params.channelAddress && data.transfer.transferId === transferId,
+        ),
+        this.evts[WITHDRAWAL_RECONCILED_EVENT].attachOnce(
+          timeout,
+          (data) => data.channelAddress === params.channelAddress && data.transferId === transferId,
+        ),
+      ]);
+      transactionHash = reconciled.transactionHash;
+      transaction = resolved.transaction;
     } catch (e) {
-      this.logger.warn({ channelAddress: params.channelAddress, transferId, timeout }, "Withdraw tx not submitted");
+      this.logger.warn(
+        { channelAddress: params.channelAddress, transferId, timeout, initiatorSubmits },
+        "Withdraw tx not processed properly",
+      );
     }
 
-    this.logger.info({ channel: res, method, methodId }, "Method complete");
-    return Result.ok({ channel: res, transactionHash });
+    this.logger.info({ channel: res, method, methodId, transactionHash, transaction }, "Method complete");
+    return Result.ok({ channel: res, transactionHash, transaction });
   }
 
   private async decrypt(encrypted: string): Promise<Result<string, EngineError>> {

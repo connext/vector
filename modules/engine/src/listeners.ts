@@ -438,14 +438,16 @@ export async function getWithdrawalQuote(
   chainService: IVectorChainService,
   logger: BaseLogger,
 ): Promise<Result<WithdrawalQuote, WithdrawQuoteError>> {
+  const receiveExactAmount = request.receiveExactAmount ?? false;
   // Helper to sign the quote + return to user
   const createAndSignQuote = async (_fee: BigNumber): Promise<Result<WithdrawalQuote, WithdrawQuoteError>> => {
+    const withdrawalAmount = receiveExactAmount ? BigNumber.from(request.amount).add(_fee) : request.amount;
     const quote = {
       channelAddress: request.channelAddress,
-      amount: _fee.gt(request.amount) ? "0" : BigNumber.from(request.amount).sub(_fee).toString(), // hash of negative value fails
+      amount: _fee.gt(withdrawalAmount) ? "0" : BigNumber.from(withdrawalAmount).sub(_fee).toString(), // hash of negative value fails
       assetId: request.assetId,
       fee: _fee.toString(),
-      expiry: (Date.now() + DEFAULT_FEE_EXPIRY).toString(), // TODO: make this configurable
+      expiry: (Date.now() + DEFAULT_FEE_EXPIRY).toString(), // TODO: make this configurable #436
     };
     try {
       const signature = await signer.signMessage(hashWithdrawalQuote(quote));
@@ -717,8 +719,6 @@ async function handleConditionalTransferCreation(
     logger.warn({ transferId, routingId, meta: transfer.meta }, "Cannot route transfer");
     return;
   }
-
-  // TODO: add automatic resolution for given transfer types
 }
 
 async function handleConditionalTransferResolution(
@@ -862,7 +862,10 @@ async function handleWithdrawalTransferResolution(
     return;
   }
 
-  const withdrawalAmount = event.updatedTransfer.balance.amount
+  // withdrawals burn the balance on resolve, so the only
+  // reliable way to get a withdrawal amount is
+  // via the initial balance in the transfer state
+  const withdrawalAmount = event.updatedTransfer.transferState.balance.amount
     .reduce((prev, curr) => prev.add(curr), BigNumber.from(0))
     .sub(event.updatedTransfer.transferState.fee);
 
@@ -878,35 +881,7 @@ async function handleWithdrawalTransferResolution(
     "Withdrawal info",
   );
 
-  // Post to evt
-  const assetIdx = assetIds.findIndex((a) => getAddress(a) === getAddress(assetId));
-  const payload: WithdrawalResolvedPayload = {
-    aliceIdentifier,
-    bobIdentifier,
-    assetId,
-    amount: withdrawalAmount.toString(),
-    fee: event.updatedTransfer.transferState.fee,
-    recipient: event.updatedTransfer.balance.to[0],
-    channelBalance: balances[assetIdx],
-    channelAddress,
-    transfer: event.updatedTransfer,
-    callTo: event.updatedTransfer.transferState.callTo,
-    callData: event.updatedTransfer.transferState.callData,
-  };
-  evts[EngineEvents.WITHDRAWAL_RESOLVED].post(payload);
-
-  // If it is not from counterparty, do not respond
-  if (fromIdentifier === signer.publicIdentifier) {
-    logger.debug(
-      { method, methodId, withdrawalAmount: withdrawalAmount.toString(), assetId },
-      "Our own resolution, no need to do anything",
-    );
-    return;
-  }
-
-  // Generate our own commitment, and save the double signed version
-  // NOTE: while generalized withdrawals are enabled, they have not been
-  // added to the engine parameters (standard withdrawals permitted only)
+  // Generate commitment, and save the double signed version
   const commitment = new WithdrawCommitment(
     channelAddress,
     alice,
@@ -924,9 +899,38 @@ async function handleWithdrawalTransferResolution(
     event.updatedTransfer.transferResolver!.responderSignature,
   );
 
+  // Post to evt
+  const assetIdx = assetIds.findIndex((a) => getAddress(a) === getAddress(assetId));
+  const payload: WithdrawalResolvedPayload = {
+    aliceIdentifier,
+    bobIdentifier,
+    assetId,
+    amount: withdrawalAmount.toString(),
+    fee: event.updatedTransfer.transferState.fee,
+    recipient: event.updatedTransfer.balance.to[0],
+    channelBalance: balances[assetIdx],
+    channelAddress,
+    transfer: event.updatedTransfer,
+    callTo: event.updatedTransfer.transferState.callTo,
+    callData: event.updatedTransfer.transferState.callData,
+    transaction: commitment.getSignedTransaction(),
+  };
+  evts[EngineEvents.WITHDRAWAL_RESOLVED].post(payload);
+
+  // If it is not from counterparty, do not respond
+  if (fromIdentifier === signer.publicIdentifier) {
+    logger.debug(
+      { method, methodId, withdrawalAmount: withdrawalAmount.toString(), assetId },
+      "Our own resolution, no need to do anything",
+    );
+    return;
+  }
+
   // Try to submit the transaction to chain IFF you are alice
   // Otherwise, alice should have submitted the tx (hash is in meta)
   if (signer.address !== alice) {
+    // Store the double signed commitment
+    await store.saveWithdrawalCommitment(transferId, commitment.toJson());
     // Withdrawal resolution meta will include the transaction hash,
     // post to EVT here
     evts[WITHDRAWAL_RECONCILED_EVENT].post({
@@ -937,8 +941,6 @@ async function handleWithdrawalTransferResolution(
       transactionHash: meta?.transactionHash,
       meta: event.updatedTransfer.meta,
     });
-    // Store the double signed commitment
-    await store.saveWithdrawalCommitment(transferId, commitment.toJson());
     logger.info({ method, methodId, withdrawalAmount: withdrawalAmount.toString(), assetId }, "Completed");
     return;
   }
@@ -1044,12 +1046,17 @@ export const resolveWithdrawal = async (
   const {
     meta,
     assetId,
-    balance,
     initiatorIdentifier,
     transferId,
-    transferState: { nonce, initiatorSignature, fee, initiator, responder, callTo, callData },
+    transferState: { nonce, initiatorSignature, fee, initiator, responder, callTo, callData, balance },
   } = transfer;
 
+  // determine whether or not alice should submit
+  const initiatorSubmits = meta.initiatorSubmits ?? false;
+
+  // withdrawals burn the balance on resolve, so the only
+  // reliable way to get a withdrawal amount is
+  // via the initial balance in the transfer state
   const withdrawalAmount = balance.amount.reduce((prev, curr) => prev.add(curr), BigNumber.from(0)).sub(fee);
   logger.debug({ withdrawalAmount: withdrawalAmount.toString(), initiator, responder, fee }, "Withdrawal info");
 
@@ -1079,7 +1086,7 @@ export const resolveWithdrawal = async (
   // Verify fee is present, signed correctly, and not expired IFF configured and
   // channel is on proper chain
   const relevantChain = transfer.chainId === 1 || TESTNETS_WITH_FEES.includes(transfer.chainId);
-  if (gasSubsidyPercentage !== 100 && signer.address === channelState.alice && relevantChain) {
+  if (gasSubsidyPercentage !== 100 && signer.address === channelState.alice && relevantChain && !initiatorSubmits) {
     const cancelWithdrawal = async (cancellationReason: string) => {
       logger.warn({ cancellationReason, transferId, channelAddress, method, methodId }, "Cancelling withdrawal");
       const resolveRes = await vector.resolve({
@@ -1138,8 +1145,6 @@ export const resolveWithdrawal = async (
     logger.info({ quote, method, methodId }, "Withdrawal fees verified");
   }
 
-  // TODO: should inject validation to make sure that a withdrawal transfer
-  // is properly signed before its been merged into your channel
   const commitment = new WithdrawCommitment(
     channelAddress,
     alice,
@@ -1160,12 +1165,8 @@ export const resolveWithdrawal = async (
   // Alice may or may not charge a fee for this service, and both parties
   // are welcome to submit the commitment if the other party does not.
 
-  // TODO: if bob is the withdrawal creator and alice has charged a fee
-  // for submitting the withdrawal, bob will refuse to sign the resolve
-  // update until the transaction is properly submitted onchain (enforced
-  // via injected validation)
   let transactionHash: string | undefined = undefined;
-  if (signer.address === alice) {
+  if (signer.address === alice && !initiatorSubmits) {
     // Submit withdrawal to chain
     logger.info(
       { method, withdrawalAmount: withdrawalAmount.toString(), channelAddress },
@@ -1221,5 +1222,8 @@ export const resolveWithdrawal = async (
   }
 
   // Withdrawal successfully resolved
-  logger.info({ method, amount: withdrawalAmount.toString(), assetId: transfer.assetId, fee }, "Withdrawal resolved");
+  logger.info(
+    { method, amount: withdrawalAmount.toString(), assetId: transfer.assetId, fee, transactionHash },
+    "Withdrawal resolved",
+  );
 };

@@ -75,7 +75,6 @@ export const parseBalanceToNumber = async (
 //////////////////////////
 ///// Onchain liquidity
 
-// TODO: add asset name label
 export const onchainLiquidity = new Gauge({
   name: "router_onchain_liquidity",
   help: "router_onchain_liquidity_help",
@@ -168,7 +167,6 @@ export const feesCollected = new Counter({
 
 //////////////////////////
 ///// Transaction metrics
-// TODO: any gas labels on txs? gas price?
 // Track on chain transactions attempts
 export const transactionAttempt = new Counter({
   name: "router_transaction_attempt",

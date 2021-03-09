@@ -204,6 +204,7 @@ describe(testName, () => {
       // Verify call stack
       expect(getSwappedAmount.callCount).to.be.eq(swapCallCount);
       expect(node.conditionalTransfer.callCount).to.be.eq(1);
+      const { balance, ...details } = senderTransfer.transferState;
       const expected = {
         channelAddress: receiverChannel.channelAddress,
         amount:
@@ -212,7 +213,7 @@ describe(testName, () => {
         timeout: BigNumber.from(senderTransfer.transferTimeout).sub(TRANSFER_DECREMENT).toString(),
         type: event.conditionType,
         publicIdentifier: routerPublicIdentifier,
-        details: { ...senderTransfer.transferState },
+        details,
         meta: {
           senderIdentifier: ctx.senderChannel.bobIdentifier,
           ...(senderTransfer.meta ?? {}),
@@ -228,6 +229,7 @@ describe(testName, () => {
       errorContext: any = {},
       senderCancelled = true,
       senderResolveFailed = false,
+      sentSingleSigned = false,
     ) => {
       const error = result.getError()!;
       expect(error).to.be.ok;
@@ -238,7 +240,9 @@ describe(testName, () => {
         expect(error.context).to.containSubset({
           ...errorContext,
         });
-        expect(store.queueUpdate.callCount).to.be.eq(0);
+        console.log("***** verifying queue");
+        expect(store.queueUpdate.callCount).to.be.eq(sentSingleSigned ? 1 : 0);
+        console.log("***** verified");
         return;
       }
       expect(error.context).to.containSubset({
@@ -373,7 +377,6 @@ describe(testName, () => {
       await verifySuccessfulResult(result, mocked, 1);
     });
 
-    // TODO: implement offline payments
     it.skip("fails but queues transfers if receiver offline and allowable offline", async () => {});
 
     // Uncancellable failures
@@ -583,8 +586,7 @@ describe(testName, () => {
 
     it.skip("fails without cancellation if transferWithAutoCollateralization got receiver timeout", async () => {});
 
-    // TODO: the code indicates that sender should not be cancelled, verify this with Layne
-    it.skip("fails with cancellation if transfer creation fails", async () => {
+    it("fails without cancellation if transfer creation fails", async () => {
       const ctx = prepEnv();
       const err = new ServerNodeServiceError(ServerNodeServiceError.reasons.InternalServerError, "", "", {});
       node.conditionalTransfer.onFirstCall().resolves(Result.fail(err));
@@ -600,9 +602,17 @@ describe(testName, () => {
       );
 
       const { stack, ...sanitized } = err.toJson();
-      await verifyErrorResult(result, ctx, ForwardTransferCreationError.reasons.ErrorForwardingTransfer, {
-        createError: sanitized,
-      });
+      await verifyErrorResult(
+        result,
+        ctx,
+        ForwardTransferCreationError.reasons.ErrorForwardingTransfer,
+        {
+          transferError: sanitized,
+        },
+        false,
+        undefined,
+        true,
+      );
     });
   });
 

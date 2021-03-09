@@ -27,6 +27,7 @@ const GetWithdrawalQuoteParamsSchema = Type.Object({
   amount: TIntegerString,
   assetId: TAddress,
   channelAddress: TAddress,
+  receiveExactAmount: Type.Optional(Type.Boolean()),
 });
 
 const GetTransferQuoteParamsSchema = Type.Object({
@@ -37,6 +38,7 @@ const GetTransferQuoteParamsSchema = Type.Object({
   recipient: Type.Optional(TPublicIdentifier),
   recipientChainId: Type.Optional(TChainId),
   recipientAssetId: Type.Optional(TAddress),
+  receiveExactAmount: Type.Optional(Type.Boolean()),
 });
 
 const GetRouterConfigParamsSchema = Type.Object({
@@ -151,6 +153,7 @@ const WithdrawParamsSchema = Type.Object({
   callTo: Type.Optional(TAddress),
   callData: Type.Optional(Type.String()),
   meta: Type.Optional(TBasicMeta),
+  initiatorSubmits: Type.Optional(Type.Boolean()),
 });
 
 //////////////////

@@ -10,6 +10,7 @@ import {
   TransferQuoteEncoding,
   WithdrawalQuote,
   WithdrawalQuoteEncoding,
+  FullTransferState,
 } from "@connext/vector-types";
 import { defaultAbiCoder } from "@ethersproject/abi";
 import { keccak256 as solidityKeccak256, sha256 as soliditySha256 } from "@ethersproject/solidity";
@@ -84,3 +85,18 @@ export const decodeWithdrawalQuote = (encodedQuote: string): WithdrawalQuote => 
 
 export const hashWithdrawalQuote = (quote: WithdrawalQuote): string =>
   solidityKeccak256(["bytes"], [encodeWithdrawalQuote(quote)]);
+
+export const getTransferParticipant = (
+  transfer: FullTransferState,
+  publicIdentifier: string,
+): "initiator" | "responder" | undefined => {
+  const isInitiator = transfer.initiatorIdentifier.toLowerCase() === publicIdentifier.toLowerCase();
+  if (!isInitiator && transfer.responderIdentifier.toLowerCase() !== publicIdentifier.toLowerCase()) {
+    return undefined;
+  }
+  return isInitiator ? "initiator" : "responder";
+};
+
+export const getTransferBalance = (transfer: FullTransferState, role: "initiator" | "responder") => {
+  return transfer.balance.amount[role === "initiator" ? 0 : 1];
+};

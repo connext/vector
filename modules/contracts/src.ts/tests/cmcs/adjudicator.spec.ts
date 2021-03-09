@@ -30,11 +30,7 @@ import { advanceBlocktime, createChannel, getContract } from "../../utils";
 const getOnchainBalance = async (assetId: string, address: string): Promise<BigNumber> => {
   return assetId === AddressZero
     ? provider.getBalance(address)
-    : new Contract(
-      assetId,
-      (await deployments.getArtifact("TestToken")).abi,
-      provider,
-    ).balanceOf(address);
+    : new Contract(assetId, (await deployments.getArtifact("TestToken")).abi, provider).balanceOf(address);
 };
 describe("CMCAdjudicator.sol", async function () {
   this.timeout(120_000);
@@ -246,11 +242,7 @@ describe("CMCAdjudicator.sol", async function () {
   describe("disputeChannel", () => {
     it("should fail if state.alice is incorrect", async function () {
       await expect(
-        channel.disputeChannel(
-          { ...channelState, alice: getRandomAddress() },
-          aliceSignature,
-          bobSignature,
-        ),
+        channel.disputeChannel({ ...channelState, alice: getRandomAddress() }, aliceSignature, bobSignature),
       ).revertedWith("CMCAdjudicator: INVALID_CHANNEL");
     });
 
@@ -715,7 +707,7 @@ describe("CMCAdjudicator.sol", async function () {
       ).revertedWith("CMCAdjudicator: INVALID_TRANSFER_HASH");
     });
 
-    // TODO: need to write a transfer def for this
+    // TODO: need to write a transfer def for this #435
     // it.skip("should fail if the resolved balances are > initial balances", async () => {});
 
     it("should correctly resolve + defund transfer if transfer is still in dispute (cancelling resolve)", async function () {

@@ -96,6 +96,7 @@ describe(testName, () => {
       getFeesStub.returns(Result.ok(fees));
       const result = await feesService.calculateFeeAmount(
         transferAmount,
+        false,
         fromAssetId,
         fromChannel,
         toAssetId,
@@ -105,7 +106,52 @@ describe(testName, () => {
         log,
       );
       expect(result.isError).to.be.false;
-      expect(result.getValue()).to.be.eq(BigNumber.from(fees.flatFee).add(5));
+      const { fee, amount } = result.getValue();
+      expect(fee).to.be.eq(BigNumber.from(fees.flatFee).add(5));
+      expect(amount).to.be.eq(transferAmount);
+    });
+
+    it("should work with only static flat fees where the received amount is exact", async () => {
+      fees.gasSubsidyPercentage = 100;
+      fees.percentageFee = 0;
+      getFeesStub.returns(Result.ok(fees));
+      const result = await feesService.calculateFeeAmount(
+        transferAmount,
+        true,
+        fromAssetId,
+        fromChannel,
+        toAssetId,
+        toChannel,
+        ethReader,
+        routerIdentifier,
+        log,
+      );
+      expect(result.isError).to.be.false;
+      const { fee, amount } = result.getValue();
+      expect(fee).to.be.eq(BigNumber.from(fees.flatFee));
+      expect(amount).to.be.eq(transferAmount.add(fees.flatFee));
+    });
+
+    it("should work with static percentage + flat fees where the received amount is exact", async () => {
+      fees.gasSubsidyPercentage = 100;
+      fees.percentageFee = 10;
+      getFeesStub.returns(Result.ok(fees));
+      const result = await feesService.calculateFeeAmount(
+        transferAmount,
+        true,
+        fromAssetId,
+        fromChannel,
+        toAssetId,
+        toChannel,
+        ethReader,
+        routerIdentifier,
+        log,
+      );
+      expect(result.isError).to.be.false;
+      const { fee, amount } = result.getValue();
+      const expectedFees = BigNumber.from(fees.flatFee).add(transferAmount.mul(11).div(100));
+      expect(fee).to.be.eq(expectedFees);
+      expect(amount).to.be.eq(transferAmount.add(expectedFees));
     });
 
     it("should not apply gas fees if neither from or to chain have chain id = 1", async () => {
@@ -114,6 +160,7 @@ describe(testName, () => {
       getSwappedAmountStub.resolves(Result.ok(0));
       const result = await feesService.calculateFeeAmount(
         transferAmount,
+        false,
         fromAssetId,
         fromChannel,
         toAssetId,
@@ -123,7 +170,9 @@ describe(testName, () => {
         log,
       );
       expect(result.isError).to.be.false;
-      expect(result.getValue()).to.be.eq(BigNumber.from(fees.flatFee).add(5));
+      const { fee, amount } = result.getValue();
+      expect(fee).to.be.eq(BigNumber.from(fees.flatFee).add(5));
+      expect(amount).to.be.eq(transferAmount);
     });
 
     it("should work with only dynamic fees on fromChain", async () => {
@@ -135,6 +184,7 @@ describe(testName, () => {
 
       const result = await feesService.calculateFeeAmount(
         transferAmount,
+        false,
         fromAssetId,
         fromChannel,
         toAssetId,
@@ -146,7 +196,9 @@ describe(testName, () => {
       expect(result.isError).to.be.false;
       const percentage = 100 - fees.gasSubsidyPercentage;
       const dynamicFees = gasFees[fromChannel.channelAddress].toNumber() * (percentage / 100);
-      expect(result.getValue().toNumber()).to.be.eq(dynamicFees);
+      const { fee, amount } = result.getValue();
+      expect(fee).to.be.eq(BigNumber.from(dynamicFees));
+      expect(amount).to.be.eq(transferAmount);
     });
 
     it("should work with only dynamic fees on toChain", async () => {
@@ -157,6 +209,7 @@ describe(testName, () => {
 
       const result = await feesService.calculateFeeAmount(
         transferAmount,
+        false,
         fromAssetId,
         fromChannel,
         toAssetId,
@@ -168,7 +221,9 @@ describe(testName, () => {
       expect(result.isError).to.be.false;
       const percentage = 100 - fees.gasSubsidyPercentage;
       const dynamicFees = gasFees[toChannel.channelAddress].toNumber() * (percentage / 100);
-      expect(result.getValue().toNumber()).to.be.eq(dynamicFees);
+      const { fee, amount } = result.getValue();
+      expect(fee).to.be.eq(BigNumber.from(dynamicFees));
+      expect(amount).to.be.eq(transferAmount);
     });
 
     it("should work with only dynamic fees on fromChain && toChain", async () => {
@@ -178,6 +233,7 @@ describe(testName, () => {
 
       const result = await feesService.calculateFeeAmount(
         transferAmount,
+        false,
         fromAssetId,
         fromChannel,
         toAssetId,
@@ -190,12 +246,15 @@ describe(testName, () => {
       const percentage = 100 - fees.gasSubsidyPercentage;
       const dynamicFees =
         gasFees[toChannel.channelAddress].add(gasFees[fromChannel.channelAddress]).toNumber() * (percentage / 100);
-      expect(result.getValue().toNumber()).to.be.eq(dynamicFees);
+      const { fee, amount } = result.getValue();
+      expect(fee).to.be.eq(BigNumber.from(dynamicFees));
+      expect(amount).to.be.eq(transferAmount);
     });
 
     it("should work with static and dynamic fees", async () => {
       const result = await feesService.calculateFeeAmount(
         transferAmount,
+        false,
         fromAssetId,
         fromChannel,
         toAssetId,
@@ -210,13 +269,41 @@ describe(testName, () => {
       const percentage = 100 - fees.gasSubsidyPercentage;
       const dynamicFees =
         gasFees[toChannel.channelAddress].add(gasFees[fromChannel.channelAddress]).toNumber() * (percentage / 100);
-      expect(result.getValue().toNumber()).to.be.eq(staticFees + dynamicFees);
+      const { fee, amount } = result.getValue();
+      expect(fee).to.be.eq(BigNumber.from(staticFees + dynamicFees));
+      expect(amount).to.be.eq(transferAmount);
+    });
+
+    it("should work with static and dynamic fees w/an exact received amount", async () => {
+      fees.percentageFee = 10;
+      const result = await feesService.calculateFeeAmount(
+        transferAmount,
+        true,
+        fromAssetId,
+        fromChannel,
+        toAssetId,
+        toChannel,
+        ethReader,
+        routerIdentifier,
+        log,
+      );
+      expect(result.isError).to.be.false;
+      const percentage = 100 - fees.gasSubsidyPercentage;
+      const dynamicFees =
+        gasFees[toChannel.channelAddress].add(gasFees[fromChannel.channelAddress]).toNumber() * (percentage / 100);
+
+      const expectedFees = BigNumber.from(fees.flatFee).add(transferAmount.mul(11).div(100)).add(dynamicFees);
+      const { fee, amount } = result.getValue();
+
+      expect(fee).to.be.eq(expectedFees);
+      expect(amount).to.be.eq(transferAmount.add(expectedFees));
     });
 
     it("should fail if it cannot get swap fees from config", async () => {
       getFeesStub.returns(Result.fail(new Error("fail")));
       const result = await feesService.calculateFeeAmount(
         transferAmount,
+        false,
         fromAssetId,
         fromChannel,
         toAssetId,
@@ -234,6 +321,7 @@ describe(testName, () => {
       calculateEstimatedGasFeeStub.returns(Result.fail(new Error("fail")));
       const result = await feesService.calculateFeeAmount(
         transferAmount,
+        false,
         fromAssetId,
         fromChannel,
         toAssetId,
@@ -250,6 +338,7 @@ describe(testName, () => {
       normalizedGasFeesStub.onSecondCall().returns(Result.fail(new Error("fail")));
       const result = await feesService.calculateFeeAmount(
         transferAmount,
+        false,
         fromAssetId,
         fromChannel,
         toAssetId,
@@ -267,6 +356,7 @@ describe(testName, () => {
       normalizedGasFeesStub.onFirstCall().returns(Result.fail(new Error("fail")));
       const result = await feesService.calculateFeeAmount(
         transferAmount,
+        false,
         fromAssetId,
         fromChannel,
         toAssetId,
