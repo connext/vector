@@ -311,13 +311,11 @@ const PostWithdrawTransferResponseSchema = {
     channelAddress: TAddress,
     transferId: TBytes32,
     transactionHash: Type.Optional(TBytes32),
-    transaction: Type.Optional(
-      Type.Object({
-        to: TAddress,
-        value: TIntegerString,
-        data: Type.String(),
-      }),
-    ),
+    transaction: Type.Object({
+      to: TAddress,
+      value: TIntegerString,
+      data: Type.String(),
+    }),
   }),
 };
 
