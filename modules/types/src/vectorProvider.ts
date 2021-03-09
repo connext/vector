@@ -20,6 +20,8 @@ export const ChannelRpcMethods = {
   chan_getRegisteredTransfers: "chan_getRegisteredTransfers",
   chan_getTransferState: "chan_getTransferState",
   chan_getTransfers: "chan_getTransfers",
+  chan_getWithdrawalCommitment: "chan_getWithdrawalCommitment",
+  chan_getWithdrawalCommitmentByTransactionHash: "chan_getWithdrawalCommitmentByTransactionHash",
   chan_setup: "chan_setup",
   chan_sendIsAlive: "chan_sendIsAlive",
   chan_requestSetup: "chan_requestSetup",
@@ -58,6 +60,8 @@ export type ChannelRpcMethodsPayloadMap = {
   [ChannelRpcMethods.chan_getTransfers]: EngineParams.GetTransfers;
   [ChannelRpcMethods.chan_getRegisteredTransfers]: EngineParams.GetRegisteredTransfers;
   [ChannelRpcMethods.chan_getChannelStates]: {};
+  [ChannelRpcMethods.chan_getWithdrawalCommitment]: EngineParams.GetWithdrawalCommitment;
+  [ChannelRpcMethods.chan_getWithdrawalCommitmentByTransactionHash]: EngineParams.GetWithdrawalCommitmentByTransactionHash;
   [ChannelRpcMethods.chan_setup]: EngineParams.Setup;
   [ChannelRpcMethods.chan_requestSetup]: EngineParams.Setup;
   [ChannelRpcMethods.chan_deposit]: EngineParams.Deposit;
