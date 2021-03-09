@@ -327,12 +327,17 @@ export const withdraw = async (
     meta: { reason: "Test withdrawal" },
   };
   const withdrawParams = initiatorSubmits ? { ...baseParams, initiatorSubmits } : { ...baseParams };
+  const resolvedPromise = withdrawer.waitFor(EngineEvents.WITHDRAWAL_RESOLVED, 30_000);
   const withdrawalRes = await withdrawer.withdraw(withdrawParams);
+  const resolvedEvent = await resolvedPromise;
+  expect(resolvedEvent).to.be.ok;
   expect(withdrawalRes.getError()).to.be.undefined;
-  let gasConsumed: BigNumber = BigNumber.from(0);
   if (initiatorSubmits) {
     const { transaction } = withdrawalRes.getValue();
     expect(transaction).to.be.ok;
+    expect({ ...resolvedEvent!.transaction, value: resolvedEvent!.transaction.value.toString() }).to.be.deep.eq(
+      transaction,
+    );
     // submit to chain
     const tx = await wallet1.sendTransaction({ to: transaction!.to, value: 0, data: transaction!.data });
     await tx.wait();
@@ -340,7 +345,6 @@ export const withdraw = async (
     const { transactionHash } = withdrawalRes.getValue()!;
     expect(transactionHash).to.be.ok;
     const receipt = await provider.waitForTransaction(transactionHash!);
-    gasConsumed = receipt.gasUsed.mul(await provider.getGasPrice());
   }
 
   const postWithdrawChannel = (await withdrawer.getStateChannel({ channelAddress })).getValue()! as FullChannelState;
