@@ -133,6 +133,16 @@ const config: HardhatUserConfig = {
       chainId: 43114,
       url: urlOverride || "https://api.avax.network/ext/bc/C/rpc",
     },
+    fantomtestnet: {
+      accounts: { mnemonic },
+      chainId: 4002,
+      url: urlOverride || "https://rpc.testnet.fantom.network/",
+    },
+    fantom: {
+      accounts: { mnemonic },
+      chainId: 250,
+      url: urlOverride || "https://rpcapi.fantom.network",
+    },
   },
 };
 

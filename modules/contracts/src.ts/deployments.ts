@@ -270,3 +270,22 @@ const avalancheDeployment = {
 };
 deployments.avalanche = avalancheDeployment;
 deployments["43114"] = avalancheDeployment;
+
+////////////////////////////////////////
+// 250 - fantom
+import * as fantomChannelFactory from "../deployments/fantom/ChannelFactory.json";
+import * as fantomChannelMastercopy from "../deployments/fantom/ChannelMastercopy.json";
+import * as fantomHashlockTransfer from "../deployments/fantom/HashlockTransfer.json";
+import * as fantomTestToken from "../deployments/fantom/TestToken.json";
+import * as fantomTransferRegistry from "../deployments/fantom/TransferRegistry.json";
+import * as fantomWithdraw from "../deployments/fantom/Withdraw.json";
+const fantomDeployment = {
+  ChannelFactory: fantomChannelFactory,
+  ChannelMastercopy: fantomChannelMastercopy,
+  HashlockTransfer: fantomHashlockTransfer,
+  TestToken: fantomTestToken,
+  TransferRegistry: fantomTransferRegistry,
+  Withdraw: fantomWithdraw,
+};
+deployments.fantom = fantomDeployment;
+deployments["250"] = fantomDeployment;
