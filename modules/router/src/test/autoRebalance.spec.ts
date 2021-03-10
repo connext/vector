@@ -1,5 +1,5 @@
 import { VectorChainReader } from "@connext/vector-contracts";
-import { expect, getTestLoggers, mkAddress, mkBytes32 } from "@connext/vector-utils";
+import { expect, getRandomBytes32, getTestLoggers, mkAddress, mkBytes32 } from "@connext/vector-utils";
 import Sinon from "sinon";
 import { AllowedSwap, Result } from "@connext/vector-types";
 import { Wallet } from "@ethersproject/wallet";
@@ -11,13 +11,20 @@ import axios from "axios";
 import { rebalanceIfNeeded } from "../services/autoRebalance";
 import { getConfig } from "../config";
 import * as metrics from "../metrics";
-import { PrismaStore } from "../services/store";
+import { PrismaStore, RouterRebalanceStatus } from "../services/store";
 
 const config = getConfig();
 
 const testName = "Auto Rebalance";
 const { log } = getTestLoggers(testName, config.logLevel as any);
 describe.only(testName, () => {
+
+  //TODO:
+  // Tests for:
+  // - rebalanceIfNeeded
+  // - approveRebalance
+  // - executeRebalance
+  // - completeRebalance
 
   describe.only("rebalanceIfNeeded", () => {
     let wallet: Sinon.SinonStubbedInstance<Wallet>;
@@ -60,9 +67,8 @@ describe.only(testName, () => {
         rebalancerUrl: "http://example.com",
       };
       const result = await rebalanceIfNeeded(swap, log, wallet, chainService as any, hydratedProviders, store);
-      console.log("****** result", result);
       expect(result.getError()).to.not.be.ok;
-      expect(result.getValue()).to.deep.eq({});
+      expect(result.getValue()).to.eq(undefined);
     });
 
     it("should not rebalance if to chain is higher balance", async () => {
@@ -80,13 +86,41 @@ describe.only(testName, () => {
       };
       const result = await rebalanceIfNeeded(swap, log, wallet, chainService as any, hydratedProviders, store);
       expect(result.getError()).to.not.be.ok;
-      expect(result.getValue()).to.deep.eq({});
+      expect(result.getValue()).to.eq(undefined);
     });
 
     it("should rebalance", async () => {
-      const transaction = { transaction: { to: mkAddress("0xa"), data: "0xdeadbeef" } };
-      mockAxios.resolves({
-        data: transaction,
+      // For the format of these response schemas see:
+      // vector/modules/types/src/schemas/autoRebalance.ts
+      const transaction = {
+        to: mkAddress("0xa"),
+        data: getRandomBytes32()
+      };
+      // First call is /approve endpoint.
+      mockAxios.onCall(0).resolves({
+        data: {
+          allowance: "10000",
+          transaction: {
+            ...transaction,
+            value: 0
+          }
+        }
+      });
+      // Second call is /execute endpoint.
+      mockAxios.onCall(1).resolves({
+        data: {
+          transaction: {
+            ...transaction,
+            value: 0
+          }
+        }
+      });
+      // Third call is /status endpoint.
+      mockAxios.onCall(2).resolves({
+        data: {
+          status: { completed: true },
+          transaction
+        }
       });
   
       const hash = mkBytes32("0xa");
@@ -111,20 +145,18 @@ describe.only(testName, () => {
         rebalancerUrl: "http://example.com",
       };
       const result = await rebalanceIfNeeded(swap, log, wallet, chainService as any, hydratedProviders, store);
+      
       expect(result.getError()).to.not.be.ok;
-      expect(result.getValue()).to.deep.eq({
-        txHash: hash,
-      });
-      wallet.sendTransaction.getCall(0);
-      wallet.sendTransaction.getCall(1);
+      expect(result.getValue()).to.eq(undefined);
       expect(wallet.sendTransaction.getCall(0).args[0]).to.deep.eq({
-        ...transaction.transaction,
+        ...transaction,
         value: 0,
       });
       expect(wallet.sendTransaction.getCall(1).args[0]).to.deep.eq({
-        ...transaction.transaction,
+        ...transaction,
         value: 0,
       });
+      log.info(wallet.sendTransaction.getCall(2));
     });
   });
 

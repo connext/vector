@@ -286,7 +286,7 @@ export const approveRebalance = async (
         method,
         methodId,
         approveRes: approveRes.data,
-        status: approveRes.status,
+        status: approveRes.data.status,
       },
       "Approval request complete",
     );
@@ -296,7 +296,7 @@ export const approveRebalance = async (
           method,
           methodId,
           allowance: approveRes.data.allowance,
-          status: approveRes.status,
+          status: approveRes.data.status,
         },
         "Approval not needed",
       );
@@ -424,8 +424,7 @@ export const completeRebalance = async (
       {
         method,
         intervalId: methodId,
-        rebalanceRes: statusRes.data,
-        status: statusRes.data.status,
+        rebalanceRes: statusRes.data
       },
       "Status request sent",
     );
