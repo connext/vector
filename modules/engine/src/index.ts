@@ -544,6 +544,67 @@ export class VectorEngine implements IVectorEngine {
     return result;
   }
 
+  private async getWithdrawalCommitment(
+    params: EngineParams.GetWithdrawalCommitment,
+  ): Promise<
+    Result<ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_getWithdrawalCommitment], EngineError>
+  > {
+    const validate = ajv.compile(EngineParams.GetWithdrawalCommitmentSchema);
+    const valid = validate(params);
+    if (!valid) {
+      return Result.fail(
+        new RpcError(RpcError.reasons.InvalidParams, "", this.publicIdentifier, {
+          invalidParamsError: validate.errors?.map((e) => e.message).join(","),
+          invalidParams: params,
+        }),
+      );
+    }
+    const { transferId } = params;
+    try {
+      const result = await this.store.getWithdrawalCommitment(transferId);
+      return Result.ok(result);
+    } catch (e) {
+      return Result.fail(
+        new RpcError(RpcError.reasons.StoreMethodFailed, "", this.publicIdentifier, {
+          storeMethod: "getWithdrawalCommitment",
+          error: jsonifyError(e),
+        }),
+      );
+    }
+  }
+
+  private async getWithdrawalCommitmentByTransactionHash(
+    params: EngineParams.GetWithdrawalCommitmentByTransactionHash,
+  ): Promise<
+    Result<
+      ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_getWithdrawalCommitmentByTransactionHash],
+      EngineError
+    >
+  > {
+    const validate = ajv.compile(EngineParams.GetWithdrawalCommitmentByTransactionHashSchema);
+    const valid = validate(params);
+    if (!valid) {
+      return Result.fail(
+        new RpcError(RpcError.reasons.InvalidParams, "", this.publicIdentifier, {
+          invalidParamsError: validate.errors?.map((e) => e.message).join(","),
+          invalidParams: params,
+        }),
+      );
+    }
+    const { transactionHash } = params;
+    try {
+      const result = await this.store.getWithdrawalCommitmentByTransactionHash(transactionHash);
+      return Result.ok(result);
+    } catch (e) {
+      return Result.fail(
+        new RpcError(RpcError.reasons.StoreMethodFailed, "", this.publicIdentifier, {
+          storeMethod: "getWithdrawalCommitmentByTransactionHash",
+          error: jsonifyError(e),
+        }),
+      );
+    }
+  }
+
   private async setup(
     params: EngineParams.Setup,
   ): Promise<Result<ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_setup], VectorError>> {

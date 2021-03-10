@@ -98,6 +98,16 @@ const GetRegisteredTransfersParamsSchema = Type.Object({
   chainId: TChainId,
 });
 
+// Returns withdrawal commitment by transfer id
+const GetWithdrawalCommitmentParamsSchema = Type.Object({
+  transferId: TBytes32,
+});
+
+// Returns withdrawal commitment by transaction hash
+const GetWithdrawalCommitmentByTransactionHashParamsSchema = Type.Object({
+  transactionHash: TBytes32,
+});
+
 // Setup engine params
 const SetupEngineParamsSchema = Type.Object({
   counterpartyIdentifier: TPublicIdentifier,
@@ -246,6 +256,14 @@ export namespace EngineParams {
 
   export const GetRegisteredTransfersSchema = GetRegisteredTransfersParamsSchema;
   export type GetRegisteredTransfers = Static<typeof GetRegisteredTransfersParamsSchema>;
+
+  export const GetWithdrawalCommitmentSchema = GetWithdrawalCommitmentParamsSchema;
+  export type GetWithdrawalCommitment = Static<typeof GetWithdrawalCommitmentParamsSchema>;
+
+  export const GetWithdrawalCommitmentByTransactionHashSchema = GetWithdrawalCommitmentByTransactionHashParamsSchema;
+  export type GetWithdrawalCommitmentByTransactionHash = Static<
+    typeof GetWithdrawalCommitmentByTransactionHashParamsSchema
+  >;
 
   export const SetupSchema = SetupEngineParamsSchema;
   export type Setup = Static<typeof SetupEngineParamsSchema>;
