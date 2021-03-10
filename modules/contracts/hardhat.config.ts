@@ -123,6 +123,16 @@ const config: HardhatUserConfig = {
       chainId: 128,
       url: urlOverride || "https://http-mainnet.hecochain.com",
     },
+    avalanchefuji: {
+      accounts: { mnemonic },
+      chainId: 43113,
+      url: urlOverride || "https://api.avax-test.network/ext/bc/C/rpc",
+    },
+    avalanche: {
+      accounts: { mnemonic },
+      chainId: 43114,
+      url: urlOverride || "https://api.avax.network/ext/bc/C/rpc",
+    },
   },
 };
 

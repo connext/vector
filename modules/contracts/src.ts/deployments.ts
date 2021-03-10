@@ -215,7 +215,7 @@ deployments.hecotestnet = hecotestnetDeployment;
 deployments["256"] = hecotestnetDeployment;
 
 ////////////////////////////////////////
-// 256 - heco
+// 128 - heco
 import * as hecoChannelFactory from "../deployments/heco/ChannelFactory.json";
 import * as hecoChannelMastercopy from "../deployments/heco/ChannelMastercopy.json";
 import * as hecoHashlockTransfer from "../deployments/heco/HashlockTransfer.json";
@@ -231,4 +231,42 @@ const hecoDeployment = {
   Withdraw: hecoWithdraw,
 };
 deployments.heco = hecoDeployment;
-deployments["256"] = hecoDeployment;
+deployments["128"] = hecoDeployment;
+
+////////////////////////////////////////
+// 43113 - avalanchefuji
+import * as avalanchefujiChannelFactory from "../deployments/avalanchefuji/ChannelFactory.json";
+import * as avalanchefujiChannelMastercopy from "../deployments/avalanchefuji/ChannelMastercopy.json";
+import * as avalanchefujiHashlockTransfer from "../deployments/avalanchefuji/HashlockTransfer.json";
+import * as avalanchefujiTestToken from "../deployments/avalanchefuji/TestToken.json";
+import * as avalanchefujiTransferRegistry from "../deployments/avalanchefuji/TransferRegistry.json";
+import * as avalanchefujiWithdraw from "../deployments/avalanchefuji/Withdraw.json";
+const avalanchefujiDeployment = {
+  ChannelFactory: avalanchefujiChannelFactory,
+  ChannelMastercopy: avalanchefujiChannelMastercopy,
+  HashlockTransfer: avalanchefujiHashlockTransfer,
+  TestToken: avalanchefujiTestToken,
+  TransferRegistry: avalanchefujiTransferRegistry,
+  Withdraw: avalanchefujiWithdraw,
+};
+deployments.avalanchefuji = avalanchefujiDeployment;
+deployments["43113"] = avalanchefujiDeployment;
+
+////////////////////////////////////////
+// 43114 - avalanche
+import * as avalancheChannelFactory from "../deployments/avalanche/ChannelFactory.json";
+import * as avalancheChannelMastercopy from "../deployments/avalanche/ChannelMastercopy.json";
+import * as avalancheHashlockTransfer from "../deployments/avalanche/HashlockTransfer.json";
+import * as avalancheTestToken from "../deployments/avalanche/TestToken.json";
+import * as avalancheTransferRegistry from "../deployments/avalanche/TransferRegistry.json";
+import * as avalancheWithdraw from "../deployments/avalanche/Withdraw.json";
+const avalancheDeployment = {
+  ChannelFactory: avalancheChannelFactory,
+  ChannelMastercopy: avalancheChannelMastercopy,
+  HashlockTransfer: avalancheHashlockTransfer,
+  TestToken: avalancheTestToken,
+  TransferRegistry: avalancheTransferRegistry,
+  Withdraw: avalancheWithdraw,
+};
+deployments.avalanche = avalancheDeployment;
+deployments["43114"] = avalancheDeployment;
