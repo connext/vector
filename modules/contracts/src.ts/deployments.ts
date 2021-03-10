@@ -194,3 +194,41 @@ const bscDeployment = {
 };
 deployments.bsc = bscDeployment;
 deployments["56"] = bscDeployment;
+
+////////////////////////////////////////
+// 256 - hecotestnet
+import * as hecotestnetChannelFactory from "../deployments/hecotestnet/ChannelFactory.json";
+import * as hecotestnetChannelMastercopy from "../deployments/hecotestnet/ChannelMastercopy.json";
+import * as hecotestnetHashlockTransfer from "../deployments/hecotestnet/HashlockTransfer.json";
+import * as hecotestnetTestToken from "../deployments/hecotestnet/TestToken.json";
+import * as hecotestnetTransferRegistry from "../deployments/hecotestnet/TransferRegistry.json";
+import * as hecotestnetWithdraw from "../deployments/hecotestnet/Withdraw.json";
+const hecotestnetDeployment = {
+  ChannelFactory: hecotestnetChannelFactory,
+  ChannelMastercopy: hecotestnetChannelMastercopy,
+  HashlockTransfer: hecotestnetHashlockTransfer,
+  TestToken: hecotestnetTestToken,
+  TransferRegistry: hecotestnetTransferRegistry,
+  Withdraw: hecotestnetWithdraw,
+};
+deployments.hecotestnet = hecotestnetDeployment;
+deployments["256"] = hecotestnetDeployment;
+
+////////////////////////////////////////
+// 256 - heco
+import * as hecoChannelFactory from "../deployments/heco/ChannelFactory.json";
+import * as hecoChannelMastercopy from "../deployments/heco/ChannelMastercopy.json";
+import * as hecoHashlockTransfer from "../deployments/heco/HashlockTransfer.json";
+import * as hecoTestToken from "../deployments/heco/TestToken.json";
+import * as hecoTransferRegistry from "../deployments/heco/TransferRegistry.json";
+import * as hecoWithdraw from "../deployments/heco/Withdraw.json";
+const hecoDeployment = {
+  ChannelFactory: hecoChannelFactory,
+  ChannelMastercopy: hecoChannelMastercopy,
+  HashlockTransfer: hecoHashlockTransfer,
+  TestToken: hecoTestToken,
+  TransferRegistry: hecoTransferRegistry,
+  Withdraw: hecoWithdraw,
+};
+deployments.heco = hecoDeployment;
+deployments["256"] = hecoDeployment;

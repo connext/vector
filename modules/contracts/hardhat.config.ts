@@ -113,6 +113,16 @@ const config: HardhatUserConfig = {
       chainId: 56,
       url: urlOverride || "https://bsc-dataseed.binance.org/",
     },
+    hecotestnet: {
+      accounts: { mnemonic },
+      chainId: 256,
+      url: urlOverride || "https://http-testnet.hecochain.com",
+    },
+    heco: {
+      accounts: { mnemonic },
+      chainId: 128,
+      url: urlOverride || "https://http-mainnet.hecochain.com",
+    },
   },
 };
 
