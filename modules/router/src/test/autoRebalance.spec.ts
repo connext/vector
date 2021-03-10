@@ -17,16 +17,9 @@ const config = getConfig();
 
 const testName = "Auto Rebalance";
 const { log } = getTestLoggers(testName, config.logLevel as any);
-describe.only(testName, () => {
+describe(testName, () => {
 
-  //TODO:
-  // Tests for:
-  // - rebalanceIfNeeded
-  // - approveRebalance
-  // - executeRebalance
-  // - completeRebalance
-
-  describe.only("rebalanceIfNeeded", () => {
+  describe("rebalanceIfNeeded", () => {
     let wallet: Sinon.SinonStubbedInstance<Wallet>;
     let chainService: Sinon.SinonStubbedInstance<VectorChainReader>;
     let hydratedProviders: { [chainId: number]: Sinon.SinonStubbedInstance<JsonRpcProvider> };
