@@ -289,3 +289,22 @@ const fantomDeployment = {
 };
 deployments.fantom = fantomDeployment;
 deployments["250"] = fantomDeployment;
+
+////////////////////////////////////////
+// 1287 - moonbasealpha
+import * as moonbasealphaChannelFactory from "../deployments/moonbasealpha/ChannelFactory.json";
+import * as moonbasealphaChannelMastercopy from "../deployments/moonbasealpha/ChannelMastercopy.json";
+import * as moonbasealphaHashlockTransfer from "../deployments/moonbasealpha/HashlockTransfer.json";
+import * as moonbasealphaTestToken from "../deployments/moonbasealpha/TestToken.json";
+import * as moonbasealphaTransferRegistry from "../deployments/moonbasealpha/TransferRegistry.json";
+import * as moonbasealphaWithdraw from "../deployments/moonbasealpha/Withdraw.json";
+const moonbasealphaDeployment = {
+  ChannelFactory: moonbasealphaChannelFactory,
+  ChannelMastercopy: moonbasealphaChannelMastercopy,
+  HashlockTransfer: moonbasealphaHashlockTransfer,
+  TestToken: moonbasealphaTestToken,
+  TransferRegistry: moonbasealphaTransferRegistry,
+  Withdraw: moonbasealphaWithdraw,
+};
+deployments.moonbasealpha = moonbasealphaDeployment;
+deployments["1287"] = moonbasealphaDeployment;

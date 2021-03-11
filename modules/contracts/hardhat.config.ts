@@ -143,6 +143,11 @@ const config: HardhatUserConfig = {
       chainId: 250,
       url: urlOverride || "https://rpcapi.fantom.network",
     },
+    moonbasealpha: {
+      accounts: { mnemonic },
+      chainId: 1287,
+      url: urlOverride || "https://rpc.testnet.moonbeam.network",
+    },
   },
 };
 
