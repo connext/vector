@@ -18,7 +18,7 @@ export type TransferMeta = BasicMeta & {
 // Method params
 export type SetupParams = {
   counterpartyIdentifier: string;
-  timeout: string;
+  timeout?: string;
   networkContext: NetworkContext;
   meta?: any;
 };
@@ -35,7 +35,7 @@ export type CreateTransferParams = {
   assetId: string;
   transferDefinition: string;
   transferInitialState: TransferState;
-  timeout: string;
+  timeout?: string;
   meta?: BasicMeta;
 };
 
