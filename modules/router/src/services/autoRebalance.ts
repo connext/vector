@@ -205,7 +205,7 @@ export const rebalanceIfNeeded = async (
       status: RouterRebalanceStatus.APPROVED,
       approveHash: approveHash.getValue(),
     };
-    await store.saveLatestRebalance(latest);
+    await store.saveRebalance(latest);
   }
 
   if (latest.status === RouterRebalanceStatus.APPROVED) {
@@ -219,7 +219,7 @@ export const rebalanceIfNeeded = async (
       status: RouterRebalanceStatus.EXECUTED,
       executeHash: executeHash.getValue(),
     };
-    await store.saveLatestRebalance(latest);
+    await store.saveRebalance(latest);
   }
 
   if (latest.status === RouterRebalanceStatus.EXECUTED) {
@@ -254,7 +254,7 @@ export const rebalanceIfNeeded = async (
       status: RouterRebalanceStatus.COMPLETE,
       completeHash: completedHash.getValue().transactionHash,
     };
-    await store.saveLatestRebalance(latest);
+    await store.saveRebalance(latest);
   }
   return Result.ok(undefined);
 };

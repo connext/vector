@@ -2,6 +2,7 @@ import { NodeParams, AllowedSwap } from "@connext/vector-types";
 
 import { PrismaClient } from "../generated/db-client";
 import { getConfig } from "../config";
+import { exception } from "node:console";
 
 const config = getConfig();
 
@@ -64,8 +65,7 @@ export interface IRouterStore {
   ): Promise<void>;
   setUpdateStatus(updateId: string, status: RouterUpdateStatus, context?: string): Promise<void>;
   getLatestRebalance(swap: AllowedSwap): Promise<RouterRebalanceRecord | undefined>;
-  saveLatestRebalance(record: RouterRebalanceRecord): Promise<void>;
-  updateLatestRebalance(record: RouterRebalanceRecord): Promise<void>;
+  saveRebalance(record: RouterRebalanceRecord): Promise<void>;
 }
 export class PrismaStore implements IRouterStore {
   public prisma: PrismaClient;
@@ -168,10 +168,21 @@ export class PrismaStore implements IRouterStore {
     });
   }
 
-  // TODO: Make this an 'upsert' operation and remove need for update fn below.
-  async saveLatestRebalance(record: RouterRebalanceRecord): Promise<void> {
-    await this.prisma.autoRebalance.create({
-      data: {
+  async saveRebalance(record: RouterRebalanceRecord): Promise<void> {
+    await this.prisma.autoRebalance.upsert({
+      where: {
+        id: record.id
+      },
+      update: {
+        // Getting current time to mark 'updatedAt' time.
+        updatedAt: new Date(Date.now()),
+        // Core data updates:
+        status: record.status,
+        approveHash: record.approveHash,
+        executeHash: record.executeHash,
+        completeHash: record.completeHash
+      },
+      create: {
         id: record.id,
         status: record.status,
         approveHash: record.approveHash,
@@ -188,33 +199,7 @@ export class PrismaStore implements IRouterStore {
         percentageFee: record.swap.percentageFee,
         flatFee: record.swap.flatFee,
         gasSubsidyPercentage: record.swap.gasSubsidyPercentage
-      },
-    });
-  }
-
-  async updateLatestRebalance(record: RouterRebalanceRecord): Promise<void> {
-    // Getting current time to mark 'updatedAt' for record.
-    const timeElapsed = Date.now();
-    const now = new Date(timeElapsed);
-    await this.prisma.autoRebalance.update({
-      where: {
-        id: record.id
-      },
-      data: {
-        // Update the 'updatedAt' time.
-        updatedAt: now,
-        // Core data updates:
-        // TODO: Should all of these items be updatable?
-        status: record.status,
-        approveHash: record.approveHash,
-        executeHash: record.executeHash,
-        completeHash: record.completeHash,
-        rebalancerUrl: record.swap.rebalancerUrl,
-        rebalanceThresholdPct: record.swap.rebalanceThresholdPct,
-        percentageFee: record.swap.percentageFee,
-        flatFee: record.swap.flatFee,
-        gasSubsidyPercentage: record.swap.gasSubsidyPercentage
-      },
+      }
     });
   }
 

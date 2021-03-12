@@ -41,9 +41,4 @@ model AutoRebalance {
 
   createdAt               DateTime @default(now())
   updatedAt               DateTime @default(now())
-
-  @@unique([fromChainId, toChainId, fromAssetId, toAssetId])
-  @@unique(approveHash)
-  @@unique(completeHash)
-  @@unique(executeHash)
 }
