@@ -2,7 +2,6 @@ import { NodeParams, AllowedSwap } from "@connext/vector-types";
 
 import { PrismaClient } from "../generated/db-client";
 import { getConfig } from "../config";
-import { exception } from "node:console";
 
 const config = getConfig();
 
@@ -139,39 +138,42 @@ export class PrismaStore implements IRouterStore {
     return new Promise<RouterRebalanceRecord | undefined>((resolve, reject) => {
       // Do we need the orderBy / findFirst ? According to schema, the query should result in only
       // 1 unique entry being returned (if found).
-      this.prisma.autoRebalance.findFirst({
-        orderBy: [
-          {
-            createdAt: "desc"
+      this.prisma.autoRebalance
+        .findFirst({
+          orderBy: [
+            {
+              updatedAt: "desc",
+            },
+          ],
+          where: {
+            fromAssetId: swap.fromAssetId.toString(),
+            toAssetId: swap.toAssetId.toString(),
+            fromChainId: swap.fromChainId.toString(),
+            toChainId: swap.toChainId.toString(),
+          },
+        })
+        .then((result) => {
+          if (result) {
+            resolve({
+              id: result.id,
+              swap: swap,
+              status: result.status as RouterRebalanceStatus,
+              approveHash: result.approveHash ? result.approveHash : undefined,
+              executeHash: result.executeHash ? result.executeHash : undefined,
+              completeHash: result.completeHash ? result.completeHash : undefined,
+            });
           }
-        ],
-        where: {
-          fromAssetId: swap.fromAssetId.toString(),
-          toAssetId: swap.toAssetId.toString(),
-          fromChainId: swap.fromChainId.toString(),
-          toChainId: swap.toChainId.toString()
-        }
-      }).then((result) => {
-        if (result) {
-          resolve({
-            id: result.id,
-            swap: swap,
-            status: result.status as RouterRebalanceStatus,
-            approveHash: result.approveHash ? result.approveHash : undefined,
-            executeHash: result.executeHash ? result.executeHash : undefined,
-            completeHash: result.completeHash ? result.completeHash : undefined,
-          })
-        }
-      }).catch((error) => {
-        reject(error);
-      })
+        })
+        .catch((error) => {
+          reject(error);
+        });
     });
   }
 
   async saveRebalance(record: RouterRebalanceRecord): Promise<void> {
     await this.prisma.autoRebalance.upsert({
       where: {
-        id: record.id
+        id: record.id,
       },
       update: {
         // Getting current time to mark 'updatedAt' time.
@@ -180,7 +182,7 @@ export class PrismaStore implements IRouterStore {
         status: record.status,
         approveHash: record.approveHash,
         executeHash: record.executeHash,
-        completeHash: record.completeHash
+        completeHash: record.completeHash,
       },
       create: {
         id: record.id,
@@ -198,9 +200,8 @@ export class PrismaStore implements IRouterStore {
         rebalanceThresholdPct: record.swap.rebalanceThresholdPct,
         percentageFee: record.swap.percentageFee,
         flatFee: record.swap.flatFee,
-        gasSubsidyPercentage: record.swap.gasSubsidyPercentage
-      }
+        gasSubsidyPercentage: record.swap.gasSubsidyPercentage,
+      },
     });
   }
-
 }
