@@ -40,8 +40,8 @@ export class MemoryLockService implements ILockService {
       throw new Error("Incorrect lock value");
     }
 
-    clearTimeout(lock!.timer);
-    return lock!.releaser();
+    clearTimeout(lock.timer);
+    return lock.releaser();
   }
 
   private randomValue() {

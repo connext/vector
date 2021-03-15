@@ -156,7 +156,7 @@ server.addHook("onReady", async () => {
   );
 
   if (config.autoRebalanceInterval) {
-    startAutoRebalanceTask(config.autoRebalanceInterval, logger, wallet, chainService, hydratedProviders);
+    startAutoRebalanceTask(config.autoRebalanceInterval, logger, wallet, chainService, hydratedProviders, store);
   }
 });
 
@@ -180,7 +180,7 @@ server.post<{ Body: NodeParams.Admin }>(
       return response.status(401).send(new ServerError(ServerError.reasons.Unauthorized, request.body).toJson());
     }
 
-    await autoRebalanceTask(logger, wallet, chainService, hydratedProviders);
+    await autoRebalanceTask(logger, wallet, chainService, hydratedProviders, store);
     return response.status(200).send({ message: "success" });
   },
 );
