@@ -2,6 +2,11 @@
 
 ## Next Release
 
+## 0.2.0-beta.10
+
+- \[router\] Rebalance from Matic -> ETH Mainnet
+- \[node\] Add `from` to send transactions
+
 ## 0.2.0-beta.9
 
 - \[engine\] Add `transaction` to `WITHDRAWAL_RESOLVED` event
