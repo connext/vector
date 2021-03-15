@@ -2,10 +2,11 @@
 
 ## Next Release
 
-## 0.2.0-beta.10
+## 0.2.0
 
 - \[router\] Rebalance from Matic -> ETH Mainnet
 - \[node\] Add `from` to send transactions
+- \[contracts\] Deploy to lots of chains!
 
 ## 0.2.0-beta.9
 
