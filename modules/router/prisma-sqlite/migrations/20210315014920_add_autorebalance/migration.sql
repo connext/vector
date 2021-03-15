@@ -19,15 +19,3 @@ CREATE TABLE "AutoRebalance" (
     "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
-
--- CreateIndex
-CREATE UNIQUE INDEX "AutoRebalance.fromChainId_toChainId_fromAssetId_toAssetId_unique" ON "AutoRebalance"("fromChainId", "toChainId", "fromAssetId", "toAssetId");
-
--- CreateIndex
-CREATE UNIQUE INDEX "AutoRebalance.approveHash_unique" ON "AutoRebalance"("approveHash");
-
--- CreateIndex
-CREATE UNIQUE INDEX "AutoRebalance.completeHash_unique" ON "AutoRebalance"("completeHash");
-
--- CreateIndex
-CREATE UNIQUE INDEX "AutoRebalance.executeHash_unique" ON "AutoRebalance"("executeHash");
