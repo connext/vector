@@ -153,11 +153,6 @@ export class EthereumChainService extends EthereumChainReader implements IVector
       return Result.fail(new ChainError(ChainError.reasons.ResolverNeeded));
     }
 
-    // TODO: should this be checked? is there some other option?
-    if (transferState.balance.amount[1] !== "0") {
-      return Result.fail(new ChainError(ChainError.reasons.NotInitialState));
-    }
-
     const encodedState = encodeTransferState(transferState.transferState, transferState.transferEncodings[0]);
     const encodedResolver = encodeTransferResolver(transferState.transferResolver, transferState.transferEncodings[1]);
 
@@ -410,9 +405,13 @@ export class EthereumChainService extends EthereumChainReader implements IVector
     }
 
     this.log.info({ sender, method, methodId, channel: channelState.channelAddress }, "Sending withdraw tx to chain");
+    const gasEstimateRes = await this.estimateGas(channelState.networkContext.chainId, minTx);
+    if (gasEstimateRes.isError) {
+      return Result.fail(gasEstimateRes.getError()!);
+    }
+    const _gas = gasEstimateRes.getValue();
+    const gas = _gas.add(EXTRA_GAS);
     return this.sendTxWithRetries(channelState.channelAddress, TransactionReason.withdraw, async () => {
-      const _gas = GAS_ESTIMATES.withdraw;
-      const gas = _gas.add(EXTRA_GAS);
       return signer.sendTransaction({ ...minTx, gasPrice, gasLimit: gas });
     }) as Promise<Result<TransactionResponse, ChainError>>;
   }
@@ -445,6 +444,15 @@ export class EthereumChainService extends EthereumChainReader implements IVector
     if (multisigRes.isError) {
       return Result.fail(multisigRes.getError()!);
     }
+
+    this.log.info(
+      {
+        method,
+        methodId,
+        chainId: channelState.networkContext.chainId,
+      },
+      "Getting gas price",
+    );
 
     const gasPriceRes = await this.getGasPrice(channelState.networkContext.chainId);
     if (gasPriceRes.isError) {
@@ -623,7 +631,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
     reason: TransactionReason,
     txFn: () => Promise<undefined | TransactionResponse>,
   ): Promise<Result<TransactionResponse | undefined, ChainError>> {
-    // TODO: add retries on specific errors
+    // TODO: add retries on specific errors #347
     try {
       const response = await this.queue.add(async () => {
         const response = await txFn();
@@ -644,7 +652,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
         });
         // Register callbacks for saving tx, then return
         response
-          .wait() // TODO: confirmation blocks?
+          .wait() // TODO: confirmation blocks? #434
           .then((receipt) => {
             if (receipt.status === 0) {
               this.log.error({ method: "sendTxAndParseResponse", receipt }, "Transaction reverted");

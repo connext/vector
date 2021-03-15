@@ -75,7 +75,7 @@ export class BrowserNode implements INodeService {
       config.logger = pino({ name: config.signer.publicIdentifier });
     }
     const node = new BrowserNode({ logger: config.logger, chainProviders: config.chainProviders });
-    // TODO: validate schema
+    // TODO: validate schema GH issue #429
     config.logger.info(
       { method: "connect", publicIdentifier: config.signer.publicIdentifier, signerAddress: config.signer.address },
       "Connecting with provided signer",
@@ -148,7 +148,7 @@ export class BrowserNode implements INodeService {
 
   // method for non-signer based apps to connect to iframe
   async init(params: { signature?: string; signer?: string } = {}): Promise<void> {
-    // TODO: validate config
+    // TODO: validate config GH issue #429
     const method = "init";
     this.logger.debug({ method }, "Method started");
     const iframeSrc = this.iframeSrc ?? "https://wallet.connext.network";
@@ -384,6 +384,36 @@ export class BrowserNode implements INodeService {
     }
   }
 
+  async getWithdrawalCommitment(
+    params: OptionalPublicIdentifier<NodeParams.GetWithdrawalCommitment>,
+  ): Promise<Result<NodeResponses.GetWithdrawalCommitment, BrowserNodeError>> {
+    try {
+      const rpc = constructRpcRequest<"chan_getWithdrawalCommitment">(
+        ChannelRpcMethods.chan_getWithdrawalCommitment,
+        params,
+      );
+      const res = await this.channelProvider!.send(rpc);
+      return Result.ok(res);
+    } catch (e) {
+      return Result.fail(e);
+    }
+  }
+
+  async getWithdrawalCommitmentByTransactionHash(
+    params: OptionalPublicIdentifier<NodeParams.GetWithdrawalCommitmentByTransactionHash>,
+  ): Promise<Result<NodeResponses.GetWithdrawalCommitmentByTransactionHash, BrowserNodeError>> {
+    try {
+      const rpc = constructRpcRequest<"chan_getWithdrawalCommitmentByTransactionHash">(
+        ChannelRpcMethods.chan_getWithdrawalCommitmentByTransactionHash,
+        params,
+      );
+      const res = await this.channelProvider!.send(rpc);
+      return Result.ok(res);
+    } catch (e) {
+      return Result.fail(e);
+    }
+  }
+
   async setup(
     params: OptionalPublicIdentifier<NodeParams.RequestSetup>,
   ): Promise<Result<NodeResponses.RequestSetup, BrowserNodeError>> {
@@ -484,6 +514,7 @@ export class BrowserNode implements INodeService {
         channelAddress: res.channel.channelAddress,
         transferId: (res.channel.latestUpdate.details as CreateUpdateDetails).transferId,
         transactionHash: res.transactionHash,
+        transaction: res.transaction,
       });
     } catch (e) {
       return Result.fail(e);

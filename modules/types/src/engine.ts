@@ -3,7 +3,8 @@ import { Balance, FullTransferState } from "./channel";
 import { EngineParams } from "./schemas";
 import { TransferName } from "./transferDefinitions";
 import { ChannelRpcMethod, ChannelRpcMethodsResponsesMap } from "./vectorProvider";
-import { TransactionEvent, TransactionEventMap, TransactionEvents } from "./event";
+import { TransactionEventMap, TransactionEvents } from "./event";
+import { MinimalTransaction } from "./chain";
 
 ///////////////////////////////////
 ////// Engine transfer types
@@ -89,7 +90,7 @@ export type WithdrawalCreatedPayload = {
 
 // Emitted when a withdrawal transfer is resolved
 export const WITHDRAWAL_RESOLVED_EVENT = "WITHDRAWAL_RESOLVED";
-export type WithdrawalResolvedPayload = WithdrawalCreatedPayload;
+export type WithdrawalResolvedPayload = WithdrawalCreatedPayload & { transaction: MinimalTransaction };
 
 // Emitted when withdrawal commitment is submitted to chain
 export const WITHDRAWAL_RECONCILED_EVENT = "WITHDRAWAL_RECONCILED";

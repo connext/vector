@@ -208,6 +208,72 @@ server.get<{ Params: NodeParams.GetChannelStateByParticipants }>(
   },
 );
 
+server.get<{ Params: NodeParams.GetWithdrawalCommitment }>(
+  "/:publicIdentifier/withdraw/transfer/:transferId",
+  {
+    schema: {
+      params: NodeParams.GetWithdrawalCommitmentSchema,
+      response: NodeResponses.GetWithdrawalCommitmentSchema,
+    },
+  },
+  async (request, reply) => {
+    const engine = getNode(request.params.publicIdentifier);
+    if (!engine) {
+      return reply
+        .status(400)
+        .send(
+          jsonifyError(
+            new ServerNodeError(ServerNodeError.reasons.NodeNotFound, request.params.publicIdentifier, request.params),
+          ),
+        );
+    }
+
+    const params = constructRpcRequest(ChannelRpcMethods.chan_getWithdrawalCommitment, {
+      transferId: request.params.transferId,
+    });
+    try {
+      const res = await engine.request<"chan_getWithdrawalCommitment">(params);
+      return reply.status(200).send(res);
+    } catch (e) {
+      logger.error({ error: jsonifyError(e) });
+      return reply.status(500).send(jsonifyError(e));
+    }
+  },
+);
+
+server.get<{ Params: NodeParams.GetWithdrawalCommitmentByTransactionHash }>(
+  "/:publicIdentifier/withdraw/transaction/:transactionHash",
+  {
+    schema: {
+      params: NodeParams.GetWithdrawalCommitmentByTransactionHashSchema,
+      response: NodeResponses.GetWithdrawalCommitmentByTransactionHashSchema,
+    },
+  },
+  async (request, reply) => {
+    const engine = getNode(request.params.publicIdentifier);
+    if (!engine) {
+      return reply
+        .status(400)
+        .send(
+          jsonifyError(
+            new ServerNodeError(ServerNodeError.reasons.NodeNotFound, request.params.publicIdentifier, request.params),
+          ),
+        );
+    }
+
+    const params = constructRpcRequest(ChannelRpcMethods.chan_getWithdrawalCommitmentByTransactionHash, {
+      transactionHash: request.params.transactionHash,
+    });
+    try {
+      const res = await engine.request<"chan_getWithdrawalCommitmentByTransactionHash">(params);
+      return reply.status(200).send(res);
+    } catch (e) {
+      logger.error({ error: jsonifyError(e) });
+      return reply.status(500).send(jsonifyError(e));
+    }
+  },
+);
+
 server.get<{ Params: NodeParams.GetTransferState }>(
   "/:publicIdentifier/transfers/:transferId",
   { schema: { params: NodeParams.GetTransferStateSchema } },
@@ -848,11 +914,14 @@ server.post<{ Body: NodeParams.Withdraw }>(
     }
     const rpc = constructRpcRequest(ChannelRpcMethods.chan_withdraw, request.body);
     try {
-      const { channel, transactionHash } = await engine.request<typeof ChannelRpcMethods.chan_withdraw>(rpc);
+      const { channel, transactionHash, transaction } = await engine.request<typeof ChannelRpcMethods.chan_withdraw>(
+        rpc,
+      );
       return reply.status(200).send({
         channelAddress: channel.channelAddress,
         transferId: (channel.latestUpdate.details as ResolveUpdateDetails).transferId,
         transactionHash,
+        transaction,
       } as NodeResponses.Withdraw);
     } catch (e) {
       logger.error({ error: jsonifyError(e) });

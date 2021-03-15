@@ -53,8 +53,6 @@ describe("MemoLock", () => {
       const array = [1, 2, 3, 4];
       await Promise.all(
         array.map(async (i) => {
-          // TODO: THIS IS NOT ACTUALLY CONCURRENT
-          // await delay(i);
           const lock = await module.acquireLock("foo");
           await delay(800);
           await module.releaseLock("foo", lock);

@@ -8,7 +8,7 @@ import {
   TransferNames,
   TransferQuote,
 } from "@connext/vector-types";
-import { BigNumber, providers, utils, Wallet } from "ethers";
+import { BigNumber, constants, providers, utils, Wallet } from "ethers";
 
 import { env } from "./env";
 import { getOnchainBalance } from "./ethereum";
@@ -248,6 +248,8 @@ export const transfer = async (
   const [senderCreate, receiverCreate] = await Promise.all([senderCreatePromise, receiverCreatePromise]);
   expect(senderCreate).to.be.ok;
   expect(receiverCreate).to.be.ok;
+  expect(senderCreate?.transfer.balance.amount).to.be.deep.eq([amount.toString(), "0"]);
+  expect(receiverCreate?.transfer.balance.amount).to.be.deep.eq([amountForwarded.toString(), "0"]);
 
   const receiverTransferRes = await receiver.getTransferByRoutingId({
     channelAddress: receiverChannel.channelAddress,
@@ -270,6 +272,7 @@ export const transfer = async (
   expect(resolveRes.getError()).to.not.be.ok;
   const receiverResolve = await receiverResolvePromise;
   expect(receiverResolve).to.be.ok;
+  expect(receiverResolve?.transfer.balance.amount).to.be.deep.eq(["0", amountForwarded.toString()]);
 
   const receiverChannelAfterResolve = (
     await receiver.getStateChannel({
@@ -293,6 +296,7 @@ export const withdraw = async (
   assetId: string,
   amount: BigNumber,
   withdrawRecipient: string,
+  initiatorSubmits: boolean = false,
 ): Promise<FullChannelState> => {
   // Get pre-withdraw channel balances
   const preWithdrawChannel = (await withdrawer.getStateChannel({ channelAddress })).getValue() as FullChannelState;
@@ -311,21 +315,37 @@ export const withdraw = async (
     channelAddress,
   });
   expect(quote.getError()).to.not.be.ok;
-  const amountWithdrawn = amount.sub(quote.getValue().fee);
+  const amountWithdrawn = amount.sub(initiatorSubmits ? 0 : quote.getValue().fee);
 
   // Perform withdrawal
-  const withdrawalRes = await withdrawer.withdraw({
+  const baseParams = {
     publicIdentifier: withdrawer.publicIdentifier,
     channelAddress,
     amount: amount.toString(),
     assetId,
     recipient: withdrawRecipient,
     meta: { reason: "Test withdrawal" },
-  });
+  };
+  const withdrawParams = initiatorSubmits ? { ...baseParams, initiatorSubmits } : { ...baseParams };
+  const resolvedPromise = withdrawer.waitFor(EngineEvents.WITHDRAWAL_RESOLVED, 30_000);
+  const withdrawalRes = await withdrawer.withdraw(withdrawParams);
+  const resolvedEvent = await resolvedPromise;
+  expect(resolvedEvent).to.be.ok;
   expect(withdrawalRes.getError()).to.be.undefined;
-  const { transactionHash } = withdrawalRes.getValue()!;
-  expect(transactionHash).to.be.ok;
-  await provider.waitForTransaction(transactionHash!);
+  if (initiatorSubmits) {
+    const { transaction } = withdrawalRes.getValue();
+    expect(transaction).to.be.ok;
+    expect({ ...resolvedEvent!.transaction, value: resolvedEvent!.transaction.value.toString() }).to.be.deep.eq(
+      transaction,
+    );
+    // submit to chain
+    const tx = await wallet1.sendTransaction({ to: transaction!.to, value: 0, data: transaction!.data });
+    await tx.wait();
+  } else {
+    const { transactionHash } = withdrawalRes.getValue()!;
+    expect(transactionHash).to.be.ok;
+    const receipt = await provider.waitForTransaction(transactionHash!);
+  }
 
   const postWithdrawChannel = (await withdrawer.getStateChannel({ channelAddress })).getValue()! as FullChannelState;
   const postWithdrawBalance = getBalanceForAssetId(postWithdrawChannel, assetId, withdrawerAliceOrBob);
@@ -336,7 +356,11 @@ export const withdraw = async (
   expect(BigNumber.from(preWithdrawCarol).sub(amount)).to.be.eq(postWithdrawBalance);
   // using gte here because roger could collateralize
   expect(postWithdrawMultisig.gte(BigNumber.from(preWithdrawMultisig).sub(amountWithdrawn))).to.be.true;
-  if (withdrawerAliceOrBob === "alice") {
+  if (
+    withdrawerAliceOrBob === "alice" &&
+    withdrawRecipient.toLowerCase() === preWithdrawChannel.alice.toLowerCase() &&
+    assetId === constants.AddressZero
+  ) {
     // use "above" because Alice sends withdrawal for Bob
     // TODO: calculate gas
     expect(postWithdrawRecipient).to.be.above(preWithdrawRecipient as any); // chai matchers arent getting this

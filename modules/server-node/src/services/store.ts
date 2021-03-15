@@ -219,7 +219,13 @@ const convertTransferEntityToFullTransferState = (
     channelNonce: transfer!.channelNonce,
     transferEncodings: transfer.createUpdate!.transferEncodings!.split("$"),
     transferId: transfer.createUpdate!.transferId!,
-    transferState: JSON.parse(transfer.createUpdate!.transferInitialState!),
+    transferState: {
+      balance: {
+        amount: [transfer.createUpdate!.transferAmountA!, transfer.createUpdate!.transferAmountB],
+        to: [transfer.createUpdate!.transferToA, transfer.createUpdate!.transferToB],
+      },
+      ...JSON.parse(transfer.createUpdate!.transferInitialState!),
+    },
     transferTimeout: transfer.createUpdate!.transferTimeout!,
     meta: transfer.createUpdate!.meta ? JSON.parse(transfer.createUpdate!.meta) : undefined,
     transferResolver: transfer.resolveUpdate?.transferResolver
@@ -1028,7 +1034,7 @@ export class PrismaStore implements IServerNodeStore {
       return undefined;
     }
 
-    // not ideal, but if the channel has been detatched we need to re-attach it separatedly... todo: use join queries
+    // not ideal, but if the channel has been detatched we need to re-attach it separatedly... todo: use join queries #430
     if (!transfer.channel) {
       const channel = await this.prisma.channel.findUnique({ where: { channelAddress: transfer.channelAddressId } });
       transfer.channel = channel;
@@ -1047,7 +1053,7 @@ export class PrismaStore implements IServerNodeStore {
       return undefined;
     }
 
-    // not ideal, but if the channel has been detatched we need to re-attach it separatedly... todo: use join queries
+    // not ideal, but if the channel has been detatched we need to re-attach it separatedly... todo: use join queries #430
     if (!transfer.channel) {
       const channel = await this.prisma.channel.findUnique({ where: { channelAddress: transfer.channelAddressId } });
       transfer.channel = channel;

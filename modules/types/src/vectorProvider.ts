@@ -1,3 +1,4 @@
+import { MinimalTransaction } from "./chain";
 import { FullTransferState, FullChannelState, ChainAddresses } from "./channel";
 import { ChainProviders } from "./network";
 import { EngineParams, NodeResponses } from "./schemas";
@@ -19,6 +20,8 @@ export const ChannelRpcMethods = {
   chan_getRegisteredTransfers: "chan_getRegisteredTransfers",
   chan_getTransferState: "chan_getTransferState",
   chan_getTransfers: "chan_getTransfers",
+  chan_getWithdrawalCommitment: "chan_getWithdrawalCommitment",
+  chan_getWithdrawalCommitmentByTransactionHash: "chan_getWithdrawalCommitmentByTransactionHash",
   chan_setup: "chan_setup",
   chan_sendIsAlive: "chan_sendIsAlive",
   chan_requestSetup: "chan_requestSetup",
@@ -57,6 +60,8 @@ export type ChannelRpcMethodsPayloadMap = {
   [ChannelRpcMethods.chan_getTransfers]: EngineParams.GetTransfers;
   [ChannelRpcMethods.chan_getRegisteredTransfers]: EngineParams.GetRegisteredTransfers;
   [ChannelRpcMethods.chan_getChannelStates]: {};
+  [ChannelRpcMethods.chan_getWithdrawalCommitment]: EngineParams.GetWithdrawalCommitment;
+  [ChannelRpcMethods.chan_getWithdrawalCommitmentByTransactionHash]: EngineParams.GetWithdrawalCommitmentByTransactionHash;
   [ChannelRpcMethods.chan_setup]: EngineParams.Setup;
   [ChannelRpcMethods.chan_requestSetup]: EngineParams.Setup;
   [ChannelRpcMethods.chan_deposit]: EngineParams.Deposit;
@@ -102,6 +107,8 @@ export type ChannelRpcMethodsResponsesMap = {
   [ChannelRpcMethods.chan_getTransfers]: FullTransferState[];
   [ChannelRpcMethods.chan_getTransferState]: FullTransferState | undefined;
   [ChannelRpcMethods.chan_getRegisteredTransfers]: RegisteredTransfer[];
+  [ChannelRpcMethods.chan_getWithdrawalCommitment]: NodeResponses.GetWithdrawalCommitment;
+  [ChannelRpcMethods.chan_getWithdrawalCommitmentByTransactionHash]: NodeResponses.GetWithdrawalCommitmentByTransactionHash;
   [ChannelRpcMethods.chan_setup]: FullChannelState;
   [ChannelRpcMethods.chan_requestSetup]: FullChannelState;
   [ChannelRpcMethods.chan_deposit]: FullChannelState;
@@ -109,7 +116,11 @@ export type ChannelRpcMethodsResponsesMap = {
   [ChannelRpcMethods.chan_createTransfer]: FullChannelState;
   [ChannelRpcMethods.chan_resolveTransfer]: FullChannelState;
   [ChannelRpcMethods.chan_restoreState]: FullChannelState;
-  [ChannelRpcMethods.chan_withdraw]: { channel: FullChannelState; transactionHash?: string };
+  [ChannelRpcMethods.chan_withdraw]: {
+    channel: FullChannelState;
+    transactionHash?: string;
+    transaction?: MinimalTransaction;
+  };
   [ChannelRpcMethods.chan_subscribe]: any;
   [ChannelRpcMethods.chan_unsubscribeAll]: any;
   [ChannelRpcMethods.connext_authenticate]: {

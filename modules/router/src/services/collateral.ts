@@ -414,7 +414,7 @@ export const requestCollateral = async (
   // check that funds actually made it into the channel
   // hard error here if not so that the sender can know that the transfer
   // will not properly get forwarded
-  // TODO: make depositRes include full channel state
+  // TODO: make depositRes include full channel state #395
   const depositRes = await node.reconcileDeposit(params);
   if (!depositRes.isError) {
     const postReconcile = await node.getStateChannel({ channelAddress: channel.channelAddress });

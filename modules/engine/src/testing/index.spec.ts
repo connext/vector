@@ -84,7 +84,7 @@ describe("VectorEngine", () => {
 
   // TODO: all methods should have tests that ensure every failure can be hit
   // below outlines only the most important (i.e. functions with the most
-  // complex logic within the index file of the module)
+  // complex logic within the index file of the module) #427
 
   // NOTE: these are nice-to-haves
 

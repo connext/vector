@@ -164,9 +164,8 @@ server.get("/ping", async () => {
   return "pong\n";
 });
 
-// TODO: the fastify plugin is not updated with the latest prom-client which supports async collect
-// in the meantime, we are implementing this ourselves
-// https://github.com/SkeLLLa/fastify-metrics/issues/21
+// TODO: use this endpoint to broadcast metrics via nats for
+// network level observability
 server.get("/metrics", async (request, response) => {
   const res = await register.metrics();
   return response.status(200).send(res);

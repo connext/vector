@@ -64,7 +64,7 @@ export async function validateUpdateParams<T extends UpdateType = any>(
     return handleError(ValidationError.reasons.ChannelNotFound);
   }
 
-  // TODO: add in resuming from dispute
+  // TODO: add in resuming from dispute #438
   if (previousState?.inDispute ?? false) {
     return handleError(ValidationError.reasons.InDispute);
   }
@@ -111,7 +111,7 @@ export async function validateUpdateParams<T extends UpdateType = any>(
         return handleError(ValidationError.reasons.InvalidChannelAddress);
       }
 
-      // TODO: should we validate the transfer registry somehow? (i.e. fetching transfers)
+      // TODO: should we validate the transfer registry somehow? (i.e. fetching transfers) #439
 
       // Make sure the timeout is valid:
       // - should be above min (24hrs)
@@ -131,7 +131,7 @@ export async function validateUpdateParams<T extends UpdateType = any>(
       }
 
       // TODO: ideally should only allow one channel per participant/chain set,
-      // but currently there is no store-service passed into this function
+      // but currently there is no store-service passed into this function #439
       break;
     }
 

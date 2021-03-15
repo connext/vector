@@ -16,6 +16,8 @@ import {
   TContractAddresses,
   TransferQuoteSchema,
   WithdrawalQuoteSchema,
+  TSignature,
+  TBytes,
 } from "./basic";
 
 ////////////////////////////////////////
@@ -228,6 +230,58 @@ const GetRegisteredTransfersResponseSchema = {
   ),
 };
 
+// GET WITHDRAWAL COMMITMENT
+const GetWithdrawalCommitmentParamsSchema = Type.Intersect([
+  EngineParams.GetWithdrawalCommitmentSchema,
+  Type.Object({ publicIdentifier: TPublicIdentifier }),
+]);
+
+const GetWithdrawalCommitmentResponseSchema = {
+  200: Type.Union([
+    Type.Undefined(),
+    Type.Object({
+      aliceSignature: Type.Optional(TSignature),
+      bobSignature: Type.Optional(TSignature),
+      channelAddress: TAddress,
+      alice: TAddress,
+      bob: TAddress,
+      recipient: TAddress,
+      assetId: TAddress,
+      amount: TIntegerString,
+      nonce: TIntegerString,
+      callTo: TAddress,
+      callData: TBytes,
+      transactionHash: Type.Optional(TBytes32),
+    }),
+  ]),
+};
+
+// GET WITHDRAWAL COMMITMENT BY HASH
+const GetWithdrawalCommitmentByTransactionHashParamsSchema = Type.Intersect([
+  EngineParams.GetWithdrawalCommitmentByTransactionHashSchema,
+  Type.Object({ publicIdentifier: TPublicIdentifier }),
+]);
+
+const GetWithdrawalCommitmentByTransactionHashResponseSchema = {
+  200: Type.Union([
+    Type.Undefined(),
+    Type.Object({
+      aliceSignature: Type.Optional(TSignature),
+      bobSignature: Type.Optional(TSignature),
+      channelAddress: TAddress,
+      alice: TAddress,
+      bob: TAddress,
+      recipient: TAddress,
+      assetId: TAddress,
+      amount: TIntegerString,
+      nonce: TIntegerString,
+      callTo: TAddress,
+      callData: TBytes,
+      transactionHash: Type.Optional(TBytes32),
+    }),
+  ]),
+};
+
 // REGISTER LISTENER
 const PostRegisterListenerBodySchema = Type.Object({
   publicIdentifier: TPublicIdentifier,
@@ -311,6 +365,11 @@ const PostWithdrawTransferResponseSchema = {
     channelAddress: TAddress,
     transferId: TBytes32,
     transactionHash: Type.Optional(TBytes32),
+    transaction: Type.Object({
+      to: TAddress,
+      value: TIntegerString,
+      data: Type.String(),
+    }),
   }),
 };
 
@@ -518,6 +577,12 @@ export namespace NodeParams {
   export const GetRegisteredTransfersSchema = GetRegisteredTransfersParamsSchema;
   export type GetRegisteredTransfers = Static<typeof GetRegisteredTransfersSchema>;
 
+  export const GetWithdrawalCommitmentSchema = GetWithdrawalCommitmentParamsSchema;
+  export type GetWithdrawalCommitment = Static<typeof GetWithdrawalCommitmentSchema>;
+
+  export const GetWithdrawalCommitmentByTransactionHashSchema = GetWithdrawalCommitmentByTransactionHashParamsSchema;
+  export type GetWithdrawalCommitmentByTransactionHash = Static<typeof GetWithdrawalCommitmentByTransactionHashSchema>;
+
   export const GetConfigSchema = Type.Object({});
   export type GetConfig = Static<typeof GetConfigSchema>;
 
@@ -633,6 +698,14 @@ export namespace NodeResponses {
 
   export const GetRegisteredTransfersSchema = GetRegisteredTransfersResponseSchema;
   export type GetRegisteredTransfers = Static<typeof GetRegisteredTransfersSchema["200"]>;
+
+  export const GetWithdrawalCommitmentSchema = GetWithdrawalCommitmentResponseSchema;
+  export type GetWithdrawalCommitment = Static<typeof GetWithdrawalCommitmentSchema["200"]>;
+
+  export const GetWithdrawalCommitmentByTransactionHashSchema = GetWithdrawalCommitmentByTransactionHashResponseSchema;
+  export type GetWithdrawalCommitmentByTransactionHash = Static<
+    typeof GetWithdrawalCommitmentByTransactionHashSchema["200"]
+  >;
 
   export const SetupSchema = PostSetupResponseSchema;
   export type Setup = Static<typeof SetupSchema["200"]>;

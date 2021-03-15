@@ -712,7 +712,7 @@ describe("validateUpdateParams", () => {
   });
 });
 
-// TODO: validUpdateParamsStub is not working
+// TODO: validUpdateParamsStub is not working #441
 describe.skip("validateParamsAndApplyUpdate", () => {
   // Test values
   const signer = getRandomChannelSigner();

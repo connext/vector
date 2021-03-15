@@ -228,7 +228,7 @@ describe(testName, () => {
         channelFactoryAddress: chainAddresses[chainId].channelFactoryAddress,
         chainId,
         transferEncodings: [stateEncoding, resolverEncoding],
-        transferState: initialState,
+        transferState: { balance, ...initialState },
         transferResolver: undefined,
         meta: { test: "meta" },
         inDispute: false,
@@ -363,7 +363,6 @@ describe(testName, () => {
         // Withdraw responder is alice, and she tried to submit tx
         const [channelState, minTx] = chainService.sendWithdrawTx.args[0];
         expect(channelState).to.be.deep.eq(updatedChannelState);
-        // TODO: stronger transaction assertions?
         expect(minTx).to.be.ok;
       }
 
@@ -481,7 +480,6 @@ describe(testName, () => {
       if (chainService.sendWithdrawTx.callCount) {
         const [channelState, minTx] = chainService.sendWithdrawTx.args[0];
         expect(channelState).to.be.deep.eq(updatedChannelState);
-        // TODO: stronger transaction assertions?
         expect(minTx).to.be.ok;
       }
     };

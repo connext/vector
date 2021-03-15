@@ -121,6 +121,28 @@ export class RestServerNodeService implements INodeService {
     return this.executeHttpRequest("config", "get", {}, NodeParams.GetConfigSchema);
   }
 
+  async getWithdrawalCommitment(
+    params: OptionalPublicIdentifier<NodeParams.GetWithdrawalCommitment>,
+  ): Promise<Result<NodeResponses.GetWithdrawalCommitment, ServerNodeServiceError>> {
+    return this.executeHttpRequest(
+      `${params.publicIdentifier ?? this.publicIdentifier}/withdraw/transfer/${params.transferId}`,
+      "get",
+      {},
+      NodeParams.GetWithdrawalCommitmentSchema,
+    );
+  }
+
+  async getWithdrawalCommitmentByTransactionHash(
+    params: OptionalPublicIdentifier<NodeParams.GetWithdrawalCommitmentByTransactionHash>,
+  ): Promise<Result<NodeResponses.GetWithdrawalCommitmentByTransactionHash, ServerNodeServiceError>> {
+    return this.executeHttpRequest(
+      `${params.publicIdentifier ?? this.publicIdentifier}/withdraw/transaction/${params.transactionHash}`,
+      "get",
+      {},
+      NodeParams.GetWithdrawalCommitmentByTransactionHashSchema,
+    );
+  }
+
   sendDisputeChannelTx(
     params: OptionalPublicIdentifier<NodeParams.SendDisputeChannelTx>,
   ): Promise<Result<NodeResponses.SendDisputeChannelTx, ServerNodeServiceError>> {

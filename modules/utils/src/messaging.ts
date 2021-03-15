@@ -120,7 +120,7 @@ export class NatsBasicMessagingService implements IBasicMessaging {
       });
       this.bearerToken = verifyResponse.data;
     }
-    // TODO: fail fast w sensible error message if bearer token is invalid
+    // TODO: fail fast w sensible error message if bearer token is invalid #446
     const service = natsServiceFactory(
       {
         bearerToken: this.bearerToken,
@@ -281,7 +281,6 @@ export class NatsBasicMessagingService implements IBasicMessaging {
     }
   }
 
-  // TODO: error typing
   protected async sendMessageWithRetries<T = any, R = any>(
     data: Result<T, any>,
     subjectSuffix: string,

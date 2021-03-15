@@ -22,6 +22,7 @@ import { normalizeGasFees } from "./utils";
 // fees in the toAssetId. Will *NOT* return an error if fees > amount
 export const calculateFeeAmount = async (
   transferAmount: BigNumber,
+  receiveExactAmount: boolean,
   fromAssetId: string,
   fromChannel: FullChannelState,
   toAssetId: string,
@@ -29,7 +30,7 @@ export const calculateFeeAmount = async (
   ethReader: IVectorChainReader,
   routerPublicIdentifier: string,
   logger: BaseLogger,
-): Promise<Result<BigNumber, FeeError>> => {
+): Promise<Result<{ fee: BigNumber; amount: BigNumber }, FeeError>> => {
   const method = "calculateFeeAmount";
   const methodId = getRandomBytes32();
   logger.info(
@@ -49,7 +50,7 @@ export const calculateFeeAmount = async (
   // If recipient is router, i.e. fromChannel ===  toChannel, then the
   // fee amount is 0 because no fees are taken without forwarding
   if (toChannel.channelAddress === fromChannel.channelAddress) {
-    return Result.ok(Zero);
+    return Result.ok({ fee: Zero, amount: transferAmount });
   }
 
   const fromChainId = fromChannel.networkContext.chainId;
@@ -76,12 +77,21 @@ export const calculateFeeAmount = async (
   );
   if (flatFee === "0" && percentageFee === 0 && gasSubsidyPercentage === 100) {
     // No fees configured
-    return Result.ok(Zero);
+    return Result.ok({ fee: Zero, amount: transferAmount });
   }
   const isSwap = fromChainId !== toChainId || fromAssetId !== toAssetId;
 
+  // Properly calculate the percentage fee / amount to send based on
+  // static (non-gas) fees:
+  // receivedAmt = [(100 - fee) * amt] / 100
+  // ie. fee = 20%, amt = 10, receivedAmt = (80 * 10) / 100 = 8
+  // If we want to set received as constant, you have
+  // (received * 100) / (100 - fee) = amt
+  // ie. fee = 20%, receivedAmt = 8, amt = (100 * 8) / (100 - 20) = 10
+
   // Calculate fees only on starting amount and update
-  const feeFromPercent = transferAmount.mul(percentageFee).div(100);
+  const amtToTransfer = receiveExactAmount ? transferAmount.mul(100).div(100 - percentageFee) : transferAmount;
+  const feeFromPercent = amtToTransfer.mul(percentageFee).div(100);
   const staticFees = feeFromPercent.add(flatFee);
   if (gasSubsidyPercentage === 100) {
     // gas is fully subsidized
@@ -96,7 +106,8 @@ export const calculateFeeAmount = async (
       },
       "Method complete, gas is subsidized",
     );
-    return Result.ok(staticFees);
+
+    return Result.ok({ fee: staticFees, amount: receiveExactAmount ? amtToTransfer.add(flatFee) : transferAmount });
   }
 
   logger.debug(
@@ -143,6 +154,16 @@ export const calculateFeeAmount = async (
     toAssetDecimals = await getDecimals(toChannel.networkContext.chainId.toString(), toAssetId);
     baseAssetToChainDecimals = await getDecimals(toChannel.networkContext.chainId.toString(), AddressZero);
   } catch (e) {
+    logger.error(
+      {
+        fromAssetDecimals,
+        baseAssetFromChainDecimals,
+        toAssetDecimals,
+        baseAssetToChainDecimals,
+        error: jsonifyError(e),
+      },
+      "Failed getting decimals",
+    );
     return Result.fail(
       new FeeError(FeeError.reasons.ExchangeRateError, {
         message: "Could not get decimals",
@@ -150,6 +171,7 @@ export const calculateFeeAmount = async (
         baseAssetFromChainDecimals,
         toAssetDecimals,
         baseAssetToChainDecimals,
+        error: jsonifyError(e),
       }),
     );
   }
@@ -248,7 +270,10 @@ export const calculateFeeAmount = async (
   );
 
   // returns the total fees applied to transfer
-  return Result.ok(totalFees);
+  return Result.ok({
+    fee: totalFees,
+    amount: receiveExactAmount ? amtToTransfer.add(flatFee).add(dynamic) : transferAmount,
+  });
 };
 
 // This function returns the cost in wei units. it is in the `normalize`

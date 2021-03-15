@@ -24,7 +24,10 @@ if [[ -n $VECTOR_DATABASE_URL ]]
 then
   echo "Using provided database url env var"
   if [[ "$VECTOR_DATABASE_URL" == sqlite://* ]]
-  then touch "${VECTOR_DATABASE_URL#sqlite://}"
+  then 
+    touch "${VECTOR_DATABASE_URL#sqlite://}"
+    schema="prisma-sqlite/schema.prisma"
+    cp prisma-sqlite/schema.prisma dist/schema.prisma
   fi
 
 elif [[ -n $VECTOR_PG_HOST ]]
@@ -57,6 +60,7 @@ fi
 ########################################
 # Launch it
 
+echo "Schema: $schema"
 echo "Running database migration"
 prisma --version
 prisma migrate deploy --preview-feature --schema "$schema"

@@ -81,8 +81,17 @@ describe(testName, () => {
       daveService,
       daveRogerPostSetup.channelAddress,
       assetId,
-      withdrawAmt.sub(transferQuote.fee),
+      withdrawAmt.sub(transferQuote.fee).div(2),
       Wallet.createRandom().address,
+    );
+    // bob withdraws
+    await withdraw(
+      daveService,
+      daveRogerPostSetup.channelAddress,
+      assetId,
+      withdrawAmt.sub(transferQuote.fee).div(2),
+      Wallet.createRandom().address,
+      true,
     );
   });
 
