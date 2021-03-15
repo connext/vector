@@ -1,4 +1,3 @@
-import { WithdrawCommitment } from "@connext/vector-contracts";
 import { Vector } from "@connext/vector-protocol";
 import { EXTRA_GAS_PRICE } from "@connext/vector-contracts";
 import {
@@ -29,7 +28,7 @@ import {
   jsonifyError,
   ChainError,
   MinimalTransaction,
-  WithdrawCommitmentJson,
+  WITHDRAWAL_RESOLVED_EVENT,
 } from "@connext/vector-types";
 import {
   generateMerkleTreeData,
@@ -545,6 +544,67 @@ export class VectorEngine implements IVectorEngine {
     return result;
   }
 
+  private async getWithdrawalCommitment(
+    params: EngineParams.GetWithdrawalCommitment,
+  ): Promise<
+    Result<ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_getWithdrawalCommitment], EngineError>
+  > {
+    const validate = ajv.compile(EngineParams.GetWithdrawalCommitmentSchema);
+    const valid = validate(params);
+    if (!valid) {
+      return Result.fail(
+        new RpcError(RpcError.reasons.InvalidParams, "", this.publicIdentifier, {
+          invalidParamsError: validate.errors?.map((e) => e.message).join(","),
+          invalidParams: params,
+        }),
+      );
+    }
+    const { transferId } = params;
+    try {
+      const result = await this.store.getWithdrawalCommitment(transferId);
+      return Result.ok(result);
+    } catch (e) {
+      return Result.fail(
+        new RpcError(RpcError.reasons.StoreMethodFailed, "", this.publicIdentifier, {
+          storeMethod: "getWithdrawalCommitment",
+          error: jsonifyError(e),
+        }),
+      );
+    }
+  }
+
+  private async getWithdrawalCommitmentByTransactionHash(
+    params: EngineParams.GetWithdrawalCommitmentByTransactionHash,
+  ): Promise<
+    Result<
+      ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_getWithdrawalCommitmentByTransactionHash],
+      EngineError
+    >
+  > {
+    const validate = ajv.compile(EngineParams.GetWithdrawalCommitmentByTransactionHashSchema);
+    const valid = validate(params);
+    if (!valid) {
+      return Result.fail(
+        new RpcError(RpcError.reasons.InvalidParams, "", this.publicIdentifier, {
+          invalidParamsError: validate.errors?.map((e) => e.message).join(","),
+          invalidParams: params,
+        }),
+      );
+    }
+    const { transactionHash } = params;
+    try {
+      const result = await this.store.getWithdrawalCommitmentByTransactionHash(transactionHash);
+      return Result.ok(result);
+    } catch (e) {
+      return Result.fail(
+        new RpcError(RpcError.reasons.StoreMethodFailed, "", this.publicIdentifier, {
+          storeMethod: "getWithdrawalCommitmentByTransactionHash",
+          error: jsonifyError(e),
+        }),
+      );
+    }
+  }
+
   private async setup(
     params: EngineParams.Setup,
   ): Promise<Result<ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_setup], VectorError>> {
@@ -918,39 +978,23 @@ export class VectorEngine implements IVectorEngine {
     let transaction: MinimalTransaction | undefined = undefined;
     const timeout = 90_000;
     try {
-      const event = await this.evts[WITHDRAWAL_RECONCILED_EVENT].attachOnce(
-        timeout,
-        (data) => data.channelAddress === params.channelAddress && data.transferId === transferId,
-      );
-      transactionHash = event.transactionHash;
+      const [resolved, reconciled] = await Promise.all([
+        this.evts[WITHDRAWAL_RESOLVED_EVENT].attachOnce(
+          timeout,
+          (data) => data.channelAddress === params.channelAddress && data.transfer.transferId === transferId,
+        ),
+        this.evts[WITHDRAWAL_RECONCILED_EVENT].attachOnce(
+          timeout,
+          (data) => data.channelAddress === params.channelAddress && data.transferId === transferId,
+        ),
+      ]);
+      transactionHash = reconciled.transactionHash;
+      transaction = resolved.transaction;
     } catch (e) {
       this.logger.warn(
         { channelAddress: params.channelAddress, transferId, timeout, initiatorSubmits },
         "Withdraw tx not processed properly",
       );
-    }
-
-    if (initiatorSubmits) {
-      let commitment: WithdrawCommitmentJson | undefined;
-      try {
-        // return the transaction hash
-        commitment = await this.store.getWithdrawalCommitment(transferId);
-      } catch (e) {
-        return Result.fail(
-          new RpcError(RpcError.reasons.StoreMethodFailed, channel.channelAddress, this.signer.publicIdentifier, {
-            storeMethod: "getWithdrawalCommitment",
-            error: e.message,
-          }),
-        );
-      }
-      if (!commitment) {
-        return Result.fail(
-          new RpcError(RpcError.reasons.EngineMethodFailure, channel.channelAddress, this.signer.publicIdentifier, {
-            message: "No commitment found for withdrawal",
-          }),
-        );
-      }
-      transaction = (await WithdrawCommitment.fromJson(commitment)).getSignedTransaction();
     }
 
     this.logger.info({ channel: res, method, methodId, transactionHash, transaction }, "Method complete");

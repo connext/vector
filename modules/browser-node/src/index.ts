@@ -384,6 +384,36 @@ export class BrowserNode implements INodeService {
     }
   }
 
+  async getWithdrawalCommitment(
+    params: OptionalPublicIdentifier<NodeParams.GetWithdrawalCommitment>,
+  ): Promise<Result<NodeResponses.GetWithdrawalCommitment, BrowserNodeError>> {
+    try {
+      const rpc = constructRpcRequest<"chan_getWithdrawalCommitment">(
+        ChannelRpcMethods.chan_getWithdrawalCommitment,
+        params,
+      );
+      const res = await this.channelProvider!.send(rpc);
+      return Result.ok(res);
+    } catch (e) {
+      return Result.fail(e);
+    }
+  }
+
+  async getWithdrawalCommitmentByTransactionHash(
+    params: OptionalPublicIdentifier<NodeParams.GetWithdrawalCommitmentByTransactionHash>,
+  ): Promise<Result<NodeResponses.GetWithdrawalCommitmentByTransactionHash, BrowserNodeError>> {
+    try {
+      const rpc = constructRpcRequest<"chan_getWithdrawalCommitmentByTransactionHash">(
+        ChannelRpcMethods.chan_getWithdrawalCommitmentByTransactionHash,
+        params,
+      );
+      const res = await this.channelProvider!.send(rpc);
+      return Result.ok(res);
+    } catch (e) {
+      return Result.fail(e);
+    }
+  }
+
   async setup(
     params: OptionalPublicIdentifier<NodeParams.RequestSetup>,
   ): Promise<Result<NodeResponses.RequestSetup, BrowserNodeError>> {
@@ -484,6 +514,7 @@ export class BrowserNode implements INodeService {
         channelAddress: res.channel.channelAddress,
         transferId: (res.channel.latestUpdate.details as CreateUpdateDetails).transferId,
         transactionHash: res.transactionHash,
+        transaction: res.transaction,
       });
     } catch (e) {
       return Result.fail(e);

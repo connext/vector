@@ -154,6 +154,16 @@ export const calculateFeeAmount = async (
     toAssetDecimals = await getDecimals(toChannel.networkContext.chainId.toString(), toAssetId);
     baseAssetToChainDecimals = await getDecimals(toChannel.networkContext.chainId.toString(), AddressZero);
   } catch (e) {
+    logger.error(
+      {
+        fromAssetDecimals,
+        baseAssetFromChainDecimals,
+        toAssetDecimals,
+        baseAssetToChainDecimals,
+        error: jsonifyError(e),
+      },
+      "Failed getting decimals",
+    );
     return Result.fail(
       new FeeError(FeeError.reasons.ExchangeRateError, {
         message: "Could not get decimals",
@@ -161,6 +171,7 @@ export const calculateFeeAmount = async (
         baseAssetFromChainDecimals,
         toAssetDecimals,
         baseAssetToChainDecimals,
+        error: jsonifyError(e),
       }),
     );
   }

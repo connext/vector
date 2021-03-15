@@ -2,6 +2,17 @@
 
 ## Next Release
 
+## 0.2.0
+
+- \[router\] Rebalance from Matic -> ETH Mainnet
+- \[node\] Add `from` to send transactions
+- \[contracts\] Deploy to lots of chains!
+
+## 0.2.0-beta.9
+
+- \[engine\] Add `transaction` to `WITHDRAWAL_RESOLVED` event
+- \[node\] Make `transaction` a non-optional return value
+
 ## 0.2.0-beta.8
 
 - \[engine, router\] Allow users to specify if they want to receive an exact amount when requesting a quote

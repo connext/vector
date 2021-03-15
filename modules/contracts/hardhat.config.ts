@@ -113,6 +113,41 @@ const config: HardhatUserConfig = {
       chainId: 56,
       url: urlOverride || "https://bsc-dataseed.binance.org/",
     },
+    hecotestnet: {
+      accounts: { mnemonic },
+      chainId: 256,
+      url: urlOverride || "https://http-testnet.hecochain.com",
+    },
+    heco: {
+      accounts: { mnemonic },
+      chainId: 128,
+      url: urlOverride || "https://http-mainnet.hecochain.com",
+    },
+    avalanchefuji: {
+      accounts: { mnemonic },
+      chainId: 43113,
+      url: urlOverride || "https://api.avax-test.network/ext/bc/C/rpc",
+    },
+    avalanche: {
+      accounts: { mnemonic },
+      chainId: 43114,
+      url: urlOverride || "https://api.avax.network/ext/bc/C/rpc",
+    },
+    fantomtestnet: {
+      accounts: { mnemonic },
+      chainId: 4002,
+      url: urlOverride || "https://rpc.testnet.fantom.network/",
+    },
+    fantom: {
+      accounts: { mnemonic },
+      chainId: 250,
+      url: urlOverride || "https://rpcapi.fantom.network",
+    },
+    moonbasealpha: {
+      accounts: { mnemonic },
+      chainId: 1287,
+      url: urlOverride || "https://rpc.testnet.moonbeam.network",
+    },
   },
 };
 

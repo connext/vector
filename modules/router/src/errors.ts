@@ -194,7 +194,9 @@ export class AutoRebalanceServiceError extends RouterError {
   static readonly reasons = {
     CouldNotGetAssetBalance: "Could not get asset balance",
     CouldNotCompleteApproval: "Could not complete approval",
+    CouldNotExecuteRebalance: "Could not execute rebalance",
     CouldNotCompleteRebalance: "Could not complete rebalance",
+    ExecutedWithoutHash: "Rebalance status is 'executed' but no execution hash found",
   } as const;
 
   readonly context: AutoRebalanceServiceErrorContext;

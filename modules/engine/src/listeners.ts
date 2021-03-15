@@ -881,35 +881,7 @@ async function handleWithdrawalTransferResolution(
     "Withdrawal info",
   );
 
-  // Post to evt
-  const assetIdx = assetIds.findIndex((a) => getAddress(a) === getAddress(assetId));
-  const payload: WithdrawalResolvedPayload = {
-    aliceIdentifier,
-    bobIdentifier,
-    assetId,
-    amount: withdrawalAmount.toString(),
-    fee: event.updatedTransfer.transferState.fee,
-    recipient: event.updatedTransfer.balance.to[0],
-    channelBalance: balances[assetIdx],
-    channelAddress,
-    transfer: event.updatedTransfer,
-    callTo: event.updatedTransfer.transferState.callTo,
-    callData: event.updatedTransfer.transferState.callData,
-  };
-  evts[EngineEvents.WITHDRAWAL_RESOLVED].post(payload);
-
-  // If it is not from counterparty, do not respond
-  if (fromIdentifier === signer.publicIdentifier) {
-    logger.debug(
-      { method, methodId, withdrawalAmount: withdrawalAmount.toString(), assetId },
-      "Our own resolution, no need to do anything",
-    );
-    return;
-  }
-
-  // Generate our own commitment, and save the double signed version
-  // NOTE: while generalized withdrawals are enabled, they have not been
-  // added to the engine parameters (standard withdrawals permitted only)
+  // Generate commitment, and save the double signed version
   const commitment = new WithdrawCommitment(
     channelAddress,
     alice,
@@ -926,6 +898,33 @@ async function handleWithdrawalTransferResolution(
     event.updatedTransfer.transferState.initiatorSignature,
     event.updatedTransfer.transferResolver!.responderSignature,
   );
+
+  // Post to evt
+  const assetIdx = assetIds.findIndex((a) => getAddress(a) === getAddress(assetId));
+  const payload: WithdrawalResolvedPayload = {
+    aliceIdentifier,
+    bobIdentifier,
+    assetId,
+    amount: withdrawalAmount.toString(),
+    fee: event.updatedTransfer.transferState.fee,
+    recipient: event.updatedTransfer.balance.to[0],
+    channelBalance: balances[assetIdx],
+    channelAddress,
+    transfer: event.updatedTransfer,
+    callTo: event.updatedTransfer.transferState.callTo,
+    callData: event.updatedTransfer.transferState.callData,
+    transaction: commitment.getSignedTransaction(),
+  };
+  evts[EngineEvents.WITHDRAWAL_RESOLVED].post(payload);
+
+  // If it is not from counterparty, do not respond
+  if (fromIdentifier === signer.publicIdentifier) {
+    logger.debug(
+      { method, methodId, withdrawalAmount: withdrawalAmount.toString(), assetId },
+      "Our own resolution, no need to do anything",
+    );
+    return;
+  }
 
   // Try to submit the transaction to chain IFF you are alice
   // Otherwise, alice should have submitted the tx (hash is in meta)

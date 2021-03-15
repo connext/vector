@@ -1,4 +1,4 @@
-import { NodeParams } from "@connext/vector-types";
+import { NodeParams, AllowedSwap } from "@connext/vector-types";
 
 import { PrismaClient } from "../generated/db-client";
 import { getConfig } from "../config";
@@ -31,7 +31,27 @@ export type RouterStoredUpdate<T extends RouterUpdateType> = {
   payload: RouterStoredUpdatePayload[T];
   status: RouterUpdateStatus;
 };
+
+export const RouterRebalanceStatus = {
+  APPROVED: "APPROVED",
+  COMPLETE: "COMPLETE",
+  EXECUTED: "EXECUTED",
+  // PROCESSING: "PROCESSING",
+} as const;
+export type RouterRebalanceStatus = keyof typeof RouterRebalanceStatus;
+
+export type RouterRebalanceRecord = {
+  id: string;
+  swap: AllowedSwap;
+  status: RouterRebalanceStatus;
+  approveHash?: string;
+  executeHash?: string;
+  completeHash?: string;
+  // createdAt
+  // updatedAt
+};
 export interface IRouterStore {
+  // QueuedUpdates store methods.
   getQueuedUpdates(
     channelAddress: string,
     statuses: RouterUpdateStatus[],
@@ -43,6 +63,8 @@ export interface IRouterStore {
     status?: RouterUpdateStatus,
   ): Promise<void>;
   setUpdateStatus(updateId: string, status: RouterUpdateStatus, context?: string): Promise<void>;
+  getLatestRebalance(swap: AllowedSwap): Promise<RouterRebalanceRecord | undefined>;
+  saveRebalance(record: RouterRebalanceRecord): Promise<void>;
 }
 export class PrismaStore implements IRouterStore {
   public prisma: PrismaClient;
@@ -108,6 +130,77 @@ export class PrismaStore implements IRouterStore {
       data: {
         status,
         context,
+      },
+    });
+  }
+
+  async getLatestRebalance(swap: AllowedSwap): Promise<RouterRebalanceRecord | undefined> {
+    return new Promise<RouterRebalanceRecord | undefined>((resolve, reject) => {
+      // Do we need the orderBy / findFirst ? According to schema, the query should result in only
+      // 1 unique entry being returned (if found).
+      this.prisma.autoRebalance
+        .findFirst({
+          orderBy: [
+            {
+              updatedAt: "desc",
+            },
+          ],
+          where: {
+            fromAssetId: swap.fromAssetId.toString(),
+            toAssetId: swap.toAssetId.toString(),
+            fromChainId: swap.fromChainId.toString(),
+            toChainId: swap.toChainId.toString(),
+          },
+        })
+        .then((result) => {
+          if (result) {
+            resolve({
+              id: result.id,
+              swap: swap,
+              status: result.status as RouterRebalanceStatus,
+              approveHash: result.approveHash ? result.approveHash : undefined,
+              executeHash: result.executeHash ? result.executeHash : undefined,
+              completeHash: result.completeHash ? result.completeHash : undefined,
+            });
+          }
+        })
+        .catch((error) => {
+          reject(error);
+        });
+    });
+  }
+
+  async saveRebalance(record: RouterRebalanceRecord): Promise<void> {
+    await this.prisma.autoRebalance.upsert({
+      where: {
+        id: record.id,
+      },
+      update: {
+        // Getting current time to mark 'updatedAt' time.
+        updatedAt: new Date(Date.now()),
+        // Core data updates:
+        status: record.status,
+        approveHash: record.approveHash,
+        executeHash: record.executeHash,
+        completeHash: record.completeHash,
+      },
+      create: {
+        id: record.id,
+        status: record.status,
+        approveHash: record.approveHash,
+        executeHash: record.executeHash,
+        completeHash: record.completeHash,
+        fromChainId: record.swap.fromChainId.toString(),
+        toChainId: record.swap.toChainId.toString(),
+        fromAssetId: record.swap.fromAssetId.toString(),
+        toAssetId: record.swap.toAssetId.toString(),
+        priceType: record.swap.priceType.toString(),
+        hardcodedRate: record.swap.hardcodedRate,
+        rebalancerUrl: record.swap.rebalancerUrl,
+        rebalanceThresholdPct: record.swap.rebalanceThresholdPct,
+        percentageFee: record.swap.percentageFee,
+        flatFee: record.swap.flatFee,
+        gasSubsidyPercentage: record.swap.gasSubsidyPercentage,
       },
     });
   }
