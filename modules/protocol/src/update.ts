@@ -19,6 +19,7 @@ import {
   CreateUpdateDetails,
   ResolveUpdateDetails,
   jsonifyError,
+  DEFAULT_TRANSFER_TIMEOUT,
 } from "@connext/vector-types";
 import { getAddress } from "@ethersproject/address";
 import { HashZero, AddressZero } from "@ethersproject/constants";
@@ -356,7 +357,7 @@ function generateSetupUpdate(
     balance: { to: participants, amount: ["0", "0"] },
     details: {
       networkContext: params.details.networkContext,
-      timeout: params.details.timeout,
+      timeout: params.details.timeout ? params.details.timeout : DEFAULT_TRANSFER_TIMEOUT.toString(),
       meta: params.details.meta ?? {},
     },
     assetId: AddressZero,
@@ -435,8 +436,9 @@ async function generateCreateUpdate(
   initiatorIdentifier: string,
 ): Promise<Result<ChannelUpdate<"create">, CreateUpdateError>> {
   const {
-    details: { assetId, transferDefinition, timeout, transferInitialState, meta, balance },
+    details: { assetId, transferDefinition, transferInitialState, meta, balance },
   } = params;
+  const timeout = params.details.timeout ? params.details.timeout : DEFAULT_TRANSFER_TIMEOUT.toString();
 
   // Creating a transfer is able to effect the following fields
   // on the channel state:

@@ -20,7 +20,7 @@ import {
 
 // Setup
 const SetupProtocolParamsSchema = Type.Object({
-  timeout: TIntegerString,
+  timeout: Type.Optional(TIntegerString),
   networkContext: TNetworkContext,
   counterpartyIdentifier: TPublicIdentifier,
   meta: Type.Optional(TBasicMeta),
@@ -40,7 +40,7 @@ const CreateProtocolParamsSchema = Type.Object({
   assetId: TAddress,
   transferDefinition: TAddress,
   transferInitialState: TransferStateSchema,
-  timeout: TIntegerString,
+  timeout: Type.Optional(TIntegerString),
   meta: Type.Optional(TBasicMeta),
 });
 
