@@ -29,6 +29,7 @@ import {
   ChainError,
   MinimalTransaction,
   WITHDRAWAL_RESOLVED_EVENT,
+  DEFAULT_CHANNEL_TIMEOUT,
 } from "@connext/vector-types";
 import {
   generateMerkleTreeData,
@@ -629,7 +630,7 @@ export class VectorEngine implements IVectorEngine {
 
     const setupRes = await this.vector.setup({
       counterpartyIdentifier: params.counterpartyIdentifier,
-      timeout: params.timeout,
+      timeout: params.timeout ?? DEFAULT_CHANNEL_TIMEOUT.toString(),
       networkContext: {
         channelFactoryAddress: this.chainAddresses[params.chainId].channelFactoryAddress,
         transferRegistryAddress: this.chainAddresses[params.chainId].transferRegistryAddress,

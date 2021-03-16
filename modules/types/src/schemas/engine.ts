@@ -112,7 +112,7 @@ const GetWithdrawalCommitmentByTransactionHashParamsSchema = Type.Object({
 const SetupEngineParamsSchema = Type.Object({
   counterpartyIdentifier: TPublicIdentifier,
   chainId: TChainId,
-  timeout: TIntegerString,
+  timeout: Type.Optional(TIntegerString),
   meta: Type.Optional(TBasicMeta),
 });
 
