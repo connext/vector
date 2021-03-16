@@ -2,7 +2,7 @@
 
 ## Next Release
 
-- \[engine, types\] Make timeout parameter optional for conditional transfer and withdraw
+- \[engine, types\] Make timeout parameter optional for setup, conditional transfer, and withdraw
 
 ## 0.2.0
 
