@@ -763,7 +763,7 @@ export class VectorEngine implements IVectorEngine {
       // This should be the message from *.reasons.BadSignatures in the protocol
       // errors
       const recoveryErr = "Could not recover signers";
-      const recoveryFailed = error.message === recoveryErr || error.context?.counterpartyError.message === recoveryErr;
+      const recoveryFailed = error.message === recoveryErr || error.context?.counterpartyError?.message === recoveryErr;
 
       if (!recoveryFailed) {
         break;
