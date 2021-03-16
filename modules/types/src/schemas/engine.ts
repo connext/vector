@@ -159,6 +159,7 @@ const WithdrawParamsSchema = Type.Object({
   amount: TIntegerString,
   assetId: TAddress,
   recipient: TAddress,
+  timeout: Type.Optional(TIntegerString),
   quote: Type.Optional(WithdrawalQuoteSchema),
   callTo: Type.Optional(TAddress),
   callData: Type.Optional(Type.String()),

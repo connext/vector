@@ -11,7 +11,6 @@ import {
   WithdrawalQuote,
   WithdrawalQuoteEncoding,
   FullTransferState,
-  DEFAULT_TRANSFER_TIMEOUT,
 } from "@connext/vector-types";
 import { defaultAbiCoder } from "@ethersproject/abi";
 import { keccak256 as solidityKeccak256, sha256 as soliditySha256 } from "@ethersproject/solidity";
@@ -20,11 +19,11 @@ export const getTransferId = (
   channelAddress: Address,
   channelNonce: string,
   transferDefinition: Address,
-  transferTimeout?: string,
+  transferTimeout: string,
 ): string =>
   solidityKeccak256(
     ["address", "address", "uint256", "uint256"],
-    [transferDefinition, channelAddress, transferTimeout ? transferTimeout : DEFAULT_TRANSFER_TIMEOUT, channelNonce],
+    [transferDefinition, channelAddress, transferTimeout, channelNonce],
   );
 
 export const encodeTransferState = (state: TransferState, encoding: string): string =>

@@ -183,7 +183,7 @@ export async function convertConditionalTransferParams(
     assetId,
     transferDefinition: definition,
     transferInitialState,
-    timeout: timeout || DEFAULT_TRANSFER_TIMEOUT.toString(),
+    timeout: timeout ?? DEFAULT_TRANSFER_TIMEOUT.toString(),
     meta: {
       ...(baseRoutingMeta ?? {}),
       ...(providedMeta ?? {}),
@@ -213,7 +213,7 @@ export async function convertWithdrawParams(
   chainReader: IVectorChainReader,
   messaging: IMessagingService,
 ): Promise<Result<CreateTransferParams, EngineError>> {
-  const { channelAddress, callTo, callData, meta } = params;
+  const { channelAddress, callTo, callData, meta, timeout } = params;
   const assetId = getAddress(params.assetId);
   const recipient = getAddress(params.recipient);
   const initiatorSubmits = params.initiatorSubmits ?? false;
@@ -385,7 +385,7 @@ export async function convertWithdrawParams(
     assetId,
     transferDefinition: definition,
     transferInitialState,
-    timeout: DEFAULT_TRANSFER_TIMEOUT.toString(),
+    timeout: timeout ?? DEFAULT_TRANSFER_TIMEOUT.toString(),
     // Note: we MUST include withdrawNonce in meta. The counterparty will NOT have the same nonce on their end otherwise.
     meta: {
       ...(meta ?? {}),
