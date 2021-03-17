@@ -114,17 +114,6 @@ export async function convertConditionalTransferParams(
         ),
       );
     }
-    const now = Date.now();
-    if (parseInt(quote.expiry) <= now) {
-      return Result.fail(
-        new ParameterConversionError(
-          ParameterConversionError.reasons.QuoteExpired,
-          channelAddress,
-          signer.publicIdentifier,
-          { params, quote, now },
-        ),
-      );
-    }
     const requireOnline = providedMeta?.requireOnline ?? true; // true by default
     baseRoutingMeta = {
       requireOnline,
@@ -293,18 +282,6 @@ export async function convertWithdrawParams(
         channelAddress,
         signer.publicIdentifier,
         { params, quote },
-      ),
-    );
-  }
-
-  const now = Date.now();
-  if (parseInt(quote.expiry) <= now) {
-    return Result.fail(
-      new ParameterConversionError(
-        ParameterConversionError.reasons.QuoteExpired,
-        channelAddress,
-        signer.publicIdentifier,
-        { params, quote, now },
       ),
     );
   }
