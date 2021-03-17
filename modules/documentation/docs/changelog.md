@@ -2,9 +2,12 @@
 
 ## Next Release
 
+- \[server-node, router\] Increase max `request.body` size on fastify servers
+
 ## 0.2.1-beta.0
 
 - \[engine\] Fix error handler bug
+
 ## 0.2.0
 
 - \[router\] Rebalance from Matic -> ETH Mainnet
