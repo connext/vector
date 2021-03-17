@@ -2,6 +2,10 @@
 
 ## Next Release
 
+## 0.2.1-beta.2
+
+- \[engine\] Remove time validation on engine
+
 ## 0.2.1-beta.1
 
 - \[server-node, router\] Increase max `request.body` size on fastify servers

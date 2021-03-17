@@ -226,33 +226,6 @@ describe("ParamConverter", () => {
       expect(messaging.sendTransferQuoteMessage.callCount).to.be.eq(0);
     });
 
-    it("should fail if quote is expired", async () => {
-      const params = generateParams();
-      const { channel: channelState } = createTestChannelState(UpdateType.deposit, {
-        channelAddress: params.channelAddress,
-        networkContext: {
-          ...chainAddresses[chainId],
-          chainId,
-          providerUrl,
-        },
-      });
-      params.quote = {
-        signature: undefined,
-        chainId,
-        routerIdentifier: channelState.aliceIdentifier,
-        amount: params.amount,
-        assetId: params.assetId,
-        recipient: params.recipient!,
-        recipientChainId: params.recipientChainId!,
-        recipientAssetId: params.recipientAssetId!,
-        fee: "0",
-        expiry: (Date.now() - 30_000).toString(),
-      };
-      const ret = await convertConditionalTransferParams(params, signerA, channelState, chainReader, messaging);
-      expect(ret.isError).to.be.true;
-      expect(ret.getError()?.message).to.be.eq(ParameterConversionError.reasons.QuoteExpired);
-    });
-
     it("should fail if quote.fee is larger than transfer amount", async () => {
       const params = generateParams();
       const { channel: channelState } = createTestChannelState(UpdateType.deposit, {
