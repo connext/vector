@@ -137,6 +137,22 @@ describe("VectorEngine", () => {
         error: "should be equal to one of the allowed values",
       },
       {
+        name: "chan_setup missing parameter timeout",
+        overrides: {
+          method: "chan_setup",
+          params: { chainId: 1, counterpartyIdentifier: counterpartyIdentifier }
+        },
+        error: "should not have required property 'timeout'",
+      },
+      {
+        name: "chan_requestSetup missing parameter timeout",
+        overrides: {
+          method: "chan_requestSetup",
+          params: { chainId: 1, counterpartyIdentifier: counterpartyIdentifier },
+        },
+        error: "should not have required property 'timeout'",
+      },
+      {
         name: "no request.method",
         overrides: { id: 1, jsonrpc: "2.0", method: undefined, params: {} },
         error: "should have required property 'method'",
@@ -384,11 +400,6 @@ describe("VectorEngine", () => {
           error: missingParam("counterpartyIdentifier"),
         },
         {
-          name: "chan_setup missing parameter timeout",
-          overrides: { method: "chan_setup", params: { chainId: 1, counterpartyIdentifier: counterpartyIdentifier } },
-          error: missingParam("timeout"),
-        },
-        {
           name: "chan_setup malformed parameter chainId",
           overrides: {
             method: "chan_setup",
@@ -424,14 +435,6 @@ describe("VectorEngine", () => {
           name: "chan_requestSetup missing parameter counterpartyIdentifier",
           overrides: { method: "chan_requestSetup", params: { chainId: 1, timeout: "1000" } },
           error: missingParam("counterpartyIdentifier"),
-        },
-        {
-          name: "chan_requestSetup missing parameter timeout",
-          overrides: {
-            method: "chan_requestSetup",
-            params: { chainId: 1, counterpartyIdentifier: counterpartyIdentifier },
-          },
-          error: missingParam("timeout"),
         },
         {
           name: "chan_requestSetup malformed parameter chainId",
