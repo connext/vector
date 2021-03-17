@@ -27,6 +27,17 @@
 @counterpartyPublicIdentifier = {{rogerPublicIdentifier}}
 @channel = {{carolRogerChannel}}
 
+@transactionHash = 0xa4ceb691a423c39f3382a776b8f7a10683a29bbf13374abd7713551df64611b6
+@transferId = 0x8985689ae3260ba9a3b1dd811cb6bc9c14251a2daeee38c776893113f8458881
+
+##############
+### Get By transferId
+GET {{nodeUrl}}/{{nodePublicIdentifier}}/withdraw/transfer/0x19c7bb0bd54f1426013b31c2a0327a8d75d348da3839d9ef2714076f3b06b3da
+
+##############
+### Get By transactionHash
+GET {{nodeUrl}}/{{nodePublicIdentifier}}/withdraw/transaction/{{transactionHash}}
+
 ##############
 ### Alice Withdraw
 POST {{nodeUrl}}/withdraw

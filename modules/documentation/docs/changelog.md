@@ -2,6 +2,20 @@
 
 ## Next Release
 
+## 0.2.1-beta.1
+
+- \[server-node, router\] Increase max `request.body` size on fastify servers
+
+## 0.2.1-beta.0
+
+- \[engine\] Fix error handler bug
+
+## 0.2.0
+
+- \[router\] Rebalance from Matic -> ETH Mainnet
+- \[node\] Add `from` to send transactions
+- \[contracts\] Deploy to lots of chains!
+
 ## 0.2.0-beta.9
 
 - \[engine\] Add `transaction` to `WITHDRAWAL_RESOLVED` event

@@ -17,3 +17,28 @@ model QueuedUpdate {
   status         String
   context        String?
 }
+
+model AutoRebalance {
+  id                      String  @id @default(uuid())
+  status                  String
+  approveHash             String?
+  executeHash             String?
+  completeHash            String?
+  
+  // Swap info
+  fromChainId             String
+  fromAssetId             String
+  toChainId               String
+  toAssetId               String
+  priceType               String
+  hardcodedRate           String
+  rebalancerUrl           String?
+  rebalanceThresholdPct   Int?
+  percentageFee           Int?
+  flatFee                 String?
+  gasSubsidyPercentage    Int?
+
+
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @default(now())
+}

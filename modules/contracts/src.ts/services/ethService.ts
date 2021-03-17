@@ -405,14 +405,15 @@ export class EthereumChainService extends EthereumChainReader implements IVector
     }
 
     this.log.info({ sender, method, methodId, channel: channelState.channelAddress }, "Sending withdraw tx to chain");
-    const gasEstimateRes = await this.estimateGas(channelState.networkContext.chainId, minTx);
+    const gasEstimateRes = await this.estimateGas(channelState.networkContext.chainId, { ...minTx, from: sender });
     if (gasEstimateRes.isError) {
       return Result.fail(gasEstimateRes.getError()!);
     }
     const _gas = gasEstimateRes.getValue();
     const gas = _gas.add(EXTRA_GAS);
+    this.log.info({ method, methodId, gas: gas.toString() }, "Estimated gas");
     return this.sendTxWithRetries(channelState.channelAddress, TransactionReason.withdraw, async () => {
-      return signer.sendTransaction({ ...minTx, gasPrice, gasLimit: gas });
+      return signer.sendTransaction({ ...minTx, gasPrice, gasLimit: gas, from: sender });
     }) as Promise<Result<TransactionResponse, ChainError>>;
   }
 
@@ -863,6 +864,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
     if (!signer?._isSigner) {
       return Result.fail(new ChainError(ChainError.reasons.SignerNotFound));
     }
+    const sender = await signer.getAddress();
 
     if (assetId === AddressZero) {
       return this.sendTxWithRetries(channelState.channelAddress, TransactionReason.depositB, () =>
@@ -872,6 +874,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
           value: BigNumber.from(amount),
           chainId: channelState.networkContext.chainId,
           gasPrice,
+          from: sender,
         }),
       ) as Promise<Result<TransactionResponse, ChainError>>;
     } else {

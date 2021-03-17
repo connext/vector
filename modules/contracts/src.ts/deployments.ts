@@ -194,3 +194,117 @@ const bscDeployment = {
 };
 deployments.bsc = bscDeployment;
 deployments["56"] = bscDeployment;
+
+////////////////////////////////////////
+// 256 - hecotestnet
+import * as hecotestnetChannelFactory from "../deployments/hecotestnet/ChannelFactory.json";
+import * as hecotestnetChannelMastercopy from "../deployments/hecotestnet/ChannelMastercopy.json";
+import * as hecotestnetHashlockTransfer from "../deployments/hecotestnet/HashlockTransfer.json";
+import * as hecotestnetTestToken from "../deployments/hecotestnet/TestToken.json";
+import * as hecotestnetTransferRegistry from "../deployments/hecotestnet/TransferRegistry.json";
+import * as hecotestnetWithdraw from "../deployments/hecotestnet/Withdraw.json";
+const hecotestnetDeployment = {
+  ChannelFactory: hecotestnetChannelFactory,
+  ChannelMastercopy: hecotestnetChannelMastercopy,
+  HashlockTransfer: hecotestnetHashlockTransfer,
+  TestToken: hecotestnetTestToken,
+  TransferRegistry: hecotestnetTransferRegistry,
+  Withdraw: hecotestnetWithdraw,
+};
+deployments.hecotestnet = hecotestnetDeployment;
+deployments["256"] = hecotestnetDeployment;
+
+////////////////////////////////////////
+// 128 - heco
+import * as hecoChannelFactory from "../deployments/heco/ChannelFactory.json";
+import * as hecoChannelMastercopy from "../deployments/heco/ChannelMastercopy.json";
+import * as hecoHashlockTransfer from "../deployments/heco/HashlockTransfer.json";
+import * as hecoTestToken from "../deployments/heco/TestToken.json";
+import * as hecoTransferRegistry from "../deployments/heco/TransferRegistry.json";
+import * as hecoWithdraw from "../deployments/heco/Withdraw.json";
+const hecoDeployment = {
+  ChannelFactory: hecoChannelFactory,
+  ChannelMastercopy: hecoChannelMastercopy,
+  HashlockTransfer: hecoHashlockTransfer,
+  TestToken: hecoTestToken,
+  TransferRegistry: hecoTransferRegistry,
+  Withdraw: hecoWithdraw,
+};
+deployments.heco = hecoDeployment;
+deployments["128"] = hecoDeployment;
+
+////////////////////////////////////////
+// 43113 - avalanchefuji
+import * as avalanchefujiChannelFactory from "../deployments/avalanchefuji/ChannelFactory.json";
+import * as avalanchefujiChannelMastercopy from "../deployments/avalanchefuji/ChannelMastercopy.json";
+import * as avalanchefujiHashlockTransfer from "../deployments/avalanchefuji/HashlockTransfer.json";
+import * as avalanchefujiTestToken from "../deployments/avalanchefuji/TestToken.json";
+import * as avalanchefujiTransferRegistry from "../deployments/avalanchefuji/TransferRegistry.json";
+import * as avalanchefujiWithdraw from "../deployments/avalanchefuji/Withdraw.json";
+const avalanchefujiDeployment = {
+  ChannelFactory: avalanchefujiChannelFactory,
+  ChannelMastercopy: avalanchefujiChannelMastercopy,
+  HashlockTransfer: avalanchefujiHashlockTransfer,
+  TestToken: avalanchefujiTestToken,
+  TransferRegistry: avalanchefujiTransferRegistry,
+  Withdraw: avalanchefujiWithdraw,
+};
+deployments.avalanchefuji = avalanchefujiDeployment;
+deployments["43113"] = avalanchefujiDeployment;
+
+////////////////////////////////////////
+// 43114 - avalanche
+import * as avalancheChannelFactory from "../deployments/avalanche/ChannelFactory.json";
+import * as avalancheChannelMastercopy from "../deployments/avalanche/ChannelMastercopy.json";
+import * as avalancheHashlockTransfer from "../deployments/avalanche/HashlockTransfer.json";
+import * as avalancheTestToken from "../deployments/avalanche/TestToken.json";
+import * as avalancheTransferRegistry from "../deployments/avalanche/TransferRegistry.json";
+import * as avalancheWithdraw from "../deployments/avalanche/Withdraw.json";
+const avalancheDeployment = {
+  ChannelFactory: avalancheChannelFactory,
+  ChannelMastercopy: avalancheChannelMastercopy,
+  HashlockTransfer: avalancheHashlockTransfer,
+  TestToken: avalancheTestToken,
+  TransferRegistry: avalancheTransferRegistry,
+  Withdraw: avalancheWithdraw,
+};
+deployments.avalanche = avalancheDeployment;
+deployments["43114"] = avalancheDeployment;
+
+////////////////////////////////////////
+// 250 - fantom
+import * as fantomChannelFactory from "../deployments/fantom/ChannelFactory.json";
+import * as fantomChannelMastercopy from "../deployments/fantom/ChannelMastercopy.json";
+import * as fantomHashlockTransfer from "../deployments/fantom/HashlockTransfer.json";
+import * as fantomTestToken from "../deployments/fantom/TestToken.json";
+import * as fantomTransferRegistry from "../deployments/fantom/TransferRegistry.json";
+import * as fantomWithdraw from "../deployments/fantom/Withdraw.json";
+const fantomDeployment = {
+  ChannelFactory: fantomChannelFactory,
+  ChannelMastercopy: fantomChannelMastercopy,
+  HashlockTransfer: fantomHashlockTransfer,
+  TestToken: fantomTestToken,
+  TransferRegistry: fantomTransferRegistry,
+  Withdraw: fantomWithdraw,
+};
+deployments.fantom = fantomDeployment;
+deployments["250"] = fantomDeployment;
+
+////////////////////////////////////////
+// 1287 - moonbasealpha
+import * as moonbasealphaChannelFactory from "../deployments/moonbasealpha/ChannelFactory.json";
+import * as moonbasealphaChannelMastercopy from "../deployments/moonbasealpha/ChannelMastercopy.json";
+import * as moonbasealphaHashlockTransfer from "../deployments/moonbasealpha/HashlockTransfer.json";
+import * as moonbasealphaTestToken from "../deployments/moonbasealpha/TestToken.json";
+import * as moonbasealphaTransferRegistry from "../deployments/moonbasealpha/TransferRegistry.json";
+import * as moonbasealphaWithdraw from "../deployments/moonbasealpha/Withdraw.json";
+const moonbasealphaDeployment = {
+  ChannelFactory: moonbasealphaChannelFactory,
+  ChannelMastercopy: moonbasealphaChannelMastercopy,
+  HashlockTransfer: moonbasealphaHashlockTransfer,
+  TestToken: moonbasealphaTestToken,
+  TransferRegistry: moonbasealphaTransferRegistry,
+  Withdraw: moonbasealphaWithdraw,
+};
+deployments.moonbasealpha = moonbasealphaDeployment;
+deployments["1287"] = moonbasealphaDeployment;
