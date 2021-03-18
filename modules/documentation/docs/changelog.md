@@ -4,6 +4,18 @@
 
 - \[engine, types\] Make timeout parameter optional for setup, conditional transfer, and withdraw
 
+## 0.2.1-beta.2
+
+- \[engine\] Remove time validation on engine
+
+## 0.2.1-beta.1
+
+- \[server-node, router\] Increase max `request.body` size on fastify servers
+
+## 0.2.1-beta.0
+
+- \[engine\] Fix error handler bug
+
 ## 0.2.0
 
 - \[router\] Rebalance from Matic -> ETH Mainnet

@@ -104,7 +104,6 @@ export class ParameterConversionError extends EngineError {
     CouldNotSignWithdrawal: "Failed to sign withdrawal commitment",
     FailedToGetRegisteredTransfer: "Could not get transfer registry information",
     FeeGreaterThanAmount: "Fees charged are greater than amount",
-    QuoteExpired: "Provided quote has expired",
     NoOp: "Cannot create withdrawal with 0 amount and no call",
     WithdrawToZero: "Cannot withdraw to AddressZero",
   } as const;

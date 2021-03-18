@@ -109,7 +109,12 @@ const signer = new ChannelSigner(Wallet.fromMnemonic(config.mnemonic).privateKey
 
 const logger = pino({ name: signer.publicIdentifier });
 logger.info("Loaded config from environment");
-const server = fastify({ logger, pluginTimeout: 300_000, disableRequestLogging: config.logLevel !== "debug" });
+const server = fastify({
+  logger,
+  pluginTimeout: 300_000,
+  disableRequestLogging: config.logLevel !== "debug",
+  bodyLimit: 10485760,
+});
 
 collectDefaultMetrics({ prefix: "router_" });
 
