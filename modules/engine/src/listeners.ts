@@ -36,6 +36,7 @@ import {
   WithdrawalQuote,
   IVectorStore,
   DEFAULT_FEE_EXPIRY,
+  DEFAULT_CHANNEL_TIMEOUT,
 } from "@connext/vector-types";
 import {
   getRandomBytes32,
@@ -380,7 +381,7 @@ export async function setupEngineListeners(
     const res = await setup({
       chainId: setupInfo.chainId,
       counterpartyIdentifier: from,
-      timeout: setupInfo.timeout,
+      timeout: setupInfo.timeout ?? DEFAULT_CHANNEL_TIMEOUT.toString(),
       meta: setupInfo.meta,
     });
     await messaging.respondToSetupMessage(
