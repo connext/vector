@@ -36,6 +36,7 @@
     "fastify-oas": "3.0.8",
     "pg": "8.5.1",
     "pino": "6.11.1",
+    "p-queue": "6.6.2",
     "regenerator-runtime": "0.13.7",
     "sqlite3": "5.0.2",
     "prom-client": "13.1.0"
