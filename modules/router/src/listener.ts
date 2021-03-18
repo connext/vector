@@ -161,7 +161,7 @@ export async function setupListeners(
       chainId,
     });
     if (data.receipt) {
-      gasConsumed.set(
+      gasConsumed.inc(
         { chainId, reason: data.reason },
         await parseBalanceToNumber(data.receipt.cumulativeGasUsed, chainId!.toString(), AddressZero),
       );
