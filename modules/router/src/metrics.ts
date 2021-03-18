@@ -165,6 +165,16 @@ export const feesCollected = new Counter({
   labelNames: ["assetId", "chainId"] as const,
 });
 
+// Track fees charged on transfers in eth where possible
+// NOTE: it is only possible to calculate fees when one of
+// the sides of the swap touches mainnet. Otherwise, we cannot
+// get the token:eth exchange rate to normalize the fees.
+export const mainnetFeesCollectedInEth = new Counter({
+  name: "router_mainnet_eth_fees",
+  help: "router_mainnet_eth_fees_help",
+  labelNames: ["assetId", "chainId"] as const,
+});
+
 //////////////////////////
 ///// Transaction metrics
 // Track on chain transactions attempts
@@ -189,8 +199,15 @@ export const transactionFailed = new Counter({
 });
 
 // Track gas consumed
-export const gasConsumed = new Gauge({
+export const gasConsumed = new Counter({
   name: "router_gas_consumed",
   help: "router_gas_consumed_help",
+  labelNames: ["reason", "chainId"] as const,
+});
+
+// Track gas consumed on mainnet in eth
+export const mainnetGasCost = new Counter({
+  name: "router_mainnet_gas_cost",
+  help: "router_mainnet_gas_cost_help",
   labelNames: ["reason", "chainId"] as const,
 });
