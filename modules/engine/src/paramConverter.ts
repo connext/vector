@@ -6,6 +6,7 @@ import {
   FullChannelState,
   Result,
   DEFAULT_TRANSFER_TIMEOUT,
+  DEFAULT_CHANNEL_TIMEOUT,
   FullTransferState,
   WithdrawState,
   EngineParams,
@@ -19,12 +20,29 @@ import {
   jsonifyError,
   IMessagingService,
   DEFAULT_FEE_EXPIRY,
+  SetupParams,
 } from "@connext/vector-types";
 import { BigNumber } from "@ethersproject/bignumber";
 import { AddressZero } from "@ethersproject/constants";
 import { getAddress } from "@ethersproject/address";
 
 import { ParameterConversionError } from "./errors";
+
+export async function convertSetupParams(
+  params: EngineParams.Setup,
+  chainAddresses: ChainAddresses
+): Promise<Result<SetupParams>> {
+  return Result.ok({
+    counterpartyIdentifier: params.counterpartyIdentifier,
+    timeout: params.timeout ?? DEFAULT_CHANNEL_TIMEOUT.toString(),
+    networkContext: {
+      channelFactoryAddress: chainAddresses[params.chainId].channelFactoryAddress,
+      transferRegistryAddress: chainAddresses[params.chainId].transferRegistryAddress,
+      chainId: params.chainId,
+    },
+    meta: params.meta,
+  });
+}
 
 export async function convertConditionalTransferParams(
   params: EngineParams.ConditionalTransfer,

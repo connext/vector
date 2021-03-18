@@ -49,6 +49,7 @@ import { DisputeError, IsAliveError, RestoreError, RpcError } from "./errors";
 import {
   convertConditionalTransferParams,
   convertResolveConditionParams,
+  convertSetupParams,
   convertWithdrawParams,
 } from "./paramConverter";
 import { setupEngineListeners } from "./listeners";
@@ -628,16 +629,11 @@ export class VectorEngine implements IVectorEngine {
       return Result.fail(chainProviders.getError()!);
     }
 
-    const setupRes = await this.vector.setup({
-      counterpartyIdentifier: params.counterpartyIdentifier,
-      timeout: params.timeout ?? DEFAULT_CHANNEL_TIMEOUT.toString(),
-      networkContext: {
-        channelFactoryAddress: this.chainAddresses[params.chainId].channelFactoryAddress,
-        transferRegistryAddress: this.chainAddresses[params.chainId].transferRegistryAddress,
-        chainId: params.chainId,
-      },
-      meta: params.meta,
-    });
+    const setupParamsResult = await convertSetupParams(params, this.chainAddresses);
+    if (setupParamsResult.isError) {
+      return Result.fail(setupParamsResult.getError()!);
+    }
+    const setupRes = await this.vector.setup(setupParamsResult.getValue());
 
     if (setupRes.isError) {
       return Result.fail(setupRes.getError()!);
