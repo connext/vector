@@ -1,6 +1,6 @@
 {
   "name": "@connext/vector-engine",
-  "version": "0.2.1-beta.3",
+  "version": "0.2.1-beta.4",
   "description": "",
   "author": "Arjun Bhuptani",
   "license": "MIT",
@@ -14,10 +14,10 @@
     "test": "nyc ts-mocha --check-leaks --exit --timeout 60000 'src/**/*.spec.ts'"
   },
   "dependencies": {
-    "@connext/vector-contracts": "0.2.1-beta.3",
-    "@connext/vector-protocol": "0.2.1-beta.3",
-    "@connext/vector-types": "0.2.1-beta.3",
-    "@connext/vector-utils": "0.2.1-beta.3",
+    "@connext/vector-contracts": "0.2.1-beta.4",
+    "@connext/vector-protocol": "0.2.1-beta.4",
+    "@connext/vector-types": "0.2.1-beta.4",
+    "@connext/vector-utils": "0.2.1-beta.4",
     "@ethersproject/address": "5.0.10",
     "@ethersproject/bignumber": "5.0.14",
     "@ethersproject/bytes": "5.0.10",
