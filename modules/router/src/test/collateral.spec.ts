@@ -60,6 +60,41 @@ describe(testName, () => {
   describe("justInTimeCollateral", () => {
     const transferAmount = parseEther("0.001");
 
+    afterEach(() => {
+      Sinon.restore();
+      Sinon.reset();
+    });
+
+    it("should fail if it cannot get the channel", async () => {
+      node.getStateChannel.resolves(Result.fail(new ChainError("fail") as any));
+      const res = await justInTimeCollateral(
+        mkAddress("0xccc"),
+        AddressZero,
+        routerPublicIdentifier,
+        node as INodeService,
+        chainReader,
+        log,
+        transferAmount.toString(),
+      );
+      expect(res.getError()!.message).to.be.eq(CollateralError.reasons.ChannelNotFound);
+      expect(node.sendDepositTx.callCount).to.be.eq(0);
+    });
+
+    it("should fail if the channel is undefined", async () => {
+      node.getStateChannel.resolves(Result.ok(undefined));
+      const res = await justInTimeCollateral(
+        mkAddress("0xccc"),
+        AddressZero,
+        routerPublicIdentifier,
+        node as INodeService,
+        chainReader,
+        log,
+        transferAmount.toString(),
+      );
+      expect(res.getError()!.message).to.be.eq(CollateralError.reasons.ChannelNotFound);
+      expect(node.sendDepositTx.callCount).to.be.eq(0);
+    });
+
     it("should do nothing if there is sufficient balance for payment", async () => {
       const { channel } = createTestChannelState(UpdateType.deposit, {
         alice: mkAddress("0xaaa"),
@@ -67,8 +102,9 @@ describe(testName, () => {
         assetIds: [AddressZero],
         balances: [{ to: [mkAddress("0xaaa"), mkAddress("0xbbb")], amount: [transferAmount.mul(3).toString(), "0"] }],
       });
+      node.getStateChannel.resolves(Result.ok(channel));
       const res = await justInTimeCollateral(
-        channel,
+        channel.channelAddress,
         AddressZero,
         routerPublicIdentifier,
         node as INodeService,
@@ -87,8 +123,9 @@ describe(testName, () => {
         alice: mkAddress("0xaaa"),
         aliceIdentifier: routerPublicIdentifier,
       });
+      node.getStateChannel.resolves(Result.ok(channel));
       const res = await justInTimeCollateral(
-        channel,
+        channel.channelAddress,
         AddressZero,
         routerPublicIdentifier,
         node as INodeService,
@@ -107,7 +144,8 @@ describe(testName, () => {
         assetIds: [AddressZero],
         balances: [{ to: [mkAddress("0xaaa"), mkAddress("0xbbb")], amount: ["0", "0"] }],
       });
-      node.getStateChannel.resolves(
+      node.getStateChannel.onCall(0).resolves(Result.ok(channel));
+      node.getStateChannel.onCall(1).resolves(
         Result.ok({
           ...channel,
           balances: [
@@ -119,7 +157,7 @@ describe(testName, () => {
         }),
       );
       const res = await justInTimeCollateral(
-        channel,
+        channel.channelAddress,
         AddressZero,
         routerPublicIdentifier,
         node as INodeService,
@@ -149,7 +187,8 @@ describe(testName, () => {
       const profile = { ...ethProfile, target: "0" };
       getRebalanceProfile.returns(Result.ok(profile));
 
-      node.getStateChannel.resolves(
+      node.getStateChannel.onCall(0).resolves(Result.ok(channel));
+      node.getStateChannel.onCall(1).resolves(
         Result.ok({
           ...channel,
           balances: [
@@ -162,7 +201,7 @@ describe(testName, () => {
       );
 
       const res = await justInTimeCollateral(
-        channel,
+        channel.channelAddress,
         AddressZero,
         routerPublicIdentifier,
         node as INodeService,
