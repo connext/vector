@@ -124,7 +124,7 @@ export class ForwardTransferResolutionError extends RouterError {
 
   static readonly reasons = {
     IncomingChannelNotFound: "Incoming channel for transfer not found",
-    ErrorResolvingTransfer: "Error resolving tranfer",
+    ErrorResolvingTransfer: "Error resolving transfer",
   } as const;
 
   readonly context: ForwardTransferResolutionErrorContext;
