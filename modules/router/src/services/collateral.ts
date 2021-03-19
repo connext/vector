@@ -7,6 +7,7 @@ import {
   jsonifyError,
 } from "@connext/vector-types";
 import { getBalanceForAssetId, getRandomBytes32, getParticipant } from "@connext/vector-utils";
+import { waitForTransaction } from "@connext/vector-contracts";
 import { getAddress } from "@ethersproject/address";
 import { BigNumber } from "@ethersproject/bignumber";
 import { BaseLogger } from "pino";
@@ -375,8 +376,8 @@ export const requestCollateral = async (
 
     const tx = txRes.getValue();
     logger.info({ method, methodId, txHash: tx.txHash }, "Submitted deposit tx");
-    const receipt = await provider.waitForTransaction(tx.txHash);
-    if (receipt.status === 0) {
+    const receipt = await waitForTransaction(provider, tx.txHash);
+    if (receipt.isError) {
       return Result.fail(
         new CollateralError(
           CollateralError.reasons.UnableToCollateralize,
@@ -385,14 +386,13 @@ export const requestCollateral = async (
           profile,
           requestedAmount,
           {
-            receipt,
-            error: "Tx reverted",
+            error: jsonifyError(receipt.getError()!),
           },
         ),
       );
     }
     logger.info({ method, methodId, txHash: tx.txHash }, "Tx mined");
-    logger.debug({ method, methodId, txHash: tx.txHash, logs: receipt.logs }, "Tx mined");
+    logger.debug({ method, methodId, txHash: tx.txHash, logs: receipt.getValue().logs }, "Tx mined");
   } else {
     logger.info(
       {

@@ -29,7 +29,7 @@ import {
 import { Signer } from "@ethersproject/abstract-signer";
 import { BigNumber } from "@ethersproject/bignumber";
 import { Contract } from "@ethersproject/contracts";
-import { JsonRpcProvider, TransactionResponse } from "@ethersproject/providers";
+import { JsonRpcProvider, TransactionReceipt, TransactionResponse } from "@ethersproject/providers";
 import { keccak256 } from "@ethersproject/keccak256";
 import { Wallet } from "@ethersproject/wallet";
 import { BaseLogger } from "pino";
@@ -46,6 +46,22 @@ import { EthereumChainReader } from "./ethReader";
 export const EXTRA_GAS_PRICE = parseUnits("20", "gwei");
 export const EXTRA_GAS = 50_000;
 
+export const waitForTransaction = async (
+  provider: JsonRpcProvider,
+  transactionHash: string,
+  confirmations?: number,
+  timeout?: number,
+): Promise<Result<TransactionReceipt, ChainError>> => {
+  try {
+    const receipt = await provider.waitForTransaction(transactionHash, confirmations, timeout);
+    if (receipt.status === 0) {
+      return Result.fail(new ChainError(ChainError.reasons.TxReverted, { receipt }));
+    }
+    return Result.ok(receipt);
+  } catch (e) {
+    return Result.fail(e);
+  }
+};
 export class EthereumChainService extends EthereumChainReader implements IVectorChainService {
   private signers: Map<number, Signer> = new Map();
   private queue: PriorityQueue = new PriorityQueue({ concurrency: 1 });
