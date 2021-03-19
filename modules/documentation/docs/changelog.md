@@ -3,6 +3,7 @@
 ## Next Release
 
 - \[router\] Create queues for transfer creation races
+- \[engine, types\] Make timeout parameter optional for setup, conditional transfer, and withdraw
 
 ## 0.2.1-beta.2
 
