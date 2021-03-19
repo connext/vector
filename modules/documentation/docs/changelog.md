@@ -2,6 +2,8 @@
 
 ## Next Release
 
+- \[router\] Create queues for transfer creation races
+
 ## 0.2.1-beta.2
 
 - \[engine\] Remove time validation on engine
