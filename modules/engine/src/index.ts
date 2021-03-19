@@ -680,9 +680,9 @@ export class VectorEngine implements IVectorEngine {
     }
     const tx = deployRes.getValue();
     this.logger.info({ chainId: channel.networkContext.chainId, hash: tx.hash }, "Deploy tx broadcast");
-    const receipt = await tx.wait();
-    if (receipt.status === 0) {
-      return Result.fail(new ChainError(ChainError.reasons.TxReverted, { receipt }));
+    const receipt = await tx.completed();
+    if (receipt.isError) {
+      return Result.fail(receipt.getError()!)
     }
     this.logger.debug({ chainId: channel.networkContext.chainId, hash: tx.hash }, "Deploy tx mined");
     this.logger.info(

@@ -2,6 +2,8 @@
 
 ## Next Release
 
+- \[contracts\] Result-ify waiting for transactions
+
 ## 0.2.1-beta.3
 
 - \[router\] Create queues for transfer creation races
