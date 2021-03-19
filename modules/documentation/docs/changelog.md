@@ -2,6 +2,8 @@
 
 ## Next Release
 
+## 0.2.1-beta.4
+
 - \[contracts\] Result-ify waiting for transactions
 
 ## 0.2.1-beta.3
