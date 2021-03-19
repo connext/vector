@@ -424,7 +424,7 @@ export const completeRebalance = async (
       {
         method,
         intervalId: methodId,
-        rebalanceRes: statusRes.data
+        rebalanceRes: statusRes.data,
       },
       "Status request sent",
     );
