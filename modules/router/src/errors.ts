@@ -14,6 +14,7 @@ export class CollateralError extends RouterError {
   static readonly reasons = {
     ChannelNotFound: "Channel not found",
     CouldNotGetOnchainDeposits: "Unable to get total deposited onchain",
+    NodeError: "Node method failed",
     NotInChannel: "Router is not found in channel",
     ProviderNotFound: "Provider not found",
     UnableToGetRebalanceProfile: "Could not get rebalance profile",

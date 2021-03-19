@@ -1,7 +1,7 @@
-import { expect, RestServerNodeService } from "@connext/vector-utils";
+import { delay, expect, getRandomBytes32, RestServerNodeService } from "@connext/vector-utils";
 import { Wallet, utils, constants } from "ethers";
 import pino from "pino";
-import { INodeService } from "@connext/vector-types";
+import { EngineEvents, INodeService, TransferNames } from "@connext/vector-types";
 
 import { env, fundIfBelow, getRandomIndex } from "../utils";
 import {
@@ -54,6 +54,65 @@ describe(testName, () => {
     if (wallet2) {
       await fundIfBelow(rogerService.signerAddress, constants.AddressZero, min.mul(15), wallet2);
     }
+  });
+
+  it("should properly forward all transfers to the same recipient (i.e. no creation race conditions on the router)", async () => {
+    const assetId = constants.AddressZero;
+    const depositAmt = utils.parseEther("1");
+    const transferAmt = utils.parseEther("0.1");
+
+    const carolRogerPostSetup = await setup(carolService, rogerService, chainId1);
+    await setup(daveService, rogerService, chainId1);
+    await deposit(carolService, rogerService, carolRogerPostSetup.channelAddress, assetId, depositAmt);
+    const routedSuccessfully: string[] = [];
+    daveService.on(
+      EngineEvents.CONDITIONAL_TRANSFER_CREATED,
+      (data) => {
+        routedSuccessfully.push(data.transfer.meta.routingId);
+      },
+      undefined,
+      daveService.publicIdentifier,
+    );
+    const cancelled: string[] = [];
+    carolService.on(
+      EngineEvents.CONDITIONAL_TRANSFER_RESOLVED,
+      (data) => {
+        cancelled.push(data.transfer.meta.routingId);
+      },
+      undefined,
+      carolService.publicIdentifier,
+    );
+
+    const routingIds: string[] = [];
+    for (const _ of Array(10).fill(0)) {
+      const preImage = getRandomBytes32();
+      const lockHash = utils.soliditySha256(["bytes32"], [preImage]);
+      const routingId = getRandomBytes32();
+      // have carol create transfer
+      const transfer = await carolService.conditionalTransfer({
+        publicIdentifier: carolService.publicIdentifier,
+        amount: transferAmt.toString(),
+        assetId,
+        channelAddress: carolRogerPostSetup.channelAddress,
+        type: TransferNames.HashlockTransfer,
+        details: {
+          lockHash,
+          expiry: "0",
+        },
+        meta: {
+          routingId,
+        },
+        recipient: daveService.publicIdentifier,
+        recipientChainId: chainId1,
+      });
+      if (transfer.isError) {
+        throw transfer.getError();
+      }
+      routingIds.push(routingId);
+    }
+    await delay(15_000);
+    expect(routingIds.sort()).to.be.deep.eq(routedSuccessfully.sort());
+    expect(cancelled.length).to.be.eq(0);
   });
 
   it("ETH: deposit, transfer C -> R -> D, withdraw", async () => {

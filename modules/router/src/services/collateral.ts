@@ -21,7 +21,7 @@ import { getRebalanceProfile } from "./config";
  * the router to forward along the payment.
  */
 export const justInTimeCollateral = async (
-  channel: FullChannelState,
+  channelAddress: string,
   assetId: string,
   publicIdentifier: string,
   node: INodeService,
@@ -31,7 +31,19 @@ export const justInTimeCollateral = async (
 ): Promise<Result<undefined | NodeResponses.Deposit, CollateralError>> => {
   const method = "justInTimeCollateral";
   const methodId = getRandomBytes32();
-  logger.info({ method, methodId, channelAddress: channel.channelAddress, assetId, transferAmount }, "Method started");
+  logger.info({ method, methodId, channelAddress, assetId, transferAmount }, "Method started");
+  // pull from store
+  // because this is a "justInTime" method, you must make sure you are using
+  // the source of truth to judge if collateral is needed
+  const channelRes = await node.getStateChannel({ channelAddress });
+  if (channelRes.isError || !channelRes.getValue()) {
+    return Result.fail(
+      new CollateralError(CollateralError.reasons.ChannelNotFound, channelAddress, assetId, {} as any, undefined, {
+        getChannelError: channelRes.isError ? jsonifyError(channelRes.getError()!) : "Channel not found",
+      }),
+    );
+  }
+  const channel = channelRes.getValue() as FullChannelState;
   // If there is sufficient balance in the channel to handle the transfer
   // amount, no need for collateralization
   const participant = getParticipant(channel, publicIdentifier);
