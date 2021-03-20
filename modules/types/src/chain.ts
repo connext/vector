@@ -10,11 +10,11 @@ import { ChainProviders, HydratedProviders } from "./network";
 import { RegisteredTransfer, TransferName, TransferState, WithdrawCommitmentJson } from "./transferDefinitions";
 
 export const GAS_ESTIMATES = {
-  createChannelAndDepositAlice: BigNumber.from(250_000),
-  createChannel: BigNumber.from(250_000),
-  depositAlice: BigNumber.from(75_000),
+  createChannelAndDepositAlice: BigNumber.from(200_000),
+  createChannel: BigNumber.from(150_000),
+  depositAlice: BigNumber.from(85_000),
   depositBob: BigNumber.from(50_000),
-  withdraw: BigNumber.from(100_000),
+  withdraw: BigNumber.from(95_000),
 };
 
 export const ERC20Abi = [
