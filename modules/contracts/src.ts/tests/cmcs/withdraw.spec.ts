@@ -71,10 +71,12 @@ describe("CMCWithdraw.sol", function() {
     expect(await channel.getWithdrawalTransactionRecord(withdrawData)).to.be.true;
   });
 
-  it("should work for standard-compliant tokens", async () => {
+  it.only("should work for standard-compliant tokens", async () => {
     const preWithdrawRecipient = await failingToken.balanceOf(recipient);
+    const preWithdrawBob = await failingToken.balanceOf(bob.address);
     const preWithdrawChannel = await failingToken.balanceOf(channel.address);
     const withdrawAmount = BigNumber.from(1000);
+    const fee = BigNumber.from(5)
     const nonce = BigNumber.from(1);
     const commitment = new WithdrawCommitment(
       channel.address,
@@ -84,6 +86,7 @@ describe("CMCWithdraw.sol", function() {
       failingToken.address,
       withdrawAmount.toString(),
       nonce.toString(),
+      fee.toString(),
     );
 
     const aliceSig = await new ChannelSigner(alice.privateKey).signMessage(commitment.hashToSign());
@@ -96,6 +99,7 @@ describe("CMCWithdraw.sol", function() {
     await tx.wait();
 
     expect(await failingToken.balanceOf(recipient)).to.be.eq(preWithdrawRecipient.add(withdrawAmount));
+    expect(await failingToken.balanceOf(bob.address)).to.be.eq(preWithdrawBob.add(fee));
     expect(await failingToken.balanceOf(channel.address)).to.be.eq(preWithdrawChannel.sub(withdrawAmount));
     expect(await channel.getTotalTransferred(failingToken.address)).to.be.eq(withdrawAmount);
     expect(await channel.getWithdrawalTransactionRecord(withdrawData)).to.be.true;

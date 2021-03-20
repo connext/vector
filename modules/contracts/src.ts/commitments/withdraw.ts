@@ -23,6 +23,7 @@ export class WithdrawCommitment {
     public readonly assetId: string,
     public readonly amount: string,
     public readonly nonce: string,
+    public readonly fee?: string,
     public readonly callTo: string = AddressZero,
     public readonly callData: string = "0x",
     public transactionHash?: string,
@@ -84,7 +85,7 @@ export class WithdrawCommitment {
   }
 
   public getWithdrawData(): string[] {
-    return [this.channelAddress, this.assetId, this.recipient, this.amount, this.nonce, this.callTo, this.callData];
+    return [this.channelAddress, this.assetId, this.recipient, this.bob, this.amount, this.fee!, this.nonce, this.callTo, this.callData];
   }
 
   public hashToSign(): string {

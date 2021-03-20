@@ -5,8 +5,10 @@ pragma experimental ABIEncoderV2;
 struct WithdrawData {
     address channelAddress;
     address assetId;
-    address payable recipient;
+    address recipient;
+    address submitter;
     uint256 amount;
+    uint256 fee;
     uint256 nonce;
     address callTo;
     bytes callData;

@@ -65,20 +65,22 @@ contract CMCWithdraw is CMCCore, CMCAsset, ICMCWithdraw {
         isExecuted[wdHash] = true;
 
         // Determine actually transferable amount
-        uint256 actualAmount = getAvailableAmount(wd.assetId, wd.amount);
+        uint256 actualAmountA = getAvailableAmount(wd.assetId, wd.amount);
+        uint256 actualAmountB = getAvailableAmount(wd.assetId, wd.fee);
 
-        // Revert if actualAmount is zero && callTo is 0
+        // Revert if actualAmountA is zero && callTo is 0
         require(
-            actualAmount > 0 || wd.callTo != address(0),
+            actualAmountA > 0 || actualAmountB > 0 || wd.callTo != address(0),
             "CMCWithdraw: NO_OP"
         );
 
         // Register and execute the transfer
-        transferAsset(wd.assetId, wd.recipient, actualAmount);
+        transferAsset(wd.assetId, payable(wd.recipient), actualAmountA);
+        transferAsset(wd.assetId, payable(wd.submitter), actualAmountB);
 
         // Do we have to make a call in addition to the actual transfer?
         if (wd.callTo != address(0)) {
-            WithdrawHelper(wd.callTo).execute(wd, actualAmount);
+            WithdrawHelper(wd.callTo).execute(wd, actualAmountA);
         }
     }
 
