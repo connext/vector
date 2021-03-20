@@ -14,10 +14,10 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@connext/vector-contracts": "0.2.1-beta.2",
-    "@connext/vector-engine": "0.2.1-beta.2",
-    "@connext/vector-types": "0.2.1-beta.2",
-    "@connext/vector-utils": "0.2.1-beta.2",
+    "@connext/vector-contracts": "0.2.1-beta.4",
+    "@connext/vector-engine": "0.2.1-beta.4",
+    "@connext/vector-types": "0.2.1-beta.4",
+    "@connext/vector-utils": "0.2.1-beta.4",
     "@ethersproject/address": "5.0.10",
     "@ethersproject/bignumber": "5.0.14",
     "@ethersproject/constants": "5.0.9",
@@ -36,6 +36,7 @@
     "fastify-oas": "3.0.8",
     "pg": "8.5.1",
     "pino": "6.11.1",
+    "p-queue": "6.6.2",
     "regenerator-runtime": "0.13.7",
     "sqlite3": "5.0.2",
     "prom-client": "13.1.0"

@@ -1,4 +1,4 @@
-import { TransactionRequest, TransactionResponse } from "@ethersproject/abstract-provider";
+import { TransactionReceipt, TransactionRequest, TransactionResponse } from "@ethersproject/abstract-provider";
 import { BigNumber, BigNumberish } from "@ethersproject/bignumber";
 
 import { Address, HexString } from "./basic";
@@ -195,6 +195,9 @@ export interface IVectorChainReader {
   ): Promise<Result<boolean, ChainError>>;
 }
 
+export type TransactionResponseWithResult = TransactionResponse & {
+  completed: (confirmations?: number) => Promise<Result<TransactionReceipt, ChainError>>;
+};
 export interface IVectorChainService extends IVectorChainReader {
   // Happy case methods
   sendDepositTx(
@@ -202,25 +205,25 @@ export interface IVectorChainService extends IVectorChainReader {
     sender: string,
     amount: string,
     assetId: string,
-  ): Promise<Result<TransactionResponse, ChainError>>;
+  ): Promise<Result<TransactionResponseWithResult, ChainError>>;
   sendWithdrawTx(
     channelState: FullChannelState,
     minTx: MinimalTransaction,
-  ): Promise<Result<TransactionResponse, ChainError>>;
+  ): Promise<Result<TransactionResponseWithResult, ChainError>>;
   sendDeployChannelTx(
     channelState: FullChannelState,
     gasPrice: BigNumber,
     deposit?: { amount: string; assetId: string }, // Included IFF createChannelAndDepositAlice
-  ): Promise<Result<TransactionResponse, ChainError>>;
+  ): Promise<Result<TransactionResponseWithResult, ChainError>>;
 
   // Dispute methods
-  sendDisputeChannelTx(channelState: FullChannelState): Promise<Result<TransactionResponse, ChainError>>;
-  sendDefundChannelTx(channelState: FullChannelState): Promise<Result<TransactionResponse, ChainError>>;
+  sendDisputeChannelTx(channelState: FullChannelState): Promise<Result<TransactionResponseWithResult, ChainError>>;
+  sendDefundChannelTx(channelState: FullChannelState): Promise<Result<TransactionResponseWithResult, ChainError>>;
   sendDisputeTransferTx(
     transferIdToDispute: string,
     activeTransfers: FullTransferState[],
-  ): Promise<Result<TransactionResponse, ChainError>>;
-  sendDefundTransferTx(transferState: FullTransferState): Promise<Result<TransactionResponse, ChainError>>;
+  ): Promise<Result<TransactionResponseWithResult, ChainError>>;
+  sendDefundTransferTx(transferState: FullTransferState): Promise<Result<TransactionResponseWithResult, ChainError>>;
   on<T extends TransactionEvent>(
     event: T,
     callback: (payload: TransactionEventMap[T]) => void | Promise<void>,

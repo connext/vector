@@ -7,6 +7,7 @@ import {
   jsonifyError,
 } from "@connext/vector-types";
 import { getBalanceForAssetId, getRandomBytes32, getParticipant } from "@connext/vector-utils";
+import { waitForTransaction } from "@connext/vector-contracts";
 import { getAddress } from "@ethersproject/address";
 import { BigNumber } from "@ethersproject/bignumber";
 import { BaseLogger } from "pino";
@@ -21,7 +22,7 @@ import { getRebalanceProfile } from "./config";
  * the router to forward along the payment.
  */
 export const justInTimeCollateral = async (
-  channel: FullChannelState,
+  channelAddress: string,
   assetId: string,
   publicIdentifier: string,
   node: INodeService,
@@ -31,7 +32,19 @@ export const justInTimeCollateral = async (
 ): Promise<Result<undefined | NodeResponses.Deposit, CollateralError>> => {
   const method = "justInTimeCollateral";
   const methodId = getRandomBytes32();
-  logger.info({ method, methodId, channelAddress: channel.channelAddress, assetId, transferAmount }, "Method started");
+  logger.info({ method, methodId, channelAddress, assetId, transferAmount }, "Method started");
+  // pull from store
+  // because this is a "justInTime" method, you must make sure you are using
+  // the source of truth to judge if collateral is needed
+  const channelRes = await node.getStateChannel({ channelAddress });
+  if (channelRes.isError || !channelRes.getValue()) {
+    return Result.fail(
+      new CollateralError(CollateralError.reasons.ChannelNotFound, channelAddress, assetId, {} as any, undefined, {
+        getChannelError: channelRes.isError ? jsonifyError(channelRes.getError()!) : "Channel not found",
+      }),
+    );
+  }
+  const channel = channelRes.getValue() as FullChannelState;
   // If there is sufficient balance in the channel to handle the transfer
   // amount, no need for collateralization
   const participant = getParticipant(channel, publicIdentifier);
@@ -363,8 +376,8 @@ export const requestCollateral = async (
 
     const tx = txRes.getValue();
     logger.info({ method, methodId, txHash: tx.txHash }, "Submitted deposit tx");
-    const receipt = await provider.waitForTransaction(tx.txHash);
-    if (receipt.status === 0) {
+    const receipt = await waitForTransaction(provider, tx.txHash);
+    if (receipt.isError) {
       return Result.fail(
         new CollateralError(
           CollateralError.reasons.UnableToCollateralize,
@@ -373,14 +386,13 @@ export const requestCollateral = async (
           profile,
           requestedAmount,
           {
-            receipt,
-            error: "Tx reverted",
+            error: jsonifyError(receipt.getError()!),
           },
         ),
       );
     }
     logger.info({ method, methodId, txHash: tx.txHash }, "Tx mined");
-    logger.debug({ method, methodId, txHash: tx.txHash, logs: receipt.logs }, "Tx mined");
+    logger.debug({ method, methodId, txHash: tx.txHash, logs: receipt.getValue().logs }, "Tx mined");
   } else {
     logger.info(
       {
