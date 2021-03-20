@@ -17,10 +17,10 @@ struct BatchWithdrawData {
 /// @author Connext <support@connext.network>
 /// @notice 
 contract BatchSubmitter {
-    IChannelFactory immutable CHANNEL_FACTORY;
+    IChannelFactory private immutable channelFactory;
 
     constructor(address channelFactoryAddress) {
-        CHANNEL_FACTORY = IChannelFactory(channelFactoryAddress);
+        channelFactory = IChannelFactory(channelFactoryAddress);
     }
 
     function submitBatchWithdrawals(BatchWithdrawData[] calldata withdrawals)
@@ -40,7 +40,7 @@ contract BatchSubmitter {
 
             // needs to be deployed
             if (size == 0) {
-                CHANNEL_FACTORY.createChannelAndDepositAlice(
+                channelFactory.createChannelAndDepositAlice(
                     withdrawal.alice, 
                     withdrawal.bob, 
                     withdrawal.withdrawData.assetId, 

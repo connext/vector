@@ -66,6 +66,7 @@ const func: DeployFunction = async () => {
   const standardMigration = [
     ["ChannelMastercopy", []],
     ["ChannelFactory", ["ChannelMastercopy", Zero]],
+    ["BatchSubmitter", ["ChannelFactory"]],
     ["HashlockTransfer", []],
     ["Withdraw", []],
     ["TransferRegistry", []],
