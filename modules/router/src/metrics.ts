@@ -1,4 +1,3 @@
-import { VectorChainReader } from "@connext/vector-contracts";
 import {
   HydratedProviders,
   ERC20Abi,
@@ -13,7 +12,6 @@ import {
   getAssetName,
   getMainnetEquivalent,
   getExchangeRateInEth,
-  normalizeFee,
   calculateExchangeWad,
 } from "@connext/vector-utils";
 import { BigNumber, BigNumberish } from "@ethersproject/bignumber";
@@ -124,7 +122,7 @@ export const incrementGasCosts = async (
   }
   const ethFee = calculateExchangeWad(
     gasPrice.getValue().mul(gasUsed),
-    await getDecimals("1", mainnetEquivalent),
+    await getDecimals("1", mainnetEquivalent.getValue()),
     rate.getValue().toString(),
     18,
   );
@@ -136,7 +134,7 @@ export const incrementGasCosts = async (
       gasUsed,
       chainId,
       reason,
-      mainnetEquivalent,
+      mainnetEquivalent: mainnetEquivalent.getValue(),
       gasPrice: gasPrice.getValue().toString(),
       ethFee: ethFee.toString(),
     },
@@ -179,7 +177,7 @@ export const incrementFees = async (
   // Get equivalent eth amount
   const ethFee = calculateExchangeWad(
     BigNumber.from(feeAmount),
-    await getDecimals("1", mainnetEquivalent),
+    await getDecimals("1", mainnetEquivalent.getValue()),
     rate.getValue().toString(),
     18,
   );
@@ -192,7 +190,7 @@ export const incrementFees = async (
       feeAmount,
       chainId: feeChainId,
       assetId: feeAssetId,
-      mainnetEquivalent,
+      mainnetEquivalent: mainnetEquivalent.getValue(),
       ethFee: ethFee.toString(),
     },
     "Incremented collected fees",
