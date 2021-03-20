@@ -9,7 +9,9 @@ export const WithdrawDataEncoding = tidy(`tuple(
     address channelAddress,
     address assetId,
     address recipient,
+    address submitter,
     uint256 amount,
+    uint256 fee,
     uint256 nonce,
     address callTo,
     bytes callData

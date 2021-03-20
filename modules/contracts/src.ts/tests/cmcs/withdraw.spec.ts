@@ -88,7 +88,6 @@ describe("CMCWithdraw.sol", function() {
       nonce.toString(),
       fee.toString(),
     );
-
     const aliceSig = await new ChannelSigner(alice.privateKey).signMessage(commitment.hashToSign());
     const bobSig = await new ChannelSigner(bob.privateKey).signMessage(commitment.hashToSign());
 
@@ -100,8 +99,8 @@ describe("CMCWithdraw.sol", function() {
 
     expect(await failingToken.balanceOf(recipient)).to.be.eq(preWithdrawRecipient.add(withdrawAmount));
     expect(await failingToken.balanceOf(bob.address)).to.be.eq(preWithdrawBob.add(fee));
-    expect(await failingToken.balanceOf(channel.address)).to.be.eq(preWithdrawChannel.sub(withdrawAmount));
-    expect(await channel.getTotalTransferred(failingToken.address)).to.be.eq(withdrawAmount);
+    expect(await failingToken.balanceOf(channel.address)).to.be.eq(preWithdrawChannel.sub(withdrawAmount.add(fee)));
+    expect(await channel.getTotalTransferred(failingToken.address)).to.be.eq(withdrawAmount.add(fee));
     expect(await channel.getWithdrawalTransactionRecord(withdrawData)).to.be.true;
   });
 
