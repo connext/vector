@@ -48,9 +48,8 @@ import {
   forwardedTransferVolume,
   attemptedTransfer,
   feesCollected,
-  getDecimals,
-  mainnetFeesCollectedInEth,
-  mainnetGasCost,
+  incrementGasCosts,
+  incrementFees,
 } from "./metrics";
 import { calculateFeeAmount } from "./services/fees";
 import { QuoteError } from "./errors";
@@ -124,29 +123,10 @@ export async function setupListeners(
       reason: data.reason,
       chainId,
     });
-    if (!data.receipt) {
+    if (!data.receipt || !chainId) {
       return;
     }
-    gasConsumed.inc(
-      { chainId, reason: data.reason },
-      await parseBalanceToNumber(data.receipt!.cumulativeGasUsed, chainId!.toString(), AddressZero),
-    );
-    if (chainId !== 1) {
-      return;
-    }
-
-    // add normalized costs
-    const providers = chainReader.getHydratedProviders();
-    if (providers.isError) {
-      logger.warn({ ...jsonifyError(providers.getError()!) }, "Failed to get hydrated providers");
-      return;
-    }
-    const gasPrice = await providers.getValue()[chainId].getGasPrice();
-    const gasUsed = gasPrice.mul(data.receipt.cumulativeGasUsed);
-    mainnetGasCost.inc(
-      { reason: data.reason, chainId },
-      await parseBalanceToNumber(gasUsed, chainId.toString(), AddressZero),
-    );
+    await incrementGasCosts(data.receipt.cumulativeGasUsed, chainId, data.reason, chainReader, logger);
   });
 
   nodeService.on(EngineEvents.TRANSACTION_FAILED, async (data) => {
@@ -160,12 +140,10 @@ export async function setupListeners(
       reason: data.reason,
       chainId,
     });
-    if (data.receipt) {
-      gasConsumed.inc(
-        { chainId, reason: data.reason },
-        await parseBalanceToNumber(data.receipt.cumulativeGasUsed, chainId!.toString(), AddressZero),
-      );
+    if (!data.receipt || !chainId) {
+      return;
     }
+    await incrementGasCosts(data.receipt.cumulativeGasUsed, chainId, data.reason, chainReader, logger);
   });
 
   // Set up listener to handle transfer creation
@@ -217,53 +195,7 @@ export async function setupListeners(
       }
       // Increment fees (taken in sender chain/asset)
       const { assetId: senderAsset, chainId: senderChain } = data.transfer;
-      // First increment fees in asset
-      feesCollected.inc(
-        {
-          chainId: senderChain,
-          assetId: senderAsset,
-        },
-        await parseBalanceToNumber(meta.quote.fee, senderChain.toString(), senderAsset),
-      );
-
-      // normalize fee to be in mainnet eth if possible
-      // NOTE: can only normalize fees if somehow they touch mainnet
-      // otherwise we cannot get a valid exchange rate. this means
-      // any percentage or flat rate fees on l2 are disregarded.
-      if (senderChain !== 1 && chainId !== 1) {
-        return;
-      }
-
-      // if the receiver chain is 1, then convert the sender amount
-      // to the receiver amount using the allowed swaps
-      let feeToNormalize = meta.quote.fee;
-      let assetToNormalize = senderAsset;
-      if (senderChain !== 1) {
-        const swapped = await getSwappedAmount(meta.quote.fee, senderAsset, senderChain, assetId, chainId);
-        if (swapped.isError) {
-          logger.warn({ ...jsonifyError(swapped.getError()!) }, "Error getting receiver-asset denominated fee");
-          return;
-        }
-        feeToNormalize = swapped.getValue();
-        assetToNormalize = assetId;
-      }
-
-      // get eth-token rate
-      const rate = await getExchangeRateInEth(senderAsset, logger);
-      if (rate.isError) {
-        // calculate exchange rate
-        logger.warn({ ...jsonifyError(rate.getError()!), assetToNormalize, chain: 1 }, "Failed to get exchange rate");
-        return;
-      }
-      const feeDecimals = await getDecimals("1", assetToNormalize);
-
-      // get fee in eth
-      const ethFee = calculateExchangeWad(BigNumber.from(feeToNormalize), feeDecimals, rate.getValue().toString(), 18);
-
-      mainnetFeesCollectedInEth.inc(
-        { chainId: senderChain, assetId: senderAsset },
-        await parseBalanceToNumber(ethFee, "1", AddressZero),
-      );
+      await incrementFees(meta.quote.fee, senderAsset, senderChain, logger);
     },
     (data: ConditionalTransferCreatedPayload) => {
       // Only forward transfers with valid routing metas
