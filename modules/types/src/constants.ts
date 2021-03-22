@@ -26,3 +26,11 @@ export const REDUCED_GAS_PRICE = parseUnits("125", "gwei");
 
 // When a quote will expire
 export const DEFAULT_FEE_EXPIRY = 300_000;
+
+// number of confirmations for non-mainnet chains
+export const NUM_CONFIRMATIONS = 2;
+// TODO: need to stop using random chainIds in our testing, these could eventually be real chains...
+export const CHAINS_WITH_NO_CONFIRMATIONS = [1, 1337, 1338, 1340, 1341, 1342];
+export const getConfirmationsForChain = (chainId: number): number => {
+  return CHAINS_WITH_NO_CONFIRMATIONS.includes(chainId) ? 0 : NUM_CONFIRMATIONS;
+};
