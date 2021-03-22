@@ -574,6 +574,7 @@ describe(testName, () => {
       chainService.getCode.resolves(Result.ok(getRandomBytes32()));
       chainService.getGasPrice.resolves(Result.ok(gasPrice));
       chainService.getDecimals.resolves(Result.ok(18));
+      chainService.estimateGas.resolves(Result.ok(BigNumber.from(150_000)));
 
       // Signer methods
       signer.signMessage.resolves(mkSig());
