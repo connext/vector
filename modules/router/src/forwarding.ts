@@ -37,7 +37,7 @@ import {
   attemptTransferWithCollateralization,
   transferWithCollateralization,
 } from "./services/transfer";
-import { inProgressCreations } from "./listener";
+import { inProgressCreations } from "./services/creationQueue";
 import { shouldChargeFees } from "./services/config";
 
 const ajv = new Ajv();

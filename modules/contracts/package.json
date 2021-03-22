@@ -1,6 +1,6 @@
 {
   "name": "@connext/vector-contracts",
-  "version": "0.2.1-beta.0",
+  "version": "0.2.1-beta.6",
   "license": "ISC",
   "description": "Smart contracts powering Connext's minimalist channel platform",
   "keywords": [
@@ -24,12 +24,13 @@
     "prettier": "prettier --write './src.sol/**/*.sol'",
     "build": "rm -rf dist && hardhat compile && tsc && npm run copy-wasm",
     "build-bundle": "rm -f dist/package.json && webpack --config ops/webpack.config.js",
-    "test": "nyc mocha --exit --require ts-node/register --require hardhat/register --timeout 60000 'src.ts/**/*.spec.ts'"
+    "test": "nyc mocha --exit --require ts-node/register --require hardhat/register --timeout 60000 'src.ts/**/*.spec.ts'",
+    "test-gas": "npx hardhat test"
   },
   "dependencies": {
     "@connext/pure-evm-wasm": "0.1.4",
-    "@connext/vector-types": "0.2.1-beta.0",
-    "@connext/vector-utils": "0.2.1-beta.0",
+    "@connext/vector-types": "0.2.1-beta.6",
+    "@connext/vector-utils": "0.2.1-beta.6",
     "@ethersproject/abi": "5.0.12",
     "@ethersproject/abstract-provider": "5.0.9",
     "@ethersproject/abstract-signer": "5.0.13",
@@ -68,6 +69,7 @@
     "babel-loader": "8.1.0",
     "chai": "4.3.1",
     "chai-subset": "1.6.0",
+    "hardhat-gas-reporter": "1.0.4",
     "ethereum-waffle": "3.3.0",
     "event-target-shim": "5.0.1",
     "hardhat-typechain": "0.3.5",

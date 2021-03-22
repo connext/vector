@@ -1,4 +1,4 @@
-import { TransactionRequest, TransactionResponse } from "@ethersproject/abstract-provider";
+import { TransactionReceipt, TransactionRequest, TransactionResponse } from "@ethersproject/abstract-provider";
 import { BigNumber, BigNumberish } from "@ethersproject/bignumber";
 
 import { Address, HexString } from "./basic";
@@ -10,11 +10,11 @@ import { ChainProviders, HydratedProviders } from "./network";
 import { RegisteredTransfer, TransferName, TransferState, WithdrawCommitmentJson } from "./transferDefinitions";
 
 export const GAS_ESTIMATES = {
-  createChannelAndDepositAlice: BigNumber.from(250_000),
-  createChannel: BigNumber.from(250_000),
-  depositAlice: BigNumber.from(75_000),
+  createChannelAndDepositAlice: BigNumber.from(200_000), // 0x5a78baf521e5739b2b63626566f6b360a242b52734662db439a2c3256d3e1f97
+  createChannel: BigNumber.from(150_000), // 0x45690e81cfc5576d11ecda7938ce91af513a873f8c7e4f26bf2a898ee45ae8ab
+  depositAlice: BigNumber.from(85_000), // 0x0ed5459c7366d862177408328591c6df5c534fe4e1fbf4a5dd0abbe3d9c761b3
   depositBob: BigNumber.from(50_000),
-  withdraw: BigNumber.from(100_000),
+  withdraw: BigNumber.from(95_000), // 0x4d4466ed10b5d39c0a80be859dc30bca0120b5e8de10ed7155cc0b26da574439
 };
 
 export const ERC20Abi = [
@@ -83,7 +83,12 @@ export type ChainInfo = {
     symbol: string;
     decimals: number;
   };
-  assetId: { [assetId: string]: string };
+  assetId: {
+    [assetId: string]: {
+      symbol: string;
+      mainnetEquivalent: string;
+    };
+  };
   rpc: string[];
   faucets: string[];
   infoURL: string;
@@ -190,6 +195,9 @@ export interface IVectorChainReader {
   ): Promise<Result<boolean, ChainError>>;
 }
 
+export type TransactionResponseWithResult = TransactionResponse & {
+  completed: (confirmations?: number) => Promise<Result<TransactionReceipt, ChainError>>;
+};
 export interface IVectorChainService extends IVectorChainReader {
   // Happy case methods
   sendDepositTx(
@@ -197,25 +205,25 @@ export interface IVectorChainService extends IVectorChainReader {
     sender: string,
     amount: string,
     assetId: string,
-  ): Promise<Result<TransactionResponse, ChainError>>;
+  ): Promise<Result<TransactionResponseWithResult, ChainError>>;
   sendWithdrawTx(
     channelState: FullChannelState,
     minTx: MinimalTransaction,
-  ): Promise<Result<TransactionResponse, ChainError>>;
+  ): Promise<Result<TransactionResponseWithResult, ChainError>>;
   sendDeployChannelTx(
     channelState: FullChannelState,
     gasPrice: BigNumber,
     deposit?: { amount: string; assetId: string }, // Included IFF createChannelAndDepositAlice
-  ): Promise<Result<TransactionResponse, ChainError>>;
+  ): Promise<Result<TransactionResponseWithResult, ChainError>>;
 
   // Dispute methods
-  sendDisputeChannelTx(channelState: FullChannelState): Promise<Result<TransactionResponse, ChainError>>;
-  sendDefundChannelTx(channelState: FullChannelState): Promise<Result<TransactionResponse, ChainError>>;
+  sendDisputeChannelTx(channelState: FullChannelState): Promise<Result<TransactionResponseWithResult, ChainError>>;
+  sendDefundChannelTx(channelState: FullChannelState): Promise<Result<TransactionResponseWithResult, ChainError>>;
   sendDisputeTransferTx(
     transferIdToDispute: string,
     activeTransfers: FullTransferState[],
-  ): Promise<Result<TransactionResponse, ChainError>>;
-  sendDefundTransferTx(transferState: FullTransferState): Promise<Result<TransactionResponse, ChainError>>;
+  ): Promise<Result<TransactionResponseWithResult, ChainError>>;
+  sendDefundTransferTx(transferState: FullTransferState): Promise<Result<TransactionResponseWithResult, ChainError>>;
   on<T extends TransactionEvent>(
     event: T,
     callback: (payload: TransactionEventMap[T]) => void | Promise<void>,

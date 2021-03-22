@@ -29,6 +29,7 @@ import {
   ChainError,
   MinimalTransaction,
   WITHDRAWAL_RESOLVED_EVENT,
+  DEFAULT_CHANNEL_TIMEOUT,
 } from "@connext/vector-types";
 import {
   generateMerkleTreeData,
@@ -48,6 +49,7 @@ import { DisputeError, IsAliveError, RestoreError, RpcError } from "./errors";
 import {
   convertConditionalTransferParams,
   convertResolveConditionParams,
+  convertSetupParams,
   convertWithdrawParams,
 } from "./paramConverter";
 import { setupEngineListeners } from "./listeners";
@@ -627,16 +629,11 @@ export class VectorEngine implements IVectorEngine {
       return Result.fail(chainProviders.getError()!);
     }
 
-    const setupRes = await this.vector.setup({
-      counterpartyIdentifier: params.counterpartyIdentifier,
-      timeout: params.timeout,
-      networkContext: {
-        channelFactoryAddress: this.chainAddresses[params.chainId].channelFactoryAddress,
-        transferRegistryAddress: this.chainAddresses[params.chainId].transferRegistryAddress,
-        chainId: params.chainId,
-      },
-      meta: params.meta,
-    });
+    const setupParamsResult = await convertSetupParams(params, this.chainAddresses);
+    if (setupParamsResult.isError) {
+      return Result.fail(setupParamsResult.getError()!);
+    }
+    const setupRes = await this.vector.setup(setupParamsResult.getValue());
 
     if (setupRes.isError) {
       return Result.fail(setupRes.getError()!);
@@ -683,9 +680,9 @@ export class VectorEngine implements IVectorEngine {
     }
     const tx = deployRes.getValue();
     this.logger.info({ chainId: channel.networkContext.chainId, hash: tx.hash }, "Deploy tx broadcast");
-    const receipt = await tx.wait();
-    if (receipt.status === 0) {
-      return Result.fail(new ChainError(ChainError.reasons.TxReverted, { receipt }));
+    const receipt = await tx.completed();
+    if (receipt.isError) {
+      return Result.fail(receipt.getError()!)
     }
     this.logger.debug({ chainId: channel.networkContext.chainId, hash: tx.hash }, "Deploy tx mined");
     this.logger.info(

@@ -36,6 +36,7 @@ import {
   WithdrawalQuote,
   IVectorStore,
   DEFAULT_FEE_EXPIRY,
+  DEFAULT_CHANNEL_TIMEOUT,
 } from "@connext/vector-types";
 import {
   getRandomBytes32,
@@ -380,7 +381,7 @@ export async function setupEngineListeners(
     const res = await setup({
       chainId: setupInfo.chainId,
       counterpartyIdentifier: from,
-      timeout: setupInfo.timeout,
+      timeout: setupInfo.timeout ?? DEFAULT_CHANNEL_TIMEOUT.toString(),
       meta: setupInfo.meta,
     });
     await messaging.respondToSetupMessage(
@@ -987,11 +988,11 @@ async function handleWithdrawalTransferResolution(
     transactionHash: tx.hash,
   });
   logger.info({ transactionHash: tx.hash }, "Submitted withdraw tx");
-  const receipt = await tx.wait();
-  if (receipt.status === 0) {
-    logger.error({ method, receipt }, "Withdraw tx reverted");
+  const receipt = await tx.completed();
+  if (receipt.isError) {
+    logger.error({ method, receipt: receipt.getError()! }, "Withdraw tx reverted");
   } else {
-    logger.info({ method, transactionHash: receipt.transactionHash }, "Withdraw tx mined, completed");
+    logger.info({ method, transactionHash: receipt.getValue().transactionHash }, "Withdraw tx mined, completed");
   }
 }
 

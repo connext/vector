@@ -12,6 +12,8 @@ import {
   ChainError,
   UpdateType,
   jsonifyError,
+  DEFAULT_CHANNEL_TIMEOUT,
+  SetupParams,
 } from "@connext/vector-types";
 import {
   createTestChannelState,
@@ -35,6 +37,7 @@ import { AddressZero } from "@ethersproject/constants";
 import {
   convertConditionalTransferParams,
   convertResolveConditionParams,
+  convertSetupParams,
   convertWithdrawParams,
 } from "../paramConverter";
 import { ParameterConversionError } from "../errors";
@@ -83,6 +86,57 @@ describe("ParamConverter", () => {
   };
 
   afterEach(() => Sinon.restore());
+
+  describe("convertSetupParams", () => {
+    const { channel: channelState } = createTestChannelState(UpdateType.deposit, {
+      channelAddress: mkAddress("0xa"),
+      networkContext: {
+        ...chainAddresses[chainId],
+        chainId,
+        providerUrl,
+      },
+    });
+
+    const generateParams = (): EngineParams.Setup => {
+      return {
+        counterpartyIdentifier: channelState.aliceIdentifier,
+        chainId: chainId,
+        timeout: DEFAULT_CHANNEL_TIMEOUT.toString(),
+        meta: undefined
+      };
+    };
+
+    const runTest = (params: EngineParams.Setup, result: SetupParams) => {
+      // Check results of a test run, making sure the result conforms to desirable SetupParams
+      // based on input EngineParams.Setup.
+      expect(result).to.containSubset({
+        counterpartyIdentifier: params.counterpartyIdentifier,
+        timeout: params.timeout,
+        networkContext: {
+          channelFactoryAddress: chainAddresses[params.chainId].channelFactoryAddress,
+          transferRegistryAddress: chainAddresses[params.chainId].transferRegistryAddress,
+          chainId: params.chainId,
+        },
+        meta: params.meta,
+      });
+    };
+
+    it("should work with provided params.timeout", async () => {
+      const params = { ...generateParams(), timeout: "100000" };
+      const result = await convertSetupParams(params, chainAddresses);
+      runTest(params, result.getValue());
+    });
+
+    it("should work with default params.timeout", async () => {
+      // Set timeout to undefined in actual passed params.
+      const params = { ...generateParams(), timeout: undefined };
+      const result = await convertSetupParams(params, chainAddresses);
+      // Now that we've run the method, overwrite timeout to use the default value, and pass
+      // these expected params into our check method.
+      const expectedParams = { ...params, timeout: DEFAULT_CHANNEL_TIMEOUT.toString() };
+      runTest(expectedParams, result.getValue());
+    });
+  });
 
   describe("convertConditionalTransferParams", () => {
     const transferFee = "5";
@@ -224,33 +278,6 @@ describe("ParamConverter", () => {
         fee: "0",
       });
       expect(messaging.sendTransferQuoteMessage.callCount).to.be.eq(0);
-    });
-
-    it("should fail if quote is expired", async () => {
-      const params = generateParams();
-      const { channel: channelState } = createTestChannelState(UpdateType.deposit, {
-        channelAddress: params.channelAddress,
-        networkContext: {
-          ...chainAddresses[chainId],
-          chainId,
-          providerUrl,
-        },
-      });
-      params.quote = {
-        signature: undefined,
-        chainId,
-        routerIdentifier: channelState.aliceIdentifier,
-        amount: params.amount,
-        assetId: params.assetId,
-        recipient: params.recipient!,
-        recipientChainId: params.recipientChainId!,
-        recipientAssetId: params.recipientAssetId!,
-        fee: "0",
-        expiry: (Date.now() - 30_000).toString(),
-      };
-      const ret = await convertConditionalTransferParams(params, signerA, channelState, chainReader, messaging);
-      expect(ret.isError).to.be.true;
-      expect(ret.getError()?.message).to.be.eq(ParameterConversionError.reasons.QuoteExpired);
     });
 
     it("should fail if quote.fee is larger than transfer amount", async () => {
@@ -589,7 +616,7 @@ describe("ParamConverter", () => {
           callTo: params.callTo ?? AddressZero,
           callData: params.callData ?? "0x",
         },
-        timeout: DEFAULT_TRANSFER_TIMEOUT.toString(),
+        timeout: params.timeout ?? DEFAULT_TRANSFER_TIMEOUT.toString(),
         meta: {
           withdrawNonce: channelState.nonce.toString(),
           quote: isUserA
@@ -672,6 +699,19 @@ describe("ParamConverter", () => {
 
           const expectedParams = { ...generateParams(), callData: "0x" };
           await runTest(expectedParams, channelState, result.getValue(), isUserA);
+        });
+
+        it("should work with provided params.timeout", async () => {
+          const params = { ...generateParams(), timeout: "100000" };
+          const { channelState, result } = await testSetup(params, isUserA);
+          runTest(params, channelState, result.getValue(), isUserA);
+        });
+
+        it("should work with default params.timeout", async () => {
+          const params = { ...generateParams(), timeout: undefined };
+          const { channelState, result } = await testSetup(params, isUserA);
+          const expectedParams = { ...params, timeout: DEFAULT_TRANSFER_TIMEOUT.toString() };
+          runTest(expectedParams, channelState, result.getValue(), isUserA);
         });
       });
     }

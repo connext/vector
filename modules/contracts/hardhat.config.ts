@@ -2,6 +2,7 @@ import "@nomiclabs/hardhat-waffle";
 import "hardhat-deploy";
 import "hardhat-deploy-ethers";
 import "@nomiclabs/hardhat-etherscan";
+import "hardhat-gas-reporter";
 
 import { HardhatUserConfig } from "hardhat/types";
 
@@ -32,6 +33,9 @@ const config: HardhatUserConfig = {
         runs: 200,
       },
     },
+  },
+  gasReporter: {
+    enabled: true,
   },
   defaultNetwork: "hardhat",
   namedAccounts: {

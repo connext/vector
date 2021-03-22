@@ -2,9 +2,35 @@
 
 ## Next Release
 
+## 0.2.1-beta.6
+
+- \[all\] Add confirmations for most chains
+- \[router\] Improvements to fee stats
+## 0.2.1-beta.5
+
+- \[types\] Update estimated gas fees
+
+## 0.2.1-beta.4
+
+- \[contracts\] Result-ify waiting for transactions
+
+## 0.2.1-beta.3
+
+- \[router\] Create queues for transfer creation races
+- \[engine, types\] Make timeout parameter optional for setup, conditional transfer, and withdraw
+
+## 0.2.1-beta.2
+
+- \[engine\] Remove time validation on engine
+
+## 0.2.1-beta.1
+
+- \[server-node, router\] Increase max `request.body` size on fastify servers
+
 ## 0.2.1-beta.0
 
 - \[engine\] Fix error handler bug
+
 ## 0.2.0
 
 - \[router\] Rebalance from Matic -> ETH Mainnet

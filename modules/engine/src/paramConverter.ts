@@ -6,6 +6,7 @@ import {
   FullChannelState,
   Result,
   DEFAULT_TRANSFER_TIMEOUT,
+  DEFAULT_CHANNEL_TIMEOUT,
   FullTransferState,
   WithdrawState,
   EngineParams,
@@ -19,12 +20,29 @@ import {
   jsonifyError,
   IMessagingService,
   DEFAULT_FEE_EXPIRY,
+  SetupParams,
 } from "@connext/vector-types";
 import { BigNumber } from "@ethersproject/bignumber";
 import { AddressZero } from "@ethersproject/constants";
 import { getAddress } from "@ethersproject/address";
 
 import { ParameterConversionError } from "./errors";
+
+export async function convertSetupParams(
+  params: EngineParams.Setup,
+  chainAddresses: ChainAddresses
+): Promise<Result<SetupParams>> {
+  return Result.ok({
+    counterpartyIdentifier: params.counterpartyIdentifier,
+    timeout: params.timeout ?? DEFAULT_CHANNEL_TIMEOUT.toString(),
+    networkContext: {
+      channelFactoryAddress: chainAddresses[params.chainId].channelFactoryAddress,
+      transferRegistryAddress: chainAddresses[params.chainId].transferRegistryAddress,
+      chainId: params.chainId,
+    },
+    meta: params.meta,
+  });
+}
 
 export async function convertConditionalTransferParams(
   params: EngineParams.ConditionalTransfer,
@@ -114,17 +132,6 @@ export async function convertConditionalTransferParams(
         ),
       );
     }
-    const now = Date.now();
-    if (parseInt(quote.expiry) <= now) {
-      return Result.fail(
-        new ParameterConversionError(
-          ParameterConversionError.reasons.QuoteExpired,
-          channelAddress,
-          signer.publicIdentifier,
-          { params, quote, now },
-        ),
-      );
-    }
     const requireOnline = providedMeta?.requireOnline ?? true; // true by default
     baseRoutingMeta = {
       requireOnline,
@@ -183,7 +190,7 @@ export async function convertConditionalTransferParams(
     assetId,
     transferDefinition: definition,
     transferInitialState,
-    timeout: timeout || DEFAULT_TRANSFER_TIMEOUT.toString(),
+    timeout: timeout ?? DEFAULT_TRANSFER_TIMEOUT.toString(),
     meta: {
       ...(baseRoutingMeta ?? {}),
       ...(providedMeta ?? {}),
@@ -213,7 +220,7 @@ export async function convertWithdrawParams(
   chainReader: IVectorChainReader,
   messaging: IMessagingService,
 ): Promise<Result<CreateTransferParams, EngineError>> {
-  const { channelAddress, callTo, callData, meta } = params;
+  const { channelAddress, callTo, callData, meta, timeout } = params;
   const assetId = getAddress(params.assetId);
   const recipient = getAddress(params.recipient);
   const initiatorSubmits = params.initiatorSubmits ?? false;
@@ -297,18 +304,6 @@ export async function convertWithdrawParams(
     );
   }
 
-  const now = Date.now();
-  if (parseInt(quote.expiry) <= now) {
-    return Result.fail(
-      new ParameterConversionError(
-        ParameterConversionError.reasons.QuoteExpired,
-        channelAddress,
-        signer.publicIdentifier,
-        { params, quote, now },
-      ),
-    );
-  }
-
   // If there is a fee being charged, recalculate the amount
   const amount = BigNumber.from(params.amount).sub(fee).toString();
 
@@ -385,7 +380,7 @@ export async function convertWithdrawParams(
     assetId,
     transferDefinition: definition,
     transferInitialState,
-    timeout: DEFAULT_TRANSFER_TIMEOUT.toString(),
+    timeout: timeout ?? DEFAULT_TRANSFER_TIMEOUT.toString(),
     // Note: we MUST include withdrawNonce in meta. The counterparty will NOT have the same nonce on their end otherwise.
     meta: {
       ...(meta ?? {}),

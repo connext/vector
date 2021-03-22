@@ -9,6 +9,7 @@ import {
   TIntegerString,
   MinimalTransaction,
   CheckStatusParams,
+  getConfirmationsForChain,
 } from "@connext/vector-types";
 import { getRandomBytes32 } from "@connext/vector-utils";
 import { BigNumber } from "@ethersproject/bignumber";
@@ -424,7 +425,7 @@ export const completeRebalance = async (
       {
         method,
         intervalId: methodId,
-        rebalanceRes: statusRes.data
+        rebalanceRes: statusRes.data,
       },
       "Status request sent",
     );
@@ -493,7 +494,7 @@ const sendTransaction = async (
     },
     "Tx sent",
   );
-  const receipt = await response.wait();
+  const receipt = await response.wait(getConfirmationsForChain(chainId));
   logger.info(
     {
       method,

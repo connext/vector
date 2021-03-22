@@ -183,6 +183,8 @@ watch-utils: types
 
 test-contracts: contracts-js
 	bash ops/test-unit.sh contracts test
+gas-test-contracts: contracts-js
+	bash ops/test-unit.sh contracts test-gas
 watch-contracts: utils
 	bash ops/test-unit.sh contracts watch
 
