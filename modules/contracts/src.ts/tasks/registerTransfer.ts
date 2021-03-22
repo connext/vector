@@ -53,7 +53,7 @@ export default task("register-transfer", "Registers transfers")
       log.info(cleaned, `Adding transfer to registry`);
       const response = await registry.addTransferDefinition(cleaned);
       log.info(`Added: ${response.hash}`);
-      await response.wait(2);
+      await response.wait();
       log.info(`Tx mined, successfully added ${cleaned.name} on ${cleaned.definition}`);
     },
   );

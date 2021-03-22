@@ -15,7 +15,7 @@ export default task("create-channel", "Creates a new channel")
     const channelAddress = await channelFactory.getChannelAddress(aliceAddress, bobAddress);
     const channelCode = await hre.ethers.provider.getCode(channelAddress);
     if (channelCode === "0x" || channelCode === "0x00") {
-      await (await channelFactory.createChannel(aliceAddress, bobAddress)).wait(2);
+      await (await channelFactory.createChannel(aliceAddress, bobAddress)).wait();
       log.info(`Successfully created a channel at ${channelAddress}`);
     } else {
       log.info(`Channel already exists at ${channelAddress}`);
