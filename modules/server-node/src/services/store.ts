@@ -8,7 +8,7 @@ import {
   FullTransferState,
   UpdateType,
   EngineEvent,
-  IEngineStore,
+  IServerNodeStore,
   WithdrawCommitmentJson,
   StoredTransaction,
   TransactionReason,
@@ -31,15 +31,6 @@ import {
   Transfer,
   OnchainTransaction,
 } from "../generated/db-client";
-
-export interface IServerNodeStore extends IEngineStore {
-  registerSubscription<T extends EngineEvent>(publicIdentifier: string, event: T, url: string): Promise<void>;
-  getSubscription<T extends EngineEvent>(publicIdentifier: string, event: T): Promise<string | undefined>;
-  getSubscriptions(publicIdentifier: string): Promise<{ [event: string]: string }>;
-  setNodeIndex(index: number, publicIdentifier: string): Promise<void>;
-  getNodeIndexes(): Promise<{ index: number; publicIdentifier: string }[]>;
-  removeNodeIndexes(): Promise<void>;
-}
 
 const convertOnchainTransactionEntityToTransaction = (
   onchainEntity: OnchainTransaction & {
