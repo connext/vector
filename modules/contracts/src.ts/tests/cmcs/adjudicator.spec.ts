@@ -87,13 +87,13 @@ describe("CMCAdjudicator.sol", async function () {
           assetId === AddressZero
             ? await bob.sendTransaction({ to: channel.address, value: depositsB })
             : await token.connect(bob).transfer(channel.address, depositsB);
-        await bobTx.wait();
+        await bobTx.wait(2);
       }
 
       const depositsA = BigNumber.from(ccs.processedDepositsA[idx]);
       if (!depositsA.isZero()) {
         const aliceTx = await channel.connect(alice).depositAlice(assetId, depositsA);
-        await aliceTx.wait();
+        await aliceTx.wait(2);
       }
     }
   };
@@ -106,7 +106,7 @@ describe("CMCAdjudicator.sol", async function () {
       await aliceSigner.signMessage(hash),
       await bobSigner.signMessage(hash),
     );
-    const { blockNumber: disputeBlock } = await tx.wait();
+    const { blockNumber: disputeBlock } = await tx.wait(2);
     const { timestamp } = await provider.getBlock(disputeBlock);
     // Bring to defund phase
     await advanceBlocktime(BigNumber.from(ccs.timeout).toNumber());
@@ -124,7 +124,7 @@ describe("CMCAdjudicator.sol", async function () {
 
   // Helper to dispute transfers + bring to defund phase
   const disputeTransfer = async (cts: FullTransferState = transferState) => {
-    await (await channel.disputeTransfer(cts, getMerkleProof(cts))).wait();
+    await (await channel.disputeTransfer(cts, getMerkleProof(cts))).wait(2);
   };
 
   // Helper to defund channels and verify transfers
@@ -145,15 +145,15 @@ describe("CMCAdjudicator.sol", async function () {
       assetIds.map((assetId: string) => getOnchainBalance(assetId, bob.address)),
     );
     // Defund channel
-    await (await channel.defundChannel(ccs, defundedAssets, indices)).wait();
+    await (await channel.defundChannel(ccs, defundedAssets, indices)).wait(2);
     // Withdraw all assets from channel
     for (let i = 0; i < assetIds.length; i++) {
       const assetId = assetIds[i];
       if ((await channel.getExitableAmount(assetId, alice.address)).gt(Zero)) {
-        await (await channel.exit(assetId, alice.address, alice.address)).wait();
+        await (await channel.exit(assetId, alice.address, alice.address)).wait(2);
       }
       if ((await channel.getExitableAmount(assetId, bob.address)).gt(Zero)) {
-        await (await channel.exit(assetId, bob.address, bob.address)).wait();
+        await (await channel.exit(assetId, bob.address, bob.address)).wait(2);
       }
     }
     // Get post-defund balances
@@ -201,8 +201,8 @@ describe("CMCAdjudicator.sol", async function () {
     token = await getContract("TestToken", alice);
     transferDefinition = await getContract("HashlockTransfer", alice);
     // mint token to alice/bob
-    await (await token.mint(alice.address, parseEther("1"))).wait();
-    await (await token.mint(bob.address, parseEther("1"))).wait();
+    await (await token.mint(alice.address, parseEther("1"))).wait(2);
+    await (await token.mint(bob.address, parseEther("1"))).wait(2);
     channel = await createChannel(alice.address, bob.address, defaultLogLevel, "true");
     const preImage = getRandomBytes32();
     const state = {
@@ -281,7 +281,7 @@ describe("CMCAdjudicator.sol", async function () {
         await aliceSigner.signMessage(hash),
         await bobSigner.signMessage(hash),
       );
-      const { blockNumber } = await tx.wait();
+      const { blockNumber } = await tx.wait(2);
 
       await verifyChannelDispute(shortTimeout, blockNumber);
 
@@ -297,7 +297,7 @@ describe("CMCAdjudicator.sol", async function () {
 
     it("should fail if nonce is lte stored nonce", async () => {
       const tx = await channel.disputeChannel(channelState, aliceSignature, bobSignature);
-      const { blockNumber } = await tx.wait();
+      const { blockNumber } = await tx.wait(2);
       await verifyChannelDispute(channelState, blockNumber);
 
       await expect(channel.disputeChannel(channelState, aliceSignature, bobSignature)).revertedWith(
@@ -307,7 +307,7 @@ describe("CMCAdjudicator.sol", async function () {
 
     it("should work for a newly initiated dispute (and store expiries)", async () => {
       const tx = await channel.disputeChannel(channelState, aliceSignature, bobSignature);
-      const { blockNumber } = await tx.wait();
+      const { blockNumber } = await tx.wait(2);
       // Verify dispute
       await verifyChannelDispute(channelState, blockNumber);
     });
@@ -317,7 +317,7 @@ describe("CMCAdjudicator.sol", async function () {
         this.skip();
       }
       const tx = await channel.disputeChannel(channelState, aliceSignature, bobSignature);
-      const { blockNumber } = await tx.wait();
+      const { blockNumber } = await tx.wait(2);
       await verifyChannelDispute(channelState, blockNumber);
       // Submit a new, higher nonced state
       const newState = { ...channelState, nonce: channelState.nonce + 1 };
@@ -327,7 +327,7 @@ describe("CMCAdjudicator.sol", async function () {
         await aliceSigner.signMessage(hash),
         await bobSigner.signMessage(hash),
       );
-      await tx2.wait();
+      await tx2.wait(2);
       // safe because timeout does not change
       await verifyChannelDispute(newState, blockNumber);
     });
@@ -379,7 +379,7 @@ describe("CMCAdjudicator.sol", async function () {
         this.skip();
       }
       const tx = await channel.disputeChannel(channelState, aliceSignature, bobSignature);
-      const { blockNumber } = await tx.wait();
+      const { blockNumber } = await tx.wait(2);
       await verifyChannelDispute(channelState, blockNumber);
       await expect(channel.defundChannel(channelState, channelState.assetIds, [])).revertedWith(
         "CMCAdjudicator: INVALID_PHASE",
@@ -502,7 +502,7 @@ describe("CMCAdjudicator.sol", async function () {
       // Send funds to multisig without reconciling offchain state
       const unprocessed = BigNumber.from(18);
       const bobTx = await bob.sendTransaction({ to: channel.address, value: unprocessed });
-      await bobTx.wait();
+      await bobTx.wait(2);
 
       // Dispute + defund channel
       await disputeChannel();
@@ -522,7 +522,7 @@ describe("CMCAdjudicator.sol", async function () {
       // Send funds to multisig without reconciling offchain state
       const unprocessed = BigNumber.from(18);
       const bobTx = await bob.sendTransaction({ to: onlyTokens.channelAddress, value: unprocessed });
-      await bobTx.wait();
+      await bobTx.wait(2);
 
       // Dispute + defund channel
       await disputeChannel(onlyTokens);
@@ -558,7 +558,7 @@ describe("CMCAdjudicator.sol", async function () {
       // Don't use helper here because will automatically bring into
       // the defund phase
       const tx = await channel.disputeChannel(channelState, aliceSignature, bobSignature);
-      await tx.wait();
+      await tx.wait(2);
       await expect(channel.disputeTransfer(transferState, getMerkleProof())).revertedWith(
         "CMCAdjudicator: INVALID_PHASE",
       );
@@ -571,7 +571,7 @@ describe("CMCAdjudicator.sol", async function () {
       const longerTimeout = { ...channelState, timeout: "4" };
       await disputeChannel(longerTimeout);
       const tx = await channel.disputeTransfer(transferState, getMerkleProof());
-      await tx.wait();
+      await tx.wait(2);
       await expect(channel.disputeTransfer(transferState, getMerkleProof())).revertedWith(
         "CMCAdjudicator: TRANSFER_ALREADY_DISPUTED",
       );
@@ -583,7 +583,7 @@ describe("CMCAdjudicator.sol", async function () {
       }
       await disputeChannel();
       const tx = await channel.disputeTransfer(transferState, getMerkleProof());
-      const { blockNumber } = await tx.wait();
+      const { blockNumber } = await tx.wait(2);
       await verifyTransferDispute(transferState, blockNumber);
     });
   });
@@ -657,7 +657,7 @@ describe("CMCAdjudicator.sol", async function () {
           encodeTransferResolver(transferState.transferResolver!, transferState.transferEncodings[1]),
           HashZero,
         );
-      await tx.wait();
+      await tx.wait(2);
       await expect(
         channel
           .connect(bob)
@@ -725,8 +725,8 @@ describe("CMCAdjudicator.sol", async function () {
             encodeTransferResolver({ preImage: HashZero }, transferState.transferEncodings[1]),
             HashZero,
           )
-      ).wait();
-      await (await channel.exit(transferState.assetId, alice.address, alice.address)).wait();
+      ).wait(2);
+      await (await channel.exit(transferState.assetId, alice.address, alice.address)).wait(2);
       expect(await getOnchainBalance(transferState.assetId, alice.address)).to.be.eq(
         preDefundAlice.add(transferState.balance.amount[0]),
       );
@@ -748,10 +748,10 @@ describe("CMCAdjudicator.sol", async function () {
             encodeTransferResolver(transferState.transferResolver, transferState.transferEncodings[1]),
             HashZero,
           )
-      ).wait();
+      ).wait(2);
       await (
         await channel.exit(transferState.assetId, transferState.balance.to[1], transferState.balance.to[1])
-      ).wait();
+      ).wait(2);
       expect(await getOnchainBalance(transferState.assetId, alice.address)).to.be.eq(preDefundAlice);
       expect(await getOnchainBalance(transferState.assetId, transferState.balance.to[1])).to.be.eq(
         transferState.balance.amount[0],
@@ -773,10 +773,10 @@ describe("CMCAdjudicator.sol", async function () {
             encodeTransferResolver(transferState.transferResolver, transferState.transferEncodings[1]),
             await signChannelMessage(transferState.initialStateHash, bob.privateKey),
           )
-      ).wait();
+      ).wait(2);
       await (
         await channel.exit(transferState.assetId, transferState.balance.to[1], transferState.balance.to[1])
-      ).wait();
+      ).wait(2);
       expect(await getOnchainBalance(transferState.assetId, alice.address)).to.be.eq(preDefundAlice);
       expect(await getOnchainBalance(transferState.assetId, transferState.balance.to[1])).to.be.eq(
         transferState.balance.amount[0],
@@ -800,8 +800,8 @@ describe("CMCAdjudicator.sol", async function () {
             encodeTransferResolver(transferState.transferResolver, transferState.transferEncodings[1]),
             HashZero,
           )
-      ).wait();
-      await (await channel.exit(transferState.assetId, alice.address, alice.address)).wait();
+      ).wait(2);
+      await (await channel.exit(transferState.assetId, alice.address, alice.address)).wait(2);
       const postDefundAlice = await getOnchainBalance(transferState.assetId, alice.address);
       expect(postDefundAlice).to.be.eq(preDefundAlice.add(transferState.balance.amount[0]));
       expect(await getOnchainBalance(transferState.assetId, transferState.balance.to[1])).to.be.eq(0);

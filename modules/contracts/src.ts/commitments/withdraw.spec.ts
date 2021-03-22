@@ -25,8 +25,8 @@ describe("withdrawCommitment", function () {
         to: channel.address,
         value: BigNumber.from(amount).mul(2),
       })
-    ).wait();
-    await (await token.transfer(channel.address, parseEther(amount))).wait();
+    ).wait(2);
+    await (await token.transfer(channel.address, parseEther(amount))).wait(2);
   });
 
   it("can successfully withdraw Eth", async () => {

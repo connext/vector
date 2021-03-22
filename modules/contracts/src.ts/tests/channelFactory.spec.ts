@@ -73,7 +73,7 @@ describe("ChannelFactory", function () {
       AddressZero,
       value,
       { value },
-    ))).wait();
+    ))).wait(2);
     const channelAddress = await channelFactory.getChannelAddress(alice.address, bob.address);
     const computedAddr = await getCreate2MultisigAddress(
       alicePubId,
@@ -106,7 +106,7 @@ describe("ChannelFactory", function () {
       await ethers.getContractFactory("ChannelFactory", alice)
     ).deploy(newChannelMastercopy.address, Zero)).deployed();
     const newChannelAddress = await newChannelFactory.getChannelAddress(alice.address, bob.address);
-    await (await newChannelFactory.createChannel(alice.address, bob.address)).wait();
+    await (await newChannelFactory.createChannel(alice.address, bob.address)).wait(2);
     expect(channel.address).to.not.eq(newChannelAddress);
   });
 });

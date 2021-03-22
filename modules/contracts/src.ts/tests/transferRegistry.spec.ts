@@ -17,15 +17,15 @@ describe("TransferRegistry.sol", function () {
     await deployments.fixture(); // Start w fresh deployments
     registry = await getContract("TransferRegistry", alice);
     // Just for these tests, reset the registry to it's initial state
-    await (await registry.removeTransferDefinition("HashlockTransfer")).wait();
-    await (await registry.removeTransferDefinition("Withdraw")).wait();
+    await (await registry.removeTransferDefinition("HashlockTransfer")).wait(2);
+    await (await registry.removeTransferDefinition("Withdraw")).wait(2);
     transfer = await getContract("HashlockTransfer", alice);
     registryInfo = await transfer.getRegistryInformation();
   });
 
   describe("addTransferDefinition", () => {
     it("should work", async () => {
-      await (await registry.addTransferDefinition(registryInfo)).wait();
+      await (await registry.addTransferDefinition(registryInfo)).wait(2);
       expect(await registry.getTransferDefinitions()).to.be.deep.eq([registryInfo]);
     });
 
@@ -38,11 +38,11 @@ describe("TransferRegistry.sol", function () {
 
   describe("removeTransferDefinition", () => {
     beforeEach(async () => {
-      await (await registry.addTransferDefinition(registryInfo)).wait();
+      await (await registry.addTransferDefinition(registryInfo)).wait(2);
     });
 
     it("should work", async () => {
-      await (await registry.removeTransferDefinition("HashlockTransfer")).wait();
+      await (await registry.removeTransferDefinition("HashlockTransfer")).wait(2);
       expect(await registry.getTransferDefinitions()).to.be.deep.eq([]);
     });
 

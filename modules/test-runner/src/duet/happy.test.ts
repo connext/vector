@@ -24,7 +24,7 @@ describe(testName, () => {
       randomIndex,
     );
     const aliceTx = await wallet1.sendTransaction({ to: aliceService.signerAddress, value: utils.parseEther("0.1") });
-    await aliceTx.wait();
+    await aliceTx.wait(2);
 
     bobService = await RestServerNodeService.connect(env.bobUrl, logger.child({ testName }), bobEvts, randomIndex);
   });

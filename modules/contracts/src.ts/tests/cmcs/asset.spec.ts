@@ -25,11 +25,11 @@ describe("CMCAsset", function () {
 
     // Fund with all tokens
     token = await getContract("TestToken", alice);
-    await (await token.mint(bob.address, parseEther("1"))).wait();
+    await (await token.mint(bob.address, parseEther("1"))).wait(2);
     failingToken = await getContract("FailingToken", alice);
-    await (await failingToken.mint(bob.address, parseEther("1"))).wait();
+    await (await failingToken.mint(bob.address, parseEther("1"))).wait(2);
     nonconformingToken = await getContract("NonconformingToken", alice);
-    await (await nonconformingToken.mint(bob.address, parseEther("1"))).wait();
+    await (await nonconformingToken.mint(bob.address, parseEther("1"))).wait(2);
   });
 
   it("should deploy", async () => {
@@ -64,9 +64,9 @@ describe("CMCAsset", function () {
   describe("makeExitable", () => {
     beforeEach(async () => {
       const [to, value] = [channel.address, BigNumber.from(10000)];
-      await (await bob.sendTransaction({ to, value })).wait();
-      await (await token.connect(bob).transfer(to, value)).wait();
-      await (await nonconformingToken.connect(bob).transfer(to, value)).wait();
+      await (await bob.sendTransaction({ to, value })).wait(2);
+      await (await token.connect(bob).transfer(to, value)).wait(2);
+      await (await nonconformingToken.connect(bob).transfer(to, value)).wait(2);
     });
 
     it("should work for ETH transfers", async () => {
@@ -101,7 +101,7 @@ describe("CMCAsset", function () {
     beforeEach(async () => {
       // Fund the channel with tokens and eth
       const tx = await bob.sendTransaction({ to: channel.address, value: BigNumber.from(10000) });
-      await tx.wait();
+      await tx.wait(2);
     });
 
     it("should work", async () => {
@@ -128,19 +128,19 @@ describe("CMCAsset", function () {
     beforeEach(async () => {
       // Fund the channel with tokens and eth
       const fund = value.mul(10);
-      await (await bob.sendTransaction({ to: channel.address, value: fund })).wait();
-      await (await failingToken.connect(bob).succeedingTransfer(channel.address, fund)).wait();
+      await (await bob.sendTransaction({ to: channel.address, value: fund })).wait(2);
+      await (await failingToken.connect(bob).succeedingTransfer(channel.address, fund)).wait(2);
 
       // Make failing transfer
       const preTransfer = await failingToken.balanceOf(bob.address);
-      await (await channel.testMakeExitable(failingToken.address, bob.address, value)).wait();
+      await (await channel.testMakeExitable(failingToken.address, bob.address, value)).wait(2);
       expect(await failingToken.balanceOf(bob.address)).to.be.eq(preTransfer);
       expect(await channel.getTotalTransferred(failingToken.address)).to.be.eq(BigNumber.from(0));
       expect(await channel.getExitableAmount(failingToken.address, bob.address)).to.be.eq(value);
 
       // Make transfers pass
-      await (await failingToken.setTransferShouldRevert(false)).wait();
-      await (await failingToken.setTransferShouldFail(false)).wait();
+      await (await failingToken.setTransferShouldRevert(false)).wait(2);
+      await (await failingToken.setTransferShouldFail(false)).wait(2);
     });
 
     it("should fail if owner is not msg.sender or recipient", async () => {
@@ -154,14 +154,14 @@ describe("CMCAsset", function () {
     });
 
     it("should fail if transfer fails", async () => {
-      await (await failingToken.setTransferShouldFail(true)).wait();
+      await (await failingToken.setTransferShouldFail(true)).wait(2);
       await expect(channel.connect(bob).exit(failingToken.address, bob.address, bob.address)).revertedWith(
         "CMCAsset: TRANSFER_FAILED",
       );
     });
 
     it("should fail if transfer reverts", async () => {
-      await (await failingToken.setTransferShouldRevert(true)).wait();
+      await (await failingToken.setTransferShouldRevert(true)).wait(2);
       await expect(channel.connect(bob).exit(failingToken.address, bob.address, bob.address)).revertedWith(
         "FAIL: Failing token",
       );
@@ -169,7 +169,7 @@ describe("CMCAsset", function () {
 
     it("should allow ERC20 token to be withdrawable if transfer fails", async () => {
       const preTransfer = await failingToken.balanceOf(bob.address);
-      await (await channel.exit(failingToken.address, bob.address, bob.address)).wait();
+      await (await channel.exit(failingToken.address, bob.address, bob.address)).wait(2);
       expect(await failingToken.balanceOf(bob.address)).to.be.eq(preTransfer.add(value));
     });
   });

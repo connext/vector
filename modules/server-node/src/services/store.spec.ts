@@ -531,7 +531,7 @@ describe("store", () => {
     });
 
     // save receipt
-    const receipt = await response.wait();
+    const receipt = await response.wait(2);
     await store.saveTransactionReceipt(setupState.channelAddress, receipt);
 
     // verify receipt

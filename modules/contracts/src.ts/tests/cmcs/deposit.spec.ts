@@ -21,7 +21,7 @@ describe("CMCDeposit.sol", function () {
     channel = await createChannel();
     // setup failing token
     failingToken = await getContract("FailingToken", alice);
-    await (await failingToken.mint(alice.address, parseEther("0.001"))).wait();
+    await (await failingToken.mint(alice.address, parseEther("0.001"))).wait(2);
     // setup reentrant token
     await deployments.deploy("ReentrantToken", {
       from: alice.address,
@@ -29,14 +29,14 @@ describe("CMCDeposit.sol", function () {
     });
 
     reentrantToken = await getContract("ReentrantToken", alice);
-    await (await reentrantToken.mint(alice.address, parseEther("0.01"))).wait();
+    await (await reentrantToken.mint(alice.address, parseEther("0.01"))).wait(2);
   });
 
   it("should only increase totalDepositsBob after receiving a direct deposit", async () => {
     const aliceDeposits = await channel.getTotalDepositsAlice(AddressZero);
     const bobDeposits = await channel.getTotalDepositsBob(AddressZero);
     const tx = await bob.sendTransaction({ to: channel.address, value });
-    await tx.wait();
+    await tx.wait(2);
     expect(await channel.getTotalDepositsAlice(AddressZero)).to.equal(aliceDeposits);
     expect(await channel.getTotalDepositsBob(AddressZero)).to.equal(bobDeposits.add(value));
   });
@@ -45,7 +45,7 @@ describe("CMCDeposit.sol", function () {
     const aliceDeposits = await channel.getTotalDepositsAlice(AddressZero);
     const bobDeposits = await channel.getTotalDepositsBob(AddressZero);
     const tx = await channel.connect(alice).depositAlice(AddressZero, value, { value });
-    await tx.wait();
+    await tx.wait(2);
     expect(await channel.getTotalDepositsAlice(AddressZero)).to.equal(aliceDeposits.add(value));
     expect(await channel.getTotalDepositsBob(AddressZero)).to.equal(bobDeposits);
   });

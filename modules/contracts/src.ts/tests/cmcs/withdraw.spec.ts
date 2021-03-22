@@ -27,18 +27,18 @@ describe("CMCWithdraw.sol", function() {
 
     // Send tokens and eth to channel
     const ethTx = await alice.sendTransaction({ to: channel.address, value: parseEther("0.001") });
-    await ethTx.wait();
+    await ethTx.wait(2);
 
     const tokenTx = await failingToken.mint(channel.address, parseEther("0.001"));
-    await tokenTx.wait();
+    await tokenTx.wait(2);
 
     // Make transfers pass
     const dontRevert = await failingToken.setTransferShouldRevert(false);
-    await dontRevert.wait();
+    await dontRevert.wait(2);
     const dontFail = await failingToken.setTransferShouldFail(false);
-    await dontFail.wait();
+    await dontFail.wait(2);
     const dontRejectEther = await failingToken.setRejectEther(false);
-    await dontRejectEther.wait();
+    await dontRejectEther.wait(2);
   });
 
   it("should work for Ether", async () => {
@@ -63,7 +63,7 @@ describe("CMCWithdraw.sol", function() {
     expect(await channel.getWithdrawalTransactionRecord(withdrawData)).to.be.false;
 
     const tx = await channel.withdraw(withdrawData, aliceSig, bobSig);
-    await tx.wait();
+    await tx.wait(2);
 
     expect(await provider.getBalance(recipient)).to.be.eq(preWithdrawRecipient.add(withdrawAmount));
     expect(await provider.getBalance(channel.address)).to.be.eq(preWithdrawChannel.sub(withdrawAmount));
@@ -93,7 +93,7 @@ describe("CMCWithdraw.sol", function() {
     expect(await channel.getWithdrawalTransactionRecord(withdrawData)).to.be.false;
 
     const tx = await channel.withdraw(withdrawData, aliceSig, bobSig);
-    await tx.wait();
+    await tx.wait(2);
 
     expect(await failingToken.balanceOf(recipient)).to.be.eq(preWithdrawRecipient.add(withdrawAmount));
     expect(await failingToken.balanceOf(channel.address)).to.be.eq(preWithdrawChannel.sub(withdrawAmount));
@@ -107,7 +107,7 @@ describe("CMCWithdraw.sol", function() {
 
     // Send tokens to channel
     const tokenTx = await nonconformingToken.mint(channel.address, parseEther("0.001"));
-    await tokenTx.wait();
+    await tokenTx.wait(2);
 
     const preWithdrawRecipient = await nonconformingToken.balanceOf(recipient);
     const preWithdrawChannel = await nonconformingToken.balanceOf(channel.address);
@@ -130,7 +130,7 @@ describe("CMCWithdraw.sol", function() {
     expect(await channel.getWithdrawalTransactionRecord(withdrawData)).to.be.false;
 
     const tx = await channel.withdraw(withdrawData, aliceSig, bobSig);
-    await tx.wait();
+    await tx.wait(2);
 
     expect(await nonconformingToken.balanceOf(recipient)).to.be.eq(preWithdrawRecipient.add(withdrawAmount));
     expect(await nonconformingToken.balanceOf(channel.address)).to.be.eq(preWithdrawChannel.sub(withdrawAmount));
@@ -244,7 +244,7 @@ describe("CMCWithdraw.sol", function() {
 
     // Make transfers fail
     const rejectEther = await failingToken.setRejectEther(true);
-    await rejectEther.wait();
+    await rejectEther.wait(2);
 
     const withdrawAmount = BigNumber.from(1000);
     const nonce = BigNumber.from(1);
@@ -268,7 +268,7 @@ describe("CMCWithdraw.sol", function() {
   it("should fail if token transfer fails", async () => {
     // Make transfers fail
     const failing = await failingToken.setTransferShouldFail(true);
-    await failing.wait();
+    await failing.wait(2);
 
     const withdrawAmount = BigNumber.from(1000);
     const nonce = BigNumber.from(1);
@@ -292,7 +292,7 @@ describe("CMCWithdraw.sol", function() {
   it("should fail if token transfer reverts", async () => {
     // Make transfers revert
     const reverting = await failingToken.setTransferShouldRevert(true);
-    await reverting.wait();
+    await reverting.wait(2);
 
     const withdrawAmount = BigNumber.from(1000);
     const nonce = BigNumber.from(1);

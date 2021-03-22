@@ -51,8 +51,8 @@ describe("EthereumChainService", function () {
     );
     token = await getContract("TestToken", alice);
     transferDefinition = await getContract("HashlockTransfer", alice);
-    await (await token.mint(alice.address, parseEther("1"))).wait();
-    await (await token.mint(bob.address, parseEther("1"))).wait();
+    await (await token.mint(alice.address, parseEther("1"))).wait(2);
+    await (await token.mint(bob.address, parseEther("1"))).wait(2);
     const preImage = getRandomBytes32();
     const state = {
       lockHash: createlockHash(preImage),

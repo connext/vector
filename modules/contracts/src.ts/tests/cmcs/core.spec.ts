@@ -22,7 +22,7 @@ describe("CMCCore.sol", function() {
     beforeEach(async () => {
       const testFactory = await (ethers as any).getContract("TestChannelFactory", alice);
       const channelAddress = await testFactory.getChannelAddress(alice.address, bob.address);
-      await (await testFactory.createChannelWithoutSetup(alice.address, bob.address)).wait();
+      await (await testFactory.createChannelWithoutSetup(alice.address, bob.address)).wait(2);
       channel = new Contract(
         channelAddress,
         (await deployments.getArtifact("TestChannel")).abi,
@@ -32,7 +32,7 @@ describe("CMCCore.sol", function() {
 
     it("should work", async () => {
       const setupTx = await channel.setup(alice.address, bob.address);
-      await setupTx.wait();
+      await setupTx.wait(2);
 
       expect(await channel.getAlice()).to.be.eq(alice.address);
       expect(await channel.getBob()).to.be.eq(bob.address);
@@ -40,7 +40,7 @@ describe("CMCCore.sol", function() {
 
     it("should fail if it has already been setup", async () => {
       const setupTx = await channel.setup(alice.address, bob.address);
-      await setupTx.wait();
+      await setupTx.wait(2);
       await expect(
         channel.setup(alice.address, bob.address),
       ).revertedWith("CMCCore: ALREADY_SETUP");
