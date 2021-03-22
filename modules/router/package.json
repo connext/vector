@@ -18,6 +18,7 @@
     "@connext/vector-engine": "0.2.1-beta.6",
     "@connext/vector-types": "0.2.1-beta.6",
     "@connext/vector-utils": "0.2.1-beta.6",
+    "@ethersproject/abi": "5.0.12",
     "@ethersproject/address": "5.0.10",
     "@ethersproject/bignumber": "5.0.14",
     "@ethersproject/constants": "5.0.9",
