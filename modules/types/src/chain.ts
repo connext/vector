@@ -83,7 +83,12 @@ export type ChainInfo = {
     symbol: string;
     decimals: number;
   };
-  assetId: { [assetId: string]: string };
+  assetId: {
+    [assetId: string]: {
+      symbol: string;
+      mainnetEquivalent: string;
+    };
+  };
   rpc: string[];
   faucets: string[];
   infoURL: string;

@@ -1,10 +1,11 @@
 import { fetchJson } from "@ethersproject/web";
-import { ChainInfo, ERC20Abi } from "@connext/vector-types";
+import { ChainInfo, ERC20Abi, Result } from "@connext/vector-types";
 import { JsonRpcProvider } from "@ethersproject/providers";
 import { Contract } from "@ethersproject/contracts";
 import { AddressZero } from "@ethersproject/constants";
 
 import chains from "./chains.json";
+import { getAddress } from "@ethersproject/address";
 
 export const CHAIN_INFO_URL = "https://chainid.network/chains.json";
 
@@ -27,6 +28,19 @@ export const getAssetName = (chainId: number, assetId: string): string => {
   } else {
     return "Token";
   }
+};
+
+export const getMainnetEquivalent = (chainId: number, assetId: string): Result<string, Error> => {
+  const original = chains.find((c) => c.chainId === chainId);
+  if (!original) {
+    return Result.fail(new Error(`Chain info not found for ${chainId}`));
+  }
+  const mainnet = original.assetId[getAddress(assetId)]?.mainnetEquivalent;
+  if (!mainnet) {
+    return Result.fail(new Error(`Mainnet equivalent not found for ${assetId} on ${chainId}`));
+  }
+  // return check-summed address
+  return Result.ok(getAddress(mainnet));
 };
 
 export const getAssetDecimals = async (assetId: string, ethProvider: JsonRpcProvider): Promise<number> => {
