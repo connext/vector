@@ -1,12 +1,14 @@
 import {
   FullChannelState,
-  GAS_ESTIMATES,
   IVectorChainReader,
   jsonifyError,
   Result,
   REDUCED_GAS_PRICE,
+  SIMPLE_WITHDRAWAL_GAS_ESTIMATE,
 } from "@connext/vector-types";
 import { getBalanceForAssetId, getParticipant, getRandomBytes32, TESTNETS_WITH_FEES } from "@connext/vector-utils";
+import { ChannelFactory, ChannelMastercopy, TestToken } from "@connext/vector-contracts";
+import { Interface } from "@ethersproject/abi";
 import { BigNumber } from "@ethersproject/bignumber";
 import { AddressZero, Zero } from "@ethersproject/constants";
 import { BaseLogger } from "pino";
@@ -356,22 +358,40 @@ export const calculateEstimatedGasFee = async (
     );
   }
 
+  // Get the gas estimates
+  const fromGasEstimates = await getGasEstimates(
+    fromChannel,
+    fromAssetId,
+    amountToSend,
+    routerPublicIdentifier,
+    ethReader,
+  );
+  const toGasEstimates = await getGasEstimates(
+    toChannel,
+    toAssetId,
+    amountToSend, // safe to not convert, amounts dont impact gas
+    routerPublicIdentifier,
+    ethReader,
+  );
+  if (fromGasEstimates.isError || toGasEstimates.isError) {
+    return Result.fail(fromGasEstimates.getError() ?? toGasEstimates.getError()!);
+  }
+
   const fromProfile = rebalanceFromProfile.getValue();
   let fromChannelFee = Zero; // start with no actions
   if (finalFromBalance.gt(fromProfile.reclaimThreshold)) {
     // There will be a post-resolution reclaim of funds
     fromChannelFee =
       fromChannelCode.getValue() === "0x"
-        ? GAS_ESTIMATES.createChannel.add(GAS_ESTIMATES.withdraw)
-        : GAS_ESTIMATES.withdraw;
+        ? fromGasEstimates.getValue().createChannel.add(SIMPLE_WITHDRAWAL_GAS_ESTIMATE)
+        : SIMPLE_WITHDRAWAL_GAS_ESTIMATE;
   } else if (finalFromBalance.lt(fromProfile.collateralizeThreshold)) {
     // There will be a post-resolution sender collateralization
+    // gas estimates are participant sensitive, so this is safe to do
     fromChannelFee =
-      participantFromChannel === "bob"
-        ? GAS_ESTIMATES.depositBob
-        : fromChannelCode.getValue() === "0x" // is alice, is deployed?
-        ? GAS_ESTIMATES.createChannelAndDepositAlice
-        : GAS_ESTIMATES.depositAlice;
+      participantFromChannel === "alice" && fromChannelCode.getValue() === "0x"
+        ? fromGasEstimates.getValue().createChannelAndDepositAlice
+        : fromGasEstimates.getValue().deposit;
   }
 
   // when forwarding a transfer, the only immediate costs on the receiver-side
@@ -457,7 +477,7 @@ export const calculateEstimatedGasFee = async (
     );
     return Result.ok({
       [fromChannel.channelAddress]: fromChannelFee,
-      [toChannel.channelAddress]: GAS_ESTIMATES.depositBob,
+      [toChannel.channelAddress]: toGasEstimates.getValue().deposit,
     });
   }
 
@@ -483,6 +503,90 @@ export const calculateEstimatedGasFee = async (
   return Result.ok({
     [fromChannel.channelAddress]: fromChannelFee,
     [toChannel.channelAddress]:
-      toChannelCode.getValue() === "0x" ? GAS_ESTIMATES.createChannelAndDepositAlice : GAS_ESTIMATES.depositAlice,
+      toChannelCode.getValue() === "0x"
+        ? toGasEstimates.getValue().createChannelAndDepositAlice
+        : toGasEstimates.getValue().deposit,
+  });
+};
+
+const getGasEstimates = async (
+  channel: FullChannelState,
+  assetId: string,
+  amount: BigNumber, // use fee amount
+  routerPublicIdentifier: string,
+  chainService: IVectorChainReader,
+): Promise<
+  Result<{ deposit: BigNumber; createChannel: BigNumber; createChannelAndDepositAlice: BigNumber }, FeeError>
+> => {
+  const iFactory = new Interface(ChannelFactory.abi);
+  const iMastercopy = new Interface(ChannelMastercopy.abi);
+  const iToken = new Interface(TestToken.abi);
+  const sender = routerPublicIdentifier === channel.aliceIdentifier ? channel.alice : channel.bob;
+  const createAndDepositGas =
+    sender === channel.alice
+      ? await chainService.estimateGas(channel.networkContext.chainId, {
+          to: channel.networkContext.channelFactoryAddress,
+          data: iFactory.encodeFunctionData("createChannelAndDepositAlice", [
+            channel.alice,
+            channel.bob,
+            assetId,
+            amount,
+          ]),
+          from: sender,
+        })
+      : Result.ok(BigNumber.from(0));
+  if (createAndDepositGas.isError) {
+    return Result.fail(
+      new FeeError(FeeError.reasons.ChainError, {
+        chainServiceMethod: "estimateGas:createChannelAndDepositAlice",
+        error: jsonifyError(createAndDepositGas.getError()!),
+      }),
+    );
+  }
+  console.log("create and deposit gas", createAndDepositGas.getValue().toString());
+
+  const createGas = await chainService.estimateGas(channel.networkContext.chainId, {
+    to: channel.networkContext.channelFactoryAddress,
+    data: iFactory.encodeFunctionData("createChannel", [channel.alice, channel.bob]),
+    from: sender,
+  });
+  if (createGas.isError) {
+    return Result.fail(
+      new FeeError(FeeError.reasons.ChainError, {
+        chainServiceMethod: "estimateGas:createChannel",
+        error: jsonifyError(createGas.getError()!),
+      }),
+    );
+  }
+  console.log("create gas", createGas.getValue().toString());
+
+  const deposit =
+    sender === channel.alice
+      ? await chainService.estimateGas(channel.networkContext.chainId, {
+          to: channel.channelAddress,
+          from: sender,
+          data: iMastercopy.encodeFunctionData("depositAlice", [assetId, amount]),
+        })
+      : await chainService.estimateGas(channel.networkContext.chainId, {
+          to: channel.channelAddress,
+          from: sender,
+          data:
+            assetId === AddressZero ? "0x" : iToken.encodeFunctionData("transfer", [channel.channelAddress, amount]),
+        });
+
+  if (deposit.isError) {
+    return Result.fail(
+      new FeeError(FeeError.reasons.ChainError, {
+        chainServiceMethod: "estimateGas:deposit",
+        error: jsonifyError(deposit.getError()!),
+      }),
+    );
+  }
+  console.log("deposit gas", deposit.getValue().toString());
+
+  return Result.ok({
+    createChannelAndDepositAlice: createAndDepositGas.getValue(),
+    createChannel: createGas.getValue(),
+    deposit: deposit.getValue(),
   });
 };
