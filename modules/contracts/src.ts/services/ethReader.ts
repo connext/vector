@@ -293,101 +293,98 @@ export class EthereumChainReader implements IVectorChainReader {
     chainId: number,
     bytecode?: string,
   ): Promise<Result<boolean, ChainError>> {
-    const provider = this.chainProviders[chainId];
-    if (!provider) {
-      return Result.fail(new ChainError(ChainError.reasons.ProviderNotFound));
-    }
-    // Get encoding
-    const registryRes = await this.getRegisteredTransferByDefinition(
-      transferDefinition,
-      transferRegistryAddress,
-      chainId,
-      bytecode,
-    );
-    if (registryRes.isError) {
-      return Result.fail(registryRes.getError()!);
-    }
-    // Try to encode
-    let encodedState: string;
-    let encodedBalance: string;
-    try {
-      encodedState = encodeTransferState(initialState, registryRes.getValue().stateEncoding);
-      encodedBalance = encodeBalance(balance);
-    } catch (e) {
-      return Result.fail(e);
-    }
-    const contract = new Contract(transferDefinition, TransferDefinition.abi, provider);
-    if (bytecode) {
-      const evmRes = this.tryEvm(
-        contract.interface.encodeFunctionData("create", [encodedBalance, encodedState]),
+    return await this.retryWrapper<boolean>(chainId,
+      async (provider: JsonRpcProvider) => {
+      // Get encoding
+      const registryRes = await this.getRegisteredTransferByDefinition(
+        transferDefinition,
+        transferRegistryAddress,
+        chainId,
         bytecode,
       );
-      if (!evmRes.isError) {
-        const decoded = contract.interface.decodeFunctionResult("create", evmRes.getValue()!)[0];
-        return Result.ok(decoded);
+      if (registryRes.isError) {
+        return Result.fail(registryRes.getError()!);
       }
-    }
-    this.log.debug(
-      {
-        transferDefinition,
-      },
-      "Calling create onchain",
-    );
-    try {
-      const valid = await contract.create(encodedBalance, encodedState);
-      return Result.ok(valid);
-    } catch (e) {
-      return Result.fail(e);
-    }
+      // Try to encode
+      let encodedState: string;
+      let encodedBalance: string;
+      try {
+        encodedState = encodeTransferState(initialState, registryRes.getValue().stateEncoding);
+        encodedBalance = encodeBalance(balance);
+      } catch (e) {
+        return Result.fail(e);
+      }
+      const contract = new Contract(transferDefinition, TransferDefinition.abi, provider);
+      if (bytecode) {
+        const evmRes = this.tryEvm(
+          contract.interface.encodeFunctionData("create", [encodedBalance, encodedState]),
+          bytecode,
+        );
+        if (!evmRes.isError) {
+          const decoded = contract.interface.decodeFunctionResult("create", evmRes.getValue()!)[0];
+          return Result.ok(decoded);
+        }
+      }
+      this.log.debug(
+        {
+          transferDefinition,
+        },
+        "Calling create onchain",
+      );
+      try {
+        const valid = await contract.create(encodedBalance, encodedState);
+        return Result.ok(valid);
+      } catch (e) {
+        return Result.fail(e);
+      }
+    });
   }
 
   async resolve(transfer: FullTransferState, chainId: number, bytecode?: string): Promise<Result<Balance, ChainError>> {
-    // Get provider
-    const provider = this.chainProviders[chainId];
-    if (!provider) {
-      return Result.fail(new ChainError(ChainError.reasons.ProviderNotFound));
-    }
+    return await this.retryWrapper<Balance>(chainId,
+      async (provider: JsonRpcProvider) => {
 
-    // Try to encode
-    let encodedState: string;
-    let encodedResolver: string;
-    let encodedBalance: string;
-    try {
-      encodedState = encodeTransferState(transfer.transferState, transfer.transferEncodings[0]);
-      encodedResolver = encodeTransferResolver(transfer.transferResolver!, transfer.transferEncodings[1]);
-      encodedBalance = encodeBalance(transfer.balance);
-    } catch (e) {
-      return Result.fail(e);
-    }
-
-    // Use pure-evm if possible
-    const contract = new Contract(transfer.transferDefinition, TransferDefinition.abi, provider);
-    if (bytecode) {
-      const evmRes = this.tryEvm(
-        contract.interface.encodeFunctionData("resolve", [encodedBalance, encodedState, encodedResolver]),
-        bytecode,
-      );
-      if (!evmRes.isError) {
-        const decoded = contract.interface.decodeFunctionResult("resolve", evmRes.getValue()!)[0];
-        return Result.ok(decoded);
+      // Try to encode
+      let encodedState: string;
+      let encodedResolver: string;
+      let encodedBalance: string;
+      try {
+        encodedState = encodeTransferState(transfer.transferState, transfer.transferEncodings[0]);
+        encodedResolver = encodeTransferResolver(transfer.transferResolver!, transfer.transferEncodings[1]);
+        encodedBalance = encodeBalance(transfer.balance);
+      } catch (e) {
+        return Result.fail(e);
       }
-    }
-    this.log.debug(
-      {
-        transferDefinition: transfer.transferDefinition,
-        transferId: transfer.transferId,
-      },
-      "Calling resolve onchain",
-    );
-    try {
-      const ret = await contract.resolve(encodedBalance, encodedState, encodedResolver);
-      return Result.ok({
-        to: ret.to,
-        amount: ret.amount.map((a: BigNumber) => a.toString()),
-      });
-    } catch (e) {
-      return Result.fail(e);
-    }
+
+      // Use pure-evm if possible
+      const contract = new Contract(transfer.transferDefinition, TransferDefinition.abi, provider);
+      if (bytecode) {
+        const evmRes = this.tryEvm(
+          contract.interface.encodeFunctionData("resolve", [encodedBalance, encodedState, encodedResolver]),
+          bytecode,
+        );
+        if (!evmRes.isError) {
+          const decoded = contract.interface.decodeFunctionResult("resolve", evmRes.getValue()!)[0];
+          return Result.ok(decoded);
+        }
+      }
+      this.log.debug(
+        {
+          transferDefinition: transfer.transferDefinition,
+          transferId: transfer.transferId,
+        },
+        "Calling resolve onchain",
+      );
+      try {
+        const ret = await contract.resolve(encodedBalance, encodedState, encodedResolver);
+        return Result.ok({
+          to: ret.to,
+          amount: ret.amount.map((a: BigNumber) => a.toString()),
+        });
+      } catch (e) {
+        return Result.fail(e);
+      }
+    });
   }
 
   async getChannelAddress(
@@ -396,82 +393,76 @@ export class EthereumChainReader implements IVectorChainReader {
     channelFactoryAddress: string,
     chainId: number,
   ): Promise<Result<string, ChainError>> {
-    // Get provider
-    const provider = this.chainProviders[chainId];
-    if (!provider) {
-      return Result.fail(new ChainError(ChainError.reasons.ProviderNotFound));
-    }
-    const channelFactory = new Contract(channelFactoryAddress, ChannelFactory.abi, provider);
-    try {
-      const derivedAddress = await channelFactory.getChannelAddress(alice, bob);
-      return Result.ok(derivedAddress);
-    } catch (e) {
-      return Result.fail(e);
-    }
-  }
-
-  async getCode(address: string, chainId: number): Promise<Result<string, ChainError>> {
-    const provider = this.chainProviders[chainId];
-    if (!provider) {
-      return Result.fail(new ChainError(ChainError.reasons.ProviderNotFound));
-    }
-    try {
-      const code = await provider.getCode(address);
-      return Result.ok(code);
-    } catch (e) {
-      return Result.fail(e);
-    }
-  }
-
-  async getBlockNumber(chainId: number): Promise<Result<number, ChainError>> {
-    const provider = this.chainProviders[chainId];
-    if (!provider) {
-      return Result.fail(new ChainError(ChainError.reasons.ProviderNotFound));
-    }
-    try {
-      const blockNumber = await provider.getBlockNumber();
-      return Result.ok(blockNumber);
-    } catch (e) {
-      return Result.fail(e);
-    }
-  }
-
-  async getGasPrice(chainId: number): Promise<Result<BigNumber, ChainError>> {
-    const provider = this.chainProviders[chainId];
-    if (!provider) {
-      return Result.fail(new ChainError(ChainError.reasons.ProviderNotFound));
-    }
-    let gasPrice: BigNumber | undefined = undefined;
-    if (chainId === 1) {
+    return await this.retryWrapper<string>(chainId,
+      async (provider: JsonRpcProvider) => {
+      const channelFactory = new Contract(channelFactoryAddress, ChannelFactory.abi, provider);
       try {
-        const gasNowResponse = await axios.get(`https://www.gasnow.org/api/v3/gas/price`);
-        const { rapid } = gasNowResponse.data;
-        gasPrice = typeof rapid !== "undefined" ? BigNumber.from(rapid) : undefined;
-      } catch (e) {
-        this.log.warn({ error: e }, "Gasnow failed, using provider");
-      }
-    }
-    if (!gasPrice) {
-      try {
-        gasPrice = await provider.getGasPrice();
+        const derivedAddress = await channelFactory.getChannelAddress(alice, bob);
+        return Result.ok(derivedAddress);
       } catch (e) {
         return Result.fail(e);
       }
-    }
-    return Result.ok(gasPrice);
+    });
+  }
+
+  async getCode(address: string, chainId: number): Promise<Result<string, ChainError>> {
+    return await this.retryWrapper<string>(chainId,
+      async (provider: JsonRpcProvider) => {
+      try {
+        const code = await provider.getCode(address);
+        return Result.ok(code);
+      } catch (e) {
+        return Result.fail(e);
+      }
+    });
+  }
+
+  async getBlockNumber(chainId: number): Promise<Result<number, ChainError>> {
+    return await this.retryWrapper<number>(chainId,
+      async (provider: JsonRpcProvider) => {
+      try {
+        const blockNumber = await provider.getBlockNumber();
+        return Result.ok(blockNumber);
+      } catch (e) {
+        return Result.fail(e);
+      }
+    });
+  }
+
+  async getGasPrice(chainId: number): Promise<Result<BigNumber, ChainError>> {
+    return await this.retryWrapper<BigNumber>(chainId,
+      async (provider: JsonRpcProvider) => {
+      let gasPrice: BigNumber | undefined = undefined;
+      if (chainId === 1) {
+        try {
+          const gasNowResponse = await axios.get(`https://www.gasnow.org/api/v3/gas/price`);
+          const { rapid } = gasNowResponse.data;
+          gasPrice = typeof rapid !== "undefined" ? BigNumber.from(rapid) : undefined;
+        } catch (e) {
+          this.log.warn({ error: e }, "Gasnow failed, using provider");
+        }
+      }
+      if (!gasPrice) {
+        try {
+          gasPrice = await provider.getGasPrice();
+        } catch (e) {
+          return Result.fail(e);
+        }
+      }
+      return Result.ok(gasPrice);
+    });
   }
 
   async estimateGas(chainId: number, transaction: TransactionRequest): Promise<Result<BigNumber, ChainError>> {
-    const provider = this.chainProviders[chainId];
-    if (!provider) {
-      return Result.fail(new ChainError(ChainError.reasons.ProviderNotFound));
-    }
-    try {
-      const gas = await provider.estimateGas(transaction);
-      return Result.ok(gas);
-    } catch (e) {
-      return Result.fail(e);
-    }
+    return await this.retryWrapper<BigNumber>(chainId,
+      async (provider: JsonRpcProvider) => {
+      try {
+        const gas = await provider.estimateGas(transaction);
+        return Result.ok(gas);
+      } catch (e) {
+        return Result.fail(e);
+      }
+    });
   }
 
   async getTokenAllowance(
@@ -480,47 +471,43 @@ export class EthereumChainReader implements IVectorChainReader {
     spender: string,
     chainId: number,
   ): Promise<Result<BigNumber, ChainError>> {
-    const provider = this.chainProviders[chainId];
-    if (!provider) {
-      return Result.fail(new ChainError(ChainError.reasons.ProviderNotFound));
-    }
-
-    const erc20 = new Contract(tokenAddress, ERC20Abi, provider);
-    try {
-      const res = await erc20.allowance(owner, spender);
-      return Result.ok(res);
-    } catch (e) {
-      return Result.fail(e);
-    }
+    return await this.retryWrapper<BigNumber>(chainId,
+      async (provider: JsonRpcProvider) => {
+      const erc20 = new Contract(tokenAddress, ERC20Abi, provider);
+      try {
+        const res = await erc20.allowance(owner, spender);
+        return Result.ok(res);
+      } catch (e) {
+        return Result.fail(e);
+      }
+    });
   }
 
   async getOnchainBalance(assetId: string, balanceOf: string, chainId: number): Promise<Result<BigNumber, ChainError>> {
-    const provider = this.chainProviders[chainId];
-    if (!provider) {
-      return Result.fail(new ChainError(ChainError.reasons.ProviderNotFound));
-    }
-    try {
-      const onchainBalance =
-        assetId === AddressZero
-          ? await provider.getBalance(balanceOf)
-          : await new Contract(assetId, ERC20Abi, provider).balanceOf(balanceOf);
-      return Result.ok(onchainBalance);
-    } catch (e) {
-      return Result.fail(e);
-    }
+    return await this.retryWrapper<BigNumber>(chainId,
+      async (provider: JsonRpcProvider) => {
+      try {
+        const onchainBalance =
+          assetId === AddressZero
+            ? await provider.getBalance(balanceOf)
+            : await new Contract(assetId, ERC20Abi, provider).balanceOf(balanceOf);
+        return Result.ok(onchainBalance);
+      } catch (e) {
+        return Result.fail(e);
+      }
+    });
   }
 
   async getDecimals(assetId: string, chainId: number): Promise<Result<number, ChainError>> {
-    const provider = this.chainProviders[chainId];
-    if (!provider) {
-      return Result.fail(new ChainError(ChainError.reasons.ProviderNotFound));
-    }
-    try {
-      const decimals = assetId === AddressZero ? 18 : await new Contract(assetId, ERC20Abi, provider).decimals();
-      return Result.ok(decimals);
-    } catch (e) {
-      return Result.fail(e);
-    }
+    return await this.retryWrapper<number>(chainId,
+      async (provider: JsonRpcProvider) => {
+      try {
+        const decimals = assetId === AddressZero ? 18 : await new Contract(assetId, ERC20Abi, provider).decimals();
+        return Result.ok(decimals);
+      } catch (e) {
+        return Result.fail(e);
+      }
+    });
   }
 
   async getWithdrawalTransactionRecord(
@@ -528,35 +515,34 @@ export class EthereumChainReader implements IVectorChainReader {
     channelAddress: string,
     chainId: number,
   ): Promise<Result<boolean, ChainError>> {
-    const provider = this.chainProviders[chainId];
-    if (!provider) {
-      return Result.fail(new ChainError(ChainError.reasons.ProviderNotFound));
-    }
-    // check if it was deployed
-    const code = await this.getCode(channelAddress, chainId);
-    if (code.isError) {
-      return Result.fail(code.getError()!);
-    }
-    if (code.getValue() === "0x") {
-      // channel must always be deployed for a withdrawal
-      // to be submitted
-      return Result.ok(false);
-    }
-    const channel = new Contract(channelAddress, VectorChannel.abi, provider);
-    try {
-      const record = await channel.getWithdrawalTransactionRecord({
-        channelAddress,
-        assetId: withdrawData.assetId,
-        recipient: withdrawData.recipient,
-        amount: withdrawData.amount,
-        nonce: withdrawData.nonce,
-        callTo: withdrawData.callTo,
-        callData: withdrawData.callData,
-      });
-      return Result.ok(record);
-    } catch (e) {
-      return Result.fail(e);
-    }
+    return await this.retryWrapper<boolean>(chainId,
+        async (provider: JsonRpcProvider) => {
+      // check if it was deployed
+      const code = await this.getCode(channelAddress, chainId);
+      if (code.isError) {
+        return Result.fail(code.getError()!);
+      }
+      if (code.getValue() === "0x") {
+        // channel must always be deployed for a withdrawal
+        // to be submitted
+        return Result.ok(false);
+      }
+      const channel = new Contract(channelAddress, VectorChannel.abi, provider);
+      try {
+        const record = await channel.getWithdrawalTransactionRecord({
+          channelAddress,
+          assetId: withdrawData.assetId,
+          recipient: withdrawData.recipient,
+          amount: withdrawData.amount,
+          nonce: withdrawData.nonce,
+          callTo: withdrawData.callTo,
+          callData: withdrawData.callData,
+        });
+        return Result.ok(record);
+      } catch (e) {
+        return Result.fail(e);
+      }
+    });
   }
 
   private tryEvm(encodedFunctionData: string, bytecode: string): Result<Uint8Array, Error> {
@@ -574,40 +560,61 @@ export class EthereumChainReader implements IVectorChainReader {
     chainId: number,
     bytecode?: string,
   ): Promise<Result<RegisteredTransfer[], ChainError>> {
+    return await this.retryWrapper<RegisteredTransfer[]>(chainId,
+      async (provider: JsonRpcProvider) => {
+        // Registry for chain not loaded, load into memory
+        const registry = new Contract(transferRegistry, TransferRegistry.abi, provider);
+        let registered;
+        if (bytecode) {
+          // Try with evm first
+          const evm = this.tryEvm(registry.interface.encodeFunctionData("getTransferDefinitions"), bytecode);
+
+          if (!evm.isError) {
+            try {
+              registered = registry.interface.decodeFunctionResult("getTransferDefinitions", evm.getValue()!)[0];
+            } catch (e) {}
+          }
+        }
+        if (!registered) {
+          try {
+            registered = await registry.getTransferDefinitions();
+          } catch (e) {
+            return Result.fail(new ChainError(e.message, { chainId, transferRegistry }));
+          }
+        }
+        const cleaned = registered.map((r: RegisteredTransfer) => {
+          return {
+            name: r.name,
+            definition: r.definition,
+            stateEncoding: tidy(r.stateEncoding),
+            resolverEncoding: tidy(r.resolverEncoding),
+            encodedCancel: r.encodedCancel,
+          };
+        });
+        this.transferRegistries.set(chainId.toString(), cleaned);
+        return Result.ok(cleaned);
+      }
+    );
+  }
+
+  private async retryWrapper<T>(
+    chainId: number,
+    targetMethod: (provider: JsonRpcProvider) => Promise<Result<T, ChainError>>
+  ): Promise<Result<T, ChainError>> {
+    // TODO : Should we retry this attempt to get provider as well?
     const provider = this.chainProviders[chainId];
     if (!provider) {
       return Result.fail(new ChainError(ChainError.reasons.ProviderNotFound));
     }
-    // Registry for chain not loaded, load into memory
-    const registry = new Contract(transferRegistry, TransferRegistry.abi, provider);
-    let registered;
-    if (bytecode) {
-      // Try with evm first
-      const evm = this.tryEvm(registry.interface.encodeFunctionData("getTransferDefinitions"), bytecode);
+    // TODO: Move this constant where it belongs.
+    const MAX_RETRIES = 5;
+    let res = await targetMethod(provider);
+    let retries = 0;
 
-      if (!evm.isError) {
-        try {
-          registered = registry.interface.decodeFunctionResult("getTransferDefinitions", evm.getValue()!)[0];
-        } catch (e) {}
-      }
+    while (res.getError() && retries < MAX_RETRIES) {
+      retries += 1;
+      res = await targetMethod(provider);
     }
-    if (!registered) {
-      try {
-        registered = await registry.getTransferDefinitions();
-      } catch (e) {
-        return Result.fail(new ChainError(e.message, { chainId, transferRegistry }));
-      }
-    }
-    const cleaned = registered.map((r: RegisteredTransfer) => {
-      return {
-        name: r.name,
-        definition: r.definition,
-        stateEncoding: tidy(r.stateEncoding),
-        resolverEncoding: tidy(r.resolverEncoding),
-        encodedCancel: r.encodedCancel,
-      };
-    });
-    this.transferRegistries.set(chainId.toString(), cleaned);
-    return Result.ok(cleaned);
+    return res;
   }
 }
