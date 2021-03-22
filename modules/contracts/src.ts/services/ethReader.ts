@@ -65,52 +65,56 @@ export class EthereumChainReader implements IVectorChainReader {
       ChainError
     >
   > {
-    const provider = this.chainProviders[chainId];
-    if (!provider) {
-      return Result.fail(new ChainError(ChainError.reasons.ProviderNotFound));
-    }
-
-    try {
-      const res = await provider.send("eth_syncing", []);
-      return Result.ok(res);
-    } catch (e) {
-      return Result.fail(e);
-    }
+    return await this.retryWrapper<
+        | boolean
+        | {
+          startingBlock: string;
+          currentBlock: string;
+          highestBlock: string;
+        }
+      >(chainId,
+      async (provider: JsonRpcProvider) => {
+      try {
+        const res = await provider.send("eth_syncing", []);
+        return Result.ok(res);
+      } catch (e) {
+        return Result.fail(e);
+      }
+    });
   }
 
   async getChannelDispute(
     channelAddress: string,
     chainId: number,
   ): Promise<Result<ChannelDispute | undefined, ChainError>> {
-    const provider = this.chainProviders[chainId];
-    if (!provider) {
-      return Result.fail(new ChainError(ChainError.reasons.ProviderNotFound));
-    }
+    return await this.retryWrapper<ChannelDispute | undefined>(chainId,
+      async (provider: JsonRpcProvider) => {
 
-    try {
-      const code = await this.getCode(channelAddress, chainId);
-      if (code.isError) {
-        return Result.fail(code.getError()!);
+      try {
+        const code = await this.getCode(channelAddress, chainId);
+        if (code.isError) {
+          return Result.fail(code.getError()!);
+        }
+        if (code.getValue() === "0x") {
+          // channel is not deployed
+          return Result.ok(undefined);
+        }
+        const dispute = await new Contract(channelAddress, VectorChannel.abi, provider).getChannelDispute();
+        if (dispute.channelStateHash === HashZero) {
+          return Result.ok(undefined);
+        }
+        return Result.ok({
+          channelStateHash: dispute.channelStateHash,
+          nonce: dispute.nonce.toString(),
+          merkleRoot: dispute.merkleRoot,
+          consensusExpiry: dispute.consensusExpiry.toString(),
+          defundExpiry: dispute.defundExpiry.toString(),
+          defundNonce: dispute.defundNonce.toString(),
+        });
+      } catch (e) {
+        return Result.fail(e);
       }
-      if (code.getValue() === "0x") {
-        // channel is not deployed
-        return Result.ok(undefined);
-      }
-      const dispute = await new Contract(channelAddress, VectorChannel.abi, provider).getChannelDispute();
-      if (dispute.channelStateHash === HashZero) {
-        return Result.ok(undefined);
-      }
-      return Result.ok({
-        channelStateHash: dispute.channelStateHash,
-        nonce: dispute.nonce.toString(),
-        merkleRoot: dispute.merkleRoot,
-        consensusExpiry: dispute.consensusExpiry.toString(),
-        defundExpiry: dispute.defundExpiry.toString(),
-        defundNonce: dispute.defundNonce.toString(),
-      });
-    } catch (e) {
-      return Result.fail(e);
-    }
+    });
   }
 
   async getRegisteredTransferByDefinition(
@@ -119,32 +123,31 @@ export class EthereumChainReader implements IVectorChainReader {
     chainId: number,
     bytecode?: string,
   ): Promise<Result<RegisteredTransfer, ChainError>> {
-    const provider = this.chainProviders[chainId];
-    if (!provider) {
-      return Result.fail(new ChainError(ChainError.reasons.ProviderNotFound));
-    }
+    return await this.retryWrapper<RegisteredTransfer>(chainId,
+      async (provider: JsonRpcProvider) => {
 
-    let registry = this.transferRegistries.get(chainId.toString())!;
-    if (!this.transferRegistries.has(chainId.toString())) {
-      // Registry for chain not loaded, load into memory
-      const loadRes = await this.loadRegistry(transferRegistry, chainId, bytecode);
-      if (loadRes.isError) {
-        return Result.fail(loadRes.getError()!);
+      let registry = this.transferRegistries.get(chainId.toString())!;
+      if (!this.transferRegistries.has(chainId.toString())) {
+        // Registry for chain not loaded, load into memory
+        const loadRes = await this.loadRegistry(transferRegistry, chainId, bytecode);
+        if (loadRes.isError) {
+          return Result.fail(loadRes.getError()!);
+        }
+        registry = loadRes.getValue();
       }
-      registry = loadRes.getValue();
-    }
 
-    const info = registry.find((r) => r.definition === definition);
-    if (!info) {
-      return Result.fail(
-        new ChainError(ChainError.reasons.TransferNotRegistered, {
-          definition,
-          transferRegistry,
-          chainId,
-        }),
-      );
-    }
-    return Result.ok(info);
+      const info = registry.find((r) => r.definition === definition);
+      if (!info) {
+        return Result.fail(
+          new ChainError(ChainError.reasons.TransferNotRegistered, {
+            definition,
+            transferRegistry,
+            chainId,
+          }),
+        );
+      }
+      return Result.ok(info);
+    });
   }
 
   async getRegisteredTransferByName(
@@ -153,33 +156,32 @@ export class EthereumChainReader implements IVectorChainReader {
     chainId: number,
     bytecode?: string,
   ): Promise<Result<RegisteredTransfer, ChainError>> {
-    const provider = this.chainProviders[chainId];
-    if (!provider) {
-      return Result.fail(new ChainError(ChainError.reasons.ProviderNotFound));
-    }
+    return await this.retryWrapper<RegisteredTransfer>(chainId,
+      async (provider: JsonRpcProvider) => {
 
-    let registry = this.transferRegistries.get(chainId.toString());
-    if (!registry) {
-      // Registry for chain not loaded, load into memory
-      const loadRes = await this.loadRegistry(transferRegistry, chainId, bytecode);
-      if (loadRes.isError) {
-        return Result.fail(loadRes.getError()!);
+      let registry = this.transferRegistries.get(chainId.toString());
+      if (!registry) {
+        // Registry for chain not loaded, load into memory
+        const loadRes = await this.loadRegistry(transferRegistry, chainId, bytecode);
+        if (loadRes.isError) {
+          return Result.fail(loadRes.getError()!);
+        }
+        registry = loadRes.getValue();
       }
-      registry = loadRes.getValue();
-    }
 
-    const info = registry!.find((r) => r.name === name);
-    if (!info) {
-      return Result.fail(
-        new ChainError(ChainError.reasons.TransferNotRegistered, {
-          name,
-          transferRegistry,
-          chainId,
-        }),
-      );
+      const info = registry!.find((r) => r.name === name);
+      if (!info) {
+        return Result.fail(
+          new ChainError(ChainError.reasons.TransferNotRegistered, {
+            name,
+            transferRegistry,
+            chainId,
+          }),
+        );
+      }
+      return Result.ok(info);
+    });
     }
-    return Result.ok(info);
-  }
 
   async getRegisteredTransfers(
     transferRegistry: string,
@@ -199,34 +201,32 @@ export class EthereumChainReader implements IVectorChainReader {
   }
 
   async getChannelFactoryBytecode(channelFactoryAddress: string, chainId: number): Promise<Result<string, ChainError>> {
-    const provider = this.chainProviders[chainId];
-    if (!provider) {
-      return Result.fail(new ChainError(ChainError.reasons.ProviderNotFound));
-    }
-    try {
-      const factory = new Contract(channelFactoryAddress, ChannelFactory.abi, provider);
-      const proxyBytecode = await factory.getProxyCreationCode();
-      return Result.ok(proxyBytecode);
-    } catch (e) {
-      return Result.fail(e);
-    }
+    return await this.retryWrapper<string>(chainId,
+      async (provider: JsonRpcProvider) => {
+      try {
+        const factory = new Contract(channelFactoryAddress, ChannelFactory.abi, provider);
+        const proxyBytecode = await factory.getProxyCreationCode();
+        return Result.ok(proxyBytecode);
+      } catch (e) {
+        return Result.fail(e);
+      }
+    });
   }
 
   async getChannelMastercopyAddress(
     channelFactoryAddress: string,
     chainId: number,
   ): Promise<Result<string, ChainError>> {
-    const provider = this.chainProviders[chainId];
-    if (!provider) {
-      return Result.fail(new ChainError(ChainError.reasons.ProviderNotFound));
-    }
-    try {
-      const factory = new Contract(channelFactoryAddress, ChannelFactory.abi, provider);
-      const mastercopy = await factory.getMastercopy();
-      return Result.ok(mastercopy);
-    } catch (e) {
-      return Result.fail(e);
-    }
+    return await this.retryWrapper<string>(chainId,
+      async (provider: JsonRpcProvider) => {
+      try {
+        const factory = new Contract(channelFactoryAddress, ChannelFactory.abi, provider);
+        const mastercopy = await factory.getMastercopy();
+        return Result.ok(mastercopy);
+      } catch (e) {
+        return Result.fail(e);
+      }
+    });
   }
 
   async getTotalDepositedA(
@@ -234,27 +234,26 @@ export class EthereumChainReader implements IVectorChainReader {
     chainId: number,
     assetId: string,
   ): Promise<Result<BigNumber, ChainError>> {
-    const provider = this.chainProviders[chainId];
-    if (!provider) {
-      return Result.fail(new ChainError(ChainError.reasons.ProviderNotFound));
-    }
+    return await this.retryWrapper<BigNumber>(chainId,
+      async (provider: JsonRpcProvider) => {
 
-    const code = await this.getCode(channelAddress, chainId);
-    if (code.isError) {
-      return Result.fail(code.getError()!);
-    }
-    if (code.getValue() === "0x") {
-      // contract *must* be deployed for alice to have a balance
-      return Result.ok(BigNumber.from(0));
-    }
+      const code = await this.getCode(channelAddress, chainId);
+      if (code.isError) {
+        return Result.fail(code.getError()!);
+      }
+      if (code.getValue() === "0x") {
+        // contract *must* be deployed for alice to have a balance
+        return Result.ok(BigNumber.from(0));
+      }
 
-    const channelContract = new Contract(channelAddress, ChannelMastercopy.abi, provider);
-    try {
-      const totalDepositsAlice = await channelContract.getTotalDepositsAlice(assetId);
-      return Result.ok(totalDepositsAlice);
-    } catch (e) {
-      return Result.fail(e);
-    }
+      const channelContract = new Contract(channelAddress, ChannelMastercopy.abi, provider);
+      try {
+        const totalDepositsAlice = await channelContract.getTotalDepositsAlice(assetId);
+        return Result.ok(totalDepositsAlice);
+      } catch (e) {
+        return Result.fail(e);
+      }
+    });
   }
 
   async getTotalDepositedB(
@@ -262,27 +261,26 @@ export class EthereumChainReader implements IVectorChainReader {
     chainId: number,
     assetId: string,
   ): Promise<Result<BigNumber, ChainError>> {
-    const provider = this.chainProviders[chainId];
-    if (!provider) {
-      return Result.fail(new ChainError(ChainError.reasons.ProviderNotFound));
-    }
+    return await this.retryWrapper<BigNumber>(chainId,
+      async (provider: JsonRpcProvider) => {
 
-    const code = await this.getCode(channelAddress, chainId);
-    if (code.isError) {
-      return Result.fail(code.getError()!);
-    }
-    if (code.getValue() === "0x") {
-      // all balance at channel address *must* be for bob
-      return this.getOnchainBalance(assetId, channelAddress, chainId);
-    }
+      const code = await this.getCode(channelAddress, chainId);
+      if (code.isError) {
+        return Result.fail(code.getError()!);
+      }
+      if (code.getValue() === "0x") {
+        // all balance at channel address *must* be for bob
+        return this.getOnchainBalance(assetId, channelAddress, chainId);
+      }
 
-    const channelContract = new Contract(channelAddress, ChannelMastercopy.abi, provider);
-    try {
-      const totalDepositsBob = await channelContract.getTotalDepositsBob(assetId);
-      return Result.ok(totalDepositsBob);
-    } catch (e) {
-      return Result.fail(e);
-    }
+      const channelContract = new Contract(channelAddress, ChannelMastercopy.abi, provider);
+      try {
+        const totalDepositsBob = await channelContract.getTotalDepositsBob(assetId);
+        return Result.ok(totalDepositsBob);
+      } catch (e) {
+        return Result.fail(e);
+      }
+    });
   }
 
   async create(
