@@ -12,8 +12,8 @@ export const fundAddress = async (recipient: string): Promise<void> => {
     value,
   });
   if (!ethTx.hash) throw new Error(`Couldn't fund account ${recipient}`);
-  await ethTx.wait();
+  await ethTx.wait(2);
 
   const tokenTx = await new Contract(tokenAddress, TestToken.abi, sugarDaddy).transfer(recipient, value);
-  await tokenTx.wait();
+  await tokenTx.wait(2);
 };

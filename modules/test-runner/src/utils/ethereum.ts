@@ -38,5 +38,5 @@ export const fundIfBelow = async (
     assetId === constants.AddressZero
       ? await funder.sendTransaction({ to: address, value: fundAmount })
       : await new Contract(assetId, ERC20Abi, funder).transfer(address, fundAmount);
-  await tx.wait();
+  await tx.wait(2);
 };

@@ -143,7 +143,7 @@ export const deployChannelIfNeeded = async (
     });
   });
   const createTx = await factory.createChannel(aliceAddr, bobAddr);
-  await createTx.wait();
+  await createTx.wait(2);
   const deployedAddr = await created;
   expect(deployedAddr).to.equal(channelAddress);
 };
@@ -162,13 +162,13 @@ export const depositOnchain = async (
     // Approve tokens
     if (assetId !== AddressZero) {
       const approval = await new Contract(assetId, TestToken.abi, depositor).approve(channelAddress, value);
-      await approval.wait();
+      await approval.wait(2);
     }
     const preDepositAliceBalance = await multisig.getTotalDepositsAlice(assetId);
     const tx = await multisig.depositAlice(assetId, value, {
       value: assetId === AddressZero ? value : BigNumber.from(0),
     });
-    await tx.wait();
+    await tx.wait(2);
     const postDepositAliceBalance = await multisig.getTotalDepositsAlice(assetId);
     expect(postDepositAliceBalance).to.equal(preDepositAliceBalance.add(value));
     return;
@@ -179,7 +179,7 @@ export const depositOnchain = async (
     assetId === AddressZero
       ? await depositor.sendTransaction({ value, to: channelAddress })
       : await new Contract(assetId, TestToken.abi, depositor).transfer(channelAddress, value);
-  await tx.wait();
+  await tx.wait(2);
   // Verify onchain values updated
   const postDepositBobBalance = await multisig.getTotalDepositsBob(assetId);
   expect(postDepositBobBalance).to.be.eq(preDepositBobBalance.add(value));

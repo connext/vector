@@ -128,10 +128,10 @@ export const deposit = async (
       channelAddress,
       publicIdentifier: depositor.publicIdentifier,
     });
-    await provider1.waitForTransaction(tx.getValue().txHash);
+    await provider1.waitForTransaction(tx.getValue().txHash, 2);
   } else {
     const tx = await wallet1.sendTransaction({ to: channel.channelAddress, value: amount });
-    await tx.wait();
+    await tx.wait(2);
   }
 
   const depositRes = await depositor.reconcileDeposit({
@@ -340,11 +340,11 @@ export const withdraw = async (
     );
     // submit to chain
     const tx = await wallet1.sendTransaction({ to: transaction!.to, value: 0, data: transaction!.data });
-    await tx.wait();
+    await tx.wait(2);
   } else {
     const { transactionHash } = withdrawalRes.getValue()!;
     expect(transactionHash).to.be.ok;
-    const receipt = await provider.waitForTransaction(transactionHash!);
+    const receipt = await provider.waitForTransaction(transactionHash!, 2);
   }
 
   const postWithdrawChannel = (await withdrawer.getStateChannel({ channelAddress })).getValue()! as FullChannelState;

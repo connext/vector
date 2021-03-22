@@ -63,7 +63,7 @@ const fundAddress = async (address: string, assetId: string, value: BigNumber): 
   });
 
   logger.debug({ hash: tx.hash, assetId, value: utils.formatEther(value) }, "Submitted deposit to chain");
-  await tx.wait();
+  await tx.wait(2);
 
   const balance = await (assetId === constants.AddressZero
     ? provider.getBalance(address)
