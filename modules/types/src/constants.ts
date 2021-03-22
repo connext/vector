@@ -36,4 +36,4 @@ export const getConfirmationsForChain = (chainId: number): number => {
 };
 
 // ETH Reader - how many attempts / retries will we do upon failure?
-const ETH_READER_MAX_RETRIES = 5;
+export const ETH_READER_MAX_RETRIES = 5;

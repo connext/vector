@@ -603,7 +603,6 @@ export class EthereumChainReader implements IVectorChainReader {
     chainId: number,
     targetMethod: (provider: JsonRpcProvider) => Promise<Result<T, ChainError>>
   ): Promise<Result<T, ChainError>> {
-    // TODO : Should we retry this attempt to get provider as well?
     const provider = this.chainProviders[chainId];
     if (!provider) {
       return Result.fail(new ChainError(ChainError.reasons.ProviderNotFound));
@@ -611,11 +610,11 @@ export class EthereumChainReader implements IVectorChainReader {
     let res = await targetMethod(provider);
     let retries;
 
-    // TODO: Would be kinda cool to save all these errors, in case a different error
-    // happens at some point among the retries.
+    // TODO: Save all error history, in case a different error happens
+    // at some point among the retries.
     for (retries = 0; retries < ETH_READER_MAX_RETRIES; retries++) {
       res = await targetMethod(provider);
-      if (!res.getError()) {
+      if (!res.isError) {
         break;
       }
     }
