@@ -15,6 +15,7 @@ import {
   TransferState,
   HydratedProviders,
   WithdrawCommitmentJson,
+  ETH_READER_MAX_RETRIES,
 } from "@connext/vector-types";
 import axios from "axios";
 import { encodeBalance, encodeTransferResolver, encodeTransferState } from "@connext/vector-utils";
@@ -188,16 +189,19 @@ export class EthereumChainReader implements IVectorChainReader {
     chainId: number,
     bytecode?: string,
   ): Promise<Result<RegisteredTransfer[], ChainError>> {
-    let registry = this.transferRegistries.get(chainId.toString());
-    if (!registry) {
-      // Registry for chain not loaded, load into memory
-      const loadRes = await this.loadRegistry(transferRegistry, chainId, bytecode);
-      if (loadRes.isError) {
-        return Result.fail(loadRes.getError()!);
+    return await this.retryWrapper<RegisteredTransfer[]>(chainId,
+      async () => {
+      let registry = this.transferRegistries.get(chainId.toString());
+      if (!registry) {
+        // Registry for chain not loaded, load into memory
+        const loadRes = await this.loadRegistry(transferRegistry, chainId, bytecode);
+        if (loadRes.isError) {
+          return Result.fail(loadRes.getError()!);
+        }
+        registry = loadRes.getValue();
       }
-      registry = loadRes.getValue();
-    }
-    return Result.ok(registry);
+      return Result.ok(registry);
+    });
   }
 
   async getChannelFactoryBytecode(channelFactoryAddress: string, chainId: number): Promise<Result<string, ChainError>> {
@@ -604,14 +608,16 @@ export class EthereumChainReader implements IVectorChainReader {
     if (!provider) {
       return Result.fail(new ChainError(ChainError.reasons.ProviderNotFound));
     }
-    // TODO: Move this constant where it belongs.
-    const MAX_RETRIES = 5;
     let res = await targetMethod(provider);
-    let retries = 0;
+    let retries;
 
-    while (res.getError() && retries < MAX_RETRIES) {
-      retries += 1;
+    // TODO: Would be kinda cool to save all these errors, in case a different error
+    // happens at some point among the retries.
+    for (retries = 0; retries < ETH_READER_MAX_RETRIES; retries++) {
       res = await targetMethod(provider);
+      if (!res.getError()) {
+        break;
+      }
     }
     return res;
   }
