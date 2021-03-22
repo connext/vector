@@ -610,12 +610,14 @@ export class EthereumChainReader implements IVectorChainReader {
     let res = await targetMethod(provider);
     let retries;
 
-    // TODO: Save all error history, in case a different error happens
-    // at some point among the retries.
-    for (retries = 0; retries < ETH_READER_MAX_RETRIES; retries++) {
-      res = await targetMethod(provider);
-      if (!res.isError) {
-        break;
+    if (res.isError) {
+      // TODO: Save all error history, in case a different error
+      // happens at some point among the retries.
+      for (retries = 1; retries < ETH_READER_MAX_RETRIES; retries++) {
+        res = await targetMethod(provider);
+        if (!res.isError) {
+          break;
+        }
       }
     }
     return res;
