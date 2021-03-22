@@ -331,6 +331,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
             to: channelFactory.address,
             data,
             from: sender,
+            value: amount,
           });
           if (_gas.isError) {
             return Result.fail(_gas.getError()!);

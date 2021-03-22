@@ -533,6 +533,7 @@ const getGasEstimates = async (
             amount,
           ]),
           from: sender,
+          value: assetId === AddressZero ? amount : Zero,
         })
       : Result.ok(BigNumber.from(0));
   if (createAndDepositGas.isError) {
@@ -543,7 +544,6 @@ const getGasEstimates = async (
       }),
     );
   }
-  console.log("create and deposit gas", createAndDepositGas.getValue().toString());
 
   const createGas = await chainService.estimateGas(channel.networkContext.chainId, {
     to: channel.networkContext.channelFactoryAddress,
@@ -558,7 +558,6 @@ const getGasEstimates = async (
       }),
     );
   }
-  console.log("create gas", createGas.getValue().toString());
 
   const deposit =
     sender === channel.alice
@@ -566,6 +565,7 @@ const getGasEstimates = async (
           to: channel.channelAddress,
           from: sender,
           data: iMastercopy.encodeFunctionData("depositAlice", [assetId, amount]),
+          value: assetId === AddressZero ? amount : Zero,
         })
       : await chainService.estimateGas(channel.networkContext.chainId, {
           to: channel.channelAddress,
@@ -582,7 +582,6 @@ const getGasEstimates = async (
       }),
     );
   }
-  console.log("deposit gas", deposit.getValue().toString());
 
   return Result.ok({
     createChannelAndDepositAlice: createAndDepositGas.getValue(),
