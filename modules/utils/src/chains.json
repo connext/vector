@@ -29,11 +29,42 @@
       "decimals": 18
     },
     "assetId": {
-      "0x0000000000000000000000000000000000000000": "ETH",
-      "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48": "USDC",
-      "0x7D1AfA7B718fb893dB30A3aBc0Cfc608AaCfeBB0": "MATIC",
-      "0x0F5D2fB29fb7d3CFeE444a200298f468908cC942": "MANA",
-      "0x6B175474E89094C44Da98b954EedeAC495271d0F": "DAI"
+      "0x0000000000000000000000000000000000000000": {
+        "symbol": "ETH",
+        "mainnetEquivalent": "0x0000000000000000000000000000000000000000"
+      },
+      "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48": {
+        "symbol": "USDC",
+        "mainnetEquivalent": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
+      },
+      "0x7D1AfA7B718fb893dB30A3aBc0Cfc608AaCfeBB0": {
+        "symbol": "MATIC",
+        "mainnetEquivalent": "0x7D1AfA7B718fb893dB30A3aBc0Cfc608AaCfeBB0"
+      },
+      "0x0F5D2fB29fb7d3CFeE444a200298f468908cC942": {
+        "symbol": "MANA",
+        "mainnetEquivalent": "0x0F5D2fB29fb7d3CFeE444a200298f468908cC942"
+      },
+      "0x6B175474E89094C44Da98b954EedeAC495271d0F": {
+        "symbol": "DAI",
+        "mainnetEquivalent": "0x6B175474E89094C44Da98b954EedeAC495271d0F"
+      },
+      "0xdAC17F958D2ee523a2206206994597C13D831ec7": {
+        "symbol": "USDT",
+        "mainnetEquivalent": "0xdAC17F958D2ee523a2206206994597C13D831ec7"
+      },
+      "0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984": {
+        "symbol": "UNI",
+        "mainnetEquivalent": "0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984"
+      },
+      "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2": {
+        "symbol": "WETH",
+        "mainnetEquivalent": "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"
+      },
+      "0xB8c77482e45F1F44dE1745F52C74426C631bDD52": {
+        "symbol": "BNB",
+        "mainnetEquivalent": "0xB8c77482e45F1F44dE1745F52C74426C631bDD52"
+      }
     },
     "rpc": [
       "https://mainnet.infura.io/v3/${INFURA_API_KEY}",
@@ -57,13 +88,34 @@
       "decimals": 18
     },
     "assetId": {
-      "0x0000000000000000000000000000000000001010": "MATIC",
-      "0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174": "USDC",
-      "0xA1c57f48F0Deb89f569dFbE6E2B7f46D33606fD4": "MANA",
-      "0x8f3Cf7ad23Cd3CaDbD9735AFf958023239c6A063": "DAI",
-      "0xb33EaAd8d922B1083446DC23f610c2567fB5180f": "UNI",
-      "0xc2132D05D31c914a87C6611C10748AEb04B58e8F": "USDT",
-      "0x7ceB23fD6bC0adD59E62ac25578270cFf1b9f619": "WETH (PoS)"
+      "0x0000000000000000000000000000000000001010": {
+        "symbol": "MATIC",
+        "mainnetEquivalent": "0x7D1AfA7B718fb893dB30A3aBc0Cfc608AaCfeBB0"
+      },
+      "0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174": {
+        "symbol": "USDC",
+        "mainnetEquivalent": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
+      },
+      "0xA1c57f48F0Deb89f569dFbE6E2B7f46D33606fD4": {
+        "symbol": "MANA",
+        "mainnetEquivalent": "0x0F5D2fB29fb7d3CFeE444a200298f468908cC942"
+      },
+      "0x8f3Cf7ad23Cd3CaDbD9735AFf958023239c6A063": {
+        "symbol": "DAI",
+        "mainnetEquivalent": "0x6B175474E89094C44Da98b954EedeAC495271d0F"
+      },
+      "0xb33EaAd8d922B1083446DC23f610c2567fB5180f": {
+        "symbol": "UNI",
+        "mainnetEquivalent": "0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984"
+      },
+      "0xc2132D05D31c914a87C6611C10748AEb04B58e8F": {
+        "symbol": "USDT",
+        "mainnetEquivalent": "0xdAC17F958D2ee523a2206206994597C13D831ec7"
+      },
+      "0x7ceB23fD6bC0adD59E62ac25578270cFf1b9f619": {
+        "symbol": "WETH (PoS)",
+        "mainnetEquivalent": "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"
+      }
     },
     "rpc": ["https://rpc-mainnet.matic.network", "wss://ws-mainnet.matic.network"],
     "faucets": [],
@@ -82,7 +134,10 @@
       "decimals": 18
     },
     "assetId": {
-      "0x0000000000000000000000000000000000001010": "MATIC"
+      "0x0000000000000000000000000000000000001010": {
+        "symbol": "MATIC",
+        "mainnetEquivalent": "0x7D1AfA7B718fb893dB30A3aBc0Cfc608AaCfeBB0"
+      }
     },
     "rpc": ["https://rpc-mumbai.matic.today", "wss://ws-mumbai.matic.today"],
     "faucets": ["https://faucet.matic.network/"],
@@ -101,7 +156,10 @@
       "decimals": 18
     },
     "assetId": {
-      "0x0000000000000000000000000000000000000000": "ETH"
+      "0x0000000000000000000000000000000000000000": {
+        "symbol": "ETH",
+        "mainnetEquivalent": "0x0000000000000000000000000000000000000000"
+      }
     },
     "rpc": [
       "https://kovan.poa.network",
@@ -126,7 +184,10 @@
       "decimals": 18
     },
     "assetId": {
-      "0x0000000000000000000000000000000000000000": "ETH"
+      "0x0000000000000000000000000000000000000000": {
+        "symbol": "ETH",
+        "mainnetEquivalent": "0x0000000000000000000000000000000000000000"
+      }
     },
     "rpc": ["https://rpc.goerli.mudit.blog/", "https://rpc.slock.it/goerli ", "https://goerli.prylabs.net/"],
     "faucets": ["https://goerli-faucet.slock.it/?address=${ADDRESS}", "https://faucet.goerli.mudit.blog"],
@@ -145,7 +206,10 @@
       "decimals": 18
     },
     "assetId": {
-      "0x0000000000000000000000000000000000000000": "ETH"
+      "0x0000000000000000000000000000000000000000": {
+        "symbol": "ETH",
+        "mainnetEquivalent": "0x0000000000000000000000000000000000000000"
+      }
     },
     "rpc": ["https://rinkeby.infura.io/v3/${INFURA_API_KEY}", "wss://rinkeby.infura.io/ws/v3/${INFURA_API_KEY}"],
     "faucets": ["https://faucet.rinkeby.io"],
@@ -164,7 +228,10 @@
       "decimals": 18
     },
     "assetId": {
-      "0x0000000000000000000000000000000000000000": "ETH"
+      "0x0000000000000000000000000000000000000000": {
+        "symbol": "ETH",
+        "mainnetEquivalent": "0x0000000000000000000000000000000000000000"
+      }
     },
     "rpc": ["https://kovan3.arbitrum.io/rpc"],
     "faucets": [],
@@ -179,10 +246,26 @@
     "networkId": 56,
     "nativeCurrency": { "name": "Binance Chain Native Token", "symbol": "BNB", "decimals": 18 },
     "assetId": {
-      "0x0000000000000000000000000000000000000000": "BNB",
-      "0x55d398326f99059fF775485246999027B3197955": "USDT",
-      "0xBf5140A22578168FD562DCcF235E5D43A02ce9B1": "UNI",
-      "0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d": "USDC"
+      "0x0000000000000000000000000000000000000000": {
+        "symbol": "BNB",
+        "mainnetEquivalent": "0xB8c77482e45F1F44dE1745F52C74426C631bDD52"
+      },
+      "0x55d398326f99059fF775485246999027B3197955": {
+        "symbol": "USDT",
+        "mainnetEquivalent": "0xdAC17F958D2ee523a2206206994597C13D831ec7"
+      },
+      "0xBf5140A22578168FD562DCcF235E5D43A02ce9B1": {
+        "symbol": "UNI",
+        "mainnetEquivalent": "0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984"
+      },
+      "0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d": {
+        "symbol": "USDC",
+        "mainnetEquivalent": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
+      },
+      "0x1AF3F329e8BE154074D8769D1FFa4eE058B1DBc3": {
+        "symbol": "DAI",
+        "mainnetEquivalent": "0x6B175474E89094C44Da98b954EedeAC495271d0F"
+      }
     },
     "rpc": [
       "https://bsc-dataseed1.binance.org",
@@ -211,11 +294,26 @@
     "networkId": 100,
     "nativeCurrency": { "name": "xDAI", "symbol": "xDAI", "decimals": 18 },
     "assetId": {
-      "0x0000000000000000000000000000000000000000": "XDAI",
-      "0x4ECaBa5870353805a9F068101A40E0f32ed605C6": "USDT",
-      "0x4537e328Bf7e4eFA29D05CAeA260D7fE26af9D74": "UNI",
-      "0xDDAfbb505ad214D7b80b1f830fcCc89B60fb7A83": "USDC",
-      "0x44fA8E6f47987339850636F88629646662444217": "DAI"
+      "0x0000000000000000000000000000000000000000": {
+        "symbol": "XDAI",
+        "mainnetEquivalent": "0x6B175474E89094C44Da98b954EedeAC495271d0F"
+      },
+      "0x4ECaBa5870353805a9F068101A40E0f32ed605C6": {
+        "symbol": "USDT",
+        "mainnetEquivalent": "0xdAC17F958D2ee523a2206206994597C13D831ec7"
+      },
+      "0x4537e328Bf7e4eFA29D05CAeA260D7fE26af9D74": {
+        "symbol": "UNI",
+        "mainnetEquivalent": "0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984"
+      },
+      "0xDDAfbb505ad214D7b80b1f830fcCc89B60fb7A83": {
+        "symbol": "USDC",
+        "mainnetEquivalent": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
+      },
+      "0x44fA8E6f47987339850636F88629646662444217": {
+        "symbol": "DAI",
+        "mainnetEquivalent": "0x6B175474E89094C44Da98b954EedeAC495271d0F"
+      }
     },
     "rpc": [
       "https://rpc.xdaichain.com",

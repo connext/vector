@@ -14,7 +14,9 @@ import {
   DEFAULT_FEE_EXPIRY,
 } from "@connext/vector-types";
 import {
+  calculateExchangeWad,
   getBalanceForAssetId,
+  getExchangeRateInEth,
   getParticipant,
   getRandomBytes32,
   getSignerAddressFromPublicIdentifier,
@@ -24,7 +26,7 @@ import Ajv from "ajv";
 import { JsonRpcProvider } from "@ethersproject/providers";
 import { BaseLogger } from "pino";
 import { BigNumber } from "@ethersproject/bignumber";
-import { AddressZero, HashZero } from "@ethersproject/constants";
+import { HashZero } from "@ethersproject/constants";
 
 import { adjustCollateral, requestCollateral } from "./services/collateral";
 import { forwardTransferCreation, forwardTransferResolution, handleIsAlive } from "./forwarding";
@@ -41,11 +43,12 @@ import {
   parseBalanceToNumber,
   successfulTransfer,
   failedTransfer,
-  gasConsumed,
   forwardedTransferSize,
   forwardedTransferVolume,
   attemptedTransfer,
   feesCollected,
+  incrementGasCosts,
+  incrementFees,
 } from "./metrics";
 import { calculateFeeAmount } from "./services/fees";
 import { QuoteError } from "./errors";
@@ -110,10 +113,10 @@ export async function setupListeners(
       reason: data.reason,
       chainId,
     });
-    gasConsumed.set(
-      { chainId, reason: data.reason },
-      await parseBalanceToNumber(data.receipt!.cumulativeGasUsed, chainId!.toString(), AddressZero),
-    );
+    if (!data.receipt || !chainId) {
+      return;
+    }
+    await incrementGasCosts(data.receipt.cumulativeGasUsed, chainId, data.reason, chainReader, logger);
   });
 
   nodeService.on(EngineEvents.TRANSACTION_FAILED, async (data) => {
@@ -127,12 +130,10 @@ export async function setupListeners(
       reason: data.reason,
       chainId,
     });
-    if (data.receipt) {
-      gasConsumed.set(
-        { chainId, reason: data.reason },
-        await parseBalanceToNumber(data.receipt.cumulativeGasUsed, chainId!.toString(), AddressZero),
-      );
+    if (!data.receipt || !chainId) {
+      return;
     }
+    await incrementGasCosts(data.receipt.cumulativeGasUsed, chainId, data.reason, chainReader, logger);
   });
 
   // Set up listener to handle transfer creation
@@ -174,19 +175,17 @@ export async function setupListeners(
           "Error forwarding transfer",
         );
       }
-      // Increment fees (taken in sender chain/asset)
-      const { assetId: senderAsset, chainId: senderChain } = data.transfer;
-      if (meta.quote) {
-        feesCollected.inc(
-          {
-            chainId,
-            assetId,
-          },
-          await parseBalanceToNumber(meta.quote.fee, senderChain.toString(), senderAsset),
-        );
-      }
       const created = res.getValue();
       logger.info({ method: "forwardTransferCreation", result: created }, "Successfully forwarded transfer");
+      if (!meta.quote) {
+        return;
+      }
+      if (meta.quote.fee === "0") {
+        return;
+      }
+      // Increment fees (taken in sender chain/asset)
+      const { assetId: senderAsset, chainId: senderChain } = data.transfer;
+      await incrementFees(meta.quote.fee, senderAsset, senderChain, logger);
     },
     (data: ConditionalTransferCreatedPayload) => {
       // Only forward transfers with valid routing metas
