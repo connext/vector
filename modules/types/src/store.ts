@@ -5,6 +5,7 @@ import { FullTransferState, FullChannelState } from "./channel";
 import { Address } from "./basic";
 import { ChannelDispute, TransferDispute } from "./dispute";
 import { GetTransfersFilterOpts } from "./schemas/engine";
+import { EngineEvent } from ".";
 
 export interface IVectorStore {
   // Store management methods
@@ -139,4 +140,13 @@ export interface IEngineStore extends IVectorStore, IChainServiceStore {
   saveWithdrawalCommitment(transferId: string, withdrawCommitment: WithdrawCommitmentJson): Promise<void>;
   // Used for restore
   saveChannelStateAndTransfers(channelState: FullChannelState, activeTransfers: FullTransferState[]): Promise<void>;
+}
+
+export interface IServerNodeStore extends IEngineStore {
+  registerSubscription<T extends EngineEvent>(publicIdentifier: string, event: T, url: string): Promise<void>;
+  getSubscription<T extends EngineEvent>(publicIdentifier: string, event: T): Promise<string | undefined>;
+  getSubscriptions(publicIdentifier: string): Promise<{ [event: string]: string }>;
+  setNodeIndex(index: number, publicIdentifier: string): Promise<void>;
+  getNodeIndexes(): Promise<{ index: number; publicIdentifier: string }[]>;
+  removeNodeIndexes(): Promise<void>;
 }

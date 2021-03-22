@@ -1,10 +1,25 @@
-import { HydratedProviders, ERC20Abi, ChainInfo } from "@connext/vector-types";
-import { hydrateProviders, getChainInfo, getAssetName } from "@connext/vector-utils";
-import { BigNumberish } from "@ethersproject/bignumber";
+import {
+  HydratedProviders,
+  ERC20Abi,
+  ChainInfo,
+  TransactionReason,
+  IVectorChainReader,
+  jsonifyError,
+} from "@connext/vector-types";
+import {
+  hydrateProviders,
+  getChainInfo,
+  getAssetName,
+  getMainnetEquivalent,
+  getExchangeRateInEth,
+  calculateExchangeWad,
+} from "@connext/vector-utils";
+import { BigNumber, BigNumberish } from "@ethersproject/bignumber";
 import { AddressZero } from "@ethersproject/constants";
 import { Contract } from "@ethersproject/contracts";
 import { formatEther, formatUnits } from "@ethersproject/units";
 import { Wallet } from "@ethersproject/wallet";
+import { BaseLogger } from "pino";
 import { Counter, Gauge } from "prom-client";
 
 import { getConfig } from "./config";
@@ -70,6 +85,116 @@ export const parseBalanceToNumber = async (
   }
   const decimals = await getDecimals(chainId, assetId);
   return parseFloat(formatUnits(toFormat, decimals));
+};
+
+export const incrementGasCosts = async (
+  gasUsed: string,
+  chainId: number,
+  reason: TransactionReason,
+  ethReader: IVectorChainReader,
+  logger: BaseLogger,
+): Promise<void> => {
+  // Increment the gas cost without any normalizing
+  gasConsumed.inc({ chainId, reason }, await parseBalanceToNumber(gasUsed, chainId.toString(), AddressZero));
+
+  // Normalize the gas amounts to mainnet eth prices
+  const mainnetEquivalent = getMainnetEquivalent(chainId, AddressZero);
+  if (mainnetEquivalent.isError) {
+    logger.warn(
+      { error: mainnetEquivalent.getError()!.message, chainId, assetId: AddressZero },
+      "No mainnet equivalent, cannot normalize",
+    );
+    return;
+  }
+
+  // Get exchange rate (token : eth)
+  const rate = await getExchangeRateInEth(mainnetEquivalent.getValue(), logger);
+  if (rate.isError) {
+    logger.warn({ error: rate.getError()?.message }, "Failed to get exchange rate");
+    return;
+  }
+
+  // Normalize to eth cost
+  const gasPrice = await ethReader.getGasPrice(chainId);
+  if (gasPrice.isError) {
+    logger.warn({ ...jsonifyError(gasPrice.getError()!), chainId }, "Failed to get gasPrice");
+    return;
+  }
+  const ethFee = calculateExchangeWad(
+    gasPrice.getValue().mul(gasUsed),
+    await getDecimals("1", mainnetEquivalent.getValue()),
+    rate.getValue().toString(),
+    18,
+  );
+
+  // Increment fees in eth
+  mainnetGasCost.inc({ chainId, reason }, await parseBalanceToNumber(ethFee, "1", AddressZero));
+  logger.debug(
+    {
+      gasUsed,
+      chainId,
+      reason,
+      mainnetEquivalent: mainnetEquivalent.getValue(),
+      gasPrice: gasPrice.getValue().toString(),
+      ethFee: ethFee.toString(),
+    },
+    "Incremented gas fees",
+  );
+};
+
+export const incrementFees = async (
+  feeAmount: string,
+  feeAssetId: string,
+  feeChainId: number,
+  logger: BaseLogger,
+): Promise<void> => {
+  // First increment fees in native asset
+  feesCollected.inc(
+    {
+      chainId: feeChainId,
+      assetId: feeAssetId,
+    },
+    await parseBalanceToNumber(feeAmount, feeChainId.toString(), feeAssetId),
+  );
+
+  // Get the mainnet equivalent
+  const mainnetEquivalent = getMainnetEquivalent(feeChainId, feeAssetId);
+  if (mainnetEquivalent.isError) {
+    logger.warn(
+      { error: mainnetEquivalent.getError()!.message, assetId: feeAssetId, chainId: feeChainId },
+      "No mainnet equivalent, cannot normalize",
+    );
+    return;
+  }
+
+  // Get exchange rate (token : eth)
+  const rate = await getExchangeRateInEth(mainnetEquivalent.getValue(), logger);
+  if (rate.isError) {
+    logger.warn({ error: rate.getError()?.message }, "Failed to get exchange rate");
+    return;
+  }
+
+  // Get equivalent eth amount
+  const ethFee = calculateExchangeWad(
+    BigNumber.from(feeAmount),
+    await getDecimals("1", mainnetEquivalent.getValue()),
+    rate.getValue().toString(),
+    18,
+  );
+  mainnetFeesCollectedInEth.inc(
+    { chainId: feeChainId, assetId: feeAssetId },
+    await parseBalanceToNumber(ethFee, "1", AddressZero),
+  );
+  logger.debug(
+    {
+      feeAmount,
+      chainId: feeChainId,
+      assetId: feeAssetId,
+      mainnetEquivalent: mainnetEquivalent.getValue(),
+      ethFee: ethFee.toString(),
+    },
+    "Incremented collected fees",
+  );
 };
 
 //////////////////////////
@@ -165,6 +290,16 @@ export const feesCollected = new Counter({
   labelNames: ["assetId", "chainId"] as const,
 });
 
+// Track fees charged on transfers in eth where possible
+// NOTE: it is only possible to calculate fees when one of
+// the sides of the swap touches mainnet. Otherwise, we cannot
+// get the token:eth exchange rate to normalize the fees.
+export const mainnetFeesCollectedInEth = new Counter({
+  name: "router_mainnet_eth_fees",
+  help: "router_mainnet_eth_fees_help",
+  labelNames: ["assetId", "chainId"] as const,
+});
+
 //////////////////////////
 ///// Transaction metrics
 // Track on chain transactions attempts
@@ -189,8 +324,15 @@ export const transactionFailed = new Counter({
 });
 
 // Track gas consumed
-export const gasConsumed = new Gauge({
+export const gasConsumed = new Counter({
   name: "router_gas_consumed",
   help: "router_gas_consumed_help",
+  labelNames: ["reason", "chainId"] as const,
+});
+
+// Track gas consumed on mainnet in eth
+export const mainnetGasCost = new Counter({
+  name: "router_mainnet_gas_cost",
+  help: "router_mainnet_gas_cost_help",
   labelNames: ["reason", "chainId"] as const,
 });

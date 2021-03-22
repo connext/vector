@@ -2,6 +2,16 @@
 
 ## Next Release
 
+## 0.2.1-beta.7
+
+- \[all\] Add confirmations for most chains
+- \[router\] Use `estimateGas` instead of hardcoded estimates
+
+## 0.2.1-beta.6
+
+- \[all\] Add confirmations for most chains
+- \[router\] Improvements to fee stats
+
 ## 0.2.1-beta.5
 
 - \[types\] Update estimated gas fees
