@@ -1,4 +1,4 @@
-import { WithdrawCommitment } from "@connext/vector-contracts";
+import { ChannelFactory, WithdrawCommitment } from "@connext/vector-contracts";
 import {
   ChainAddresses,
   ChannelUpdateEvent,
@@ -32,11 +32,11 @@ import {
   IS_ALIVE_EVENT,
   Values,
   jsonifyError,
-  GAS_ESTIMATES,
   WithdrawalQuote,
   IVectorStore,
   DEFAULT_FEE_EXPIRY,
   DEFAULT_CHANNEL_TIMEOUT,
+  SIMPLE_WITHDRAWAL_GAS_ESTIMATE,
 } from "@connext/vector-types";
 import {
   getRandomBytes32,
@@ -46,6 +46,7 @@ import {
   safeJsonStringify,
   mkSig,
 } from "@connext/vector-utils";
+import { Interface } from "@ethersproject/abi";
 import { getAddress } from "@ethersproject/address";
 import { BigNumber } from "@ethersproject/bignumber";
 import { Zero } from "@ethersproject/constants";
@@ -486,8 +487,23 @@ export async function getWithdrawalQuote(
     );
   }
 
+  const data = new Interface(ChannelFactory.abi).encodeFunctionData("createChannel", [channel.alice, channel.bob]);
+  const gas = await chainService.estimateGas(channel.networkContext.chainId, {
+    to: channel.channelAddress,
+    from: channel.alice,
+    data,
+  });
+  if (gas.isError) {
+    return Result.fail(
+      new WithdrawQuoteError(WithdrawQuoteError.reasons.ChainServiceFailure, signer.publicIdentifier, request, {
+        chainServiceMethod: "estimateGas",
+        chainServiceError: jsonifyError(gas.getError()!),
+      }),
+    );
+  }
+
   const gasEstimate =
-    code.getValue() !== "0x" ? GAS_ESTIMATES.withdraw : GAS_ESTIMATES.withdraw.add(GAS_ESTIMATES.createChannel);
+    code.getValue() !== "0x" ? SIMPLE_WITHDRAWAL_GAS_ESTIMATE : SIMPLE_WITHDRAWAL_GAS_ESTIMATE.add(gas.getValue());
 
   // Get the gas price
   const gasPrice = await chainService.getGasPrice(channel.networkContext.chainId);
