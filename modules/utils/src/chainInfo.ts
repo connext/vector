@@ -23,11 +23,10 @@ export const getChainInfo = async (chainId: number): Promise<ChainInfo> => {
 
 export const getAssetName = (chainId: number, assetId: string): string => {
   const chain = chains.find((info: ChainInfo) => info.chainId === chainId);
-  if (chain) {
-    return chain.assetId[assetId] ? chain.assetId[assetId] ?? "Token" : "Token";
-  } else {
+  if (!chain) {
     return "Token";
   }
+  return chain.assetId[assetId]?.symbol ?? "Token";
 };
 
 export const getMainnetEquivalent = (chainId: number, assetId: string): Result<string, Error> => {
