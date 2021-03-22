@@ -305,7 +305,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
       return Result.fail(approveRes.getError()!);
     }
     if (approveRes.getValue()) {
-      const receipt = await approveRes.getValue()!.wait();
+      const receipt = await approveRes.getValue()!.wait(2);
       if (receipt.status === 0) {
         return Result.fail(new ChainError(ChainError.reasons.TxReverted, { receipt }));
       }
@@ -394,7 +394,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
             },
             "Waiting for event to be emitted",
           );
-          const receipt = await deployTx.wait();
+          const receipt = await deployTx.wait(2);
           if (receipt.status === 0) {
             return Result.fail(
               new ChainError(ChainError.reasons.TxReverted, {
@@ -674,7 +674,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
 
         // Register callbacks for saving tx, then return
         response
-          .wait() // TODO: confirmation blocks? #434
+          .wait(2)
           .then(async (receipt) => {
             if (receipt.status === 0) {
               this.log.error({ method: "sendTxAndParseResponse", receipt }, "Transaction reverted");
@@ -879,7 +879,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
       }
       const approveTx = approveRes.getValue();
       if (approveTx) {
-        const receipt = await approveTx.wait();
+        const receipt = await approveTx.wait(2);
         if (receipt.status === 0) {
           return Result.fail(new ChainError(ChainError.reasons.TxReverted, { receipt }));
         }

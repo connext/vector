@@ -493,7 +493,7 @@ const sendTransaction = async (
     },
     "Tx sent",
   );
-  const receipt = await response.wait();
+  const receipt = await response.wait(2);
   logger.info(
     {
       method,

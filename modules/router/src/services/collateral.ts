@@ -376,7 +376,7 @@ export const requestCollateral = async (
 
     const tx = txRes.getValue();
     logger.info({ method, methodId, txHash: tx.txHash }, "Submitted deposit tx");
-    const receipt = await waitForTransaction(provider, tx.txHash);
+    const receipt = await waitForTransaction(provider, tx.txHash, 2);
     if (receipt.isError) {
       return Result.fail(
         new CollateralError(
