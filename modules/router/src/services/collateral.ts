@@ -5,6 +5,7 @@ import {
   NodeResponses,
   IVectorChainReader,
   jsonifyError,
+  getConfirmationsForChain,
 } from "@connext/vector-types";
 import { getBalanceForAssetId, getRandomBytes32, getParticipant } from "@connext/vector-utils";
 import { waitForTransaction } from "@connext/vector-contracts";
@@ -376,7 +377,11 @@ export const requestCollateral = async (
 
     const tx = txRes.getValue();
     logger.info({ method, methodId, txHash: tx.txHash }, "Submitted deposit tx");
-    const receipt = await waitForTransaction(provider, tx.txHash);
+    const receipt = await waitForTransaction(
+      provider,
+      tx.txHash,
+      getConfirmationsForChain(channel.networkContext.chainId),
+    );
     if (receipt.isError) {
       return Result.fail(
         new CollateralError(
