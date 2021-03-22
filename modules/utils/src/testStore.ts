@@ -1,10 +1,15 @@
 import {
   Balance,
+  ChannelUpdate,
+  EngineEvent,
+  EngineEvents,
   ResolveUpdateDetails,
   StoredTransactionStatus,
   TransactionReason,
+  UpdateType,
   WithdrawCommitmentJson,
   IEngineStore,
+  IServerNodeStore,
 } from "@connext/vector-types";
 import {
   createTestChannelState,
@@ -15,14 +20,16 @@ import {
   getRandomIdentifier,
   getSignerAddressFromPublicIdentifier,
   createTestTxResponse,
+  createTestChannelUpdate,
   mkPublicIdentifier,
   mkAddress,
   delay,
   getRandomChannelSigner,
   mkSig,
 } from ".";
+// import { delay } from "ts-nats/lib/util";
 
-export const testStore = <T extends IEngineStore>(name: string, makeStore: () => T) => {
+export const testStore = <T extends IEngineStore>(name: string, makeStore: () => T, isBrowserStore: boolean = false) => {
   describe(name, () => {
     let store: T;
   
@@ -402,272 +409,398 @@ export const testStore = <T extends IEngineStore>(name: string, makeStore: () =>
         expect(retrieved.length).to.be.eq(2);
       });
     });
-  
+
     describe("getWithdrawalCommitment / getWithdrawalCommitmentByTransactionHash / saveWithdrawalCommitment", () => {
-      const alice = getRandomChannelSigner();
-      const bob = getRandomChannelSigner();
-      const transferId = getRandomBytes32();
-      const commitment: WithdrawCommitmentJson = {
-        channelAddress: mkAddress("0xcc"),
-        amount: "10",
-        alice: alice.address,
-        bob: bob.address,
-        assetId: mkAddress(),
-        aliceSignature: mkSig("0xaaa"),
-        bobSignature: mkSig("0xbbb"),
-        recipient: mkAddress("0xrrr"),
-        nonce: "12",
-        callData: "0x",
-        callTo: mkAddress(),
-        transactionHash: mkHash("0xttt"),
-      };
-  
-      beforeEach(async () => {
-        await store.saveWithdrawalCommitment(transferId, commitment);
+      // Here we process this test differently based on whether it's a BrowserStore we're testing or the PrismaStore
+      // from server-node. There are also a few tests unique to each, and a few that they share.
+      if (isBrowserStore) {
+        // BrowserNode tests.
+        const alice = getRandomChannelSigner();
+        const bob = getRandomChannelSigner();
+        const transferId = getRandomBytes32();
+        const commitment: WithdrawCommitmentJson = {
+          channelAddress: mkAddress("0xcc"),
+          amount: "10",
+          alice: alice.address,
+          bob: bob.address,
+          assetId: mkAddress(),
+          aliceSignature: mkSig("0xaaa"),
+          bobSignature: mkSig("0xbbb"),
+          recipient: mkAddress("0xrrr"),
+          nonce: "12",
+          callData: "0x",
+          callTo: mkAddress(),
+          transactionHash: mkHash("0xttt"),
+        };
+    
+        beforeEach(async () => {
+          await store.saveWithdrawalCommitment(transferId, commitment);
+        });
+    
+        it("getWithdrawalCommitment should work", async () => {
+          expect(await store.getWithdrawalCommitment(transferId)).to.be.deep.eq(commitment);
+        });
+    
+        it("getWithdrawalCommitmentByTransactionHash should work", async () => {
+          expect(await store.getWithdrawalCommitmentByTransactionHash(commitment.transactionHash!)).to.be.deep.eq(
+            commitment,
+          );
+        });
+      } else {
+        // ServerNode tests.
+        let resolveUpdate: ChannelUpdate<"resolve">;
+        let createUpdate: ChannelUpdate<"create">;
+        const alice = getRandomChannelSigner();
+        const bob = getRandomChannelSigner();
+        const transferId = getRandomBytes32();
+        const commitment: WithdrawCommitmentJson = {
+          channelAddress: mkAddress("0xcc"),
+          amount: "10",
+          alice: alice.address,
+          bob: bob.address,
+          assetId: mkAddress(),
+          aliceSignature: mkSig("0xaaa"),
+          bobSignature: mkSig("0xbbb"),
+          recipient: mkAddress("0xrrr"),
+          nonce: "12",
+          callData: "0x",
+          callTo: mkAddress(),
+          transactionHash: mkHash("0xttt"),
+        };
+
+        beforeEach(async () => {
+          resolveUpdate = createTestChannelUpdate(UpdateType.resolve, {
+            channelAddress: commitment.channelAddress,
+            details: {
+              transferId,
+              transferResolver: { responderSignature: commitment.bobSignature },
+              meta: { transactionHash: commitment.transactionHash },
+            },
+            fromIdentifier: bob.publicIdentifier,
+            toIdentifier: alice.publicIdentifier,
+            assetId: commitment.assetId,
+            nonce: 5,
+          });
+
+          createUpdate = createTestChannelUpdate(UpdateType.create, {
+            channelAddress: commitment.channelAddress,
+            details: {
+              transferId,
+              balance: { amount: [commitment.amount, "0"], to: [commitment.recipient, bob.address] },
+              transferInitialState: {
+                initiatorSignature: commitment.aliceSignature,
+                initiator: commitment.alice,
+                responder: commitment.bob,
+                nonce: commitment.nonce,
+                callTo: commitment.callTo,
+                callData: commitment.callData,
+                fee: "0",
+              },
+            },
+            fromIdentifier: alice.publicIdentifier,
+            toIdentifier: bob.publicIdentifier,
+            assetId: commitment.assetId,
+            nonce: 4,
+          });
+
+          const { channel: createChannel, transfer } = createTestChannelState(UpdateType.create, {
+            channelAddress: commitment.channelAddress,
+            alice: commitment.alice,
+            bob: commitment.bob,
+            aliceIdentifier: alice.publicIdentifier,
+            bobIdentifier: bob.publicIdentifier,
+            latestUpdate: { ...createUpdate },
+          });
+          await store.saveChannelState(createChannel, { ...transfer, balance: createUpdate.balance });
+
+          const resolveChannel = createTestChannelState(UpdateType.resolve, {
+            channelAddress: commitment.channelAddress,
+            alice: commitment.alice,
+            bob: commitment.bob,
+            aliceIdentifier: alice.publicIdentifier,
+            bobIdentifier: bob.publicIdentifier,
+            latestUpdate: { ...resolveUpdate },
+          }).channel;
+          await store.saveChannelState(
+            { ...resolveChannel, latestUpdate: resolveUpdate },
+            {
+              ...transfer,
+              transferResolver: { responderSignature: commitment.bobSignature },
+              balance: createUpdate.balance,
+            },
+          );
+          await store.saveWithdrawalCommitment(transferId, commitment);
+        });
+
+        it("should update transfer resolver", async () => {
+          const transferId = mkBytes32("0xabcde");
+          const createState = createTestChannelState("create", {}, { transferId });
+          await store.saveChannelState(createState.channel, createState.transfer);
+          let transferFromStore = await store.getTransferState(createState.transfer.transferId);
+          expect(transferFromStore).to.deep.eq({
+            ...createState.transfer,
+            transferState: {
+              balance: (createState.channel.latestUpdate as ChannelUpdate<typeof UpdateType.create>).details.balance,
+              ...createState.transfer.transferState,
+            },
+          });
+        });
+
+        it("should create an event subscription", async () => {
+          const pubId = mkPublicIdentifier();
+          const subs = {
+            [EngineEvents.CONDITIONAL_TRANSFER_CREATED]: "sub1",
+            [EngineEvents.CONDITIONAL_TRANSFER_RESOLVED]: "sub2",
+            [EngineEvents.DEPOSIT_RECONCILED]: "sub3",
+          };
+          const servernodestore = store as unknown as IServerNodeStore;
+          await servernodestore.registerSubscription(pubId, EngineEvents.CONDITIONAL_TRANSFER_CREATED, "othersub");
+    
+          const other = await servernodestore.getSubscription(pubId, EngineEvents.CONDITIONAL_TRANSFER_CREATED);
+          expect(other).to.eq("othersub");
+    
+          for (const [event, url] of Object.entries(subs)) {
+            await servernodestore.registerSubscription(pubId, event as EngineEvent, url);
+          }
+    
+          const all = await servernodestore.getSubscriptions(pubId);
+          expect(all).to.deep.eq(subs);
+        });
+      }
+
+      // Shared tests.
+      it("should save transaction responses and receipts", async () => {
+        // Load store with channel
+        const setupState = createTestChannelState("setup").channel;
+        await store.saveChannelState(setupState);
+    
+        const response = createTestTxResponse();
+    
+        // save response
+        await store.saveTransactionResponse(setupState.channelAddress, TransactionReason.depositA, response);
+    
+        // verify response
+        const storedResponse = await store.getTransactionByHash(response.hash);
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const { wait, confirmations, hash, ...sanitizedResponse } = response;
+        expect(storedResponse).to.containSubset({
+          ...sanitizedResponse,
+          status: StoredTransactionStatus.submitted,
+          channelAddress: setupState.channelAddress,
+          transactionHash: hash,
+          gasLimit: response.gasLimit.toString(),
+          gasPrice: response.gasPrice.toString(),
+          value: response.value.toString(),
+        });
+    
+        // save receipt
+        const receipt = await response.wait();
+        await store.saveTransactionReceipt(setupState.channelAddress, receipt);
+    
+        // verify receipt
+        const storedReceipt = await store.getTransactionByHash(response.hash);
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const { confirmations: receiptConfs, ...sanitizedReceipt } = receipt;
+        expect(storedReceipt).to.containSubset({
+          ...sanitizedResponse,
+          ...sanitizedReceipt,
+          channelAddress: setupState.channelAddress,
+          transactionHash: hash,
+          gasLimit: response.gasLimit.toString(),
+          gasPrice: response.gasPrice.toString(),
+          value: response.value.toString(),
+          cumulativeGasUsed: receipt.cumulativeGasUsed.toString(),
+          gasUsed: receipt.gasUsed.toString(),
+          status: StoredTransactionStatus.mined,
+        });
+    
+        // save failing response
+        const failed = createTestTxResponse({ hash: mkHash("0x13754"), nonce: 65 });
+        await store.saveTransactionResponse(setupState.channelAddress, TransactionReason.depositB, failed);
+        // save error
+        await store.saveTransactionFailure(setupState.channelAddress, failed.hash, "failed to send");
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const { wait: fWait, confirmations: fConf, hash: fHash, ...sanitizedFailure } = failed;
+        const storedFailure = await store.getTransactionByHash(fHash);
+        expect(storedFailure).to.containSubset({
+          ...sanitizedFailure,
+          transactionHash: fHash,
+          gasLimit: failed.gasLimit.toString(),
+          gasPrice: failed.gasPrice.toString(),
+          value: failed.value.toString(),
+          status: StoredTransactionStatus.failed,
+          error: "failed to send",
+        });
       });
-  
-      it("getWithdrawalCommitment should work", async () => {
-        expect(await store.getWithdrawalCommitment(transferId)).to.be.deep.eq(commitment);
+    
+      it("should save and retrieve all update types and keep updating the channel", async () => {
+        const setupState = createTestChannelState("setup").channel;
+        await store.saveChannelState(setupState);
+    
+        let fromStore = await store.getChannelState(setupState.channelAddress);
+        expect(fromStore).to.deep.eq(setupState);
+    
+        const updatedBalanceForDeposit: Balance = { amount: ["10", "20"], to: setupState.balances[0].to };
+        const depositState = createTestChannelState("deposit", {
+          nonce: setupState.nonce + 1,
+          defundNonces: setupState.defundNonces,
+          balances: [updatedBalanceForDeposit, setupState.balances[0]],
+          networkContext: setupState.networkContext,
+        }).channel;
+        await store.saveChannelState(depositState);
+    
+        fromStore = await store.getChannelState(setupState.channelAddress);
+        expect(fromStore).to.deep.eq(depositState);
+    
+        const createState = createTestChannelState(
+          "create",
+          {
+            channelAddress: setupState.channelAddress,
+            nonce: depositState.nonce + 1,
+            defundNonces: setupState.defundNonces,
+            networkContext: setupState.networkContext,
+          },
+          {
+            transferId: mkHash("0x111"),
+            meta: { routingId: mkBytes32("0xddd") },
+          },
+        );
+        await store.saveChannelState(createState.channel, createState.transfer);
+    
+        fromStore = await store.getChannelState(setupState.channelAddress);
+        expect(fromStore).to.deep.eq(createState.channel);
+    
+        const resolveState = createTestChannelState(
+          "resolve",
+          {
+            nonce: createState.channel.nonce + 1,
+            defundNonces: setupState.defundNonces,
+            networkContext: setupState.networkContext,
+          },
+          {
+            transferId: mkHash("0x111"),
+          },
+        );
+        await store.saveChannelState(resolveState.channel, resolveState.transfer);
+    
+        fromStore = await store.getChannelState(setupState.channelAddress);
+        expect(fromStore).to.deep.eq(resolveState.channel);
       });
-  
-      it("getWithdrawalCommitmentByTransactionHash should work", async () => {
-        expect(await store.getWithdrawalCommitmentByTransactionHash(commitment.transactionHash!)).to.be.deep.eq(
-          commitment,
+    
+      it("should update transfer resolver", async () => {
+        const transferId = mkBytes32("0xabcde");
+        const createState = createTestChannelState("create", {}, { transferId });
+        await store.saveChannelState(createState.channel, createState.transfer);
+        let transferFromStore = await store.getTransferState(createState.transfer.transferId);
+        expect(transferFromStore).to.deep.eq(createState.transfer);
+    
+        const resolveState = createTestChannelState("resolve", { nonce: createState.channel.nonce + 1 }, { transferId });
+    
+        await store.saveChannelState(resolveState.channel, resolveState.transfer);
+        const fromStore = await store.getChannelState(resolveState.channel.channelAddress);
+        expect(fromStore).to.deep.eq(resolveState.channel);
+    
+        transferFromStore = await store.getTransferState(resolveState.transfer.transferId);
+        expect(transferFromStore!.transferResolver).to.deep.eq(
+          (resolveState.channel.latestUpdate.details as ResolveUpdateDetails).transferResolver,
         );
       });
-    });
-  
-    it("should save transaction responses and receipts", async () => {
-      // Load store with channel
-      const setupState = createTestChannelState("setup").channel;
-      await store.saveChannelState(setupState);
-  
-      const response = createTestTxResponse();
-  
-      // save response
-      await store.saveTransactionResponse(setupState.channelAddress, TransactionReason.depositA, response);
-  
-      // verify response
-      const storedResponse = await store.getTransactionByHash(response.hash);
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { wait, confirmations, hash, ...sanitizedResponse } = response;
-      expect(storedResponse).to.containSubset({
-        ...sanitizedResponse,
-        status: StoredTransactionStatus.submitted,
-        channelAddress: setupState.channelAddress,
-        transactionHash: hash,
-        gasLimit: response.gasLimit.toString(),
-        gasPrice: response.gasPrice.toString(),
-        value: response.value.toString(),
-      });
-  
-      // save receipt
-      const receipt = await response.wait();
-      await store.saveTransactionReceipt(setupState.channelAddress, receipt);
-  
-      // verify receipt
-      const storedReceipt = await store.getTransactionByHash(response.hash);
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { confirmations: receiptConfs, ...sanitizedReceipt } = receipt;
-      expect(storedReceipt).to.containSubset({
-        ...sanitizedResponse,
-        ...sanitizedReceipt,
-        channelAddress: setupState.channelAddress,
-        transactionHash: hash,
-        gasLimit: response.gasLimit.toString(),
-        gasPrice: response.gasPrice.toString(),
-        value: response.value.toString(),
-        cumulativeGasUsed: receipt.cumulativeGasUsed.toString(),
-        gasUsed: receipt.gasUsed.toString(),
-        status: StoredTransactionStatus.mined,
-      });
-  
-      // save failing response
-      const failed = createTestTxResponse({ hash: mkHash("0x13754"), nonce: 65 });
-      await store.saveTransactionResponse(setupState.channelAddress, TransactionReason.depositB, failed);
-      // save error
-      await store.saveTransactionFailure(setupState.channelAddress, failed.hash, "failed to send");
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { wait: fWait, confirmations: fConf, hash: fHash, ...sanitizedFailure } = failed;
-      const storedFailure = await store.getTransactionByHash(fHash);
-      expect(storedFailure).to.containSubset({
-        ...sanitizedFailure,
-        transactionHash: fHash,
-        gasLimit: failed.gasLimit.toString(),
-        gasPrice: failed.gasPrice.toString(),
-        value: failed.value.toString(),
-        status: StoredTransactionStatus.failed,
-        error: "failed to send",
-      });
-    });
-  
-    it("should save and retrieve all update types and keep updating the channel", async () => {
-      const setupState = createTestChannelState("setup").channel;
-      await store.saveChannelState(setupState);
-  
-      let fromStore = await store.getChannelState(setupState.channelAddress);
-      expect(fromStore).to.deep.eq(setupState);
-  
-      const updatedBalanceForDeposit: Balance = { amount: ["10", "20"], to: setupState.balances[0].to };
-      const depositState = createTestChannelState("deposit", {
-        nonce: setupState.nonce + 1,
-        defundNonces: setupState.defundNonces,
-        balances: [updatedBalanceForDeposit, setupState.balances[0]],
-        networkContext: setupState.networkContext,
-      }).channel;
-      await store.saveChannelState(depositState);
-  
-      fromStore = await store.getChannelState(setupState.channelAddress);
-      expect(fromStore).to.deep.eq(depositState);
-  
-      const createState = createTestChannelState(
-        "create",
-        {
-          channelAddress: setupState.channelAddress,
-          nonce: depositState.nonce + 1,
-          defundNonces: setupState.defundNonces,
-          networkContext: setupState.networkContext,
-        },
-        {
-          transferId: mkHash("0x111"),
-          meta: { routingId: mkBytes32("0xddd") },
-        },
-      );
-      await store.saveChannelState(createState.channel, createState.transfer);
-  
-      fromStore = await store.getChannelState(setupState.channelAddress);
-      expect(fromStore).to.deep.eq(createState.channel);
-  
-      const resolveState = createTestChannelState(
-        "resolve",
-        {
-          nonce: createState.channel.nonce + 1,
-          defundNonces: setupState.defundNonces,
-          networkContext: setupState.networkContext,
-        },
-        {
-          transferId: mkHash("0x111"),
-        },
-      );
-      await store.saveChannelState(resolveState.channel, resolveState.transfer);
-  
-      fromStore = await store.getChannelState(setupState.channelAddress);
-      expect(fromStore).to.deep.eq(resolveState.channel);
-    });
-  
-    it("should update transfer resolver", async () => {
-      const transferId = mkBytes32("0xabcde");
-      const createState = createTestChannelState("create", {}, { transferId });
-      await store.saveChannelState(createState.channel, createState.transfer);
-      let transferFromStore = await store.getTransferState(createState.transfer.transferId);
-      expect(transferFromStore).to.deep.eq(createState.transfer);
-  
-      const resolveState = createTestChannelState("resolve", { nonce: createState.channel.nonce + 1 }, { transferId });
-  
-      await store.saveChannelState(resolveState.channel, resolveState.transfer);
-      const fromStore = await store.getChannelState(resolveState.channel.channelAddress);
-      expect(fromStore).to.deep.eq(resolveState.channel);
-  
-      transferFromStore = await store.getTransferState(resolveState.transfer.transferId);
-      expect(transferFromStore!.transferResolver).to.deep.eq(
-        (resolveState.channel.latestUpdate.details as ResolveUpdateDetails).transferResolver,
-      );
-    });
-  
-    it("should create multiple active transfers", async () => {
-      const createState = createTestChannelState(
-        "create",
-        {},
-        {
-          transferId: mkHash("0x111"),
-          meta: { routingId: mkBytes32("0xddd") },
-          balance: { to: [mkAddress("0xaaa"), mkAddress("0xbbb")], amount: ["5", "0"] },
-        },
-      );
-      await store.saveChannelState(createState.channel, createState.transfer);
-  
-      const updatedState = createTestChannelState(
-        "create",
-        {
-          nonce: createState.channel.nonce + 1,
-        },
-        {
-          transferId: mkHash("0x112"),
-          meta: { routingId: mkBytes32("0xeee") },
-          balance: { to: [mkAddress("0xaaa"), mkAddress("0xbbb")], amount: ["5", "0"] },
-        },
-      );
-      await store.saveChannelState(updatedState.channel, updatedState.transfer);
-  
-      const channelFromStore = await store.getChannelState(createState.channel.channelAddress);
-      expect(channelFromStore).to.deep.eq(updatedState.channel);
-  
-      const transfers = await store.getActiveTransfers(createState.channel.channelAddress);
-  
-      expect(transfers.length).eq(2);
-      const t1 = transfers.find((t) => t.transferId === createState.transfer.transferId);
-      const t2 = transfers.find((t) => t.transferId === updatedState.transfer.transferId);
-      expect(t1).to.deep.eq(createState.transfer);
-      expect(t2).to.deep.eq(updatedState.transfer);
-    });
-  
-    it("should get multiple transfers by routingId", async () => {
-      const routingId = mkBytes32("0xddd");
-      const alice = getRandomIdentifier();
-      const bob1 = getRandomIdentifier();
-      const createState = createTestChannelState(
-        "create",
-        {
-          aliceIdentifier: alice,
-          alice: getSignerAddressFromPublicIdentifier(alice),
-          bobIdentifier: bob1,
-          bob: getSignerAddressFromPublicIdentifier(bob1),
-        },
-        {
-          transferId: mkHash("0x111"),
-          meta: { routingId },
-          balance: {
-            to: [getSignerAddressFromPublicIdentifier(alice), getSignerAddressFromPublicIdentifier(bob1)],
-            amount: ["7", "0"],
+    
+      it("should create multiple active transfers", async () => {
+        const createState = createTestChannelState(
+          "create",
+          {},
+          {
+            transferId: mkHash("0x111"),
+            meta: { routingId: mkBytes32("0xddd") },
+            balance: { to: [mkAddress("0xaaa"), mkAddress("0xbbb")], amount: ["5", "0"] },
           },
-          responder: getSignerAddressFromPublicIdentifier(alice),
-          initiator: getSignerAddressFromPublicIdentifier(bob1),
-        },
-      );
-  
-      await store.saveChannelState(createState.channel, createState.transfer);
-  
-      const newBob = getRandomIdentifier();
-      const createState2 = createTestChannelState(
-        "create",
-        {
-          aliceIdentifier: alice,
-          alice: getSignerAddressFromPublicIdentifier(alice),
-          channelAddress: getRandomBytes32(),
-          bob: getSignerAddressFromPublicIdentifier(newBob),
-          bobIdentifier: newBob,
-        },
-        {
-          transferId: mkHash("0x122"),
-          meta: { routingId },
-          balance: {
-            to: [getSignerAddressFromPublicIdentifier(alice), getSignerAddressFromPublicIdentifier(newBob)],
-            amount: ["7", "0"],
+        );
+        await store.saveChannelState(createState.channel, createState.transfer);
+    
+        const updatedState = createTestChannelState(
+          "create",
+          {
+            nonce: createState.channel.nonce + 1,
           },
-          initiator: getSignerAddressFromPublicIdentifier(alice),
-          responder: getSignerAddressFromPublicIdentifier(newBob),
-        },
-      );
-  
-      await store.saveChannelState(createState2.channel, createState2.transfer);
-  
-      const transfers = await store.getTransfersByRoutingId(routingId);
-      expect(transfers.length).to.eq(2);
-  
-      const t1 = transfers.find((t) => t.transferId === createState.transfer.transferId);
-      const t2 = transfers.find((t) => t.transferId === createState2.transfer.transferId);
-      expect(t1).to.deep.eq(createState.transfer);
-      expect(t2).to.deep.eq(createState2.transfer);
+          {
+            transferId: mkHash("0x112"),
+            meta: { routingId: mkBytes32("0xeee") },
+            balance: { to: [mkAddress("0xaaa"), mkAddress("0xbbb")], amount: ["5", "0"] },
+          },
+        );
+        await store.saveChannelState(updatedState.channel, updatedState.transfer);
+    
+        const channelFromStore = await store.getChannelState(createState.channel.channelAddress);
+        expect(channelFromStore).to.deep.eq(updatedState.channel);
+    
+        const transfers = await store.getActiveTransfers(createState.channel.channelAddress);
+    
+        expect(transfers.length).eq(2);
+        const t1 = transfers.find((t) => t.transferId === createState.transfer.transferId);
+        const t2 = transfers.find((t) => t.transferId === updatedState.transfer.transferId);
+        expect(t1).to.deep.eq(createState.transfer);
+        expect(t2).to.deep.eq(updatedState.transfer);
+      });
+    
+      it("should get multiple transfers by routingId", async () => {
+        const routingId = mkBytes32("0xddd");
+        const alice = getRandomIdentifier();
+        const bob1 = getRandomIdentifier();
+        const createState = createTestChannelState(
+          "create",
+          {
+            aliceIdentifier: alice,
+            alice: getSignerAddressFromPublicIdentifier(alice),
+            bobIdentifier: bob1,
+            bob: getSignerAddressFromPublicIdentifier(bob1),
+          },
+          {
+            transferId: mkHash("0x111"),
+            meta: { routingId },
+            balance: {
+              to: [getSignerAddressFromPublicIdentifier(alice), getSignerAddressFromPublicIdentifier(bob1)],
+              amount: ["7", "0"],
+            },
+            responder: getSignerAddressFromPublicIdentifier(alice),
+            initiator: getSignerAddressFromPublicIdentifier(bob1),
+          },
+        );
+    
+        await store.saveChannelState(createState.channel, createState.transfer);
+    
+        const newBob = getRandomIdentifier();
+        const createState2 = createTestChannelState(
+          "create",
+          {
+            aliceIdentifier: alice,
+            alice: getSignerAddressFromPublicIdentifier(alice),
+            channelAddress: getRandomBytes32(),
+            bob: getSignerAddressFromPublicIdentifier(newBob),
+            bobIdentifier: newBob,
+          },
+          {
+            transferId: mkHash("0x122"),
+            meta: { routingId },
+            balance: {
+              to: [getSignerAddressFromPublicIdentifier(alice), getSignerAddressFromPublicIdentifier(newBob)],
+              amount: ["7", "0"],
+            },
+            initiator: getSignerAddressFromPublicIdentifier(alice),
+            responder: getSignerAddressFromPublicIdentifier(newBob),
+          },
+        );
+    
+        await store.saveChannelState(createState2.channel, createState2.transfer);
+    
+        const transfers = await store.getTransfersByRoutingId(routingId);
+        expect(transfers.length).to.eq(2);
+    
+        const t1 = transfers.find((t) => t.transferId === createState.transfer.transferId);
+        const t2 = transfers.find((t) => t.transferId === createState2.transfer.transferId);
+        expect(t1).to.deep.eq(createState.transfer);
+        expect(t2).to.deep.eq(createState2.transfer);
+      });
     });
   });
 }

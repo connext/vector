@@ -12,4 +12,4 @@ const name = "BrowserStore";
 const { log } = getTestLoggers(name);
 const pubId = mkPublicIdentifier();
 
-testStore(name, () => new BrowserStore(pubId, log, indexedDB, IDBKeyRange))
+testStore(name, () => new BrowserStore(pubId, log, indexedDB, IDBKeyRange), true)
