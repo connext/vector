@@ -15,7 +15,7 @@ export default task("drip", "Mints tokens to given address")
       const token = await (hre.ethers as any).getContract("TestToken", signerAddress ?? address);
       const mint = await token.mint(address, toDrip);
       log.info(`Transaction: ${mint.hash}`);
-      await mint.wait();
+      await mint.wait(2);
       log.info(`Successfully minted tokens`);
     },
   );

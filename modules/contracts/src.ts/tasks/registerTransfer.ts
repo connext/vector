@@ -36,7 +36,7 @@ export default task("register-transfer", "Registers transfers")
         );
         const removal = await registry.removeTransferDefinition(transferName);
         log.info({ hash: removal.hash }, "Removal tx broadcast");
-        await removal.wait();
+        await removal.wait(2);
         log.info("Removal tx mined");
       }
 
@@ -53,7 +53,7 @@ export default task("register-transfer", "Registers transfers")
       log.info(cleaned, `Adding transfer to registry`);
       const response = await registry.addTransferDefinition(cleaned);
       log.info(`Added: ${response.hash}`);
-      await response.wait();
+      await response.wait(2);
       log.info(`Tx mined, successfully added ${cleaned.name} on ${cleaned.definition}`);
     },
   );

@@ -18,7 +18,7 @@ export default task("change-transfer-registry-owner", "Change transfer registry 
       const tx = await registry.transferOwnership(newOwner);
       log.info({ hash: tx.hash }, "transferOwnership tx broadcast");
 
-      await tx.wait();
+      await tx.wait(2);
       log.info(`transferOwnership tx mined!`);
 
       const _newOwner = await registry.owner();
