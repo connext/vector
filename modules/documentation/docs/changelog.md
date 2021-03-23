@@ -2,10 +2,25 @@
 
 ## Next Release
 
+## 0.2.1-beta.9
+
+- \[router\] Change fee calculations
+
+## 0.2.1-beta.8
+
+- \[contracts\] Add retry logic to `ethReader`
+- \[engine\] Bug in fee calculation fix
+
+## 0.2.1-beta.7
+
+- \[all\] Add confirmations for most chains
+- \[router\] Use `estimateGas` instead of hardcoded estimates
+
 ## 0.2.1-beta.6
 
 - \[all\] Add confirmations for most chains
 - \[router\] Improvements to fee stats
+
 ## 0.2.1-beta.5
 
 - \[types\] Update estimated gas fees

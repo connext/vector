@@ -1,10 +1,11 @@
 import {
   FullChannelState,
-  GAS_ESTIMATES,
   IVectorChainReader,
   jsonifyError,
   Result,
   REDUCED_GAS_PRICE,
+  SIMPLE_WITHDRAWAL_GAS_ESTIMATE,
+  GAS_ESTIMATES,
 } from "@connext/vector-types";
 import { getBalanceForAssetId, getParticipant, getRandomBytes32, TESTNETS_WITH_FEES } from "@connext/vector-utils";
 import { BigNumber } from "@ethersproject/bignumber";
@@ -362,16 +363,17 @@ export const calculateEstimatedGasFee = async (
     // There will be a post-resolution reclaim of funds
     fromChannelFee =
       fromChannelCode.getValue() === "0x"
-        ? GAS_ESTIMATES.createChannel.add(GAS_ESTIMATES.withdraw)
-        : GAS_ESTIMATES.withdraw;
+        ? GAS_ESTIMATES.createChannel.add(SIMPLE_WITHDRAWAL_GAS_ESTIMATE)
+        : SIMPLE_WITHDRAWAL_GAS_ESTIMATE;
   } else if (finalFromBalance.lt(fromProfile.collateralizeThreshold)) {
     // There will be a post-resolution sender collateralization
+    // gas estimates are participant sensitive, so this is safe to do
     fromChannelFee =
-      participantFromChannel === "bob"
-        ? GAS_ESTIMATES.depositBob
-        : fromChannelCode.getValue() === "0x" // is alice, is deployed?
+      participantFromChannel === "alice" && fromChannelCode.getValue() === "0x"
         ? GAS_ESTIMATES.createChannelAndDepositAlice
-        : GAS_ESTIMATES.depositAlice;
+        : participantFromChannel === "alice"
+        ? GAS_ESTIMATES.depositAlice
+        : GAS_ESTIMATES.depositBob;
   }
 
   // when forwarding a transfer, the only immediate costs on the receiver-side

@@ -17,6 +17,16 @@ export const GAS_ESTIMATES = {
   withdraw: BigNumber.from(95_000), // 0x4d4466ed10b5d39c0a80be859dc30bca0120b5e8de10ed7155cc0b26da574439
 };
 
+// NOTE: you cannot easily use `estimateGas` to calculate the costs
+// of a withdrawal onchain. This is because to make sure that the
+// estimate call does not revert you would need to have the correct
+// signatures, make sure the channel is deployed, etc. So just
+// use a hardcoded estimate for a simple withdrawal, then use the
+// callTo and callData to estimate the gas used on the withdraw
+// helper
+// TODO: update fees to account for a withdraw helper
+export const SIMPLE_WITHDRAWAL_GAS_ESTIMATE = BigNumber.from(100_000);
+
 export const ERC20Abi = [
   // Read-Only Functions
   "function balanceOf(address owner) view returns (uint256)",

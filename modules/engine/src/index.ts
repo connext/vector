@@ -1,5 +1,4 @@
 import { Vector } from "@connext/vector-protocol";
-import { EXTRA_GAS_PRICE } from "@connext/vector-contracts";
 import {
   ChainAddresses,
   IChannelSigner,
@@ -658,8 +657,7 @@ export class VectorEngine implements IVectorEngine {
     if (gasPriceRes.isError) {
       Result.fail(gasPriceRes.getError()!);
     }
-    const _gasPrice = gasPriceRes.getValue();
-    const gasPrice = _gasPrice.add(EXTRA_GAS_PRICE);
+    const gasPrice = gasPriceRes.getValue();
     this.logger.info(
       { method, chainId: channel.networkContext.chainId, channel: channel.channelAddress },
       "Got gas price",

@@ -1,6 +1,6 @@
 {
   "name": "@connext/vector-contracts",
-  "version": "0.2.1-beta.6",
+  "version": "0.2.1-beta.9",
   "license": "ISC",
   "description": "Smart contracts powering Connext's minimalist channel platform",
   "keywords": [
@@ -29,8 +29,8 @@
   },
   "dependencies": {
     "@connext/pure-evm-wasm": "0.1.4",
-    "@connext/vector-types": "0.2.1-beta.6",
-    "@connext/vector-utils": "0.2.1-beta.6",
+    "@connext/vector-types": "0.2.1-beta.9",
+    "@connext/vector-utils": "0.2.1-beta.9",
     "@ethersproject/abi": "5.0.12",
     "@ethersproject/abstract-provider": "5.0.9",
     "@ethersproject/abstract-signer": "5.0.13",

@@ -1,6 +1,6 @@
 import { VectorChainService } from "@connext/vector-contracts";
 import { VectorEngine } from "@connext/vector-engine";
-import { EngineEvents, ILockService, IVectorChainService, IVectorEngine } from "@connext/vector-types";
+import { EngineEvents, ILockService, IVectorChainService, IVectorEngine, IServerNodeStore } from "@connext/vector-types";
 import { ChannelSigner, NatsMessagingService, logAxiosError } from "@connext/vector-utils";
 import Axios from "axios";
 import { Wallet } from "@ethersproject/wallet";
@@ -8,7 +8,6 @@ import { Wallet } from "@ethersproject/wallet";
 import { logger, _providers } from "../index";
 import { config } from "../config";
 import { LockService } from "../services/lock";
-import { IServerNodeStore } from "../services/store";
 
 const ETH_STANDARD_PATH = "m/44'/60'/0'/0";
 
