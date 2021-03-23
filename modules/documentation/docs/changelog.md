@@ -5,6 +5,7 @@
 ## 0.2.1-beta.10
 
 - \[engine\] Change withdrawal fee calculations
+
 ## 0.2.1-beta.9
 
 - \[router\] Change fee calculations
