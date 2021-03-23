@@ -34,3 +34,6 @@ export const CHAINS_WITH_NO_CONFIRMATIONS = [1, 1337, 1338, 1340, 1341, 1342];
 export const getConfirmationsForChain = (chainId: number): number => {
   return CHAINS_WITH_NO_CONFIRMATIONS.includes(chainId) ? 0 : NUM_CONFIRMATIONS;
 };
+
+// ETH Reader - how many attempts / retries will we do upon failure?
+export const ETH_READER_MAX_RETRIES = 5;
