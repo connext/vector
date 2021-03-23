@@ -217,14 +217,12 @@ export const onchainLiquidity = new Gauge({
         );
 
         // tokens
-        await Promise.all(
-          Object.entries(rebalancedTokens[chainId] ?? {}).map(async ([assetId, config]) => {
-            const balance = await config.contract.balanceOf(signerAddress);
-            const assetName: string = getAssetName(Number(chainId), assetId);
-            const toSet = await parseBalanceToNumber(balance, chainId, assetId);
-            this.set({ chainName: chainInfo?.name ?? chainId, chainId, assetName, assetId }, toSet);
-          }),
-        );
+        for (const [assetId, config] of Object.entries(rebalancedTokens[chainId] ?? {})) {
+          const balance = await config.contract.balanceOf(signerAddress);
+          const assetName: string = getAssetName(Number(chainId), assetId);
+          const toSet = await parseBalanceToNumber(balance, chainId, assetId);
+          this.set({ chainName: chainInfo?.name ?? chainId, chainId, assetName, assetId }, toSet);
+        }
       }),
     );
   },
