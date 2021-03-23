@@ -2,6 +2,10 @@
 
 ## Next Release
 
+## 0.2.1-beta.9
+
+- \[router\] Change fee calculations
+
 ## 0.2.1-beta.8
 
 - \[contracts\] Add retry logic to `ethReader`
