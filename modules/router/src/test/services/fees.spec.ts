@@ -1,6 +1,6 @@
 import { VectorChainReader } from "@connext/vector-contracts";
 import * as vectorUtils from "@connext/vector-utils";
-import { Result, UpdateType, FullChannelState, SIMPLE_WITHDRAWAL_GAS_ESTIMATE } from "@connext/vector-types";
+import { Result, UpdateType, FullChannelState, GAS_ESTIMATES } from "@connext/vector-types";
 import { BigNumber } from "@ethersproject/bignumber";
 import { expect } from "chai";
 import Sinon from "sinon";
@@ -18,14 +18,6 @@ const config = getConfig();
 const testName = "Router fees";
 const { log } = vectorUtils.getTestLoggers(testName, config.logLevel ?? ("info" as any));
 
-const GAS_ESTIMATES = {
-  createChannelAndDepositAlice: BigNumber.from(200_000), // 0x5a78baf521e5739b2b63626566f6b360a242b52734662db439a2c3256d3e1f97
-  createChannel: BigNumber.from(150_000), // 0x45690e81cfc5576d11ecda7938ce91af513a873f8c7e4f26bf2a898ee45ae8ab
-  depositAlice: BigNumber.from(85_000), // 0x0ed5459c7366d862177408328591c6df5c534fe4e1fbf4a5dd0abbe3d9c761b3
-  depositBob: BigNumber.from(50_000),
-  withdraw: SIMPLE_WITHDRAWAL_GAS_ESTIMATE, // 0x4d4466ed10b5d39c0a80be859dc30bca0120b5e8de10ed7155cc0b26da574439
-};
-
 describe(testName, () => {
   let ethReader: Sinon.SinonStubbedInstance<VectorChainReader>;
   let getRebalanceProfileStub: Sinon.SinonStub;
@@ -39,16 +31,6 @@ describe(testName, () => {
     getSwappedAmountStub = Sinon.stub(swapService, "getSwappedAmount");
     getFeesStub = Sinon.stub(configService, "getSwapFees");
     getDecimalsStub = Sinon.stub(metrics, "getDecimals").resolves(18);
-
-    // setup gas fees stubs
-    // from channel calls
-    ethReader.estimateGas.onCall(0).resolves(Result.ok(GAS_ESTIMATES.createChannelAndDepositAlice));
-    ethReader.estimateGas.onCall(1).resolves(Result.ok(GAS_ESTIMATES.createChannel));
-    ethReader.estimateGas.onCall(2).resolves(Result.ok(GAS_ESTIMATES.depositAlice));
-    // to channel calls
-    ethReader.estimateGas.onCall(3).resolves(Result.ok(GAS_ESTIMATES.createChannelAndDepositAlice));
-    ethReader.estimateGas.onCall(4).resolves(Result.ok(GAS_ESTIMATES.createChannel));
-    ethReader.estimateGas.onCall(5).resolves(Result.ok(GAS_ESTIMATES.depositAlice));
   });
 
   afterEach(() => {
@@ -573,10 +555,6 @@ describe(testName, () => {
         };
         fromChannel.aliceIdentifier = fromChannel.bobIdentifier;
         fromChannel.bobIdentifier = routerIdentifier;
-        // setup gas fees stubs
-        // from channel calls
-        ethReader.estimateGas.onCall(0).resolves(Result.ok(GAS_ESTIMATES.createChannel));
-        ethReader.estimateGas.onCall(1).resolves(Result.ok(GAS_ESTIMATES.depositBob));
         const result = await feesService.calculateEstimatedGasFee(
           BigNumber.from(3),
           toAssetId,
@@ -652,10 +630,6 @@ describe(testName, () => {
         toChannel.balances[0] = { to: [toChannel.bob, toChannel.alice], amount: ["0", "0"] };
         toChannel.aliceIdentifier = toChannel.bobIdentifier;
         toChannel.bobIdentifier = routerIdentifier;
-
-        // setup gas for to channel calls
-        ethReader.estimateGas.onCall(3).resolves(Result.ok(GAS_ESTIMATES.createChannel));
-        ethReader.estimateGas.onCall(4).resolves(Result.ok(GAS_ESTIMATES.depositBob));
 
         const result = await feesService.calculateEstimatedGasFee(
           toSend,
