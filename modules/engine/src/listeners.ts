@@ -1,4 +1,4 @@
-import { ChannelFactory, WithdrawCommitment } from "@connext/vector-contracts";
+import { WithdrawCommitment } from "@connext/vector-contracts";
 import {
   ChainAddresses,
   ChannelUpdateEvent,
@@ -37,6 +37,7 @@ import {
   DEFAULT_FEE_EXPIRY,
   DEFAULT_CHANNEL_TIMEOUT,
   SIMPLE_WITHDRAWAL_GAS_ESTIMATE,
+  GAS_ESTIMATES,
 } from "@connext/vector-types";
 import {
   getRandomBytes32,
@@ -46,7 +47,6 @@ import {
   safeJsonStringify,
   mkSig,
 } from "@connext/vector-utils";
-import { Interface } from "@ethersproject/abi";
 import { getAddress } from "@ethersproject/address";
 import { BigNumber } from "@ethersproject/bignumber";
 import { Zero } from "@ethersproject/constants";
@@ -487,23 +487,29 @@ export async function getWithdrawalQuote(
     );
   }
 
-  const data = new Interface(ChannelFactory.abi).encodeFunctionData("createChannel", [channel.alice, channel.bob]);
-  const gas = await chainService.estimateGas(channel.networkContext.chainId, {
-    to: channel.channelAddress,
-    from: channel.alice,
-    data,
-  });
-  if (gas.isError) {
-    return Result.fail(
-      new WithdrawQuoteError(WithdrawQuoteError.reasons.ChainServiceFailure, signer.publicIdentifier, request, {
-        chainServiceMethod: "estimateGas",
-        chainServiceError: jsonifyError(gas.getError()!),
-      }),
-    );
-  }
+  // TODO: fix :(
+  // const data = new Interface(ChannelFactory.abi).encodeFunctionData("createChannel", [channel.alice, channel.bob]);
+  // const gas = await chainService.estimateGas(channel.networkContext.chainId, {
+  //   to: channel.channelAddress,
+  //   from: channel.alice,
+  //   data,
+  // });
+  // if (gas.isError) {
+  //   return Result.fail(
+  //     new WithdrawQuoteError(WithdrawQuoteError.reasons.ChainServiceFailure, signer.publicIdentifier, request, {
+  //       chainServiceMethod: "estimateGas",
+  //       chainServiceError: jsonifyError(gas.getError()!),
+  //     }),
+  //   );
+  // }
+
+  // const gasEstimate =
+  //   code.getValue() !== "0x" ? SIMPLE_WITHDRAWAL_GAS_ESTIMATE : SIMPLE_WITHDRAWAL_GAS_ESTIMATE.add(gas.getValue());
 
   const gasEstimate =
-    code.getValue() !== "0x" ? SIMPLE_WITHDRAWAL_GAS_ESTIMATE : SIMPLE_WITHDRAWAL_GAS_ESTIMATE.add(gas.getValue());
+    code.getValue() !== "0x"
+      ? SIMPLE_WITHDRAWAL_GAS_ESTIMATE
+      : SIMPLE_WITHDRAWAL_GAS_ESTIMATE.add(GAS_ESTIMATES.createChannel);
 
   // Get the gas price
   const gasPrice = await chainService.getGasPrice(channel.networkContext.chainId);
