@@ -1,5 +1,5 @@
 export { EthereumChainReader as VectorChainReader } from "./ethReader";
-export { EthereumChainService as VectorChainService, EXTRA_GAS_PRICE, waitForTransaction } from "./ethService";
+export { EthereumChainService as VectorChainService, waitForTransaction } from "./ethService";
 
 /*
 const harmonyChainIds = [];
