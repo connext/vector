@@ -42,13 +42,7 @@ describe(testName, () => {
 
     // setup gas fees stubs
     // from channel calls
-    ethReader.estimateGas.onCall(0).resolves(Result.ok(GAS_ESTIMATES.createChannelAndDepositAlice));
-    ethReader.estimateGas.onCall(1).resolves(Result.ok(GAS_ESTIMATES.createChannel));
-    ethReader.estimateGas.onCall(2).resolves(Result.ok(GAS_ESTIMATES.depositAlice));
     // to channel calls
-    ethReader.estimateGas.onCall(3).resolves(Result.ok(GAS_ESTIMATES.createChannelAndDepositAlice));
-    ethReader.estimateGas.onCall(4).resolves(Result.ok(GAS_ESTIMATES.createChannel));
-    ethReader.estimateGas.onCall(5).resolves(Result.ok(GAS_ESTIMATES.depositAlice));
   });
 
   afterEach(() => {
@@ -573,10 +567,9 @@ describe(testName, () => {
         };
         fromChannel.aliceIdentifier = fromChannel.bobIdentifier;
         fromChannel.bobIdentifier = routerIdentifier;
+
         // setup gas fees stubs
         // from channel calls
-        ethReader.estimateGas.onCall(0).resolves(Result.ok(GAS_ESTIMATES.createChannel));
-        ethReader.estimateGas.onCall(1).resolves(Result.ok(GAS_ESTIMATES.depositBob));
         const result = await feesService.calculateEstimatedGasFee(
           BigNumber.from(3),
           toAssetId,
@@ -654,8 +647,6 @@ describe(testName, () => {
         toChannel.bobIdentifier = routerIdentifier;
 
         // setup gas for to channel calls
-        ethReader.estimateGas.onCall(3).resolves(Result.ok(GAS_ESTIMATES.createChannel));
-        ethReader.estimateGas.onCall(4).resolves(Result.ok(GAS_ESTIMATES.depositBob));
 
         const result = await feesService.calculateEstimatedGasFee(
           toSend,

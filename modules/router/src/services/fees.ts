@@ -371,7 +371,9 @@ export const calculateEstimatedGasFee = async (
     fromChannelFee =
       participantFromChannel === "alice" && fromChannelCode.getValue() === "0x"
         ? GAS_ESTIMATES.createChannelAndDepositAlice
-        : GAS_ESTIMATES.depositAlice;
+        : participantFromChannel === "alice"
+        ? GAS_ESTIMATES.depositAlice
+        : GAS_ESTIMATES.depositBob;
   }
 
   // when forwarding a transfer, the only immediate costs on the receiver-side
@@ -483,8 +485,6 @@ export const calculateEstimatedGasFee = async (
   return Result.ok({
     [fromChannel.channelAddress]: fromChannelFee,
     [toChannel.channelAddress]:
-      toChannelCode.getValue() === "0x"
-        ? GAS_ESTIMATES.createChannelAndDepositAlice
-        : GAS_ESTIMATES.depositAlice,
+      toChannelCode.getValue() === "0x" ? GAS_ESTIMATES.createChannelAndDepositAlice : GAS_ESTIMATES.depositAlice,
   });
 };
