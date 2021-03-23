@@ -489,14 +489,14 @@ export async function getWithdrawalQuote(
 
   const data = new Interface(ChannelFactory.abi).encodeFunctionData("createChannel", [channel.alice, channel.bob]);
   const gas = await chainService.estimateGas(channel.networkContext.chainId, {
-    to: channel.channelAddress,
-    from: channel.alice,
+    to: channel.networkContext.channelFactoryAddress,
+    from: signer.address,
     data,
   });
   if (gas.isError) {
     return Result.fail(
       new WithdrawQuoteError(WithdrawQuoteError.reasons.ChainServiceFailure, signer.publicIdentifier, request, {
-        chainServiceMethod: "estimateGas",
+        chainServiceMethod: "estimateGas:createChannel",
         chainServiceError: jsonifyError(gas.getError()!),
       }),
     );

@@ -2,6 +2,11 @@
 
 ## Next Release
 
+## 0.2.1-beta.8
+
+- \[contracts\] Add retry logic to `ethReader`
+- \[engine\] Bug in fee calculation fix
+
 ## 0.2.1-beta.7
 
 - \[all\] Add confirmations for most chains
