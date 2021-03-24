@@ -102,10 +102,14 @@ export const normalizeFee = async (
   return Result.ok(BigNumber.from(feeWithGasPriceInAsset));
 };
 
+// Safe for only MAINNET tokens
 export const getExchangeRateInEth = async (
   tokenAddress: string,
   logger: BaseLogger,
 ): Promise<Result<number, FeeCalculationError>> => {
+  if (tokenAddress === AddressZero) {
+    return Result.ok(1);
+  }
   const uri = `https://api.coingecko.com/api/v3/simple/token_price/ethereum?contract_addresses=${tokenAddress}&vs_currencies=eth`;
   logger.info({ uri }, "Getting exchange rate");
   try {
