@@ -36,7 +36,6 @@ import { Wallet } from "@ethersproject/wallet";
 import { BaseLogger } from "pino";
 import PriorityQueue from "p-queue";
 import { AddressZero, HashZero } from "@ethersproject/constants";
-import { parseUnits } from "@ethersproject/units";
 import { MerkleTree } from "merkletreejs";
 import { Evt } from "evt";
 
@@ -54,7 +53,19 @@ export const waitForTransaction = async (
   timeout?: number,
 ): Promise<Result<TransactionReceipt, ChainError>> => {
   try {
-    const receipt = await provider.waitForTransaction(transactionHash, confirmations, timeout);
+    const receipt =
+      (await provider.waitForTransaction(transactionHash, confirmations, timeout)) ??
+      (await provider.getTransactionReceipt(transactionHash));
+    if (!receipt) {
+      // This shouldnt happen, but *has* previously. Does not always mean
+      // the transaction failed.
+      return Result.fail(
+        new ChainError(ChainError.reasons.TxNotFound, {
+          transactionHash,
+          chainId: (await provider.getNetwork()).chainId,
+        }),
+      );
+    }
     if (receipt.status === 0) {
       return Result.fail(new ChainError(ChainError.reasons.TxReverted, { receipt }));
     }
@@ -246,7 +257,10 @@ export class EthereumChainService extends EthereumChainReader implements IVector
           if (multisigRes.getValue() !== `0x`) {
             return undefined;
           }
-          return channelFactory.createChannel(channelState.alice, channelState.bob, { gasPrice, gasLimit: BIG_GAS_LIMIT });
+          return channelFactory.createChannel(channelState.alice, channelState.bob, {
+            gasPrice,
+            gasLimit: BIG_GAS_LIMIT,
+          });
         },
       );
       if (result.isError) {
