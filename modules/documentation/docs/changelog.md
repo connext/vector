@@ -2,6 +2,12 @@
 
 ## Next Release
 
+## 0.2.1-beta.11
+
+- \[utils\] Coin gecko utility function exiting early if ETH used
+- \[router\] Metrics not being able to convert matic
+- \[contracts\] Handle weird error with transaction receipt fetching
+
 ## 0.2.1-beta.10
 
 - \[engine\] Change withdrawal fee calculations
