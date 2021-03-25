@@ -413,15 +413,27 @@ export async function setupListeners(
       return;
     }
 
-    const res = await requestCollateral(
-      channel as FullChannelState,
-      data.assetId,
-      routerSigner.publicIdentifier,
-      nodeService,
-      chainReader,
-      logger,
-      data.amount,
-    );
+    let res;
+    if (data.amount) {
+      res = await requestCollateral(
+        channel as FullChannelState,
+        data.assetId,
+        routerSigner.publicIdentifier,
+        nodeService,
+        chainReader,
+        logger,
+        data.amount,
+      );
+    } else {
+      res = await adjustCollateral(
+        (channel as FullChannelState).channelAddress,
+        data.assetId,
+        routerSigner.publicIdentifier,
+        nodeService,
+        chainReader,
+        logger,
+      );
+    }
     if (res.isError) {
       logger.error({ method, methodId, error: jsonifyError(res.getError()!) }, "Error requesting collateral");
       return;
