@@ -136,6 +136,7 @@ export class RpcError extends EngineError {
     TransferNotFound: "Transfer not found",
     SigningFailed: "Failed to sign message",
     UtilitySigningFailed: "Failed to sign utility message",
+    WithdrawResolutionFailed: "Withdrawal commitment not found post-create",
   } as const;
 
   constructor(
