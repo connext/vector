@@ -78,6 +78,8 @@ export type ChannelRpcMethodsPayloadMap = {
     chainProviders: ChainProviders;
     chainAddresses?: ChainAddresses;
     messagingUrl?: string;
+    natsUrl?: string;
+    authUrl?: string;
   };
   [ChannelRpcMethods.chan_dispute]: EngineParams.DisputeChannel;
   [ChannelRpcMethods.chan_defund]: EngineParams.DefundChannel;

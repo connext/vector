@@ -40,6 +40,8 @@ export default class ConnextManager {
     messagingUrl?: string,
     signature?: string,
     signerAddress?: string,
+    natsUrl?: string,
+    authUrl?: string,
   ): Promise<BrowserNode> {
     console.log(`Initializing node signature: ${signature}, ${signerAddress}`);
     // store entropy in local storage
@@ -94,8 +96,8 @@ export default class ConnextManager {
       chainProviders,
       logger: pino(),
       messagingUrl: messagingUrl ?? config.messagingUrl,
-      authUrl: config.authUrl,
-      natsUrl: config.natsUrl,
+      authUrl: authUrl ?? config.authUrl,
+      natsUrl: natsUrl ?? config.natsUrl,
     });
     localStorage.setItem("publicIdentifier", signer.publicIdentifier);
     return this.browserNode;
@@ -125,6 +127,8 @@ export default class ConnextManager {
         request.params.messagingUrl,
         request.params.signature,
         request.params.signer,
+        request.params.natsUrl,
+        request.params.authUrl,
       );
       return {
         publicIdentifier: node.publicIdentifier,
