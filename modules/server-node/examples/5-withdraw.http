@@ -54,3 +54,16 @@ Content-Type: application/json
     "hello": "world"
   }
 }
+
+##############
+### Get Withdraw Fee Quote
+POST {{nodeUrl}}/withdraw/quote
+Content-Type: application/json
+
+{
+  "publicIdentifier": "{{nodePublicIdentifier}}",
+  "amount": "100000000000000000",
+  "assetId": "0xbd69fC70FA1c3AED524Bb4E82Adc5fcCFFcD79Fa",
+  "channelAddress": "{{channel}}",
+  "receiveExactAmount": false
+}

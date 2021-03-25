@@ -36,7 +36,6 @@ import { Wallet } from "@ethersproject/wallet";
 import { BaseLogger } from "pino";
 import PriorityQueue from "p-queue";
 import { AddressZero, HashZero } from "@ethersproject/constants";
-import { parseUnits } from "@ethersproject/units";
 import { MerkleTree } from "merkletreejs";
 import { Evt } from "evt";
 
@@ -44,8 +43,8 @@ import { ChannelFactory, VectorChannel } from "../artifacts";
 
 import { EthereumChainReader } from "./ethReader";
 
-export const EXTRA_GAS_PRICE = parseUnits("20", "gwei");
 export const EXTRA_GAS = 50_000;
+export const BIG_GAS_LIMIT = BigNumber.from(1_000_000); // 1M gas should cover all Connext txs
 
 export const waitForTransaction = async (
   provider: JsonRpcProvider,
@@ -54,7 +53,19 @@ export const waitForTransaction = async (
   timeout?: number,
 ): Promise<Result<TransactionReceipt, ChainError>> => {
   try {
-    const receipt = await provider.waitForTransaction(transactionHash, confirmations, timeout);
+    const receipt =
+      (await provider.waitForTransaction(transactionHash, confirmations, timeout)) ??
+      (await provider.getTransactionReceipt(transactionHash));
+    if (!receipt) {
+      // This shouldnt happen, but *has* previously. Does not always mean
+      // the transaction failed.
+      return Result.fail(
+        new ChainError(ChainError.reasons.TxNotFound, {
+          transactionHash,
+          chainId: (await provider.getNetwork()).chainId,
+        }),
+      );
+    }
     if (receipt.status === 0) {
       return Result.fail(new ChainError(ChainError.reasons.TxReverted, { receipt }));
     }
@@ -246,20 +257,10 @@ export class EthereumChainService extends EthereumChainReader implements IVector
           if (multisigRes.getValue() !== `0x`) {
             return undefined;
           }
-          const data = new Interface(ChannelFactory.abi).encodeFunctionData("createChannel", [
-            channelState.alice,
-            channelState.bob,
-          ]);
-          const _gas = await this.estimateGas(channelState.networkContext.chainId, {
-            to: channelFactory.address,
-            data,
-            from: sender,
+          return channelFactory.createChannel(channelState.alice, channelState.bob, {
+            gasPrice,
+            gasLimit: BIG_GAS_LIMIT,
           });
-          if (_gas.isError) {
-            return Result.fail(_gas.getError()!);
-          }
-          const gas = _gas.getValue().add(EXTRA_GAS);
-          return channelFactory.createChannel(channelState.alice, channelState.bob, { gasPrice, gasLimit: gas });
         },
       );
       if (result.isError) {
@@ -327,20 +328,10 @@ export class EthereumChainService extends EthereumChainReader implements IVector
             assetId,
             amount,
           ]);
-          const _gas = await this.estimateGas(channelState.networkContext.chainId, {
-            to: channelFactory.address,
-            data,
-            from: sender,
-            value: amount,
-          });
-          if (_gas.isError) {
-            return Result.fail(_gas.getError()!);
-          }
-          const gas = _gas.getValue().add(EXTRA_GAS);
           return channelFactory.createChannelAndDepositAlice(channelState.alice, channelState.bob, assetId, amount, {
             value: amount,
             gasPrice,
-            gasLimit: gas,
+            gasLimit: BIG_GAS_LIMIT,
           });
         },
       ) as Promise<Result<TransactionResponseWithResult, ChainError>>;
@@ -380,24 +371,9 @@ export class EthereumChainService extends EthereumChainReader implements IVector
           // multisig deployed, just send deposit (will check allowance)
           return this.sendDepositATx(channelState, amount, assetId, gasPrice);
         }
-        const data = new Interface(ChannelFactory.abi).encodeFunctionData("createChannelAndDepositAlice", [
-          channelState.alice,
-          channelState.bob,
-          assetId,
-          amount,
-        ]);
-        const _gas = await this.estimateGas(channelState.networkContext.chainId, {
-          to: channelFactory.address,
-          data,
-          from: sender,
-        });
-        if (_gas.isError) {
-          return Result.fail(_gas.getError()!);
-        }
-        const gas = _gas.getValue().add(EXTRA_GAS);
         return channelFactory.createChannelAndDepositAlice(channelState.alice, channelState.bob, assetId, amount, {
           gasPrice,
-          gasLimit: gas,
+          gasLimit: BIG_GAS_LIMIT,
         });
       },
     ) as Promise<Result<TransactionResponseWithResult, ChainError>>;
@@ -430,8 +406,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
     if (gasPriceRes.isError) {
       Result.fail(gasPriceRes.getError()!);
     }
-    const _gasPrice = gasPriceRes.getValue();
-    const gasPrice = _gasPrice.add(EXTRA_GAS_PRICE);
+    const gasPrice = gasPriceRes.getValue();
     this.log.info(
       {
         channelAddress: channelState.channelAddress,
@@ -497,19 +472,12 @@ export class EthereumChainService extends EthereumChainReader implements IVector
     }
 
     this.log.info({ sender, method, methodId, channel: channelState.channelAddress }, "Sending withdraw tx to chain");
-    const gasEstimateRes = await this.estimateGas(channelState.networkContext.chainId, { ...minTx, from: sender });
-    if (gasEstimateRes.isError) {
-      return Result.fail(gasEstimateRes.getError()!);
-    }
-    const _gas = gasEstimateRes.getValue();
-    const gas = _gas.add(EXTRA_GAS);
-    this.log.info({ method, methodId, gas: gas.toString() }, "Estimated gas");
     return this.sendTxWithRetries(
       channelState.channelAddress,
       channelState.networkContext.chainId,
       TransactionReason.withdraw,
       async () => {
-        return signer.sendTransaction({ ...minTx, gasPrice, gasLimit: gas, from: sender });
+        return signer.sendTransaction({ ...minTx, gasPrice, gasLimit: BIG_GAS_LIMIT, from: sender });
       },
     ) as Promise<Result<TransactionResponseWithResult, ChainError>>;
   }
@@ -556,8 +524,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
     if (gasPriceRes.isError) {
       Result.fail(gasPriceRes.getError()!);
     }
-    const _gasPrice = gasPriceRes.getValue();
-    const gasPrice = _gasPrice.add(EXTRA_GAS_PRICE);
+    const gasPrice = gasPriceRes.getValue();
     this.log.info(
       {
         channelAddress: channelState.channelAddress,
