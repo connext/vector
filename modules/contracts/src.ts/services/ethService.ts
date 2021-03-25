@@ -36,7 +36,6 @@ import { Wallet } from "@ethersproject/wallet";
 import { BaseLogger } from "pino";
 import PriorityQueue from "p-queue";
 import { AddressZero, HashZero } from "@ethersproject/constants";
-import { parseUnits } from "@ethersproject/units";
 import { MerkleTree } from "merkletreejs";
 import { Evt } from "evt";
 
@@ -246,7 +245,10 @@ export class EthereumChainService extends EthereumChainReader implements IVector
           if (multisigRes.getValue() !== `0x`) {
             return undefined;
           }
-          return channelFactory.createChannel(channelState.alice, channelState.bob, { gasPrice, gasLimit: BIG_GAS_LIMIT });
+          return channelFactory.createChannel(channelState.alice, channelState.bob, {
+            gasPrice,
+            gasLimit: BIG_GAS_LIMIT,
+          });
         },
       );
       if (result.isError) {
@@ -708,7 +710,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
 
         // Register callbacks for saving tx, then return
         response
-          .wait(getConfirmationsForChain(chainId)) // TODO: confirmation blocks? #434
+          .wait(getConfirmationsForChain(chainId))
           .then(async (receipt) => {
             if (receipt.status === 0) {
               this.log.error({ method: "sendTxAndParseResponse", receipt }, "Transaction reverted");

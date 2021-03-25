@@ -19,6 +19,7 @@ import { AddressZero } from "@ethersproject/constants";
 import { Contract } from "@ethersproject/contracts";
 import { formatEther, formatUnits } from "@ethersproject/units";
 import { Wallet } from "@ethersproject/wallet";
+import { getAddress } from "ethers/lib/utils";
 import { BaseLogger } from "pino";
 import { Counter, Gauge } from "prom-client";
 
@@ -47,7 +48,7 @@ Object.entries(hydrated).forEach(async ([chainId, provider]) => {
   rebalancedTokens[chainId] = {};
   const assets = config.rebalanceProfiles
     .filter((prof) => prof.chainId.toString() === chainId && prof.assetId !== AddressZero)
-    .map((p) => p.assetId);
+    .map((p) => getAddress(p.assetId));
 
   assets.forEach((asset) => {
     rebalancedTokens[chainId][asset] = {
@@ -57,21 +58,28 @@ Object.entries(hydrated).forEach(async ([chainId, provider]) => {
   });
 });
 
-export const getDecimals = async (chainId: string, assetId: string): Promise<number> => {
+export const getDecimals = async (chainId: string, _assetId: string): Promise<number> => {
+  const assetId = getAddress(_assetId);
   if (assetId === AddressZero) {
     return 18;
   }
-  const { decimals: _decimals, contract } = rebalancedTokens[chainId][assetId];
+  const { decimals: _decimals, contract: _contract } = rebalancedTokens[chainId][assetId] ?? {};
   if (_decimals) {
     return _decimals;
   }
+  if (!_contract && !hydrated[parseInt(chainId)]) {
+    // no provider for that chain, cannot retrieve decimals,
+    // use default of 18
+    return 18;
+  }
+  const contract = _contract ?? new Contract(assetId, ERC20Abi, hydrated[parseInt(chainId)]);
   let decimals = 18;
   try {
     decimals = await contract.decimals();
   } catch (e) {
     // default to 18
   }
-  rebalancedTokens[chainId][assetId].decimals = decimals;
+  rebalancedTokens[chainId][assetId] = { decimals, contract };
   return decimals;
 };
 
