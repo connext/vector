@@ -219,7 +219,7 @@ export const transferWithCollateralization = async (
   const methodId = getRandomBytes32();
   logger.debug({ method, methodId, transferParams: params, channelAddress: channel.channelAddress }, "Method started");
   return queueTransferCreation<Result<NodeResponses.ConditionalTransfer | undefined, ForwardTransferCreationError>>(
-    params.channelAddress,
+    channel.channelAddress,
     async () => {
       // collateralize if needed
       const collateralRes = await justInTimeCollateral(
