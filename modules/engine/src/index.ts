@@ -25,10 +25,8 @@ import {
   Values,
   VectorError,
   jsonifyError,
-  ChainError,
   MinimalTransaction,
   WITHDRAWAL_RESOLVED_EVENT,
-  DEFAULT_CHANNEL_TIMEOUT,
 } from "@connext/vector-types";
 import {
   generateMerkleTreeData,
@@ -989,7 +987,7 @@ export class VectorEngine implements IVectorEngine {
           delay(timeout),
         ]),
       ]);
-      transactionHash = typeof reconciled === "object" ? reconciled.transactionHash : "";
+      transactionHash = typeof reconciled === "object" ? reconciled.transactionHash : undefined;
       transaction = resolved.transaction;
     } catch (e) {
       this.logger.warn(
