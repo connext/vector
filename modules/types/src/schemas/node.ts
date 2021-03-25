@@ -477,7 +477,7 @@ const PostSendDisputeChannelTxBodySchema = Type.Intersect([
 
 const PostSendDisputeChannelTxResponseSchema = {
   200: Type.Object({
-    txHash: TBytes32,
+    transactionHash: TBytes32,
   }),
 };
 
@@ -489,7 +489,7 @@ const PostSendDefundChannelTxBodySchema = Type.Intersect([
 
 const PostSendDefundChannelTxResponseSchema = {
   200: Type.Object({
-    txHash: TBytes32,
+    transactionHash: TBytes32,
   }),
 };
 
@@ -501,7 +501,7 @@ const PostSendDisputeTransferTxBodySchema = Type.Intersect([
 
 const PostSendDisputeTransferTxResponseSchema = {
   200: Type.Object({
-    txHash: TBytes32,
+    transactionHash: TBytes32,
   }),
 };
 
@@ -513,7 +513,7 @@ const PostSendDefundTransferTxBodySchema = Type.Intersect([
 
 const PostSendDefundTransferTxResponseSchema = {
   200: Type.Object({
-    txHash: TBytes32,
+    transactionHash: TBytes32,
   }),
 };
 
