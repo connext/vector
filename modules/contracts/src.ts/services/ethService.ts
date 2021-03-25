@@ -53,19 +53,7 @@ export const waitForTransaction = async (
   timeout?: number,
 ): Promise<Result<TransactionReceipt, ChainError>> => {
   try {
-    const receipt =
-      (await provider.waitForTransaction(transactionHash, confirmations, timeout)) ??
-      (await provider.getTransactionReceipt(transactionHash));
-    if (!receipt) {
-      // This shouldnt happen, but *has* previously. Does not always mean
-      // the transaction failed.
-      return Result.fail(
-        new ChainError(ChainError.reasons.TxNotFound, {
-          transactionHash,
-          chainId: (await provider.getNetwork()).chainId,
-        }),
-      );
-    }
+    const receipt = await provider.waitForTransaction(transactionHash, confirmations, timeout);
     if (receipt.status === 0) {
       return Result.fail(new ChainError(ChainError.reasons.TxReverted, { receipt }));
     }
@@ -722,7 +710,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
 
         // Register callbacks for saving tx, then return
         response
-          .wait(getConfirmationsForChain(chainId)) // TODO: confirmation blocks? #434
+          .wait(getConfirmationsForChain(chainId))
           .then(async (receipt) => {
             if (receipt.status === 0) {
               this.log.error({ method: "sendTxAndParseResponse", receipt }, "Transaction reverted");
