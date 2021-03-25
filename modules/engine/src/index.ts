@@ -53,6 +53,7 @@ import {
 import { setupEngineListeners } from "./listeners";
 import { getEngineEvtContainer } from "./utils";
 import { sendIsAlive } from "./isAlive";
+import { WithdrawCommitment } from "@connext/vector-contracts";
 
 export const ajv = new Ajv();
 
@@ -995,9 +996,22 @@ export class VectorEngine implements IVectorEngine {
         "Withdraw tx not processed properly",
       );
     }
+    if (!transaction) {
+      // try to get from store
+      const commitment = await this.store.getWithdrawalCommitment(transferId);
+      if (!commitment) {
+        return Result.fail(
+          new RpcError(RpcError.reasons.WithdrawResolutionFailed, params.channelAddress, this.publicIdentifier, {
+            transferId,
+          }),
+        );
+      }
+
+      transaction = (await WithdrawCommitment.fromJson(commitment)).getSignedTransaction();
+    }
 
     this.logger.info({ channel: res, method, methodId, transactionHash, transaction }, "Method complete");
-    return Result.ok({ channel: res, transactionHash, transaction });
+    return Result.ok({ channel: res, transactionHash, transaction: transaction! });
   }
 
   private async decrypt(encrypted: string): Promise<Result<string, EngineError>> {
