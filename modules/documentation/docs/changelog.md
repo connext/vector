@@ -2,6 +2,10 @@
 
 ## Next Release
 
+## 0.2.1-beta.12
+
+- \[contracts\] Wait at least 1 conf for all chains
+
 ## 0.2.1-beta.11
 
 - \[utils\] Coin gecko utility function exiting early if ETH used
