@@ -20,6 +20,7 @@ import {
   TChannelUpdate,
   ProtocolError,
   jsonifyError,
+  ChainReaderEvents,
 } from "@connext/vector-types";
 import { getCreate2MultisigAddress, getRandomBytes32 } from "@connext/vector-utils";
 import { Contract } from "@ethersproject/contracts";
@@ -183,6 +184,70 @@ export class Vector implements IVectorProtocol {
     return outboundRes;
   }
 
+  /**
+   * Checks current dispute status of all channels and flags them
+   * as in dispute if a dispute has been started onchain.
+   *
+   * Also registers listeners for disputes in case any happen while
+   * online.
+   */
+  private async registerDisputes(): Promise<void> {
+    // Get all channel states from store
+    const channels = await this.storeService.getChannelStates();
+
+    // Register listeners for each channel on chain service for
+    // any dispute event
+    await Promise.all(
+      channels.map((channel) => {
+        return this.chainReader.registerChannel(channel.channelAddress, channel.networkContext.chainId);
+      }),
+    );
+
+    // Register callback on chainReader events to properly
+    // update the `channel.inDispute` flag
+    // NOTE: you only need to add it for the first dispute
+    // event. The channels should be updated if a dispute
+    // exists onchain otherwise
+    this.chainReader.on(ChainReaderEvents.CHANNEL_DISPUTED, async (payload) => {
+      this.logger.warn({ ...payload }, "Channel in dispute");
+      const channel = await this.storeService.getChannelState(payload.state.channelAddress);
+      // TODO: is this the best way to save dispute? think not. should probably
+      // save them separately somehow
+      await this.storeService.saveChannelDispute({ ...channel!, inDispute: true }, payload.dispute);
+    });
+
+    // Check channel onchain to see if it is *currently* in dispute
+    await Promise.all(
+      channels.map(async (channel) => {
+        const disputeRes = await this.chainReader.getChannelDispute(
+          channel.channelAddress,
+          channel.networkContext.chainId,
+        );
+        if (disputeRes.isError) {
+          this.logger.error(
+            { channelAddress: channel.channelAddress, error: disputeRes.getError()!.message },
+            "Could not get dispute",
+          );
+          return;
+        }
+        const dispute = disputeRes.getValue();
+        if (!dispute) {
+          return;
+        }
+        try {
+          // save dispute record
+          // TODO: implement recovery from dispute #438
+          await this.storeService.saveChannelDispute({ ...channel, inDispute: true }, dispute);
+        } catch (e) {
+          this.logger.error(
+            { channelAddress: channel.channelAddress, error: e.message },
+            "Failed to update dispute on startup",
+          );
+        }
+      }),
+    );
+  }
+
   private async setupServices(): Promise<Vector> {
     // response to incoming message where we are not the leader
     // steps:
@@ -273,95 +338,8 @@ export class Vector implements IVectorProtocol {
       },
     );
 
-    // sync latest state before starting
-    // TODO: skipping this, if it works, consider just not awaiting the promise so the rest of startup can continue #440
-    const channels = await this.storeService.getChannelStates();
-    const providers = this.chainReader.getHydratedProviders();
-    if (providers.isError) {
-      this.logger.error({ ...providers.getError() }, "Error getting chain providers");
-      return this;
-    }
-    const supportedChains = Object.keys(providers.getValue()).map((chain) => parseInt(chain));
-
-    // Handle disputes
-    // First check on current dispute status of all channels onchain
-    // Since we have no way of knowing the last time the protocol
-    // connected, we must check this on startup
-    // TODO: is there a better way to do this? #440
-    // TODO: make event handlers go inside chain service or something, improve dispute monitoring flow
-
-    // create helper to save dispute
-    const saveChannelDispute = async (channel: FullChannelState) => {
-      const disputeRes = await this.chainReader.getChannelDispute(
-        channel.channelAddress,
-        channel.networkContext.chainId,
-      );
-      if (disputeRes.isError) {
-        this.logger.error(
-          { channelAddress: channel.channelAddress, error: disputeRes.getError()!.message },
-          "Could not get dispute",
-        );
-        return;
-      }
-      const dispute = disputeRes.getValue();
-      if (!dispute) {
-        return;
-      }
-      try {
-        // save dispute record
-        // TODO: implement recovery from dispute #438
-        await this.storeService.saveChannelDispute({ ...channel, inDispute: true }, dispute);
-      } catch (e) {
-        this.logger.error(
-          { channelAddress: channel.channelAddress, error: e.message },
-          "Failed to update dispute on startup",
-        );
-      }
-    };
-
-    // register listeners regardless of checkin
-    channels.map((channel) => {
-      if (!supportedChains.includes(channel.networkContext.chainId)) {
-        this.logger.debug(
-          { chainId: channel.networkContext.chainId, supportedChains },
-          "Channel chain not supported, skipping",
-        );
-        return;
-      }
-      const channelContract = new Contract(
-        channel.channelAddress,
-        ChannelMastercopy.abi,
-        providers.getValue()[channel.networkContext.chainId],
-      );
-      channelContract.on("ChannelDisputed", async () => {
-        this.logger.warn({ channelAddress: channel.channelAddress }, "Channel disputed onchain");
-        await saveChannelDispute(channel);
-      });
-      channelContract.on("ChannelDefunded", async () => {
-        await saveChannelDispute(channel);
-      });
-    });
-
-    // update channel promises
-    const promises = Promise.all(
-      channels.map(async (channel) => {
-        if (!supportedChains.includes(channel.networkContext.chainId)) {
-          this.logger.debug(
-            { chainId: channel.networkContext.chainId, supportedChains },
-            "Channel chain not supported, skipping",
-          );
-          return;
-        }
-        await saveChannelDispute(channel);
-      }),
-    );
-    if (!this.skipCheckIn) {
-      await promises;
-    } else {
-      // TODO: enforce this on updates
-      this.logger.warn("Not awaiting dispute checks");
-      promises.then(() => this.logger.info("Checked all channel disputes"));
-    }
+    // Handle disputes -- don't need to await
+    this.registerDisputes();
     return this;
   }
 
