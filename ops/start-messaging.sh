@@ -180,17 +180,6 @@ services:
       - '$jwt_private_key_secret'
       - '$jwt_public_key_secret'
 
-  nats:
-    $common
-    image: '$nats_image'
-    environment:
-      JWT_SIGNER_PUBLIC_KEY_FILE: '/run/secrets/$jwt_public_key_secret'
-    secrets:
-      - '$jwt_public_key_secret'
-    ports:
-      - '4222:4222'
-      - '4221:4221'
-
 EOF
 
 docker stack deploy -c "$docker_compose" "$stack"
