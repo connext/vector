@@ -662,6 +662,40 @@ export class EthereumChainReader implements IVectorChainReader {
     });
   }
 
+  ////////////////////////////
+  /// CHAIN READER EVENTS
+  public on<T extends ChainReaderEvent>(
+    event: T,
+    callback: (payload: ChainReaderEventMap[T]) => void | Promise<void>,
+    filter: (payload: ChainReaderEventMap[T]) => boolean = () => true,
+  ): void {
+    (this.disputeEvts[event].pipe(filter) as Evt<ChainReaderEventMap[T]>).attach(callback);
+  }
+
+  public once<T extends ChainReaderEvent>(
+    event: T,
+    callback: (payload: ChainReaderEventMap[T]) => void | Promise<void>,
+    filter: (payload: ChainReaderEventMap[T]) => boolean = () => true,
+  ): void {
+    (this.disputeEvts[event].pipe(filter) as Evt<ChainReaderEventMap[T]>).attachOnce(callback);
+  }
+
+  public off<T extends ChainReaderEvent>(event?: T): void {
+    if (event) {
+      this.disputeEvts[event].detach();
+      return;
+    }
+    Object.values(this.disputeEvts).forEach((evt) => evt.detach());
+  }
+
+  public waitFor<T extends ChainReaderEvent>(
+    event: T,
+    timeout: number,
+    filter: (payload: ChainReaderEventMap[T]) => boolean = () => true,
+  ): Promise<ChainReaderEventMap[T]> {
+    return this.disputeEvts[event].pipe(filter).waitFor(timeout) as Promise<ChainReaderEventMap[T]>;
+  }
+
   private tryEvm(encodedFunctionData: string, bytecode: string): Result<Uint8Array, Error> {
     try {
       const output = execEvmBytecode(bytecode, encodedFunctionData);

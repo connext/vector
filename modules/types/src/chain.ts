@@ -1,5 +1,6 @@
 import { TransactionReceipt, TransactionRequest, TransactionResponse } from "@ethersproject/abstract-provider";
 import { BigNumber, BigNumberish } from "@ethersproject/bignumber";
+import { ChainReaderEvent, ChainReaderEventMap } from ".";
 
 import { Address, HexString } from "./basic";
 import { Balance, FullChannelState, FullTransferState } from "./channel";
@@ -212,6 +213,23 @@ export interface IVectorChainReader {
    * @param chainId Chain of channel
    */
   registerChannel(channelAddress: string, chainId: number): Promise<Result<void, ChainError>>;
+
+  on<T extends ChainReaderEvent>(
+    event: T,
+    callback: (payload: ChainReaderEventMap[T]) => void | Promise<void>,
+    filter?: (payload: ChainReaderEventMap[T]) => boolean,
+  ): void;
+  once<T extends ChainReaderEvent>(
+    event: T,
+    callback: (payload: ChainReaderEventMap[T]) => void | Promise<void>,
+    filter?: (payload: ChainReaderEventMap[T]) => boolean,
+  ): void;
+  off<T extends ChainReaderEvent>(event?: T): void;
+  waitFor<T extends ChainReaderEvent>(
+    event: T,
+    timeout: number,
+    filter?: (payload: ChainReaderEventMap[T]) => boolean,
+  ): Promise<ChainReaderEventMap[T]>;
 }
 
 export type TransactionResponseWithResult = TransactionResponse & {
