@@ -281,7 +281,7 @@ describe("utils", () => {
           processedDepositsA ? processedDepositsA[0] || "0" : "0",
           processedDepositsB ? processedDepositsB[0] || "0" : "0",
           assetId ?? AddressZero,
-          chainReader,
+          chainReader as IVectorChainReader,
         );
 
         if (error) {

@@ -64,7 +64,7 @@ describe("Vector", () => {
         lockService,
         storeService,
         signer,
-        chainReader,
+        chainReader as IVectorChainReader,
         pino(),
         false,
       );
@@ -93,7 +93,15 @@ describe("Vector", () => {
     beforeEach(async () => {
       const signer = getRandomChannelSigner();
       storeService.getChannelStates.resolves([]);
-      vector = await Vector.connect(messagingService, lockService, storeService, signer, chainReader, pino(), false);
+      vector = await Vector.connect(
+        messagingService,
+        lockService,
+        storeService,
+        signer,
+        chainReader as IVectorChainReader,
+        pino(),
+        false,
+      );
     });
 
     it("should work", async () => {
@@ -212,7 +220,15 @@ describe("Vector", () => {
 
       storeService.getChannelState.resolves(createTestChannelState(UpdateType.setup, { channelAddress }).channel);
 
-      vector = await Vector.connect(messagingService, lockService, storeService, signer, chainReader, pino(), false);
+      vector = await Vector.connect(
+        messagingService,
+        lockService,
+        storeService,
+        signer,
+        chainReader as IVectorChainReader,
+        pino(),
+        false,
+      );
     });
 
     it("should work", async () => {
@@ -274,7 +290,15 @@ describe("Vector", () => {
 
       storeService.getChannelState.resolves(createTestChannelState(UpdateType.setup, { channelAddress }).channel);
 
-      vector = await Vector.connect(messagingService, lockService, storeService, signer, chainReader, pino(), false);
+      vector = await Vector.connect(
+        messagingService,
+        lockService,
+        storeService,
+        signer,
+        chainReader as IVectorChainReader,
+        pino(),
+        false,
+      );
     });
 
     it("should work", async () => {
@@ -374,7 +398,15 @@ describe("Vector", () => {
 
       storeService.getChannelState.resolves(createTestChannelState(UpdateType.setup, { channelAddress }).channel);
 
-      vector = await Vector.connect(messagingService, lockService, storeService, signer, chainReader, pino(), false);
+      vector = await Vector.connect(
+        messagingService,
+        lockService,
+        storeService,
+        signer,
+        chainReader as IVectorChainReader,
+        pino(),
+        false,
+      );
     });
 
     it("should work", async () => {
