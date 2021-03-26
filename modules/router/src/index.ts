@@ -21,6 +21,10 @@ import {
   TransactionFailedPayload,
   SetupPayload,
   NodeParams,
+  TransferDefundedPayload,
+  TransferDisputedPayload,
+  ChannelDefundedPayload,
+  ChannelDisputedPayload,
 } from "@connext/vector-types";
 import { collectDefaultMetrics, register } from "prom-client";
 import { Wallet } from "ethers";
@@ -50,6 +54,10 @@ const withdrawResolvedPath = "/withdrawal-resolved";
 const transactionSubmittedPath = "/transaction-submitted";
 const transactionMinedPath = "/transaction-mined";
 const transactionFailedPath = "/transaction-failed";
+const channelDisputedPath = "/channel-disputed";
+const channelDefundedPath = "/channel-defunded";
+const transferDisputedPath = "/transfer-disputed";
+const transferDefundedPath = "/transfer-defunded";
 const evts: EventCallbackConfig = {
   [EngineEvents.IS_ALIVE]: {
     evt: Evt.create<IsAlivePayload>(),
@@ -102,6 +110,22 @@ const evts: EventCallbackConfig = {
   [EngineEvents.TRANSACTION_FAILED]: {
     evt: Evt.create<TransactionFailedPayload & { publicIdentifier: string }>(),
     url: `${routerBase}${transactionFailedPath}`,
+  },
+  [EngineEvents.CHANNEL_DISPUTED]: {
+    evt: Evt.create<ChannelDisputedPayload>(),
+    url: `${routerBase}${channelDisputedPath}`,
+  },
+  [EngineEvents.CHANNEL_DEFUNDED]: {
+    evt: Evt.create<ChannelDefundedPayload>(),
+    url: `${routerBase}${channelDefundedPath}`,
+  },
+  [EngineEvents.TRANSFER_DISPUTED]: {
+    evt: Evt.create<TransferDisputedPayload>(),
+    url: `${routerBase}${transferDisputedPath}`,
+  },
+  [EngineEvents.TRANSFER_DEFUNDED]: {
+    evt: Evt.create<TransferDefundedPayload>(),
+    url: `${routerBase}${transferDefundedPath}`,
   },
 };
 
