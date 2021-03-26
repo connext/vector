@@ -13,6 +13,7 @@ import {
   getMainnetEquivalent,
   getExchangeRateInEth,
   calculateExchangeWad,
+  parseProviders,
 } from "@connext/vector-utils";
 import { BigNumber, BigNumberish } from "@ethersproject/bignumber";
 import { AddressZero } from "@ethersproject/constants";
@@ -35,7 +36,7 @@ const config = getConfig();
 ///// Helpers/Utils
 export const wallet = Wallet.fromMnemonic(config.mnemonic);
 export const signerAddress = wallet.address;
-export const hydrated: HydratedProviders = hydrateProviders(config.chainProviders);
+export const hydrated: HydratedProviders = hydrateProviders(parseProviders(config.chainProviders));
 export const rebalancedTokens: {
   [chainId: string]: {
     [assetId: string]: {

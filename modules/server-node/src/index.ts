@@ -19,7 +19,7 @@ import {
   VectorErrorJson,
   StoredTransaction,
 } from "@connext/vector-types";
-import { constructRpcRequest, getPublicIdentifierFromPublicKey, hydrateProviders } from "@connext/vector-utils";
+import { constructRpcRequest, getPublicIdentifierFromPublicKey, hydrateProviders, parseProviders } from "@connext/vector-utils";
 import { WithdrawCommitment } from "@connext/vector-contracts";
 import { Static, Type } from "@sinclair/typebox";
 import { Wallet } from "@ethersproject/wallet";
@@ -51,7 +51,7 @@ server.register(fastifyCors, {
 
 export const store = new PrismaStore();
 
-export const _providers = hydrateProviders(config.chainProviders);
+export const _providers = hydrateProviders(parseProviders(config.chainProviders));
 
 server.addHook("onReady", async () => {
   const persistedNodes = await store.getNodeIndexes();

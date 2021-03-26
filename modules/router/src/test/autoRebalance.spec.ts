@@ -1,9 +1,8 @@
 import { VectorChainReader } from "@connext/vector-contracts";
 import { expect, getRandomBytes32, getTestLoggers, mkAddress, mkBytes32 } from "@connext/vector-utils";
 import Sinon from "sinon";
-import { AllowedSwap, Result } from "@connext/vector-types";
+import { AllowedSwap, ChainProvider, Result } from "@connext/vector-types";
 import { Wallet } from "@ethersproject/wallet";
-import { JsonRpcProvider } from "@ethersproject/providers";
 import { BigNumber } from "@ethersproject/bignumber";
 import { parseEther } from "@ethersproject/units";
 import axios from "axios";
@@ -112,7 +111,7 @@ describe(testName, () => {
   describe("rebalanceIfNeeded", () => {
     let wallet: Sinon.SinonStubbedInstance<Wallet>;
     let chainService: Sinon.SinonStubbedInstance<VectorChainReader>;
-    let hydratedProviders: { [chainId: number]: Sinon.SinonStubbedInstance<JsonRpcProvider> };
+    let hydratedProviders: { [chainId: number]: Sinon.SinonStubbedInstance<ChainProvider> };
     let mockAxios: Sinon.SinonStubbedInstance<any>;
     let mockConfirmation: Sinon.SinonStubbedInstance<any>;
     let store: Sinon.SinonStubbedInstance<PrismaStore>;
@@ -132,8 +131,8 @@ describe(testName, () => {
 
       chainService = Sinon.createStubInstance(VectorChainReader);
       hydratedProviders = {
-        1337: Sinon.createStubInstance(JsonRpcProvider),
-        1338: Sinon.createStubInstance(JsonRpcProvider),
+        1337: Sinon.createStubInstance(ChainProvider),
+        1338: Sinon.createStubInstance(ChainProvider),
       };
       const parseBalanceStub = Sinon.stub(metrics, "getDecimals").resolves(18);
       hydratedProviders[1337].getGasPrice.resolves(BigNumber.from(138));

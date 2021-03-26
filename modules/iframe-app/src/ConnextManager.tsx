@@ -6,7 +6,7 @@ import {
   EngineParams,
   jsonifyError,
 } from "@connext/vector-types";
-import { ChannelSigner, constructRpcRequest, safeJsonParse } from "@connext/vector-utils";
+import { ChannelSigner, constructRpcRequest, parseProviders, safeJsonParse } from "@connext/vector-utils";
 import { entropyToMnemonic } from "@ethersproject/hdnode";
 import { keccak256 } from "@ethersproject/keccak256";
 import { toUtf8Bytes } from "@ethersproject/strings";
@@ -89,7 +89,7 @@ export default class ConnextManager {
     this.browserNode = await BrowserNode.connect({
       signer,
       chainAddresses: chainAddresses ?? config.chainAddresses,
-      chainProviders,
+      chainProviders: parseProviders(chainProviders),
       logger: pino(),
       messagingUrl: _messagingUrl,
       authUrl: _authUrl,
