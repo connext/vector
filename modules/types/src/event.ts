@@ -79,8 +79,8 @@ export type TransferDefundedPayload = {
   defunder: string;
   state: CoreTransferState;
   dispute: TransferDispute;
-  encodedInitialState: string; // gets decoded (?)
-  encodedTransferResolver: string; // gets decoded (?)
+  encodedInitialState: string;
+  encodedTransferResolver: string;
   balance: Balance;
 };
 
