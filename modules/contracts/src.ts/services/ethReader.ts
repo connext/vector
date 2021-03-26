@@ -540,6 +540,21 @@ export class EthereumChainReader implements IVectorChainReader {
     });
   }
 
+  // // When you are checking for disputes that have happened while you were
+  // // offline, you query the `getChannelDispute` function onchain. This will
+  // // give you the `ChannelDispute` record, but *not* the `CoreChannelState`
+  // // that was disputed. To find the `CoreChannelState` that was disputed,
+  // // you need to look at the emitted event corresponding to the
+  // // `ChannelDispute`.
+  // async getCoreChannelState(): Promise<Result<CoreChannelState, ChainError>> {
+  //   // Get the expiry from dispute
+  //   // Find the approximate timestamp for when the dispute event was emitted
+  //   // Binary search from blocks to find which one corresponds to the timestamp
+  //   // for the emitted dispute
+  //   // Get events for that block
+  //   // Parse events + return the core channel state
+  // }
+
   async registerChannel(channelAddress: string, chainId: number): Promise<Result<void, ChainError>> {
     return this.retryWrapper<void>(chainId, async (provider: JsonRpcProvider) => {
       if (this.contracts.has(channelAddress)) {
