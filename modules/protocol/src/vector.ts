@@ -23,7 +23,6 @@ import {
   ChainReaderEvents,
 } from "@connext/vector-types";
 import { getCreate2MultisigAddress, getRandomBytes32 } from "@connext/vector-utils";
-import { Contract } from "@ethersproject/contracts";
 import { Evt } from "evt";
 import pino from "pino";
 
@@ -193,7 +192,8 @@ export class Vector implements IVectorProtocol {
    */
   private async registerDisputes(): Promise<void> {
     // Get all channel states from store
-    const channels = await this.storeService.getChannelStates();
+    const allChannels = await this.storeService.getChannelStates();
+    const channels = allChannels.filter((c) => c.alice === this.signerAddress || c.bob === this.signerAddress);
 
     // Register listeners for each channel on chain service for
     // any dispute event
@@ -210,13 +210,23 @@ export class Vector implements IVectorProtocol {
     // exists onchain otherwise
     this.chainReader.on(ChainReaderEvents.CHANNEL_DISPUTED, async (payload) => {
       this.logger.warn({ ...payload }, "Channel in dispute");
-      const channel = await this.storeService.getChannelState(payload.state.channelAddress);
-      // TODO: is this the best way to save dispute? think not. should probably
-      // save them separately somehow
-      await this.storeService.saveChannelDispute({ ...channel!, inDispute: true }, payload.dispute);
+      if (payload.state.alice !== this.signerAddress && payload.state.bob !== this.signerAddress) {
+        return;
+      }
+      await this.storeService.saveChannelDispute(payload.state.channelAddress, payload.dispute, payload.state);
     });
 
-    // Check channel onchain to see if it is *currently* in dispute
+    this.chainReader.on(ChainReaderEvents.TRANSFER_DISPUTED, async (payload) => {
+      if (payload.state.initiator !== this.signerAddress && payload.state.responder !== this.signerAddress) {
+        return;
+      }
+      await this.storeService.saveTransferDispute(payload.state.channelAddress, payload.dispute, payload.state);
+    });
+
+    // Check channel onchain to see if it is *currently* in dispute. This
+    // is done to make sure any disputes that happened while the user was
+    // offline are properly accounted for
+    // TODO: how to account for transfer disputes efficiently?
     await Promise.all(
       channels.map(async (channel) => {
         const disputeRes = await this.chainReader.getChannelDispute(
@@ -234,10 +244,17 @@ export class Vector implements IVectorProtocol {
         if (!dispute) {
           return;
         }
+        // Before saving the dispute record, you have to get the
+        // CoreChannelState that is associated with the dispute record.
+        // The CoreChannelState is only emitted in events, not stored
+        // onchain, so you must query events
+
+        // TODO: best way to query past events here? See `getCoreChannelState`
+        // in the ethReader class
         try {
           // save dispute record
           // TODO: implement recovery from dispute #438
-          await this.storeService.saveChannelDispute({ ...channel, inDispute: true }, dispute);
+          await this.storeService.saveChannelDispute(channel.channelAddress, dispute);
         } catch (e) {
           this.logger.error(
             { channelAddress: channel.channelAddress, error: e.message },
@@ -338,7 +355,11 @@ export class Vector implements IVectorProtocol {
       },
     );
 
-    // Handle disputes -- don't need to await
+    // Handle disputes
+    // TODO: if this is awaited, then it may cause problems with the
+    // server-node startup (double check on prod). If it is *not* awaited
+    // then you could have a race condition where this is not completed
+    // before your channel is updated
     this.registerDisputes();
     return this;
   }
@@ -408,61 +429,15 @@ export class Vector implements IVectorProtocol {
     const returnVal = await this.executeUpdate(updateParams);
     if (!returnVal.isError) {
       const channel = returnVal.getValue();
-      const providers = this.chainReader.getHydratedProviders();
-      if (!providers.isError) {
-        // register listeners
-        const channelContract = new Contract(
-          channelAddress,
-          ChannelMastercopy.abi,
-          providers.getValue()[channel.networkContext.chainId],
+      const registrationRes = await this.chainReader.registerChannel(
+        channel.channelAddress,
+        channel.networkContext.chainId,
+      );
+      if (registrationRes.isError) {
+        this.logger.warn(
+          { ...jsonifyError(registrationRes.getError()!) },
+          "Failed to register channel for dispute watching",
         );
-        channelContract.on("ChannelDisputed", async () => {
-          this.logger.warn({ channelAddress: channel.channelAddress }, "Channel disputed onchain");
-          const disputeRes = await this.chainReader.getChannelDispute(
-            channel.channelAddress,
-            channel.networkContext.chainId,
-          );
-          if (disputeRes.isError) {
-            this.logger.error(
-              { channelAddress: channel.channelAddress, error: disputeRes.getError()!.message },
-              "Could not get dispute",
-            );
-            return;
-          }
-          const dispute = disputeRes.getValue();
-          if (!dispute) {
-            return;
-          }
-          try {
-            // save dispute record
-            await this.storeService.saveChannelDispute({ ...channel, inDispute: true }, dispute);
-          } catch (e) {
-            this.logger.error({ channelAddress: channel.channelAddress, error: e.message }, "Failed to update dispute");
-          }
-        });
-        channelContract.on("ChannelDefunded", async () => {
-          const disputeRes = await this.chainReader.getChannelDispute(
-            channel.channelAddress,
-            channel.networkContext.chainId,
-          );
-          if (disputeRes.isError) {
-            this.logger.error(
-              { channelAddress: channel.channelAddress, error: disputeRes.getError()!.message },
-              "Could not get dispute",
-            );
-            return;
-          }
-          const dispute = disputeRes.getValue();
-          if (!dispute) {
-            return;
-          }
-          try {
-            // save dispute record
-            await this.storeService.saveChannelDispute({ ...channel, inDispute: true }, dispute);
-          } catch (e) {
-            this.logger.error({ channelAddress: channel.channelAddress, error: e.message }, "Failed to update dispute");
-          }
-        });
       }
     }
     this.logger.debug(
