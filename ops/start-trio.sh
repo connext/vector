@@ -60,9 +60,9 @@ then
   )
 fi
 
-if [[ -z "$messaging_url" ]]
-then bash "$root/ops/start-messaging.sh"
-fi
+# if [[ -z "$messaging_url" ]]
+# then bash "$root/ops/start-messaging.sh"
+# fi
 
 echo
 echo "Preparing to launch $stack stack"
