@@ -25,10 +25,8 @@ import {
   Values,
   VectorError,
   jsonifyError,
-  ChainError,
   MinimalTransaction,
   WITHDRAWAL_RESOLVED_EVENT,
-  DEFAULT_CHANNEL_TIMEOUT,
 } from "@connext/vector-types";
 import {
   generateMerkleTreeData,
@@ -37,6 +35,7 @@ import {
   getRandomBytes32,
   getParticipant,
   hashWithdrawalQuote,
+  delay,
 } from "@connext/vector-utils";
 import pino from "pino";
 import Ajv from "ajv";
@@ -54,6 +53,7 @@ import {
 import { setupEngineListeners } from "./listeners";
 import { getEngineEvtContainer } from "./utils";
 import { sendIsAlive } from "./isAlive";
+import { WithdrawCommitment } from "@connext/vector-contracts";
 
 export const ajv = new Ajv();
 
@@ -680,7 +680,7 @@ export class VectorEngine implements IVectorEngine {
     this.logger.info({ chainId: channel.networkContext.chainId, hash: tx.hash }, "Deploy tx broadcast");
     const receipt = await tx.completed();
     if (receipt.isError) {
-      return Result.fail(receipt.getError()!)
+      return Result.fail(receipt.getError()!);
     }
     this.logger.debug({ chainId: channel.networkContext.chainId, hash: tx.hash }, "Deploy tx mined");
     this.logger.info(
@@ -974,16 +974,21 @@ export class VectorEngine implements IVectorEngine {
     const timeout = 90_000;
     try {
       const [resolved, reconciled] = await Promise.all([
-        this.evts[WITHDRAWAL_RESOLVED_EVENT].attachOnce(
-          timeout,
+        // resolved should always happen
+        this.evts[WITHDRAWAL_RESOLVED_EVENT].waitFor(
           (data) => data.channelAddress === params.channelAddress && data.transfer.transferId === transferId,
-        ),
-        this.evts[WITHDRAWAL_RECONCILED_EVENT].attachOnce(
           timeout,
-          (data) => data.channelAddress === params.channelAddress && data.transferId === transferId,
         ),
+        // reconciling (submission to chain) may not happen (i.e. holding
+        // mainnet withdrawals for lower gas)
+        Promise.race([
+          this.evts[WITHDRAWAL_RECONCILED_EVENT].waitFor(
+            (data) => data.channelAddress === params.channelAddress && data.transferId === transferId,
+          ),
+          delay(timeout),
+        ]),
       ]);
-      transactionHash = reconciled.transactionHash;
+      transactionHash = typeof reconciled === "object" ? reconciled.transactionHash : undefined;
       transaction = resolved.transaction;
     } catch (e) {
       this.logger.warn(
@@ -991,9 +996,22 @@ export class VectorEngine implements IVectorEngine {
         "Withdraw tx not processed properly",
       );
     }
+    if (!transaction) {
+      // try to get from store
+      const commitment = await this.store.getWithdrawalCommitment(transferId);
+      if (!commitment) {
+        return Result.fail(
+          new RpcError(RpcError.reasons.WithdrawResolutionFailed, params.channelAddress, this.publicIdentifier, {
+            transferId,
+          }),
+        );
+      }
+
+      transaction = (await WithdrawCommitment.fromJson(commitment)).getSignedTransaction();
+    }
 
     this.logger.info({ channel: res, method, methodId, transactionHash, transaction }, "Method complete");
-    return Result.ok({ channel: res, transactionHash, transaction });
+    return Result.ok({ channel: res, transactionHash, transaction: transaction! });
   }
 
   private async decrypt(encrypted: string): Promise<Result<string, EngineError>> {

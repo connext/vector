@@ -1,6 +1,6 @@
 {
   "name": "@connext/vector-browser-node",
-  "version": "0.2.1-beta.13",
+  "version": "0.2.1-beta.15",
   "author": "",
   "license": "ISC",
   "description": "",
@@ -14,13 +14,13 @@
   "scripts": {
     "build": "rm -rf dist && tsc",
     "start": "node dist/index.js",
-    "test": "ts-mocha --bail --check-leaks --exit --timeout 60000 'src/**/*.spec.ts'"
+    "test": "nyc ts-mocha --bail --check-leaks --exit --timeout 60000 'src/**/*.spec.ts'"
   },
   "dependencies": {
-    "@connext/vector-contracts": "0.2.1-beta.13",
-    "@connext/vector-engine": "0.2.1-beta.13",
-    "@connext/vector-types": "0.2.1-beta.13",
-    "@connext/vector-utils": "0.2.1-beta.13",
+    "@connext/vector-contracts": "0.2.1-beta.15",
+    "@connext/vector-engine": "0.2.1-beta.15",
+    "@connext/vector-types": "0.2.1-beta.15",
+    "@connext/vector-utils": "0.2.1-beta.15",
     "@ethersproject/address": "5.0.10",
     "@ethersproject/bignumber": "5.0.14",
     "@ethersproject/constants": "5.0.9",
@@ -46,6 +46,7 @@
     "copy-webpack-plugin": "6.2.1",
     "fake-indexeddb": "3.1.2",
     "mocha": "8.3.0",
+    "nyc": "15.1.0",
     "pino-pretty": "4.6.0",
     "sinon": "9.2.4",
     "ts-loader": "8.0.7",
