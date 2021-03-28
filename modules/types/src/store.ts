@@ -1,7 +1,7 @@
 import { TransactionReceipt, TransactionResponse } from "@ethersproject/abstract-provider";
 
 import { WithdrawCommitmentJson } from "./transferDefinitions/withdraw";
-import { FullTransferState, FullChannelState } from "./channel";
+import { FullTransferState, FullChannelState, CoreChannelState, CoreTransferState } from "./channel";
 import { Address } from "./basic";
 import { ChannelDispute, TransferDispute } from "./dispute";
 import { GetTransfersFilterOpts } from "./schemas/engine";
@@ -32,14 +32,41 @@ export interface IVectorStore {
   // Setters
   saveChannelState(channelState: FullChannelState, transfer?: FullTransferState): Promise<void>;
 
+  /**
+   * Saves information about a channel dispute from the onchain record
+   * @param channelAddress multisig address of channel
+   * @param channelDispute record of dispute corresponding to channelAddress
+   * @param disputedChannel channel state that was disputed onchain, may not be the same as what is otherwise stored. Will be undefined if you did not get the information about the dispute from events, but instead got them from querying the chain (ccs not stored onchain)
+   */
   saveChannelDispute(
-    channel: FullChannelState,
+    channelAddress: string,
     channelDispute: ChannelDispute,
-    transferDispute?: TransferDispute,
+    disputedChannel?: CoreChannelState,
   ): Promise<void>;
-  // TODO: full disputes #445
-  // getChannelDispute(channelAddress: string): Promise<ChannelDispute | undefined>;
-  // getTransferDispute(transferAddress: string): Promise<TransferDispute | undefined>;
+
+  /**
+   * Returns stored record of channel dispute or undefined iff doesn't exist
+   * @param channelAddress channel address of disputed channel
+   */
+  getChannelDispute(channelAddress: string): Promise<ChannelDispute | undefined>;
+
+  /**
+   * Stores information about a transfer dispute from chain
+   * @param channelAddress address of the channel
+   * @param transferDispute record of dispute corresponding to disputedTransfer
+   * @param disputedTransfer transfer state that was disputed onchain, may not be the same as what is otherwise stored. Will be undefined if you did not get the information about the dispute from events, but instead got them from querying the chain (ccs not stored onchain)
+   */
+  saveTransferDispute(
+    channelAddress: string,
+    transferDispute: TransferDispute,
+    disputedTransfer?: CoreTransferState,
+  ): Promise<void>;
+
+  /**
+   * Returns stored record of transfer dispute or undefined iff doesn't exist
+   * @param transferId Transfer id of disputed transfer
+   */
+  getTransferDispute(transferId: string): Promise<TransferDispute | undefined>;
 }
 
 export const StoredTransactionStatus = {

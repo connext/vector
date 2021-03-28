@@ -9,6 +9,8 @@ import {
   ChannelDispute,
   TransferDispute,
   GetTransfersFilterOpts,
+  CoreChannelState,
+  CoreTransferState,
 } from "@connext/vector-types";
 import { TransactionReceipt, TransactionResponse } from "@ethersproject/abstract-provider";
 
@@ -17,31 +19,45 @@ export class MemoryStoreService implements IEngineStore {
     throw new Error("Method not implemented.");
   }
   saveChannelDispute(
-    channel: FullChannelState,
+    channelAddress: string,
     channelDispute: ChannelDispute,
-    transferDispute?: TransferDispute,
+    disputedChannel?: CoreChannelState,
   ): Promise<void> {
-    this.channelDisputes.set(channel.channelAddress, channelDispute);
-    const existing = this.channelStates.get(channel.channelAddress);
+    this.channelDisputes.set(channelAddress, channelDispute);
+    const existing = this.channelStates.get(channelAddress);
     if (existing) {
-      this.channelStates.set(channel.channelAddress, {
+      this.channelStates.set(channelAddress, {
         ...existing,
-        inDispute: channel.inDispute,
+        inDispute: true,
       });
-    }
-    if (transferDispute && this.transfers.has(transferDispute.transferId)) {
-      this.transferDisputes.set(transferDispute.transferId, transferDispute);
-      const t = this.transfers.get(transferDispute.transferId);
-      this.transfers.set(t.transferId, { ...t, inDispute: true });
     }
     return Promise.resolve();
   }
-  // getChannelDispute(channelAddress: string): Promise<ChannelDispute> {
-  //   return Promise.resolve(this.channelDisputes.get(channelAddress));
-  // }
-  // getTransferDispute(transferAddress: string): Promise<TransferDispute> {
-  //   return Promise.resolve(this.transferDisputes.get(transferAddress));
-  // }
+
+  getChannelDispute(channelAddress: string): Promise<ChannelDispute | undefined> {
+    return Promise.resolve(this.channelDisputes.get(channelAddress));
+  }
+
+  saveTransferDispute(
+    channelAddress: string,
+    transferDispute: TransferDispute,
+    transfer?: CoreTransferState,
+  ): Promise<void> {
+    this.transferDisputes.set(transferDispute.transferId, transferDispute);
+    const existing = this.channelStates.get(channelAddress);
+    if (existing) {
+      this.channelStates.set(existing.channelAddress, {
+        ...existing,
+        inDispute: true,
+      });
+    }
+    return Promise.resolve();
+  }
+
+  getTransferDispute(transferId: string): Promise<TransferDispute | undefined> {
+    return Promise.resolve(this.transferDisputes.get(transferId));
+  }
+
   getTransactionByHash(transactionHash: string): Promise<StoredTransaction | undefined> {
     return Promise.resolve(undefined);
   }

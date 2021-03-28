@@ -1,5 +1,7 @@
 import {
   ChannelDispute,
+  CoreChannelState,
+  CoreTransferState,
   FullChannelState,
   FullTransferState,
   GetTransfersFilterOpts,
@@ -117,17 +119,6 @@ export class BrowserStore implements IEngineStore, IChainServiceStore {
     idbKeyRange?: { bound: Function; lowerBound: Function; upperBound: Function },
   ) {
     this.db = new VectorIndexedDBDatabase(dbName, indexedDB, idbKeyRange);
-  }
-
-  async saveChannelDispute(
-    channel: FullChannelState,
-    channelDispute: ChannelDispute,
-    transferDispute?: TransferDispute,
-  ): Promise<void> {
-    await this.db.channels.update(channel.channelAddress, { inDispute: channel.inDispute });
-    if (transferDispute) {
-      await this.db.transfers.update(transferDispute.transferId, { inDispute: true });
-    }
   }
 
   public static async create(
@@ -382,5 +373,27 @@ export class BrowserStore implements IEngineStore, IChainServiceStore {
     }
     const { transferId, ...commitment } = w;
     return commitment;
+  }
+
+  saveTransferDispute(
+    channelAddress: string,
+    transferDispute: TransferDispute,
+    disputedTransfer?: CoreTransferState,
+  ): Promise<void> {
+    throw new Error("Method not implemented.");
+  }
+  getTransferDispute(transferId: string): Promise<TransferDispute | undefined> {
+    throw new Error("Method not implemented.");
+  }
+
+  async saveChannelDispute(
+    channelAddress: string,
+    channelDispute: ChannelDispute,
+    disputedChannel?: CoreChannelState,
+  ): Promise<void> {
+    throw new Error("Method not implemented");
+  }
+  getChannelDispute(channelAddress: string): Promise<ChannelDispute | undefined> {
+    throw new Error("Method not implemented.");
   }
 }

@@ -16,6 +16,8 @@ import {
   ChannelDispute,
   TransferDispute,
   GetTransfersFilterOpts,
+  CoreChannelState,
+  CoreTransferState,
 } from "@connext/vector-types";
 import { getRandomBytes32, getSignerAddressFromPublicIdentifier } from "@connext/vector-utils";
 import { BigNumber } from "@ethersproject/bignumber";
@@ -30,6 +32,8 @@ import {
   Balance as BalanceEntity,
   Transfer,
   OnchainTransaction,
+  ChannelDispute as ChannelDisputeEntity,
+  TransferDispute as TransferDisputeEntity,
 } from "../generated/db-client";
 
 const convertOnchainTransactionEntityToTransaction = (
@@ -70,6 +74,7 @@ const convertChannelEntityToFullChannelState = (
   channelEntity: Channel & {
     balances: BalanceEntity[];
     latestUpdate: Update | null;
+    disputeReference: ChannelDisputeEntity | null;
   },
 ): FullChannelState => {
   // use the inputted assetIds to preserve order
@@ -177,7 +182,7 @@ const convertChannelEntityToFullChannelState = (
       toIdentifier: channelEntity.latestUpdate!.toIdentifier,
       type: channelEntity.latestUpdate!.type as "create" | "deposit" | "resolve" | "setup",
     },
-    inDispute: channelEntity.inDispute,
+    inDispute: !!channelEntity.disputeReference,
   };
   return channel;
 };
@@ -253,6 +258,25 @@ const convertEntitiesToWithdrawalCommitment = (
   };
 };
 
+const convertEntityToChannelDispute = (dispute: ChannelDisputeEntity): ChannelDispute => {
+  return {
+    channelStateHash: dispute.channelStateHash,
+    consensusExpiry: dispute.consensusExpiry,
+    defundExpiry: dispute.defundExpiry,
+    defundNonce: dispute.defundNonce,
+    merkleRoot: dispute.merkleRoot,
+    nonce: dispute.nonce,
+  };
+};
+
+const convertEntityToTransferDispute = (entity: TransferDisputeEntity): TransferDispute => {
+  return {
+    isDefunded: entity.isDefunded,
+    transferDisputeExpiry: entity.transferDisputeExpiry,
+    transferId: entity.transferId,
+    transferStateHash: entity.transferStateHash,
+  };
+};
 export class PrismaStore implements IServerNodeStore {
   public prisma: PrismaClient;
 
@@ -264,23 +288,6 @@ export class PrismaStore implements IServerNodeStore {
       : config.dbUrl;
 
     this.prisma = new PrismaClient(_dbUrl ? { datasources: { db: { url: _dbUrl } } } : undefined);
-  }
-
-  async saveChannelDispute(
-    channel: FullChannelState,
-    channelDispute: ChannelDispute,
-    transferDispute?: TransferDispute,
-  ): Promise<void> {
-    await this.prisma.channel.update({
-      where: { channelAddress: channel.channelAddress },
-      data: { inDispute: channel.inDispute },
-    });
-    if (transferDispute) {
-      await this.prisma.transfer.update({
-        where: { transferId: transferDispute.transferId },
-        data: { inDispute: true },
-      });
-    }
   }
 
   async getTransactionByHash(transactionHash: string): Promise<StoredTransaction | undefined> {
@@ -551,7 +558,7 @@ export class PrismaStore implements IServerNodeStore {
   async getChannelState(channelAddress: string): Promise<FullChannelState | undefined> {
     const channelEntity = await this.prisma.channel.findUnique({
       where: { channelAddress },
-      include: { balances: true, latestUpdate: true },
+      include: { balances: true, latestUpdate: true, disputeReference: true },
     });
     if (!channelEntity) {
       return undefined;
@@ -580,7 +587,7 @@ export class PrismaStore implements IServerNodeStore {
           },
         ],
       },
-      include: { balances: true, latestUpdate: true },
+      include: { balances: true, latestUpdate: true, disputeReference: true },
     });
     if (!channelEntity) {
       return undefined;
@@ -590,7 +597,9 @@ export class PrismaStore implements IServerNodeStore {
   }
 
   async getChannelStates(): Promise<FullChannelState[]> {
-    const channelEntities = await this.prisma.channel.findMany({ include: { balances: true, latestUpdate: true } });
+    const channelEntities = await this.prisma.channel.findMany({
+      include: { balances: true, latestUpdate: true, disputeReference: true },
+    });
     return channelEntities.map(convertChannelEntityToFullChannelState);
   }
 
@@ -709,7 +718,6 @@ export class PrismaStore implements IServerNodeStore {
     await this.prisma.channel.upsert({
       where: { channelAddress: channelState.channelAddress },
       create: {
-        inDispute: false,
         assetIds,
         activeTransfers: {
           ...activeTransfers,
@@ -949,7 +957,6 @@ export class PrismaStore implements IServerNodeStore {
     });
 
     const channelModelDetails: Prisma.ChannelCreateInput = {
-      inDispute: false,
       assetIds,
       chainId: channel.networkContext.chainId.toString(),
       channelAddress: channel.channelAddress,
@@ -1117,6 +1124,96 @@ export class PrismaStore implements IServerNodeStore {
     }
 
     return transfers.map(convertTransferEntityToFullTransferState);
+  }
+
+  //////////////////////////////////
+  ///// DISPUTE METHODS
+  //////////////////////////////////
+  async saveChannelDispute(
+    channelAddress: string,
+    channelDispute: ChannelDispute,
+    disputedChannel?: CoreChannelState,
+  ): Promise<void> {
+    // const onchainChannel = !disputedChannel ? {} : {};
+    // TODO: fix the storage of the onchain channel reference
+    await this.prisma.channelDispute.upsert({
+      where: { channelAddress },
+      create: {
+        channelAddress,
+        channelStateHash: channelDispute.channelStateHash,
+        consensusExpiry: channelDispute.consensusExpiry,
+        defundExpiry: channelDispute.defundExpiry,
+        defundNonce: channelDispute.defundNonce,
+        merkleRoot: channelDispute.merkleRoot,
+        nonce: channelDispute.nonce,
+        offchainChannel: { connect: { channelAddress } },
+        // TODO: make `connectOrCreate`
+        onchainChannel: { connect: { channelAddress: `${channelAddress}-dispute` } },
+      },
+      update: {
+        channelStateHash: channelDispute.channelStateHash,
+        consensusExpiry: channelDispute.consensusExpiry,
+        defundExpiry: channelDispute.defundExpiry,
+        defundNonce: channelDispute.defundNonce,
+        merkleRoot: channelDispute.merkleRoot,
+        nonce: channelDispute.nonce,
+        // TODO: update state
+        // onchainChannel: { update: {} },
+      },
+    });
+  }
+
+  async getChannelDispute(channelAddress: string): Promise<ChannelDispute | undefined> {
+    const entity = await this.prisma.channelDispute.findUnique({
+      where: {
+        channelAddress,
+      },
+    });
+    if (!entity) {
+      return undefined;
+    }
+    return convertEntityToChannelDispute(entity);
+  }
+
+  async saveTransferDispute(
+    transferId: string,
+    transferDispute: TransferDispute,
+    disputedTransfer?: CoreTransferState,
+  ): Promise<void> {
+    // TODO: fix the storage of the onchain transfer reference
+    await this.prisma.transferDispute.upsert({
+      where: { transferId },
+      create: {
+        isDefunded: transferDispute.isDefunded,
+        transferId: transferDispute.transferId,
+        transferStateHash: transferDispute.transferStateHash,
+        transferDisputeExpiry: transferDispute.transferDisputeExpiry,
+        offchainTransfer: { connect: { transferId } },
+        // TODO: make `connectOrCreate`
+        onchainTransfer: { connect: { transferId: `${transferId}-dispute` } },
+      },
+      update: {
+        isDefunded: transferDispute.isDefunded,
+        transferId: transferDispute.transferId,
+        transferStateHash: transferDispute.transferStateHash,
+        transferDisputeExpiry: transferDispute.transferDisputeExpiry,
+        // TODO: update state
+        // onchainTransfer: {}
+      },
+    });
+    throw new Error("Method not implemented.");
+  }
+
+  async getTransferDispute(transferId: string): Promise<TransferDispute | undefined> {
+    const entity = await this.prisma.transferDispute.findUnique({
+      where: {
+        transferId,
+      },
+    });
+    if (!entity) {
+      return undefined;
+    }
+    return convertEntityToTransferDispute(entity);
   }
 
   async setNodeIndex(index: number, publicIdentifier: string): Promise<void> {
