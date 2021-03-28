@@ -23,6 +23,35 @@ model Balance {
   @@map(name: "balance")
 }
 
+model ChannelDispute {
+  channelAddress          String    @id  // TODO: better ID?
+  channelStateHash        String
+  nonce                   String
+  merkleRoot              String
+  consensusExpiry         String
+  defundExpiry            String
+  defundNonce             String
+
+  offchainChannelId       String
+  offchainChannel         Channel @relation("OffchainChannel", fields: [offchainChannelId], references: [channelAddress])
+
+  onchainChannelId        String?
+  onchainChannel          Channel? @relation("OnchainChannel", fields: [onchainChannelId], references: [channelAddress])
+}
+
+model TransferDispute {
+  transferId             String     @id // TODO: better ID?
+  transferStateHash      String
+  transferDisputeExpiry  String
+  isDefunded             Boolean
+
+  offchainTransferId     String
+  offchainTransfer       Transfer @relation("OffchainTransfer", fields: [offchainTransferId], references: [transferId])
+
+  onchainTransferId      String?
+  onchainTransfer        Transfer? @relation("OnchainTransfer", fields: [onchainTransferId], references: [transferId])
+}
+
 model Channel {
   channelAddress          String    @id
   publicIdentifierA       String
@@ -38,13 +67,21 @@ model Channel {
   transferRegistryAddress String
   chainId                 String
   latestUpdate            Update?
-  inDispute               Boolean
 
   activeTransfers Transfer[]
 
   createdAt DateTime @default(now())
 
   OnchainTransaction OnchainTransaction[]
+
+  // Disputes
+  // NOTE: disputes can have a different offchain and onchain state.
+  // The `*Reference` field links to the offchain transfer representation
+  // while the `*Record` field links to the onchain representation that
+  // has the transferId suffix `-dispute`
+  disputeReference        ChannelDispute? @relation("OffchainChannel")
+  disputeRecord           ChannelDispute? @relation("OnchainChannel")
+
   @@unique([publicIdentifierA, publicIdentifierB, chainId])
   @@unique([participantA, participantB, chainId])
   @@map(name: "channel")
@@ -140,6 +177,13 @@ model Transfer {
   // resolved will not always exist
   resolveUpdateChannelAddressId String?
   resolveUpdateNonce            Int?
+
+  // NOTE: disputes can have a different offchain and onchain state.
+  // The `*Reference` field links to the offchain transfer representation
+  // while the `*Record` field links to the onchain representation that
+  // has the transferId suffix `-dispute`
+  disputeReference        TransferDispute? @relation("OffchainTransfer")
+  disputeRecord           TransferDispute? @relation("OnchainTransfer")
 
   @@unique([routingId, channelAddressId])
   @@map(name: "transfer")
