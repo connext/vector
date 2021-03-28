@@ -571,7 +571,7 @@ export class BrowserNode implements INodeService {
     const rpc = constructRpcRequest(ChannelRpcMethods.chan_dispute, params);
     try {
       const res = await this.channelProvider!.send(rpc);
-      return Result.ok({ txHash: res.transactionHash });
+      return Result.ok({ transactionHash: res.transactionHash });
     } catch (e) {
       return Result.fail(e);
     }
@@ -583,7 +583,7 @@ export class BrowserNode implements INodeService {
     const rpc = constructRpcRequest(ChannelRpcMethods.chan_defund, params);
     try {
       const res = await this.channelProvider!.send(rpc);
-      return Result.ok({ txHash: res.transactionHash });
+      return Result.ok({ transactionHash: res.transactionHash });
     } catch (e) {
       return Result.fail(e);
     }
@@ -595,7 +595,7 @@ export class BrowserNode implements INodeService {
     const rpc = constructRpcRequest(ChannelRpcMethods.chan_disputeTransfer, params);
     try {
       const res = await this.channelProvider!.send(rpc);
-      return Result.ok({ txHash: res.transactionHash });
+      return Result.ok({ transactionHash: res.transactionHash });
     } catch (e) {
       return Result.fail(e);
     }
@@ -607,7 +607,7 @@ export class BrowserNode implements INodeService {
     const rpc = constructRpcRequest(ChannelRpcMethods.chan_defundTransfer, params);
     try {
       const res = await this.channelProvider!.send(rpc);
-      return Result.ok({ txHash: res.transactionHash });
+      return Result.ok({ transactionHash: res.transactionHash });
     } catch (e) {
       return Result.fail(e);
     }

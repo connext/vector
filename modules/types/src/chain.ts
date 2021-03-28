@@ -1,11 +1,12 @@
 import { TransactionReceipt, TransactionRequest, TransactionResponse } from "@ethersproject/abstract-provider";
 import { BigNumber, BigNumberish } from "@ethersproject/bignumber";
+import { ChainReaderEvent, ChainReaderEventMap } from ".";
 
 import { Address, HexString } from "./basic";
 import { Balance, FullChannelState, FullTransferState } from "./channel";
 import { ChannelDispute } from "./dispute";
 import { Result, Values, VectorError } from "./error";
-import { TransactionEvent, TransactionEventMap } from "./event";
+import { ChainServiceEvent, ChainServiceEventMap } from "./event";
 import { ChainProviders, HydratedProviders } from "./network";
 import { RegisteredTransfer, TransferName, TransferState, WithdrawCommitmentJson } from "./transferDefinitions";
 
@@ -204,6 +205,31 @@ export interface IVectorChainReader {
     channelAddress: string,
     chainId: number,
   ): Promise<Result<boolean, ChainError>>;
+
+  /**
+   * Watches the channel for any dispute events and parrots them in
+   * cleaned types
+   * @param channelAddress Address of channel to parrot events for
+   * @param chainId Chain of channel
+   */
+  registerChannel(channelAddress: string, chainId: number): Promise<Result<void, ChainError>>;
+
+  on<T extends ChainReaderEvent>(
+    event: T,
+    callback: (payload: ChainReaderEventMap[T]) => void | Promise<void>,
+    filter?: (payload: ChainReaderEventMap[T]) => boolean,
+  ): void;
+  once<T extends ChainReaderEvent>(
+    event: T,
+    callback: (payload: ChainReaderEventMap[T]) => void | Promise<void>,
+    filter?: (payload: ChainReaderEventMap[T]) => boolean,
+  ): void;
+  off<T extends ChainReaderEvent>(event?: T): void;
+  waitFor<T extends ChainReaderEvent>(
+    event: T,
+    timeout: number,
+    filter?: (payload: ChainReaderEventMap[T]) => boolean,
+  ): Promise<ChainReaderEventMap[T]>;
 }
 
 export type TransactionResponseWithResult = TransactionResponse & {
@@ -235,20 +261,22 @@ export interface IVectorChainService extends IVectorChainReader {
     activeTransfers: FullTransferState[],
   ): Promise<Result<TransactionResponseWithResult, ChainError>>;
   sendDefundTransferTx(transferState: FullTransferState): Promise<Result<TransactionResponseWithResult, ChainError>>;
-  on<T extends TransactionEvent>(
+
+  // Event methods
+  on<T extends ChainServiceEvent>(
     event: T,
-    callback: (payload: TransactionEventMap[T]) => void | Promise<void>,
-    filter?: (payload: TransactionEventMap[T]) => boolean,
+    callback: (payload: ChainServiceEventMap[T]) => void | Promise<void>,
+    filter?: (payload: ChainServiceEventMap[T]) => boolean,
   ): void;
-  once<T extends TransactionEvent>(
+  once<T extends ChainServiceEvent>(
     event: T,
-    callback: (payload: TransactionEventMap[T]) => void | Promise<void>,
-    filter?: (payload: TransactionEventMap[T]) => boolean,
+    callback: (payload: ChainServiceEventMap[T]) => void | Promise<void>,
+    filter?: (payload: ChainServiceEventMap[T]) => boolean,
   ): void;
-  off<T extends TransactionEvent>(event?: T): void;
-  waitFor<T extends TransactionEvent>(
+  off<T extends ChainServiceEvent>(event?: T): void;
+  waitFor<T extends ChainServiceEvent>(
     event: T,
     timeout: number,
-    filter?: (payload: TransactionEventMap[T]) => boolean,
-  ): Promise<TransactionEventMap[T]>;
+    filter?: (payload: ChainServiceEventMap[T]) => boolean,
+  ): Promise<ChainServiceEventMap[T]>;
 }

@@ -13,6 +13,7 @@ import {
   IChannelSigner,
   UpdateParams,
   ChainError,
+  IVectorChainReader,
 } from "@connext/vector-types";
 import {
   getRandomChannelSigner,
@@ -515,7 +516,7 @@ describe("generateAndApplyUpdate", () => {
     // Make call
     const result = await vectorUpdate.generateAndApplyUpdate(
       signer,
-      chainService,
+      chainService as IVectorChainReader,
       params,
       previousState,
       activeTransfers,
