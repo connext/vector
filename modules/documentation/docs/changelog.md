@@ -2,6 +2,14 @@
 
 ## Next Release
 
+## 0.2.1-beta.15
+
+- \[utils\] Add bsc testnet to chains.json
+
+## 0.2.1-beta.14
+
+- \[engine\] Add handling in case withdrawals are not immediately reconciled
+
 ## 0.2.1-beta.13
 
 - \[contracts\] Request collateral also adjusts
