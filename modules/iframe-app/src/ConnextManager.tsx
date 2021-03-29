@@ -43,7 +43,15 @@ export default class ConnextManager {
     natsUrl?: string,
     authUrl?: string,
   ): Promise<BrowserNode> {
-    console.log(`Initializing node signature: ${signature}, ${signerAddress}`);
+    console.log(`initNode params: `, {
+      chainProviders,
+      chainAddresses,
+      messagingUrl,
+      signature,
+      signerAddress,
+      natsUrl,
+      authUrl,
+    });
     // store entropy in local storage
     if (!localStorage) {
       throw new Error("localStorage not available in this window, please enable cross-site cookies and try again.");
@@ -98,7 +106,7 @@ export default class ConnextManager {
     if (_messagingUrl === "https://messaging.connext.network") {
       console.warn("Using deprecated messaging URL, converting to new URL");
       _authUrl = "https://messaging.connext.network";
-      _natsUrl ="websocket.connext.provide.network";
+      _natsUrl = "websocket.connext.provide.network";
       _messagingUrl = undefined;
     }
 
