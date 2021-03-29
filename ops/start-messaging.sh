@@ -121,8 +121,7 @@ then
   public_url="https://$domain_name/ping"
   proxy_ports="ports:
       - '80:80'
-      - '443:443'
-      - '4222:4222'"
+      - '443:443'"
   echo "${stack}_proxy will be exposed on *:80 and *:443"
 
 else
@@ -180,6 +179,17 @@ services:
     secrets:
       - '$jwt_private_key_secret'
       - '$jwt_public_key_secret'
+
+  nats:
+    $common
+    image: '$nats_image'
+    environment:
+      JWT_SIGNER_PUBLIC_KEY_FILE: '/run/secrets/$jwt_public_key_secret'
+    secrets:
+      - '$jwt_public_key_secret'
+    ports:
+      - '4222:4222'
+      - '4221:4221'
 
 EOF
 
