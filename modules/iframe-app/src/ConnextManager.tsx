@@ -90,14 +90,22 @@ export default class ConnextManager {
       console.warn("Public identifier does not match what is in storage, new store will be created");
     }
 
+    let _messagingUrl = messagingUrl ?? config.messagingUrl;
+    let _authUrl = authUrl ?? config.authUrl;
+    let _natsUrl = natsUrl ?? config.natsUrl;
+    if (_messagingUrl === "https://messaging.connext.network") {
+      _authUrl = "https://messaging.connext.network";
+      _natsUrl = "nats1.connext.provide.network:4222,nats2.connext.provide.network:4222,nats3.connext.provide.network:4222";
+    }
+
     this.browserNode = await BrowserNode.connect({
       signer,
       chainAddresses: chainAddresses ?? config.chainAddresses,
       chainProviders,
       logger: pino(),
-      messagingUrl: messagingUrl ?? config.messagingUrl,
-      authUrl: authUrl ?? config.authUrl,
-      natsUrl: natsUrl ?? config.natsUrl,
+      messagingUrl: _messagingUrl,
+      authUrl: _authUrl,
+      natsUrl: _natsUrl,
     });
     localStorage.setItem("publicIdentifier", signer.publicIdentifier);
     return this.browserNode;
