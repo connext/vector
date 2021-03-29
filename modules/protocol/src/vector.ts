@@ -209,10 +209,10 @@ export class Vector implements IVectorProtocol {
     // event. The channels should be updated if a dispute
     // exists onchain otherwise
     this.chainReader.on(ChainReaderEvents.CHANNEL_DISPUTED, async (payload) => {
-      this.logger.warn({ ...payload }, "Channel in dispute");
       if (payload.state.alice !== this.signerAddress && payload.state.bob !== this.signerAddress) {
         return;
       }
+      this.logger.warn({ ...payload }, "Channel in dispute");
       await this.storeService.saveChannelDispute(payload.state.channelAddress, payload.dispute, payload.state);
     });
 
@@ -346,6 +346,21 @@ export class Vector implements IVectorProtocol {
 
         const { updatedChannel, updatedActiveTransfers, updatedTransfer } = inboundRes.getValue();
 
+        // If it is setup, watch for dispute events in channel
+        if (received.update.type === UpdateType.setup) {
+          this.logger.info({ channelAddress: updatedChannel.channelAddress }, "Registering channel for dispute events");
+          const registrationRes = await this.chainReader.registerChannel(
+            updatedChannel.channelAddress,
+            updatedChannel.networkContext.chainId,
+          );
+          if (registrationRes.isError) {
+            this.logger.warn(
+              { ...jsonifyError(registrationRes.getError()!) },
+              "Failed to register channel for dispute watching",
+            );
+          }
+        }
+
         this.evts[ProtocolEventName.CHANNEL_UPDATE_EVENT].post({
           updatedChannelState: updatedChannel,
           updatedTransfers: updatedActiveTransfers,
@@ -360,7 +375,7 @@ export class Vector implements IVectorProtocol {
     // server-node startup (double check on prod). If it is *not* awaited
     // then you could have a race condition where this is not completed
     // before your channel is updated
-    this.registerDisputes();
+    await this.registerDisputes();
     return this;
   }
 
@@ -429,6 +444,7 @@ export class Vector implements IVectorProtocol {
     const returnVal = await this.executeUpdate(updateParams);
     if (!returnVal.isError) {
       const channel = returnVal.getValue();
+      this.logger.debug({ channelAddress }, "Registering channel for dispute events");
       const registrationRes = await this.chainReader.registerChannel(
         channel.channelAddress,
         channel.networkContext.chainId,
