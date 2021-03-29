@@ -57,11 +57,15 @@ export class ChainProvider extends BaseProvider {
       this.chainId = chainId;
       this.providerUrls = providerUrls;
 
-      for (var member in BaseProvider) {
-        if (typeof BaseProvider[member] === "function") {
-          // if (T.hasOwnProperty(member)) {
-          this[member] = this._provider[member];
-          // }
+      // Object.assign(this, this._provider); -> TypeError: Cannot assign to read only property '_isProvider' of object '#<ChainProvider>'
+      for (var key in Object.keys(this._provider)) {
+        console.log("DEBUG MESSAGE:")
+        console.log(key, this._provider[key]);
+        if (typeof this._provider[key] == "function") {
+          Object.assign(this, {
+            key: this._provider[key]
+          });
+          console.log(this[key]);
         }
       }
     }
@@ -70,7 +74,6 @@ export class ChainProvider extends BaseProvider {
       if (this._provider instanceof JsonRpcProvider) {
         return (this._provider as JsonRpcProvider).send(method, params);
       } else {
-        // return (this._provider as FallbackProvider).perform(method, params);
         const providers = (this._provider as FallbackProvider).providerConfigs.map(p => p.provider);
         return new Promise((resolve, reject) => {
           var errors: any[] = [];

@@ -52,8 +52,8 @@ contract CMCCore is ReentrancyGuard, ICMCCore {
         bob = _bob;
     }
 
-    /// @notice A getter function for the bob of the multisig
-    /// @return Bob's signer address
+    /// @notice A getter function for the alice of the multisig
+    /// @return Alice's signer address
     function getAlice()
         external
         view
@@ -66,7 +66,7 @@ contract CMCCore is ReentrancyGuard, ICMCCore {
     }
 
     /// @notice A getter function for the bob of the multisig
-    /// @return Alice's signer address
+    /// @return Bob's signer address
     function getBob()
         external
         view
