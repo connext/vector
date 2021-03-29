@@ -30,7 +30,6 @@ model ChannelDispute {
   merkleRoot              String
   consensusExpiry         String
   defundExpiry            String
-  defundNonce             String
 
   offchainChannelId       String
   offchainChannel         Channel @relation("OffchainChannel", fields: [offchainChannelId], references: [channelAddress])

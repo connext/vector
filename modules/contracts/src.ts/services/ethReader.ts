@@ -595,7 +595,6 @@ export class EthereumChainReader implements IVectorChainReader {
           merkleRoot: dispute.merkleRoot,
           consensusExpiry: dispute.consensusExpiry.toString(),
           defundExpiry: dispute.defundExpiry.toString(),
-          defundNonce: dispute.defundNonce.toString(),
         };
       };
 

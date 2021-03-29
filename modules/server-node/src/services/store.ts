@@ -263,7 +263,6 @@ const convertEntityToChannelDispute = (dispute: ChannelDisputeEntity): ChannelDi
     channelStateHash: dispute.channelStateHash,
     consensusExpiry: dispute.consensusExpiry,
     defundExpiry: dispute.defundExpiry,
-    defundNonce: dispute.defundNonce,
     merkleRoot: dispute.merkleRoot,
     nonce: dispute.nonce,
   };
@@ -1143,18 +1142,16 @@ export class PrismaStore implements IServerNodeStore {
         channelStateHash: channelDispute.channelStateHash,
         consensusExpiry: channelDispute.consensusExpiry,
         defundExpiry: channelDispute.defundExpiry,
-        defundNonce: channelDispute.defundNonce,
         merkleRoot: channelDispute.merkleRoot,
         nonce: channelDispute.nonce,
         offchainChannel: { connect: { channelAddress } },
         // TODO: make `connectOrCreate`
-        onchainChannel: { connect: { channelAddress: `${channelAddress}-dispute` } },
+        // onchainChannel: { connect: { channelAddress: `${channelAddress}-dispute` } },
       },
       update: {
         channelStateHash: channelDispute.channelStateHash,
         consensusExpiry: channelDispute.consensusExpiry,
         defundExpiry: channelDispute.defundExpiry,
-        defundNonce: channelDispute.defundNonce,
         merkleRoot: channelDispute.merkleRoot,
         nonce: channelDispute.nonce,
         // TODO: update state
