@@ -90,6 +90,9 @@ export class EthereumChainService extends EthereumChainReader implements IVector
   async sendDisputeChannelTx(
     channelState: FullChannelState,
   ): Promise<Result<TransactionResponseWithResult, ChainError>> {
+    const method = "sendDisputeChannelTx";
+    const methodId = getRandomBytes32();
+    this.log.info({ method, methodId, channelAddress: channelState.channelAddress }, "Method started");
     const signer = this.signers.get(channelState.networkContext.chainId);
     if (!signer?._isSigner) {
       return Result.fail(new ChainError(ChainError.reasons.SignerNotFound));
@@ -98,6 +101,44 @@ export class EthereumChainService extends EthereumChainReader implements IVector
     if (!channelState.latestUpdate.aliceSignature || !channelState.latestUpdate.bobSignature) {
       return Result.fail(new ChainError(ChainError.reasons.MissingSigs));
     }
+
+    const code = await this.getCode(channelState.channelAddress, channelState.networkContext.chainId);
+    if (code.isError) {
+      return Result.fail(code.getError()!);
+    }
+    if (code.getValue() === "0x") {
+      this.log.info(
+        { method, methodId, channelAddress: channelState.channelAddress, chainId: channelState.networkContext.chainId },
+        "Deploying channel",
+      );
+      const gasPrice = await this.getGasPrice(channelState.networkContext.chainId);
+      if (gasPrice.isError) {
+        Result.fail(gasPrice.getError()!);
+      }
+
+      const deploy = await this.sendDeployChannelTx(channelState, gasPrice.getValue());
+      if (deploy.isError) {
+        return Result.fail(deploy.getError()!);
+      }
+      this.log.debug(
+        { method, methodId, channelAddress: channelState.channelAddress, transactionHash: deploy.getValue().hash },
+        "Deploy channel tx",
+      );
+      const result = await deploy.getValue().completed();
+      if (result.isError) {
+        return Result.fail(result.getError()!);
+      }
+      this.log.info(
+        {
+          method,
+          methodId,
+          channelAddress: channelState.channelAddress,
+          transactionHash: result.getValue().transactionHash,
+        },
+        "Channel deployed",
+      );
+    }
+
     return this.sendTxWithRetries(
       channelState.channelAddress,
       channelState.networkContext.chainId,
