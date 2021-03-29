@@ -23,6 +23,7 @@ import {
   FullChannelState,
   ChainError,
   EngineParams,
+  WithdrawalResolvedPayload,
 } from "@connext/vector-types";
 import {
   getTestLoggers,
@@ -437,7 +438,7 @@ describe(testName, () => {
 
       // Create a promise that will resolve once the event is emitted
       // + some time for the handler to complete
-      const resolvedEvent = new Promise<WithdrawalCreatedPayload>((resolve) =>
+      const resolvedEvent = new Promise<WithdrawalResolvedPayload>((resolve) =>
         container[WITHDRAWAL_RESOLVED_EVENT].attachOnce(5000, (data) => delay(500).then(() => resolve(data))),
       );
 
@@ -457,7 +458,12 @@ describe(testName, () => {
         channelBalance:
           updatedChannelState.balances[updatedChannelState.assetIds.findIndex((a) => a === commitment.assetId)],
         channelAddress: updatedChannelState.channelAddress,
+        transaction: {
+          to: commitment.channelAddress,
+          value: 0,
+        },
       });
+      expect(emitted.transaction.data).to.be.ok;
 
       // When getting resolve events, withdrawers will always save the
       // double signed commitment to their store. If the withdrawer is

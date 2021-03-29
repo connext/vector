@@ -121,7 +121,7 @@ export type ChannelRpcMethodsResponsesMap = {
   [ChannelRpcMethods.chan_withdraw]: {
     channel: FullChannelState;
     transactionHash?: string;
-    transaction?: MinimalTransaction;
+    transaction: MinimalTransaction;
   };
   [ChannelRpcMethods.chan_subscribe]: any;
   [ChannelRpcMethods.chan_unsubscribeAll]: any;

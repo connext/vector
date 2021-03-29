@@ -19,6 +19,7 @@
   "links": [],
   "panels": [
     {
+      "columns": [],
       "datasource": "Prometheus",
       "fieldConfig": {
         "defaults": {
@@ -79,6 +80,7 @@
           }
         ]
       },
+      "fontSize": "100%",
       "gridPos": {
         "h": 7,
         "w": 15,
@@ -90,7 +92,83 @@
         "showHeader": true,
         "sortBy": []
       },
+      "pageSize": null,
       "pluginVersion": "7.4.3",
+      "showHeader": true,
+      "sort": {
+        "col": 2,
+        "desc": false
+      },
+      "styles": [
+        {
+          "alias": "",
+          "align": "auto",
+          "colorMode": null,
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)"
+          ],
+          "dateFormat": "YYYY-MM-DD HH:mm:ss",
+          "decimals": 2,
+          "mappingType": 1,
+          "pattern": "__name__",
+          "thresholds": [],
+          "type": "hidden",
+          "unit": "short"
+        },
+        {
+          "alias": "",
+          "align": "auto",
+          "colorMode": null,
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)"
+          ],
+          "dateFormat": "YYYY-MM-DD HH:mm:ss",
+          "decimals": 2,
+          "mappingType": 1,
+          "pattern": "Time",
+          "thresholds": [],
+          "type": "hidden",
+          "unit": "short"
+        },
+        {
+          "alias": "",
+          "align": "auto",
+          "colorMode": null,
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)"
+          ],
+          "dateFormat": "YYYY-MM-DD HH:mm:ss",
+          "decimals": 2,
+          "mappingType": 1,
+          "pattern": "instance",
+          "thresholds": [],
+          "type": "hidden",
+          "unit": "short"
+        },
+        {
+          "alias": "",
+          "align": "auto",
+          "colorMode": null,
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)"
+          ],
+          "dateFormat": "YYYY-MM-DD HH:mm:ss",
+          "decimals": 2,
+          "mappingType": 1,
+          "pattern": "job",
+          "thresholds": [],
+          "type": "hidden",
+          "unit": "short"
+        }
+      ],
       "targets": [
         {
           "expr": "router_onchain_liquidity",
@@ -105,6 +183,7 @@
       "timeFrom": null,
       "timeShift": null,
       "title": "Router Onchain Liquidity",
+      "transform": "table",
       "transformations": [
         {
           "id": "organize",
@@ -128,6 +207,7 @@
       "type": "table"
     },
     {
+      "columns": [],
       "datasource": "Prometheus",
       "fieldConfig": {
         "defaults": {
@@ -155,6 +235,7 @@
         },
         "overrides": []
       },
+      "fontSize": "100%",
       "gridPos": {
         "h": 7,
         "w": 5,
@@ -165,7 +246,37 @@
       "options": {
         "showHeader": true
       },
+      "pageSize": null,
       "pluginVersion": "7.4.3",
+      "showHeader": true,
+      "sort": {
+        "col": 0,
+        "desc": true
+      },
+      "styles": [
+        {
+          "alias": "Time",
+          "align": "auto",
+          "dateFormat": "YYYY-MM-DD HH:mm:ss",
+          "pattern": "Time",
+          "type": "date"
+        },
+        {
+          "alias": "",
+          "align": "right",
+          "colorMode": null,
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)"
+          ],
+          "decimals": 2,
+          "pattern": "/.*/",
+          "thresholds": [],
+          "type": "number",
+          "unit": "short"
+        }
+      ],
       "targets": [
         {
           "expr": "router_channels",
@@ -178,6 +289,7 @@
         }
       ],
       "title": "Number of Channels",
+      "transform": "table",
       "transformations": [
         {
           "id": "organize",
@@ -233,7 +345,8 @@
       "linewidth": 1,
       "nullPointMode": "null",
       "options": {
-        "alertThreshold": true
+        "alertThreshold": true,
+        "dataLinks": []
       },
       "percentage": false,
       "pluginVersion": "7.4.3",
@@ -301,6 +414,7 @@
       }
     },
     {
+      "columns": [],
       "datasource": "Prometheus",
       "fieldConfig": {
         "defaults": {
@@ -361,6 +475,7 @@
           }
         ]
       },
+      "fontSize": "100%",
       "gridPos": {
         "h": 8,
         "w": 9,
@@ -372,7 +487,37 @@
         "showHeader": true,
         "sortBy": []
       },
+      "pageSize": null,
       "pluginVersion": "7.4.3",
+      "showHeader": true,
+      "sort": {
+        "col": 0,
+        "desc": true
+      },
+      "styles": [
+        {
+          "alias": "Time",
+          "align": "auto",
+          "dateFormat": "YYYY-MM-DD HH:mm:ss",
+          "pattern": "Time",
+          "type": "date"
+        },
+        {
+          "alias": "",
+          "align": "right",
+          "colorMode": null,
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)"
+          ],
+          "decimals": 2,
+          "pattern": "/.*/",
+          "thresholds": [],
+          "type": "number",
+          "unit": "short"
+        }
+      ],
       "targets": [
         {
           "expr": "router_offchain_liquidity",
@@ -387,6 +532,7 @@
       "timeFrom": null,
       "timeShift": null,
       "title": "Router Offchain Liquidity",
+      "transform": "table",
       "transformations": [
         {
           "id": "organize",
@@ -493,18 +639,43 @@
       "id": 14,
       "options": {
         "colorMode": "value",
+        "fieldOptions": {
+          "calcs": [
+            "mean"
+          ],
+          "defaults": {
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "red",
+                  "value": 80
+                }
+              ]
+            }
+          },
+          "overrides": [],
+          "values": false
+        },
         "graphMode": "area",
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": ["lastNotNull"],
+          "calcs": [
+            "lastNotNull"
+          ],
           "fields": "",
           "values": false
         },
         "text": {},
         "textMode": "auto"
       },
-      "pluginVersion": "7.4.3",
+      "pluginVersion": "6.7.6",
       "targets": [
         {
           "expr": "increase(router_transfer_volume[7d])",
@@ -593,18 +764,43 @@
       "id": 12,
       "options": {
         "colorMode": "value",
+        "fieldOptions": {
+          "calcs": [
+            "mean"
+          ],
+          "defaults": {
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "red",
+                  "value": 80
+                }
+              ]
+            }
+          },
+          "overrides": [],
+          "values": false
+        },
         "graphMode": "area",
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": ["lastNotNull"],
+          "calcs": [
+            "lastNotNull"
+          ],
           "fields": "",
           "values": false
         },
         "text": {},
         "textMode": "auto"
       },
-      "pluginVersion": "7.4.3",
+      "pluginVersion": "6.7.6",
       "targets": [
         {
           "expr": "increase(router_transfer_volume[24h])",
@@ -621,6 +817,7 @@
       "type": "stat"
     },
     {
+      "columns": [],
       "datasource": "Prometheus",
       "fieldConfig": {
         "defaults": {
@@ -648,6 +845,7 @@
         },
         "overrides": []
       },
+      "fontSize": "100%",
       "gridPos": {
         "h": 8,
         "w": 10,
@@ -658,7 +856,37 @@
       "options": {
         "showHeader": true
       },
+      "pageSize": null,
       "pluginVersion": "7.4.3",
+      "showHeader": true,
+      "sort": {
+        "col": 0,
+        "desc": true
+      },
+      "styles": [
+        {
+          "alias": "Time",
+          "align": "auto",
+          "dateFormat": "YYYY-MM-DD HH:mm:ss",
+          "pattern": "Time",
+          "type": "date"
+        },
+        {
+          "alias": "",
+          "align": "right",
+          "colorMode": null,
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)"
+          ],
+          "decimals": 2,
+          "pattern": "/.*/",
+          "thresholds": [],
+          "type": "number",
+          "unit": "short"
+        }
+      ],
       "targets": [
         {
           "expr": "sum by (chainId) (router_gas_consumed)",
@@ -671,6 +899,7 @@
         }
       ],
       "title": "Gas Consumed",
+      "transform": "table",
       "transformations": [
         {
           "id": "organize",
@@ -723,7 +952,8 @@
       "linewidth": 1,
       "nullPointMode": "null",
       "options": {
-        "alertThreshold": true
+        "alertThreshold": true,
+        "dataLinks": []
       },
       "percentage": false,
       "pluginVersion": "7.4.3",
@@ -792,7 +1022,7 @@
     }
   ],
   "refresh": false,
-  "schemaVersion": 27,
+  "schemaVersion": 22,
   "style": "dark",
   "tags": [],
   "templating": {
@@ -802,9 +1032,25 @@
     "from": "now-24h",
     "to": "now"
   },
-  "timepicker": {},
+  "timepicker": {
+    "refresh_intervals": [
+      "5s",
+      "10s",
+      "30s",
+      "1m",
+      "5m",
+      "15m",
+      "30m",
+      "1h",
+      "2h",
+      "1d"
+    ]
+  },
   "timezone": "",
   "title": "Router Main",
   "uid": "Oe5I2JcGk",
-  "version": 4
+  "variables": {
+    "list": []
+  },
+  "version": 5
 }
