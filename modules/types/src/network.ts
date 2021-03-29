@@ -1,4 +1,4 @@
-import { JsonRpcProvider, FallbackProvider } from "@ethersproject/providers";
+import { JsonRpcProvider, FallbackProvider, BaseProvider } from "@ethersproject/providers";
 
 export type ChainProviders = {
   [chainId: number]: string[]
@@ -8,15 +8,11 @@ export type HydratedProviders = {
   [chainId: number]: ChainProvider;
 };
 
-interface Blah extends JsonRpcProvider {
-
-}
-
 /* Represents an aggregate of providers for a particular chain. Leverages functionality from
 *  @ethersproject/providers/FallbackProvider in order to fallback to other providers in the
 *  event of failed requests.
 */
-export class ChainProvider {
+export class ChainProvider extends BaseProvider {
     readonly chainId: number;
     readonly providerUrls: string[];
     readonly _provider: JsonRpcProvider | FallbackProvider;
@@ -24,8 +20,9 @@ export class ChainProvider {
     constructor(chainId: number, providers: string[] | JsonRpcProvider[], stallTimeout?: number) {
       // We'll collect all the provider URLs as we hydrate each provider.
       var providerUrls: string[] = [];
+      var provider: JsonRpcProvider | FallbackProvider;
       if (providers.length > 1) {
-        this._provider = new FallbackProvider(
+        provider = new FallbackProvider(
           // Map the provider URLs into JsonRpcProviders 
           providers.map((provider: string | JsonRpcProvider, priority: number) => {
             const hydratedProvider = (typeof(provider) === "string") ? new JsonRpcProvider(provider, chainId) : provider;
@@ -49,18 +46,44 @@ export class ChainProvider {
           1
         );
       } else if (providers.length === 1) {
-        const provider = providers[0];
-        this._provider = (typeof(provider) === "string") ? new JsonRpcProvider(provider, chainId) : provider;
+        const singleProvider = providers[0];
+        provider = (typeof(singleProvider) === "string") ? new JsonRpcProvider(singleProvider, chainId) : singleProvider;
       } else {
         throw new Error("At least one provider must be defined.")
       }
+      super(provider.getNetwork())
 
+      this._provider = provider;
       this.chainId = chainId;
       this.providerUrls = providerUrls;
+
+      for (var member in BaseProvider) {
+        if (typeof BaseProvider[member] === "function") {
+          // if (T.hasOwnProperty(member)) {
+          this[member] = this._provider[member];
+          // }
+        }
+      }
     }
 
-    // send(method: string, params: { [name: string]: any }): Promise<any> {
-      // return this.perform(method, params);
-    // }
+    send(method: string, params: any[]): Promise<any> {
+      if (this._provider instanceof JsonRpcProvider) {
+        return (this._provider as JsonRpcProvider).send(method, params);
+      } else {
+        // return (this._provider as FallbackProvider).perform(method, params);
+        const providers = (this._provider as FallbackProvider).providerConfigs.map(p => p.provider);
+        return new Promise((resolve, reject) => {
+          var errors: any[] = [];
+          for (let i = 0; i < providers.length; i++) {
+            try {
+              resolve((providers[i] as JsonRpcProvider).send(method, params));
+            } catch (e) {
+              errors.push(e);
+            }
+          }
+          reject(errors);
+        });
+      }
+    }
 
 }
