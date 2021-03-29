@@ -93,9 +93,13 @@ export default class ConnextManager {
     let _messagingUrl = messagingUrl ?? config.messagingUrl;
     let _authUrl = authUrl ?? config.authUrl;
     let _natsUrl = natsUrl ?? config.natsUrl;
+
+    // convert to use messaging cluster
     if (_messagingUrl === "https://messaging.connext.network") {
+      console.warn("Using deprecated messaging URL, converting to new URL");
       _authUrl = "https://messaging.connext.network";
-      _natsUrl = "nats1.connext.provide.network:4222,nats2.connext.provide.network:4222,nats3.connext.provide.network:4222";
+      _natsUrl ="websocket.connext.provide.network";
+      _messagingUrl = undefined;
     }
 
     this.browserNode = await BrowserNode.connect({
