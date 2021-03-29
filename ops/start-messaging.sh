@@ -121,7 +121,8 @@ then
   public_url="https://$domain_name/ping"
   proxy_ports="ports:
       - '80:80'
-      - '443:443'"
+      - '443:443'
+      - '4222:4222'"
   echo "${stack}_proxy will be exposed on *:80 and *:443"
 
 else
