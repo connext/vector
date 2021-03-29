@@ -9,6 +9,7 @@ import {
   WithdrawalCreatedPayload,
   WithdrawalReconciledPayload,
   WithdrawalResolvedPayload,
+  ChannelDisputedPayload,
 } from "@connext/vector-types";
 
 import { env } from "../utils";
@@ -20,6 +21,7 @@ const depositReconciledPath = "/deposit-reconciled";
 const withdrawalCreatedPath = "/withdrawal-created";
 const withdrawalResolvedPath = "/withdrawal-resolved";
 const withdrawalReconciledPath = "/withdrawal-reconciled";
+const channelDisputedPath = "/channel-disputed";
 export const carolEvts = {
   [EngineEvents.IS_ALIVE]: {},
   [EngineEvents.SETUP]: {},
@@ -52,7 +54,10 @@ export const carolEvts = {
   [ChainServiceEvents.TRANSACTION_SUBMITTED]: {},
   [ChainServiceEvents.TRANSACTION_MINED]: {},
   [ChainServiceEvents.TRANSACTION_FAILED]: {},
-  [EngineEvents.CHANNEL_DISPUTED]: {},
+  [EngineEvents.CHANNEL_DISPUTED]: {
+    evt: Evt.create<ChannelDisputedPayload & { publicIdentifier: string }>(),
+    url: `${serverBase}${channelDisputedPath}-carol`,
+  },
   [EngineEvents.CHANNEL_DEFUNDED]: {},
   [EngineEvents.TRANSFER_DISPUTED]: {},
   [EngineEvents.TRANSFER_DEFUNDED]: {},
@@ -90,7 +95,10 @@ export const daveEvts = {
   [ChainServiceEvents.TRANSACTION_SUBMITTED]: {},
   [ChainServiceEvents.TRANSACTION_MINED]: {},
   [ChainServiceEvents.TRANSACTION_FAILED]: {},
-  [EngineEvents.CHANNEL_DISPUTED]: {},
+  [EngineEvents.CHANNEL_DISPUTED]: {
+    evt: Evt.create<ChannelDisputedPayload & { publicIdentifier: string }>(),
+    url: `${serverBase}${channelDisputedPath}-dave`,
+  },
   [EngineEvents.CHANNEL_DEFUNDED]: {},
   [EngineEvents.TRANSFER_DISPUTED]: {},
   [EngineEvents.TRANSFER_DEFUNDED]: {},
@@ -132,6 +140,13 @@ server.post(`${withdrawalReconciledPath}-carol`, async (request, response) => {
   return response.status(200).send({ message: "success" });
 });
 
+server.post(`${channelDisputedPath}-carol`, async (request, response) => {
+  carolEvts[EngineEvents.CHANNEL_DISPUTED].evt.post(
+    request.body as ChannelDisputedPayload & { publicIdentifier: string },
+  );
+  return response.status(200).send({ message: "success" });
+});
+
 server.post(`${conditionalTransferCreatedPath}-dave`, async (request, response) => {
   daveEvts[EngineEvents.CONDITIONAL_TRANSFER_CREATED].evt.post(request.body as ConditionalTransferCreatedPayload);
   return response.status(200).send({ message: "success" });
@@ -159,6 +174,13 @@ server.post(`${withdrawalResolvedPath}-dave`, async (request, response) => {
 
 server.post(`${withdrawalReconciledPath}-dave`, async (request, response) => {
   daveEvts[EngineEvents.WITHDRAWAL_RECONCILED].evt.post(request.body as WithdrawalReconciledPayload);
+  return response.status(200).send({ message: "success" });
+});
+
+server.post(`${channelDisputedPath}-dave`, async (request, response) => {
+  daveEvts[EngineEvents.CHANNEL_DISPUTED].evt.post(
+    request.body as ChannelDisputedPayload & { publicIdentifier: string },
+  );
   return response.status(200).send({ message: "success" });
 });
 

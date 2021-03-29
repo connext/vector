@@ -45,10 +45,10 @@ export const getEngineEvtContainer = (): EngineEvtContainer => {
     >(),
     [ChainServiceEvents.TRANSACTION_MINED]: Evt.create<TransactionMinedPayload & { publicIdentifier: string }>(),
     [ChainServiceEvents.TRANSACTION_FAILED]: Evt.create<TransactionFailedPayload & { publicIdentifier: string }>(),
-    [ChainServiceEvents.CHANNEL_DISPUTED]: Evt.create<ChannelDisputedPayload>(),
-    [ChainServiceEvents.CHANNEL_DEFUNDED]: Evt.create<ChannelDefundedPayload>(),
-    [ChainServiceEvents.TRANSFER_DISPUTED]: Evt.create<TransferDisputedPayload>(),
-    [ChainServiceEvents.TRANSFER_DEFUNDED]: Evt.create<TransferDefundedPayload>(),
+    [ChainServiceEvents.CHANNEL_DISPUTED]: Evt.create<ChannelDisputedPayload & { publicIdentifier: string }>(),
+    [ChainServiceEvents.CHANNEL_DEFUNDED]: Evt.create<ChannelDefundedPayload & { publicIdentifier: string }>(),
+    [ChainServiceEvents.TRANSFER_DISPUTED]: Evt.create<TransferDisputedPayload & { publicIdentifier: string }>(),
+    [ChainServiceEvents.TRANSFER_DEFUNDED]: Evt.create<TransferDefundedPayload & { publicIdentifier: string }>(),
   };
 };
 

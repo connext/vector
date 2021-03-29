@@ -430,6 +430,22 @@ export async function setupEngineListeners(
   chainService.on(EngineEvents.TRANSACTION_FAILED, (data) => {
     evts[EngineEvents.TRANSACTION_FAILED].post({ ...data, publicIdentifier: signer.publicIdentifier });
   });
+
+  chainService.on(EngineEvents.CHANNEL_DISPUTED, (data) => {
+    evts[EngineEvents.CHANNEL_DISPUTED].post({ ...data, publicIdentifier: signer.publicIdentifier });
+  });
+
+  chainService.on(EngineEvents.CHANNEL_DEFUNDED, (data) => {
+    evts[EngineEvents.CHANNEL_DEFUNDED].post({ ...data, publicIdentifier: signer.publicIdentifier });
+  });
+
+  chainService.on(EngineEvents.TRANSFER_DISPUTED, (data) => {
+    evts[EngineEvents.TRANSFER_DISPUTED].post({ ...data, publicIdentifier: signer.publicIdentifier });
+  });
+
+  chainService.on(EngineEvents.TRANSFER_DEFUNDED, (data) => {
+    evts[EngineEvents.TRANSFER_DEFUNDED].post({ ...data, publicIdentifier: signer.publicIdentifier });
+  });
 }
 
 export async function getWithdrawalQuote(
@@ -488,7 +504,9 @@ export async function getWithdrawalQuote(
   }
 
   const gasEstimate =
-    code.getValue() !== "0x" ? SIMPLE_WITHDRAWAL_GAS_ESTIMATE : SIMPLE_WITHDRAWAL_GAS_ESTIMATE.add(GAS_ESTIMATES.createChannel);
+    code.getValue() !== "0x"
+      ? SIMPLE_WITHDRAWAL_GAS_ESTIMATE
+      : SIMPLE_WITHDRAWAL_GAS_ESTIMATE.add(GAS_ESTIMATES.createChannel);
 
   // Get the gas price
   const gasPrice = await chainService.getGasPrice(channel.networkContext.chainId);
@@ -783,7 +801,7 @@ async function handleConditionalTransferResolution(
   };
   evts[EngineEvents.CONDITIONAL_TRANSFER_RESOLVED].post(payload);
 }
-
+``;
 async function handleWithdrawalTransferCreation(
   event: ChannelUpdateEvent,
   signer: IChannelSigner,

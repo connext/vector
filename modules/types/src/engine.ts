@@ -145,6 +145,18 @@ export interface EngineEventMap extends ChainServiceEventMap {
   [ChainServiceEvents.TRANSACTION_FAILED]: ChainServiceEventMap[typeof ChainServiceEvents.TRANSACTION_FAILED] & {
     publicIdentifier: string;
   };
+  [ChainServiceEvents.CHANNEL_DISPUTED]: ChainServiceEventMap[typeof ChainServiceEvents.CHANNEL_DISPUTED] & {
+    publicIdentifier: string;
+  };
+  [ChainServiceEvents.CHANNEL_DEFUNDED]: ChainServiceEventMap[typeof ChainServiceEvents.CHANNEL_DEFUNDED] & {
+    publicIdentifier: string;
+  };
+  [ChainServiceEvents.TRANSFER_DISPUTED]: ChainServiceEventMap[typeof ChainServiceEvents.TRANSFER_DISPUTED] & {
+    publicIdentifier: string;
+  };
+  [ChainServiceEvents.TRANSFER_DEFUNDED]: ChainServiceEventMap[typeof ChainServiceEvents.TRANSFER_DEFUNDED] & {
+    publicIdentifier: string;
+  };
 }
 
 ///////////////////////////////////
