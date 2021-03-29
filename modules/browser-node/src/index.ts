@@ -83,7 +83,14 @@ export class BrowserNode implements INodeService {
     const node = new BrowserNode({ logger: config.logger, chainProviders: config.chainProviders });
     // TODO: validate schema GH issue #429
     config.logger.info(
-      { method: "connect", publicIdentifier: config.signer.publicIdentifier, signerAddress: config.signer.address },
+      {
+        method: "connect",
+        publicIdentifier: config.signer.publicIdentifier,
+        signerAddress: config.signer.address,
+        messagingUrl: config.messagingUrl,
+        natsUrl: config.natsUrl,
+        authUrl: config.authUrl,
+      },
       "Connecting with provided signer",
     );
     const chainJsonProviders = hydrateProviders(config.chainProviders!);
