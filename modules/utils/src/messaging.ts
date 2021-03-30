@@ -63,6 +63,11 @@ export class NatsBasicMessagingService implements IBasicMessaging {
     // Either messagingUrl or authUrl+natsUrl must be specified
     if (config.messagingUrl) {
       this.authUrl = config.messagingUrl;
+      // backwards compatible config for new cluster
+      if (config.messagingUrl === "https://messaging.connext.network") {
+        config.authUrl = NATS_AUTH_URL;
+        config.natsUrl = isNode() ? NATS_CLUSTER_URL : NATS_WS_URL;
+      }
       if (isNode()) {
         this.natsUrl = `nats://${
           // Remove protocol prefix and port+path suffix
