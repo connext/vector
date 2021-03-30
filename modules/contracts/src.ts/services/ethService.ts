@@ -173,7 +173,11 @@ export class EthereumChainService extends EthereumChainReader implements IVector
       TransactionReason.defundChannel,
       () => {
         const channel = new Contract(channelState.channelAddress, VectorChannel.abi, signer);
-        return channel.defundChannel(channelState, assetsToDefund, indices);
+        return channel.defundChannel(
+          channelState,
+          assetsToDefund,
+          indices.length > 0 ? indices : assetsToDefund.map((_asset, idx) => idx),
+        );
       },
     ) as Promise<Result<TransactionResponseWithResult, ChainError>>;
   }
