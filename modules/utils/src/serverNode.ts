@@ -189,6 +189,12 @@ export class RestServerNodeService implements INodeService {
     return this.executeHttpRequest(`send-defund-transfer-tx`, "post", params, NodeParams.SendDefundTransferTxSchema);
   }
 
+  sendExitChannelTx(
+    params: OptionalPublicIdentifier<NodeParams.SendExitChannelTx>,
+  ): Promise<Result<NodeResponses.SendExitChannelTx, ServerNodeServiceError>> {
+    return this.executeHttpRequest(`send-exit-channel-tx`, "post", params, NodeParams.SendExitChannelTxSchema);
+  }
+
   async createNode(params: NodeParams.CreateNode): Promise<Result<NodeResponses.CreateNode, ServerNodeServiceError>> {
     const res = await this.executeHttpRequest<NodeResponses.CreateNode>(
       `node`,

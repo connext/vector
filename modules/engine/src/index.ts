@@ -27,6 +27,7 @@ import {
   jsonifyError,
   MinimalTransaction,
   WITHDRAWAL_RESOLVED_EVENT,
+  VectorErrorJson,
 } from "@connext/vector-types";
 import {
   generateMerkleTreeData,
@@ -1264,6 +1265,29 @@ export class VectorEngine implements IVectorEngine {
   }
 
   // DISPUTE METHODS
+  private async getDispute(
+    params: EngineParams.GetChannelDispute,
+  ): Promise<Result<ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_getDispute], EngineError>> {
+    const validate = ajv.compile(EngineParams.GetChannelDisputeSchema);
+    const valid = validate(params);
+    if (!valid) {
+      return Result.fail(
+        new RpcError(RpcError.reasons.InvalidParams, "", this.publicIdentifier, {
+          invalidParamsError: validate.errors?.map((e) => e.message).join(","),
+          invalidParams: params,
+        }),
+      );
+    }
+    try {
+      const dispute = await this.store.getChannelDispute(params.channelAddress);
+      return Result.ok(dispute);
+    } catch (e) {
+      return Result.fail(
+        new RpcError(RpcError.reasons.StoreMethodFailed, params.channelAddress, this.publicIdentifier, { params }),
+      );
+    }
+  }
+
   private async dispute(
     params: EngineParams.DisputeChannel,
   ): Promise<Result<ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_dispute], EngineError>> {
@@ -1329,6 +1353,27 @@ export class VectorEngine implements IVectorEngine {
     }
 
     return Result.ok({ transactionHash: disputeRes.getValue().hash });
+  }
+
+  private async getTransferDispute(
+    params: EngineParams.GetTransferDispute,
+  ): Promise<Result<ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_getTransferDispute], EngineError>> {
+    const validate = ajv.compile(EngineParams.DisputeTransferSchema);
+    const valid = validate(params);
+    if (!valid) {
+      return Result.fail(
+        new RpcError(RpcError.reasons.InvalidParams, "", this.publicIdentifier, {
+          invalidParamsError: validate.errors?.map((e) => e.message).join(","),
+          invalidParams: params,
+        }),
+      );
+    }
+    try {
+      const dispute = await this.store.getTransferDispute(params.transferId);
+      return Result.ok(dispute);
+    } catch (e) {
+      return Result.fail(new RpcError(RpcError.reasons.StoreMethodFailed, "", this.publicIdentifier, { params }));
+    }
   }
 
   private async disputeTransfer(
@@ -1409,6 +1454,57 @@ export class VectorEngine implements IVectorEngine {
       return Result.fail(defundRes.getError()!);
     }
     return Result.ok({ transactionHash: defundRes.getValue().hash });
+  }
+
+  private async exit(
+    params: EngineParams.ExitChannel,
+  ): Promise<Result<ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_exit], EngineError>> {
+    const validate = ajv.compile(EngineParams.ExitChannelSchema);
+    const valid = validate(params);
+    if (!valid) {
+      return Result.fail(
+        new RpcError(RpcError.reasons.InvalidParams, "", this.publicIdentifier, {
+          invalidParamsError: validate.errors?.map((e) => e.message).join(","),
+          invalidParams: params,
+        }),
+      );
+    }
+
+    const channel = await this.getChannelState({ channelAddress: params.channelAddress });
+    if (channel.isError) {
+      return Result.fail(channel.getError()!);
+    }
+    const state = channel.getValue();
+    if (!state) {
+      return Result.fail(
+        new DisputeError(DisputeError.reasons.ChannelNotFound, params.channelAddress, this.publicIdentifier),
+      );
+    }
+    if (!state.inDispute) {
+      return Result.fail(
+        new DisputeError(DisputeError.reasons.ChannelNotInDispute, params.channelAddress, this.publicIdentifier),
+      );
+    }
+
+    const results: { assetId: string; transactionHash?: string; error?: VectorErrorJson }[] = [];
+    const recipient = params.recipient ?? this.signerAddress;
+    const owner = params.owner ?? this.signerAddress;
+    for (const assetId of params.assetIds) {
+      const result = await this.chainService.sendExitChannelTx(
+        state.channelAddress,
+        state.networkContext.chainId,
+        assetId,
+        owner,
+        recipient,
+      );
+      results.push({
+        assetId,
+        transactionHash: result.isError ? undefined : result.getValue().hash,
+        error: result.isError ? jsonifyError(result.getError()!) : undefined,
+      });
+    }
+
+    return Result.ok(results);
   }
 
   // JSON RPC interface -- this will accept:

@@ -87,6 +87,7 @@ export const TransactionReason = {
   depositB: "depositB",
   deploy: "deploy",
   deployWithDepositAlice: "deployWithDepositAlice",
+  exitChannel: "exitChannel",
   transferTokens: "transferTokens",
   withdraw: "withdraw",
 } as const;

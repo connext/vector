@@ -17,6 +17,8 @@ import {
   FullChannelState,
   DEFAULT_CHANNEL_TIMEOUT,
   GetTransfersFilterOpts,
+  TransferDispute,
+  ChannelDispute,
 } from "@connext/vector-types";
 import { constructRpcRequest, hydrateProviders, NatsMessagingService } from "@connext/vector-utils";
 import pino, { BaseLogger } from "pino";
@@ -568,13 +570,13 @@ export class BrowserNode implements INodeService {
   async getChannelDispute(
     params: OptionalPublicIdentifier<NodeParams.GetChannelDispute>,
   ): Promise<Result<NodeResponses.GetChannelDispute, BrowserNodeError>> {
-    // TODO: Implement method!
-    return Result.fail(
-      new BrowserNodeError(BrowserNodeError.reasons.MethodNotImplemented, this.publicIdentifier, {
-        params,
-        method: "getChannelDispute",
-      }),
-    );
+    const rpc = constructRpcRequest(ChannelRpcMethods.chan_getDispute, params);
+    try {
+      const res = (await this.channelProvider!.send(rpc)) as ChannelDispute | undefined;
+      return Result.ok(res);
+    } catch (e) {
+      return Result.fail(e);
+    }
   }
 
   async sendDisputeChannelTx(
@@ -604,13 +606,13 @@ export class BrowserNode implements INodeService {
   async getTransferDispute(
     params: OptionalPublicIdentifier<NodeParams.GetTransferDispute>,
   ): Promise<Result<NodeResponses.GetTransferDispute, BrowserNodeError>> {
-    // TODO: Implement method!
-    return Result.fail(
-      new BrowserNodeError(BrowserNodeError.reasons.MethodNotImplemented, this.publicIdentifier, {
-        params,
-        method: "getTransferDispute",
-      }),
-    );
+    const rpc = constructRpcRequest(ChannelRpcMethods.chan_getTransferDispute, params);
+    try {
+      const res = (await this.channelProvider!.send(rpc)) as TransferDispute | undefined;
+      return Result.ok(res);
+    } catch (e) {
+      return Result.fail(e);
+    }
   }
 
   async sendDisputeTransferTx(
@@ -632,6 +634,18 @@ export class BrowserNode implements INodeService {
     try {
       const res = await this.channelProvider!.send(rpc);
       return Result.ok({ transactionHash: res.transactionHash });
+    } catch (e) {
+      return Result.fail(e);
+    }
+  }
+
+  async sendExitChannelTx(
+    params: OptionalPublicIdentifier<NodeParams.SendExitChannelTx>,
+  ): Promise<Result<NodeResponses.SendExitChannelTx, BrowserNodeError>> {
+    const rpc = constructRpcRequest(ChannelRpcMethods.chan_exit, params);
+    try {
+      const res = (await this.channelProvider!.send(rpc)) as NodeResponses.SendExitChannelTx;
+      return Result.ok(res);
     } catch (e) {
       return Result.fail(e);
     }

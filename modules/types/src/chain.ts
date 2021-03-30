@@ -261,6 +261,13 @@ export interface IVectorChainService extends IVectorChainReader {
     activeTransfers: FullTransferState[],
   ): Promise<Result<TransactionResponseWithResult, ChainError>>;
   sendDefundTransferTx(transferState: FullTransferState): Promise<Result<TransactionResponseWithResult, ChainError>>;
+  sendExitChannelTx(
+    channelAddress: string,
+    chainId: number,
+    assetId: string,
+    owner: string,
+    recipient: string,
+  ): Promise<Result<TransactionResponseWithResult, ChainError>>;
 
   // Event methods
   on<T extends ChainServiceEvent>(

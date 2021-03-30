@@ -1,5 +1,7 @@
 import { MinimalTransaction } from "./chain";
 import { FullTransferState, FullChannelState, ChainAddresses } from "./channel";
+import { ChannelDispute, TransferDispute } from "./dispute";
+import { VectorErrorJson } from "./error";
 import { ChainProviders } from "./network";
 import { EngineParams, NodeResponses } from "./schemas";
 import { RegisteredTransfer } from "./transferDefinitions";
@@ -36,8 +38,11 @@ export const ChannelRpcMethods = {
   connext_authenticate: "connext_authenticate",
   chan_dispute: "chan_dispute",
   chan_defund: "chan_defund",
+  chan_getDispute: "chan_getDispute",
   chan_disputeTransfer: "chan_disputeTransfer",
   chan_defundTransfer: "chan_defundTransfer",
+  chan_getTransferDispute: "chan_getTransferDispute",
+  chan_exit: "chan_exit",
   chan_decrypt: "chan_decrypt",
   chan_subscription: "chan_subscription",
 } as const;
@@ -81,8 +86,11 @@ export type ChannelRpcMethodsPayloadMap = {
   };
   [ChannelRpcMethods.chan_dispute]: EngineParams.DisputeChannel;
   [ChannelRpcMethods.chan_defund]: EngineParams.DefundChannel;
+  [ChannelRpcMethods.chan_getDispute]: EngineParams.GetChannelDispute;
   [ChannelRpcMethods.chan_disputeTransfer]: EngineParams.DisputeTransfer;
   [ChannelRpcMethods.chan_defundTransfer]: EngineParams.DefundTransfer;
+  [ChannelRpcMethods.chan_getTransferDispute]: EngineParams.GetTransferDispute;
+  [ChannelRpcMethods.chan_exit]: EngineParams.ExitChannel;
   [ChannelRpcMethods.chan_decrypt]: string;
   [ChannelRpcMethods.chan_subscription]: {
     subscription: string;
@@ -129,8 +137,11 @@ export type ChannelRpcMethodsResponsesMap = {
   };
   [ChannelRpcMethods.chan_dispute]: { transactionHash: string };
   [ChannelRpcMethods.chan_defund]: { transactionHash: string };
+  [ChannelRpcMethods.chan_getDispute]: ChannelDispute | undefined;
   [ChannelRpcMethods.chan_disputeTransfer]: { transactionHash: string };
   [ChannelRpcMethods.chan_defundTransfer]: { transactionHash: string };
+  [ChannelRpcMethods.chan_getTransferDispute]: TransferDispute | undefined;
+  [ChannelRpcMethods.chan_exit]: { assetId: string; transactionHash?: string; error?: VectorErrorJson }[];
   [ChannelRpcMethods.chan_decrypt]: string;
   [ChannelRpcMethods.chan_subscription]: any;
 };

@@ -246,6 +246,25 @@ export class EthereumChainService extends EthereumChainReader implements IVector
     ) as Promise<Result<TransactionResponseWithResult, ChainError>>;
   }
 
+  public async sendExitChannelTx(
+    channelAddress: string,
+    chainId: number,
+    assetId: string,
+    owner: string,
+    recipient: string,
+  ): Promise<Result<TransactionResponseWithResult, ChainError>> {
+    const signer = this.signers.get(chainId);
+    if (!signer?._isSigner) {
+      return Result.fail(new ChainError(ChainError.reasons.SignerNotFound));
+    }
+    this.log.info({ channelAddress, chainId, assetId, owner, recipient }, "Defunding channel");
+
+    return this.sendTxWithRetries(channelAddress, chainId, TransactionReason.exitChannel, () => {
+      const channel = new Contract(channelAddress, VectorChannel.abi, signer);
+      return channel.exit(assetId, owner, recipient);
+    }) as Promise<Result<TransactionResponseWithResult, ChainError>>;
+  }
+
   public async sendDeployChannelTx(
     channelState: FullChannelState,
     gasPrice: BigNumber,

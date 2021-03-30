@@ -108,6 +108,16 @@ export interface INodeService {
     params: OptionalPublicIdentifier<NodeParams.SendIsAlive>,
   ): Promise<Result<NodeResponses.SendIsAlive, NodeError>>;
 
+  withdraw(params: OptionalPublicIdentifier<NodeParams.Withdraw>): Promise<Result<NodeResponses.Withdraw, NodeError>>;
+
+  getWithdrawalQuote(
+    params: OptionalPublicIdentifier<NodeParams.WithdrawalQuote>,
+  ): Promise<Result<NodeResponses.WithdrawalQuote, NodeError>>;
+
+  restoreState(
+    params: OptionalPublicIdentifier<NodeParams.RestoreState>,
+  ): Promise<Result<NodeResponses.RestoreState, NodeError>>;
+
   // Dispute methods
   getChannelDispute(
     params: OptionalPublicIdentifier<NodeParams.GetChannelDispute>,
@@ -133,15 +143,9 @@ export interface INodeService {
     params: OptionalPublicIdentifier<NodeParams.SendDefundTransferTx>,
   ): Promise<Result<NodeResponses.SendDefundTransferTx, NodeError>>;
 
-  withdraw(params: OptionalPublicIdentifier<NodeParams.Withdraw>): Promise<Result<NodeResponses.Withdraw, NodeError>>;
-
-  getWithdrawalQuote(
-    params: OptionalPublicIdentifier<NodeParams.WithdrawalQuote>,
-  ): Promise<Result<NodeResponses.WithdrawalQuote, NodeError>>;
-
-  restoreState(
-    params: OptionalPublicIdentifier<NodeParams.RestoreState>,
-  ): Promise<Result<NodeResponses.RestoreState, NodeError>>;
+  sendExitChannelTx(
+    params: OptionalPublicIdentifier<NodeParams.SendExitChannelTx>,
+  ): Promise<Result<NodeResponses.SendExitChannelTx, NodeError>>;
 
   once<T extends EngineEvent>(
     event: T,
