@@ -21,7 +21,7 @@ jobs:
 
   ssh:
     env:
-      MESSAGING_DOMAINNAME: messaging.connext.network
+      MESSAGING_DOMAINNAME: oldmessaging.connext.network
       TESTNET_DOMAINNAME: testnet-vector.connext.network
     runs-on: ubuntu-20.04
     steps:
