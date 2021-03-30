@@ -2,10 +2,14 @@
   Warnings:
 
   - You are about to drop the column `inDispute` on the `channel` table. All the data in the column will be lost.
+  - You are about to drop the column `inDispute` on the `transfer` table. All the data in the column will be lost.
 
 */
 -- AlterTable
 ALTER TABLE "channel" DROP COLUMN "inDispute";
+
+-- AlterTable
+ALTER TABLE "transfer" DROP COLUMN "inDispute";
 
 -- CreateTable
 CREATE TABLE "ChannelDispute" (

@@ -143,7 +143,6 @@ model Update {
 model Transfer {
   transferId   String   @id
   routingId    String
-  inDispute    Boolean
   channelNonce Int
   createdAt    DateTime @default(now())
 

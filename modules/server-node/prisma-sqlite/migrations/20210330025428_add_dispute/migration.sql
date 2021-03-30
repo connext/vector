@@ -2,6 +2,7 @@
   Warnings:
 
   - You are about to drop the column `inDispute` on the `channel` table. All the data in the column will be lost.
+  - You are about to drop the column `inDispute` on the `transfer` table. All the data in the column will be lost.
 
 */
 -- CreateTable
@@ -52,6 +53,35 @@ DROP TABLE "channel";
 ALTER TABLE "new_channel" RENAME TO "channel";
 CREATE UNIQUE INDEX "channel.publicIdentifierA_publicIdentifierB_chainId_unique" ON "channel"("publicIdentifierA", "publicIdentifierB", "chainId");
 CREATE UNIQUE INDEX "channel.participantA_participantB_chainId_unique" ON "channel"("participantA", "participantB", "chainId");
+CREATE TABLE "new_transfer" (
+    "transferId" TEXT NOT NULL PRIMARY KEY,
+    "routingId" TEXT NOT NULL,
+    "channelNonce" INTEGER NOT NULL,
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "onchainTransactionId" TEXT,
+    "transactionHash" TEXT,
+    "amountA" TEXT NOT NULL,
+    "amountB" TEXT NOT NULL,
+    "toA" TEXT NOT NULL,
+    "toB" TEXT NOT NULL,
+    "initialStateHash" TEXT NOT NULL,
+    "channelAddress" TEXT,
+    "channelAddressId" TEXT NOT NULL,
+    "createUpdateChannelAddressId" TEXT,
+    "createUpdateNonce" INTEGER,
+    "resolveUpdateChannelAddressId" TEXT,
+    "resolveUpdateNonce" INTEGER,
+    FOREIGN KEY ("createUpdateChannelAddressId", "createUpdateNonce") REFERENCES "update" ("channelAddressId", "nonce") ON DELETE SET NULL ON UPDATE CASCADE,
+    FOREIGN KEY ("resolveUpdateChannelAddressId", "resolveUpdateNonce") REFERENCES "update" ("channelAddressId", "nonce") ON DELETE SET NULL ON UPDATE CASCADE,
+    FOREIGN KEY ("transactionHash") REFERENCES "onchain_transaction" ("transactionHash") ON DELETE SET NULL ON UPDATE CASCADE,
+    FOREIGN KEY ("channelAddress") REFERENCES "channel" ("channelAddress") ON DELETE SET NULL ON UPDATE CASCADE
+);
+INSERT INTO "new_transfer" ("transferId", "routingId", "channelNonce", "createdAt", "onchainTransactionId", "transactionHash", "amountA", "amountB", "toA", "toB", "initialStateHash", "channelAddress", "channelAddressId", "createUpdateChannelAddressId", "createUpdateNonce", "resolveUpdateChannelAddressId", "resolveUpdateNonce") SELECT "transferId", "routingId", "channelNonce", "createdAt", "onchainTransactionId", "transactionHash", "amountA", "amountB", "toA", "toB", "initialStateHash", "channelAddress", "channelAddressId", "createUpdateChannelAddressId", "createUpdateNonce", "resolveUpdateChannelAddressId", "resolveUpdateNonce" FROM "transfer";
+DROP TABLE "transfer";
+ALTER TABLE "new_transfer" RENAME TO "transfer";
+CREATE UNIQUE INDEX "transfer.routingId_channelAddressId_unique" ON "transfer"("routingId", "channelAddressId");
+CREATE UNIQUE INDEX "transfer_createUpdateChannelAddressId_createUpdateNonce_unique" ON "transfer"("createUpdateChannelAddressId", "createUpdateNonce");
+CREATE UNIQUE INDEX "transfer_resolveUpdateChannelAddressId_resolveUpdateNonce_unique" ON "transfer"("resolveUpdateChannelAddressId", "resolveUpdateNonce");
 PRAGMA foreign_key_check;
 PRAGMA foreign_keys=ON;
 
