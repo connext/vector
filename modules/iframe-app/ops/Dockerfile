@@ -1,4 +1,4 @@
-FROM node:12.16.0-alpine3.10
+FROM node:14-alpine3.10
 WORKDIR /root
 ENV HOME /root
 RUN apk add --update --no-cache bash curl g++ gcc git jq make python
