@@ -188,10 +188,15 @@ const convertChannelEntityToFullChannelState = (
 };
 
 const convertTransferEntityToFullTransferState = (
-  transfer: Transfer & { channel: Channel | null; createUpdate: Update | null; resolveUpdate: Update | null },
+  transfer: Transfer & {
+    channel: Channel | null;
+    createUpdate: Update | null;
+    resolveUpdate: Update | null;
+    disputeReference: TransferDisputeEntity | null;
+  },
 ) => {
   const fullTransfer: FullTransferState = {
-    inDispute: transfer.inDispute,
+    inDispute: !!transfer.disputeReference,
     channelFactoryAddress: transfer.channel!.channelFactoryAddress,
     assetId: transfer.createUpdate!.assetId,
     chainId: BigNumber.from(transfer.channel!.chainId).toNumber(),
@@ -486,7 +491,7 @@ export class PrismaStore implements IServerNodeStore {
           createUpdate: { transferDefinition: withdrawalDefinition },
         },
       },
-      include: { channel: true, createUpdate: true, resolveUpdate: true },
+      include: { channel: true, createUpdate: true, resolveUpdate: true, disputeReference: true },
     });
 
     for (const transfer of entities) {
@@ -606,7 +611,6 @@ export class PrismaStore implements IServerNodeStore {
     const createTransferEntity: Prisma.TransferCreateWithoutChannelInput | undefined =
       channelState.latestUpdate.type === UpdateType.create
         ? {
-            inDispute: false,
             channelAddressId: channelState.channelAddress,
             transferId: transfer!.transferId,
             routingId: transfer!.meta?.routingId ?? getRandomBytes32(),
@@ -1014,7 +1018,7 @@ export class PrismaStore implements IServerNodeStore {
   async getActiveTransfers(channelAddress: string): Promise<FullTransferState[]> {
     const transferEntities = await this.prisma.transfer.findMany({
       where: { channelAddress },
-      include: { channel: true, createUpdate: true, resolveUpdate: true },
+      include: { channel: true, createUpdate: true, resolveUpdate: true, disputeReference: true },
     });
     const transfers = transferEntities.map(convertTransferEntityToFullTransferState);
     return transfers;
@@ -1024,7 +1028,7 @@ export class PrismaStore implements IServerNodeStore {
     // should be only 1, verify this is always true
     const transfer = await this.prisma.transfer.findUnique({
       where: { transferId },
-      include: { channel: true, createUpdate: true, resolveUpdate: true },
+      include: { channel: true, createUpdate: true, resolveUpdate: true, disputeReference: true },
     });
 
     if (!transfer) {
@@ -1043,7 +1047,7 @@ export class PrismaStore implements IServerNodeStore {
   async getTransferByRoutingId(channelAddress: string, routingId: string): Promise<FullTransferState | undefined> {
     const transfer = await this.prisma.transfer.findUnique({
       where: { routingId_channelAddressId: { routingId, channelAddressId: channelAddress } },
-      include: { channel: true, createUpdate: true, resolveUpdate: true },
+      include: { channel: true, createUpdate: true, resolveUpdate: true, disputeReference: true },
     });
 
     if (!transfer) {
@@ -1092,6 +1096,7 @@ export class PrismaStore implements IServerNodeStore {
         channel: true,
         createUpdate: true,
         resolveUpdate: true,
+        disputeReference: true,
       },
     });
 
@@ -1112,6 +1117,7 @@ export class PrismaStore implements IServerNodeStore {
         channel: true,
         createUpdate: true,
         resolveUpdate: true,
+        disputeReference: true,
       },
     });
 
@@ -1133,8 +1139,174 @@ export class PrismaStore implements IServerNodeStore {
     channelDispute: ChannelDispute,
     disputedChannel?: CoreChannelState,
   ): Promise<void> {
-    // const onchainChannel = !disputedChannel ? {} : {};
-    // TODO: fix the storage of the onchain channel reference
+    const offchain = await this.prisma.channel.findUnique({ where: { channelAddress } });
+    const onchainChannelCreateEntry =
+      disputedChannel && offchain
+        ? {
+            connectOrCreate: {
+              where: { channelAddress: `${channelAddress}-dispute` },
+              create: {
+                // fields from CoreChannelState
+                channelAddress: `${channelAddress}-dispute`,
+                participantA: disputedChannel.alice,
+                participantB: disputedChannel.bob,
+                assetIds: disputedChannel.assetIds.join(","),
+                timeout: disputedChannel.timeout,
+                merkleRoot: disputedChannel.merkleRoot,
+                nonce: disputedChannel.nonce,
+                chainId: offchain.chainId,
+                balances: {
+                  create: disputedChannel!.assetIds.reduce(
+                    (create: Prisma.BalanceCreateWithoutChannelInput[], assetId: string, index: number) => {
+                      return [
+                        ...create,
+                        {
+                          amount: disputedChannel.balances[index].amount[0],
+                          participant: disputedChannel.alice,
+                          to: disputedChannel.balances[index].to[0],
+                          assetId,
+                          processedDeposit: disputedChannel.processedDepositsA[index],
+                          defundNonce: disputedChannel.defundNonces[index],
+                        },
+                        {
+                          amount: disputedChannel.balances[index].amount[1],
+                          participant: disputedChannel.bob,
+                          to: disputedChannel.balances[index].to[1],
+                          assetId,
+                          processedDeposit: disputedChannel.processedDepositsB[index],
+                          defundNonce: disputedChannel.defundNonces[index],
+                        },
+                      ];
+                    },
+                    [],
+                  ),
+                },
+                // fields from FullChannelState
+                publicIdentifierA: offchain!.publicIdentifierA,
+                publicIdentifierB: offchain!.publicIdentifierB,
+                channelFactoryAddress: offchain!.channelFactoryAddress,
+                transferRegistryAddress: offchain!.transferRegistryAddress,
+              },
+            },
+          }
+        : { connect: { channelAddress: `${channelAddress}-dispute` } };
+
+    const onchainChannelUpdateEntry =
+      disputedChannel && offchain
+        ? {
+            upsert: {
+              create: {
+                // fields from CoreChannelState
+                channelAddress: `${channelAddress}-dispute`,
+                participantA: disputedChannel!.alice,
+                participantB: disputedChannel!.bob,
+                assetIds: disputedChannel!.assetIds.join(","),
+                timeout: disputedChannel!.timeout,
+                merkleRoot: disputedChannel!.merkleRoot,
+                nonce: disputedChannel!.nonce,
+                chainId: offchain!.chainId,
+                balances: {
+                  create: disputedChannel!.assetIds.reduce(
+                    (create: Prisma.BalanceCreateWithoutChannelInput[], assetId: string, index: number) => {
+                      return [
+                        ...create,
+                        {
+                          amount: disputedChannel!.balances[index].amount[0],
+                          participant: disputedChannel!.alice,
+                          to: disputedChannel!.balances[index].to[0],
+                          assetId,
+                          processedDeposit: disputedChannel!.processedDepositsA[index],
+                          defundNonce: disputedChannel!.defundNonces[index],
+                        },
+                        {
+                          amount: disputedChannel!.balances[index].amount[1],
+                          participant: disputedChannel!.bob,
+                          to: disputedChannel!.balances[index].to[1],
+                          assetId,
+                          processedDeposit: disputedChannel!.processedDepositsB[index],
+                          defundNonce: disputedChannel!.defundNonces[index],
+                        },
+                      ];
+                    },
+                    [],
+                  ),
+                },
+                // fields from FullChannelState
+                publicIdentifierA: offchain!.publicIdentifierA,
+                publicIdentifierB: offchain!.publicIdentifierB,
+                channelFactoryAddress: offchain!.channelFactoryAddress,
+                transferRegistryAddress: offchain!.transferRegistryAddress,
+              },
+              update: {
+                // fields from CoreChannelState
+                timeout: disputedChannel!.timeout,
+                merkleRoot: disputedChannel!.merkleRoot,
+                nonce: disputedChannel!.nonce,
+                balances: {
+                  upsert: disputedChannel!.assetIds.reduce(
+                    (
+                      upsert: Prisma.BalanceUpsertWithWhereUniqueWithoutChannelInput[],
+                      assetId: string,
+                      index: number,
+                    ) => {
+                      return [
+                        ...upsert,
+                        {
+                          create: {
+                            amount: disputedChannel!.balances[index].amount[0],
+                            participant: disputedChannel!.alice,
+                            to: disputedChannel!.balances[index].to[0],
+                            processedDeposit: disputedChannel!.processedDepositsA[index],
+                            defundNonce: disputedChannel!.defundNonces[index],
+                            assetId,
+                          },
+                          update: {
+                            amount: disputedChannel!.balances[index].amount[0],
+                            to: disputedChannel!.balances[index].to[0],
+                            processedDeposit: disputedChannel!.processedDepositsA[index],
+                            defundNonce: disputedChannel!.defundNonces[index],
+                          },
+                          where: {
+                            participant_channelAddress_assetId: {
+                              participant: disputedChannel!.alice,
+                              channelAddress: `${channelAddress}-dispute`,
+                              assetId,
+                            },
+                          },
+                        },
+                        {
+                          create: {
+                            amount: disputedChannel!.balances[index].amount[1],
+                            participant: disputedChannel!.bob,
+                            to: disputedChannel!.balances[index].to[1],
+                            processedDeposit: disputedChannel!.processedDepositsB[index],
+                            defundNonce: disputedChannel!.defundNonces[index],
+                            assetId,
+                          },
+                          update: {
+                            amount: disputedChannel!.balances[index].amount[1],
+                            to: disputedChannel!.balances[index].to[1],
+                            processedDeposit: disputedChannel!.processedDepositsB[index],
+                            defundNonce: disputedChannel!.defundNonces[index],
+                          },
+                          where: {
+                            participant_channelAddress_assetId: {
+                              participant: disputedChannel!.bob,
+                              channelAddress: `${channelAddress}-dispute`,
+                              assetId,
+                            },
+                          },
+                        },
+                      ];
+                    },
+                    [],
+                  ),
+                },
+              },
+            },
+          }
+        : { connect: { channelAddress: `${channelAddress}-dispute` } };
+
     await this.prisma.channelDispute.upsert({
       where: { channelAddress },
       create: {
@@ -1145,8 +1317,7 @@ export class PrismaStore implements IServerNodeStore {
         merkleRoot: channelDispute.merkleRoot,
         nonce: channelDispute.nonce,
         offchainChannel: { connect: { channelAddress } },
-        // TODO: make `connectOrCreate`
-        // onchainChannel: { connect: { channelAddress: `${channelAddress}-dispute` } },
+        onchainChannel: { ...onchainChannelCreateEntry },
       },
       update: {
         channelStateHash: channelDispute.channelStateHash,
@@ -1154,8 +1325,7 @@ export class PrismaStore implements IServerNodeStore {
         defundExpiry: channelDispute.defundExpiry,
         merkleRoot: channelDispute.merkleRoot,
         nonce: channelDispute.nonce,
-        // TODO: update state
-        // onchainChannel: { update: {} },
+        onchainChannel: { ...onchainChannelUpdateEntry },
       },
     });
   }
@@ -1178,6 +1348,7 @@ export class PrismaStore implements IServerNodeStore {
     disputedTransfer?: CoreTransferState,
   ): Promise<void> {
     // TODO: fix the storage of the onchain transfer reference
+    const offchain = await this.prisma.transfer.findUnique({ where: { transferId } });
     await this.prisma.transferDispute.upsert({
       where: { transferId },
       create: {
@@ -1187,18 +1358,79 @@ export class PrismaStore implements IServerNodeStore {
         transferDisputeExpiry: transferDispute.transferDisputeExpiry,
         offchainTransfer: { connect: { transferId } },
         // TODO: make `connectOrCreate`
-        onchainTransfer: { connect: { transferId: `${transferId}-dispute` } },
+        onchainTransfer: {
+          connectOrCreate: {
+            where: { transferId: `${transferId}-dispute` },
+            create: {
+              // CoreTransferState fields
+              transferId: `${transferId}-dispute`,
+              channelAddressId: disputedTransfer!.channelAddress,
+              amountA: disputedTransfer!.balance.amount[0],
+              amountB: disputedTransfer!.balance.amount[1],
+              toA: disputedTransfer!.balance.to[0],
+              toB: disputedTransfer!.balance.to[1],
+              initialStateHash: disputedTransfer!.initialStateHash,
+              // TODO: make connectOrCreate
+              channel: { connect: { channelAddress: `${disputedTransfer!.channelAddress}-dispute` } },
+              // TODO: make connectOrCreate
+              createUpdate: {
+                connect: {
+                  channelAddressId_nonce: {
+                    channelAddressId: `${disputedTransfer!.channelAddress}-dispute`,
+                    nonce: offchain!.createUpdateNonce!,
+                  },
+                },
+              },
+              // FullTransferState fields
+              routingId: offchain!.routingId,
+              channelNonce: offchain!.channelNonce,
+            },
+          },
+        },
       },
       update: {
         isDefunded: transferDispute.isDefunded,
         transferId: transferDispute.transferId,
         transferStateHash: transferDispute.transferStateHash,
         transferDisputeExpiry: transferDispute.transferDisputeExpiry,
-        // TODO: update state
-        // onchainTransfer: {}
+        onchainTransfer: {
+          upsert: {
+            create: {
+              // CoreTransferState fields
+              transferId: `${transferId}-dispute`,
+              channelAddressId: disputedTransfer!.channelAddress,
+              amountA: disputedTransfer!.balance.amount[0],
+              amountB: disputedTransfer!.balance.amount[1],
+              toA: disputedTransfer!.balance.to[0],
+              toB: disputedTransfer!.balance.to[1],
+              initialStateHash: disputedTransfer!.initialStateHash,
+              // TODO: make connectOrCreate
+              channel: { connect: { channelAddress: `${disputedTransfer!.channelAddress}-dispute` } },
+              // TODO: make connectOrCreate
+              createUpdate: {
+                connect: {
+                  channelAddressId_nonce: {
+                    channelAddressId: `${disputedTransfer!.channelAddress}-dispute`,
+                    nonce: offchain!.createUpdateNonce!,
+                  },
+                },
+              },
+              // FullTransferState fields
+              routingId: offchain!.routingId,
+              channelNonce: offchain!.channelNonce,
+            },
+            update: {
+              channelAddressId: disputedTransfer!.channelAddress,
+              amountA: disputedTransfer!.balance.amount[0],
+              amountB: disputedTransfer!.balance.amount[1],
+              toA: disputedTransfer!.balance.to[0],
+              toB: disputedTransfer!.balance.to[1],
+              initialStateHash: disputedTransfer!.initialStateHash,
+            },
+          },
+        },
       },
     });
-    throw new Error("Method not implemented.");
   }
 
   async getTransferDispute(transferId: string): Promise<TransferDispute | undefined> {
