@@ -1148,8 +1148,8 @@ export class PrismaStore implements IServerNodeStore {
               create: {
                 // fields from CoreChannelState
                 channelAddress: `${channelAddress}-dispute`,
-                participantA: disputedChannel.alice,
-                participantB: disputedChannel.bob,
+                participantA: `${disputedChannel!.alice}-dispute`,
+                participantB: `${disputedChannel!.bob}-dispute`,
                 assetIds: disputedChannel.assetIds.join(","),
                 timeout: disputedChannel.timeout,
                 merkleRoot: disputedChannel.merkleRoot,
@@ -1182,8 +1182,8 @@ export class PrismaStore implements IServerNodeStore {
                   ),
                 },
                 // fields from FullChannelState
-                publicIdentifierA: offchain!.publicIdentifierA,
-                publicIdentifierB: offchain!.publicIdentifierB,
+                publicIdentifierA: `${offchain!.publicIdentifierA}-dispute`,
+                publicIdentifierB: `${offchain!.publicIdentifierB}-dispute`,
                 channelFactoryAddress: offchain!.channelFactoryAddress,
                 transferRegistryAddress: offchain!.transferRegistryAddress,
               },
@@ -1198,8 +1198,8 @@ export class PrismaStore implements IServerNodeStore {
               create: {
                 // fields from CoreChannelState
                 channelAddress: `${channelAddress}-dispute`,
-                participantA: disputedChannel!.alice,
-                participantB: disputedChannel!.bob,
+                participantA: `${disputedChannel!.alice}-dispute`,
+                participantB: `${disputedChannel!.bob}-dispute`,
                 assetIds: disputedChannel!.assetIds.join(","),
                 timeout: disputedChannel!.timeout,
                 merkleRoot: disputedChannel!.merkleRoot,
@@ -1232,8 +1232,8 @@ export class PrismaStore implements IServerNodeStore {
                   ),
                 },
                 // fields from FullChannelState
-                publicIdentifierA: offchain!.publicIdentifierA,
-                publicIdentifierB: offchain!.publicIdentifierB,
+                publicIdentifierA: `${offchain!.publicIdentifierA}-dispute`,
+                publicIdentifierB: `${offchain!.publicIdentifierB}-dispute`,
                 channelFactoryAddress: offchain!.channelFactoryAddress,
                 transferRegistryAddress: offchain!.transferRegistryAddress,
               },
@@ -1325,6 +1325,7 @@ export class PrismaStore implements IServerNodeStore {
         defundExpiry: channelDispute.defundExpiry,
         merkleRoot: channelDispute.merkleRoot,
         nonce: channelDispute.nonce,
+        offchainChannel: { connect: { channelAddress } },
         onchainChannel: { ...onchainChannelUpdateEntry },
       },
     });
