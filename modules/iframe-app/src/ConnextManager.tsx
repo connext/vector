@@ -64,8 +64,20 @@ export default class ConnextManager {
         );
       }
     }
-    let storedEntropy = localStorage.getItem("entropy");
 
+    let _messagingUrl = messagingUrl ?? config.messagingUrl;
+    let _authUrl = authUrl ?? config.authUrl;
+    let _natsUrl = natsUrl ?? config.natsUrl;
+
+    // convert to use messaging cluster
+    if (_messagingUrl === "https://messaging.connext.network") {
+      console.warn("Using deprecated messaging URL, converting to new URL");
+      _authUrl = "https://messaging.connext.network";
+      _natsUrl = "wss://websocket.connext.provide.network";
+      _messagingUrl = undefined;
+    }
+
+    let storedEntropy = localStorage.getItem("entropy");
     if (!storedEntropy) {
       storedEntropy = signature ?? hexlify(randomBytes(65));
     } else {
@@ -75,7 +87,9 @@ export default class ConnextManager {
           storedEntropy,
           chainAddresses ?? config.chainAddresses,
           chainProviders,
-          messagingUrl ?? config.messagingUrl,
+          _messagingUrl,
+          _authUrl,
+          _natsUrl,
         );
         if (ableToMigrate) {
           storedEntropy = signature;
@@ -96,18 +110,6 @@ export default class ConnextManager {
     const storedPublicIdentifier = localStorage.getItem("publicIdentifier");
     if (storedPublicIdentifier && storedPublicIdentifier !== signer.publicIdentifier) {
       console.warn("Public identifier does not match what is in storage, new store will be created");
-    }
-
-    let _messagingUrl = messagingUrl ?? config.messagingUrl;
-    let _authUrl = authUrl ?? config.authUrl;
-    let _natsUrl = natsUrl ?? config.natsUrl;
-
-    // convert to use messaging cluster
-    if (_messagingUrl === "https://messaging.connext.network") {
-      console.warn("Using deprecated messaging URL, converting to new URL");
-      _authUrl = "https://messaging.connext.network";
-      _natsUrl = "websocket.connext.provide.network";
-      _messagingUrl = undefined;
     }
 
     this.browserNode = await BrowserNode.connect({
@@ -188,6 +190,8 @@ export default class ConnextManager {
     chainAddresses: ChainAddresses,
     chainProviders: ChainProviders,
     messagingUrl?: string,
+    authUrl?: string,
+    natsUrl?: string,
   ): Promise<boolean> {
     console.warn("Checking if local storage can be migrated to deterministic key");
     const mnemonic = entropyToMnemonic(keccak256(storedEntropy));
@@ -200,8 +204,8 @@ export default class ConnextManager {
       chainProviders,
       logger: pino(),
       messagingUrl,
-      authUrl: config.authUrl,
-      natsUrl: config.natsUrl,
+      authUrl,
+      natsUrl,
     });
 
     const channelAddressesRes = await browserNode.getStateChannels();
