@@ -2,6 +2,10 @@
 
 ## Next Release
 
+## 0.2.1-beta.20
+
+- \[node\] Router config for cluster
+
 ## 0.2.1-beta.19
 
 - \[node\] Use upgraded messaging cluster
