@@ -143,6 +143,17 @@ export class RestServerNodeService implements INodeService {
     );
   }
 
+  getChannelDispute(
+    params: OptionalPublicIdentifier<NodeParams.GetChannelDispute>,
+  ): Promise<Result<NodeResponses.GetChannelDispute, ServerNodeServiceError>> {
+    return this.executeHttpRequest(
+      `${params.publicIdentifier ?? this.publicIdentifier}/channels/channel/${params.channelAddress}/dispute`,
+      "get",
+      params,
+      NodeParams.SendDefundChannelTxSchema,
+    );
+  }
+
   sendDisputeChannelTx(
     params: OptionalPublicIdentifier<NodeParams.SendDisputeChannelTx>,
   ): Promise<Result<NodeResponses.SendDisputeChannelTx, ServerNodeServiceError>> {
@@ -153,6 +164,17 @@ export class RestServerNodeService implements INodeService {
     params: OptionalPublicIdentifier<NodeParams.SendDefundChannelTx>,
   ): Promise<Result<NodeResponses.SendDefundChannelTx, ServerNodeServiceError>> {
     return this.executeHttpRequest(`send-defund-channel-tx`, "post", params, NodeParams.SendDefundChannelTxSchema);
+  }
+
+  getTransferDispute(
+    params: OptionalPublicIdentifier<NodeParams.GetTransferDispute>,
+  ): Promise<Result<NodeResponses.GetTransferDispute, ServerNodeServiceError>> {
+    return this.executeHttpRequest(
+      `${params.publicIdentifier ?? this.publicIdentifier}/transfers/transfer/${params.transferId}/dispute`,
+      "get",
+      params,
+      NodeParams.SendDefundChannelTxSchema,
+    );
   }
 
   sendDisputeTransferTx(

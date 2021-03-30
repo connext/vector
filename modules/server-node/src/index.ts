@@ -36,7 +36,12 @@ import {
 const configuredIdentifier = getPublicIdentifierFromPublicKey(Wallet.fromMnemonic(config.mnemonic).publicKey);
 export const logger = pino({ name: configuredIdentifier, level: config.logLevel ?? "info" });
 logger.info("Loaded config from environment");
-const server = fastify({ logger, pluginTimeout: 300_000, disableRequestLogging: config.logLevel !== "debug", bodyLimit: 52428800 });
+const server = fastify({
+  logger,
+  pluginTimeout: 300_000,
+  disableRequestLogging: config.logLevel !== "debug",
+  bodyLimit: 52428800,
+});
 server.register(fastifyCors, {
   origin: "*",
   methods: ["GET", "PUT", "POST", "OPTIONS"],
@@ -610,6 +615,30 @@ server.post<{ Body: NodeParams.SendDepositTx }>(
   },
 );
 
+server.get<{ Params: NodeParams.GetChannelDispute }>(
+  "/:publicIdentifier/channels/channel/:channelAddress/dispute",
+  { schema: { params: NodeParams.GetChannelDisputeSchema, response: NodeResponses.GetChannelDisputeSchema } },
+  async (request, reply) => {
+    const engine = getNode(request.params.publicIdentifier);
+    if (!engine) {
+      return reply
+        .status(400)
+        .send(
+          jsonifyError(
+            new ServerNodeError(ServerNodeError.reasons.NodeNotFound, request.params.publicIdentifier, request.params),
+          ),
+        );
+    }
+    try {
+      const res = await store.getChannelDispute(request.params.channelAddress);
+      return reply.status(200).send(res);
+    } catch (e) {
+      logger.error({ error: jsonifyError(e) });
+      return reply.status(500).send(jsonifyError(e));
+    }
+  },
+);
+
 server.post<{ Body: NodeParams.SendDisputeChannelTx }>(
   "/send-dispute-channel-tx",
   {
@@ -666,6 +695,30 @@ server.post<{ Body: NodeParams.SendDefundChannelTx }>(
 
     try {
       const res = await engine.request<typeof ChannelRpcMethods.chan_defund>(rpc);
+      return reply.status(200).send(res);
+    } catch (e) {
+      logger.error({ error: jsonifyError(e) });
+      return reply.status(500).send(jsonifyError(e));
+    }
+  },
+);
+
+server.get<{ Params: NodeParams.GetTransferDispute }>(
+  "/:publicIdentifier/transfers/transfer/:transferId/dispute",
+  { schema: { params: NodeParams.GetTransferDisputeSchema, response: NodeResponses.GetTransferDisputeSchema } },
+  async (request, reply) => {
+    const engine = getNode(request.params.publicIdentifier);
+    if (!engine) {
+      return reply
+        .status(400)
+        .send(
+          jsonifyError(
+            new ServerNodeError(ServerNodeError.reasons.NodeNotFound, request.params.publicIdentifier, request.params),
+          ),
+        );
+    }
+    try {
+      const res = await store.getTransferDispute(request.params.transferId);
       return reply.status(200).send(res);
     } catch (e) {
       logger.error({ error: jsonifyError(e) });

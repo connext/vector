@@ -565,6 +565,18 @@ export class BrowserNode implements INodeService {
 
   //////////////////////
   /// DISPUTE METHODS
+  async getChannelDispute(
+    params: OptionalPublicIdentifier<NodeParams.GetChannelDispute>,
+  ): Promise<Result<NodeResponses.GetChannelDispute, BrowserNodeError>> {
+    // TODO: Implement method!
+    return Result.fail(
+      new BrowserNodeError(BrowserNodeError.reasons.MethodNotImplemented, this.publicIdentifier, {
+        params,
+        method: "getChannelDispute",
+      }),
+    );
+  }
+
   async sendDisputeChannelTx(
     params: OptionalPublicIdentifier<NodeParams.SendDisputeChannelTx>,
   ): Promise<Result<NodeResponses.SendDisputeChannelTx, BrowserNodeError>> {
@@ -587,6 +599,18 @@ export class BrowserNode implements INodeService {
     } catch (e) {
       return Result.fail(e);
     }
+  }
+
+  async getTransferDispute(
+    params: OptionalPublicIdentifier<NodeParams.GetTransferDispute>,
+  ): Promise<Result<NodeResponses.GetTransferDispute, BrowserNodeError>> {
+    // TODO: Implement method!
+    return Result.fail(
+      new BrowserNodeError(BrowserNodeError.reasons.MethodNotImplemented, this.publicIdentifier, {
+        params,
+        method: "getTransferDispute",
+      }),
+    );
   }
 
   async sendDisputeTransferTx(

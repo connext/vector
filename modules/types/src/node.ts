@@ -109,6 +109,10 @@ export interface INodeService {
   ): Promise<Result<NodeResponses.SendIsAlive, NodeError>>;
 
   // Dispute methods
+  getChannelDispute(
+    params: OptionalPublicIdentifier<NodeParams.GetChannelDispute>,
+  ): Promise<Result<NodeResponses.GetChannelDispute, NodeError>>;
+
   sendDisputeChannelTx(
     params: OptionalPublicIdentifier<NodeParams.SendDisputeChannelTx>,
   ): Promise<Result<NodeResponses.SendDisputeChannelTx, NodeError>>;
@@ -116,6 +120,10 @@ export interface INodeService {
   sendDefundChannelTx(
     params: OptionalPublicIdentifier<NodeParams.SendDefundChannelTx>,
   ): Promise<Result<NodeResponses.SendDefundChannelTx, NodeError>>;
+
+  getTransferDispute(
+    params: OptionalPublicIdentifier<NodeParams.GetTransferDispute>,
+  ): Promise<Result<NodeResponses.GetTransferDispute, NodeError>>;
 
   sendDisputeTransferTx(
     params: OptionalPublicIdentifier<NodeParams.SendDisputeTransferTx>,
