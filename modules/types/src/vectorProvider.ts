@@ -78,6 +78,8 @@ export type ChannelRpcMethodsPayloadMap = {
     chainProviders: ChainProviders;
     chainAddresses?: ChainAddresses;
     messagingUrl?: string;
+    natsUrl?: string;
+    authUrl?: string;
   };
   [ChannelRpcMethods.chan_dispute]: EngineParams.DisputeChannel;
   [ChannelRpcMethods.chan_defund]: EngineParams.DefundChannel;
@@ -119,7 +121,7 @@ export type ChannelRpcMethodsResponsesMap = {
   [ChannelRpcMethods.chan_withdraw]: {
     channel: FullChannelState;
     transactionHash?: string;
-    transaction?: MinimalTransaction;
+    transaction: MinimalTransaction;
   };
   [ChannelRpcMethods.chan_subscribe]: any;
   [ChannelRpcMethods.chan_unsubscribeAll]: any;

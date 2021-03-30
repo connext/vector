@@ -59,6 +59,8 @@ export const createNode = async (
   const messaging = new NatsMessagingService({
     logger: logger.child({ module: "NatsMessagingService" }),
     messagingUrl: config.messagingUrl,
+    natsUrl: config.natsUrl,
+    authUrl: config.authUrl,
     signer,
   });
   await messaging.connect();

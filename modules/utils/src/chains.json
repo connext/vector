@@ -64,6 +64,10 @@
       "0xB8c77482e45F1F44dE1745F52C74426C631bDD52": {
         "symbol": "BNB",
         "mainnetEquivalent": "0xB8c77482e45F1F44dE1745F52C74426C631bDD52"
+      },
+      "0x1614f18fc94f47967a3fbe5ffcd46d4e7da3d787": {
+        "symbol": "PAID",
+        "mainnetEquivalent": "0x1614f18fc94f47967a3fbe5ffcd46d4e7da3d787"
       }
     },
     "rpc": [
@@ -163,6 +167,10 @@
       "0x0000000000000000000000000000000000000000": {
         "symbol": "ETH",
         "mainnetEquivalent": "0x0000000000000000000000000000000000000000"
+      },
+      "0x67e1816bEEcB2a2852f9305049483f32b5c7ef60": {
+        "symbol": "PAID",
+        "mainnetEquivalent": "0x1614f18fc94f47967a3fbe5ffcd46d4e7da3d787"
       }
     },
     "rpc": [
@@ -191,6 +199,10 @@
       "0x0000000000000000000000000000000000000000": {
         "symbol": "ETH",
         "mainnetEquivalent": "0x0000000000000000000000000000000000000000"
+      },
+      "0x04dfd3cfca0e110b6b3c2e7d2384a851d1665988": {
+        "symbol": "PAID",
+        "mainnetEquivalent": "0x1614f18fc94f47967a3fbe5ffcd46d4e7da3d787"
       }
     },
     "rpc": ["https://rpc.goerli.mudit.blog/", "https://rpc.slock.it/goerli ", "https://goerli.prylabs.net/"],
@@ -213,6 +225,10 @@
       "0x0000000000000000000000000000000000000000": {
         "symbol": "ETH",
         "mainnetEquivalent": "0x0000000000000000000000000000000000000000"
+      },
+      "0xB4a04eCF1855FBccf5C770BA6DB1dde7c96b17Be": {
+        "symbol": "PAID",
+        "mainnetEquivalent": "0x1614f18fc94f47967a3fbe5ffcd46d4e7da3d787"
       }
     },
     "rpc": ["https://rinkeby.infura.io/v3/${INFURA_API_KEY}", "wss://rinkeby.infura.io/ws/v3/${INFURA_API_KEY}"],
@@ -330,5 +346,34 @@
     ],
     "faucets": [],
     "infoURL": "https://forum.poa.network/c/xdai-chain"
+  },
+	{
+    "name": "Binance Smart Chain Testnet",
+    "chainId": 97,
+    "shortName": "bnbt",
+    "chain": "BSC",
+    "network": "testnet",
+    "networkId": 97,
+    "nativeCurrency": { "name": "Binance Chain Native Token", "symbol": "BNB", "decimals": 18 },
+    "assetId": {
+      "0x0000000000000000000000000000000000000000": {
+        "symbol": "BNB",
+        "mainnetEquivalent": "0xB8c77482e45F1F44dE1745F52C74426C631bDD52"
+      },
+      "0xc825e75837a3f10e6cc7bda1b85eaac572ac3b8d": {
+        "symbol": "PAID",
+        "mainnetEquivalent": "0x1614f18fc94f47967a3fbe5ffcd46d4e7da3d787"
+      }
+    },
+    "rpc": [
+			"https://data-seed-prebsc-1-s1.binance.org:8545",
+			"https://data-seed-prebsc-2-s1.binance.org:8545",
+			"https://data-seed-prebsc-1-s2.binance.org:8545",
+			"https://data-seed-prebsc-2-s2.binance.org:8545",
+			"https://data-seed-prebsc-1-s3.binance.org:8545",
+			"https://data-seed-prebsc-2-s3.binance.org:8545"
+    ],
+    "faucets": ["https://testnet.binance.org/faucet-smart"],
+    "infoURL": "https://www.binance.org"
   }
 ]
