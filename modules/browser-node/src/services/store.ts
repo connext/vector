@@ -44,6 +44,14 @@ class VectorIndexedDBDatabase extends Dexie {
   transfers: Dexie.Table<StoredTransfer, string>;
   transactions: Dexie.Table<StoredTransaction, string>;
   withdrawCommitment: Dexie.Table<WithdrawCommitmentJson & { transferId: string }, string>;
+  channelDisputes: Dexie.Table<
+    { channelAddress: string; channelDispute: ChannelDispute; disputedChannel?: CoreChannelState },
+    string
+  >;
+  transferDisputes: Dexie.Table<
+    { transferId: string; transferDispute: TransferDispute; disputedTransfer?: CoreTransferState },
+    string
+  >;
   values: Dexie.Table<any, string>;
   // database name
   name: string;
@@ -94,10 +102,17 @@ class VectorIndexedDBDatabase extends Dexie {
       withdrawCommitment: "transferId,transactionHash",
     });
 
+    this.version(4).stores({
+      channelDisputes: "channelAddress",
+      transferDisputes: "transferId",
+    });
+
     this.channels = this.table("channels");
     this.transfers = this.table("transfers");
     this.transactions = this.table("transactions");
     this.withdrawCommitment = this.table("withdrawCommitment");
+    this.channelDisputes = this.table("channelDisputes");
+    this.transferDisputes = this.table("transferDisputes");
     this.values = this.table("values");
     this.name = name;
   }
@@ -375,15 +390,20 @@ export class BrowserStore implements IEngineStore, IChainServiceStore {
     return commitment;
   }
 
-  saveTransferDispute(
-    channelAddress: string,
+  async saveTransferDispute(
+    transferId: string,
     transferDispute: TransferDispute,
     disputedTransfer?: CoreTransferState,
   ): Promise<void> {
-    throw new Error("Method not implemented.");
+    await this.db.transferDisputes.put({ transferDispute, transferId, disputedTransfer });
   }
-  getTransferDispute(transferId: string): Promise<TransferDispute | undefined> {
-    throw new Error("Method not implemented.");
+
+  async getTransferDispute(transferId: string): Promise<TransferDispute | undefined> {
+    const entity = await this.db.transferDisputes.get({ transferId });
+    if (!entity) {
+      return undefined;
+    }
+    return entity.transferDispute;
   }
 
   async saveChannelDispute(
@@ -391,9 +411,14 @@ export class BrowserStore implements IEngineStore, IChainServiceStore {
     channelDispute: ChannelDispute,
     disputedChannel?: CoreChannelState,
   ): Promise<void> {
-    throw new Error("Method not implemented");
+    await this.db.channelDisputes.put({ channelDispute, disputedChannel, channelAddress });
   }
-  getChannelDispute(channelAddress: string): Promise<ChannelDispute | undefined> {
-    throw new Error("Method not implemented.");
+
+  async getChannelDispute(channelAddress: string): Promise<ChannelDispute | undefined> {
+    const entity = await this.db.channelDisputes.get({ channelAddress });
+    if (!entity) {
+      return undefined;
+    }
+    return entity.channelDispute;
   }
 }
