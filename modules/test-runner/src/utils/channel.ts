@@ -25,6 +25,18 @@ if (chainId2) {
   wallet2 = Wallet.fromMnemonic(env.sugarDaddy!).connect(provider2);
 }
 
+export const advanceBlocktime = async (seconds: number, provider = provider1): Promise<void> => {
+  const { timestamp: currTime } = await provider.getBlock("latest");
+  await provider.send("evm_increaseTime", [seconds]);
+  await provider.send("evm_mine", []);
+  const { timestamp: finalTime } = await provider.getBlock("latest");
+  const desired = currTime + seconds;
+  if (finalTime < desired) {
+    const diff = finalTime - desired;
+    await provider.send("evm_increaseTime", [diff]);
+  }
+};
+
 export const setup = async (
   bobService: INodeService,
   aliceService: INodeService,
