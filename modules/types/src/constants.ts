@@ -37,3 +37,8 @@ export const getConfirmationsForChain = (chainId: number): number => {
 
 // ETH Reader - how many attempts / retries will we do upon failure?
 export const ETH_READER_MAX_RETRIES = 5;
+
+export const NATS_CLUSTER_URL =
+  "nats://nats1.connext.provide.network:4222,nats://nats2.connext.provide.network:4222,nats://nats3.connext.provide.network:4222";
+export const NATS_AUTH_URL = "https://messaging.connext.network";
+export const NATS_WS_URL = "wss://websocket.connext.provide.network";

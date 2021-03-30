@@ -15,6 +15,9 @@ import {
   IBasicMessaging,
   RouterError,
   NodeResponses,
+  NATS_CLUSTER_URL,
+  NATS_AUTH_URL,
+  NATS_WS_URL,
 } from "@connext/vector-types";
 import axios, { AxiosResponse } from "axios";
 import pino, { BaseLogger } from "pino";
@@ -80,7 +83,8 @@ export class NatsBasicMessagingService implements IBasicMessaging {
       }
       this.log.info(`Derived natsUrl=${this.natsUrl} from messagingUrl=${config.messagingUrl}`);
     } else if (!config.authUrl || !config.natsUrl) {
-      throw new Error(`Either a messagingUrl or both an authUrl + natsUrl must be provided`);
+      config.authUrl = NATS_AUTH_URL;
+      config.natsUrl = isNode() ? NATS_CLUSTER_URL : NATS_WS_URL;
     }
 
     // Let authUrl and/or natsUrl overwrite messagingUrl if both are provided
@@ -90,6 +94,8 @@ export class NatsBasicMessagingService implements IBasicMessaging {
     if (config.natsUrl) {
       this.natsUrl = config.natsUrl;
     }
+
+    this.log.info({ natsUrl: this.natsUrl, authUrl: this.authUrl }, "Messaging config generated");
 
     if (config.bearerToken) {
       this.bearerToken = config.bearerToken;
