@@ -183,63 +183,63 @@ export const rebalanceIfNeeded = async (
   // if it is not completed, wait for next poll
 
   // check if an active rebalance is in progress
-  let latest = await store.getLatestRebalance(swap);
-  console.log("latest: ", latest);
-  if (!latest) {
-    // set dummy value
-    latest = {
-      status: RouterRebalanceStatus.COMPLETE,
+  let latestRebalance = await store.getLatestRebalance(swap);
+
+  if (!latestRebalance || latestRebalance.status === RouterRebalanceStatus.COMPLETE) {
+    // If there's no record of a previous rebalance, or if the last one completed successfully,
+    // create a new rebalance record.
+    latestRebalance = {
       swap,
-      approveHash: undefined,
-      executeHash: undefined,
-      completeHash: undefined,
-      id: uuidv4(), // dummy value, set by db
+      status: RouterRebalanceStatus.PENDING,
+      id: uuidv4()
     };
+    await store.saveRebalance(latestRebalance);
   }
 
-  if (latest.status === RouterRebalanceStatus.COMPLETE) {
+  if (latestRebalance.status === RouterRebalanceStatus.PENDING) {
     // approve rebalance
     const approveHash = await approveRebalance(amountToSend, swap, hydratedProviders, wallet, logger, methodId);
     if (approveHash.isError) {
       return Result.fail(approveHash.getError()!);
     }
     // save status
-    latest = {
-      ...latest,
+    latestRebalance = {
+      ...latestRebalance,
+      swap,
       status: RouterRebalanceStatus.APPROVED,
       approveHash: approveHash.getValue(),
     };
-    await store.saveRebalance(latest);
+    await store.saveRebalance(latestRebalance);
   }
 
-  if (latest.status === RouterRebalanceStatus.APPROVED) {
+  if (latestRebalance.status === RouterRebalanceStatus.APPROVED) {
     const executeHash = await executeRebalance(amountToSend, swap, hydratedProviders, wallet, logger, methodId);
     if (executeHash.isError) {
       return Result.fail(executeHash.getError()!);
     }
     // save status
-    latest = {
-      ...latest,
+    latestRebalance = {
+      ...latestRebalance,
       status: RouterRebalanceStatus.EXECUTED,
       executeHash: executeHash.getValue(),
     };
-    await store.saveRebalance(latest);
+    await store.saveRebalance(latestRebalance);
   }
 
-  if (latest.status === RouterRebalanceStatus.EXECUTED) {
-    if (!latest.executeHash) {
+  if (latestRebalance.status === RouterRebalanceStatus.EXECUTED) {
+    if (!latestRebalance.executeHash) {
       return Result.fail(
         new AutoRebalanceServiceError(
           AutoRebalanceServiceError.reasons.ExecutedWithoutHash,
           swap.fromChainId,
           swap.fromAssetId,
-          { method, methodId, latest },
+          { method, methodId, latestRebalance },
         ),
       );
     }
     const completedHash = await completeRebalance(
       amountToSend,
-      latest.executeHash,
+      latestRebalance.executeHash,
       swap,
       hydratedProviders,
       wallet,
@@ -253,12 +253,12 @@ export const rebalanceIfNeeded = async (
       return Result.ok(undefined);
     }
     // save status
-    latest = {
-      ...latest,
+    latestRebalance = {
+      ...latestRebalance,
       status: RouterRebalanceStatus.COMPLETE,
       completeHash: completedHash.getValue().transactionHash,
     };
-    await store.saveRebalance(latest);
+    await store.saveRebalance(latestRebalance);
   }
   return Result.ok(undefined);
 };

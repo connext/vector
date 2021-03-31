@@ -32,6 +32,7 @@ export type RouterStoredUpdate<T extends RouterUpdateType> = {
 };
 
 export const RouterRebalanceStatus = {
+  PENDING: "PENDING",
   APPROVED: "APPROVED",
   COMPLETE: "COMPLETE",
   EXECUTED: "EXECUTED",
