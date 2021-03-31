@@ -61,7 +61,7 @@ then echo "Aborting: A new, unique $project version is required" && exit 1
 fi
 
 # Check the changelog is updated
-if [ ! "$(grep "$version$" "$root/modules/documentation/docs/changelog.md")"  ]
+if [ ! "$(grep "$version$" "$root/changelog.md")"  ]
 then echo "Aborting: Make sure you've updated the changelog for $version" && exit 1
 fi
 
