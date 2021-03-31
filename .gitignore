@@ -64,8 +64,6 @@ modules/documentation/site
 **/*.*_backup
 **/*.log
 **/*.patch
-cypress/screenshots
-cypress/videos
 
 # OS
 **/.bash_history
