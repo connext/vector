@@ -173,7 +173,8 @@
         "mainnetEquivalent": "0x1614f18fc94f47967a3fbe5ffcd46d4e7da3d787"
       },
       "0x48987E8B356e0dE474ddE9Bc10541F8106C88A23": {
-        "symbol": "PROPS"
+        "symbol": "PROPS",
+        "mainnetEquivalent": "0x6fe56c0bcdd471359019fcbc48863d6c3e9d4f41"
       }
     },
     "rpc": [
@@ -208,7 +209,8 @@
         "mainnetEquivalent": "0x1614f18fc94f47967a3fbe5ffcd46d4e7da3d787"
       },
       "0x7a652687E2f9167cdC9831C0f9B5C3Ff5E5Bc5C7": {
-        "symbol": "PROPS"
+        "symbol": "PROPS",
+        "mainnetEquivalent": "0x6fe56c0bcdd471359019fcbc48863d6c3e9d4f41"
       }
     },
     "rpc": ["https://rpc.goerli.mudit.blog/", "https://rpc.slock.it/goerli ", "https://goerli.prylabs.net/"],
