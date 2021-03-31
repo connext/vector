@@ -2,6 +2,10 @@
 
 ## Next Release
 
+## 0.2.1-beta.23
+
+- \[router\] Fix autorebalancing approval tx schema
+
 ## 0.2.1-beta.22
 
 - \[router\] Fix autorebalancing

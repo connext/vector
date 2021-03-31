@@ -526,13 +526,13 @@ const sendTransaction = async (
       from: wallet.address,
       data: transaction.data,
       to: transaction.to,
-      value: transaction.value.toString(),
+      value: (transaction.value ?? 0).toString(),
     },
     "Sending tx",
   );
   const response = await wallet.connect(provider).sendTransaction({
     to: transaction.to,
-    value: transaction.value,
+    value: transaction.value ?? 0,
     data: transaction.data,
     gasPrice: BigNumber.from(gasPrice),
   });
