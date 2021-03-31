@@ -604,7 +604,9 @@ export class PrismaStore implements IServerNodeStore {
     const channelEntities = await this.prisma.channel.findMany({
       include: { balances: true, latestUpdate: true, disputeReference: true },
     });
-    return channelEntities.map(convertChannelEntityToFullChannelState);
+    // TODO: in query
+    const nonDispute = channelEntities.filter((e) => e.channelAddress.indexOf(`-dispute`) === -1);
+    return nonDispute.map(convertChannelEntityToFullChannelState);
   }
 
   async saveChannelState(channelState: FullChannelState, transfer?: FullTransferState): Promise<void> {
