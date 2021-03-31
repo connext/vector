@@ -345,7 +345,7 @@ export const requestCollateral = async (
       {
         method,
         methodId,
-        amountToDeposit: amountToDeposit.toString(),
+        amountToDeposit: amountToDeposit.sub(reconcilable).toString(),
         target: target.toString(),
         channelAddress: channel.channelAddress,
         assetId,
@@ -353,7 +353,7 @@ export const requestCollateral = async (
       "Deposit calculated, submitting tx",
     );
     const txRes = await node.sendDepositTx({
-      amount: amountToDeposit.toString(),
+      amount: amountToDeposit.sub(reconcilable).toString(),
       assetId: assetId,
       chainId: channel.networkContext.chainId,
       channelAddress: channel.channelAddress,
@@ -369,7 +369,7 @@ export const requestCollateral = async (
           requestedAmount,
           {
             error: jsonifyError(txRes.getError()!),
-            amountToDeposit: amountToDeposit.toString(),
+            amountToDeposit: amountToDeposit.sub(reconcilable).toString(),
           },
         ),
       );
