@@ -18,6 +18,7 @@ import { Wallet } from "@ethersproject/wallet";
 import { Type, Static } from "@sinclair/typebox";
 import axios from "axios";
 import { BaseLogger } from "pino";
+import { v4 as uuidv4 } from "uuid";
 
 import { getConfig } from "../config";
 import { AutoRebalanceServiceError } from "../errors";
@@ -170,7 +171,7 @@ export const rebalanceIfNeeded = async (
       method,
       intervalId: methodId,
       amountToSendNumber,
-      amountToSend,
+      amountToSend: amountToSend.toString(),
     },
     "Rebalance required",
   );
@@ -183,6 +184,7 @@ export const rebalanceIfNeeded = async (
 
   // check if an active rebalance is in progress
   let latest = await store.getLatestRebalance(swap);
+  console.log("latest: ", latest);
   if (!latest) {
     // set dummy value
     latest = {
@@ -190,7 +192,7 @@ export const rebalanceIfNeeded = async (
       swap,
       approveHash: undefined,
       executeHash: undefined,
-      id: getRandomBytes32(), // dummy value, set by db
+      id: uuidv4(), // dummy value, set by db
     };
   }
 
@@ -273,7 +275,8 @@ export const approveRebalance = async (
   logger.debug({ method, methodId, swap, amount: amount.toString() }, "Method started");
 
   try {
-    const approveRes = await axios.post(`${swap.rebalancerUrl}/approval`, {
+    const approveUrl = `${swap.rebalancerUrl}/approval`;
+    const postBody: RebalanceParams = {
       amount: amount.toString(),
       assetId: swap.fromAssetId,
       fromProvider: config.chainProviders[swap.fromChainId],
@@ -281,7 +284,17 @@ export const approveRebalance = async (
       toProvider: config.chainProviders[swap.toChainId],
       toChainId: swap.toChainId,
       signer: wallet.address,
-    } as RebalanceParams);
+    };
+    logger.info(
+      {
+        method,
+        methodId,
+        approveUrl,
+        postBody,
+      },
+      "Sending approval request",
+    );
+    const approveRes = await axios.post(approveUrl, postBody);
     logger.info(
       {
         method,
