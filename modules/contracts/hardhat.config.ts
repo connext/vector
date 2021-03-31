@@ -122,11 +122,22 @@ const config: HardhatUserConfig = {
       chainId: 256,
       url: urlOverride || "https://http-testnet.hecochain.com",
     },
+    harmony: {
+      accounts: { mnemonic },
+      chainId: 1666600000,
+      url: urlOverride || "https://api.harmony.one/",
+    },
+    harmonytestnet: {
+      accounts: { mnemonic },
+      chainId: 1666700000,
+      url: urlOverride || "https://api.s0.b.hmny.io/",
+    },
     heco: {
       accounts: { mnemonic },
       chainId: 128,
       url: urlOverride || "https://http-mainnet.hecochain.com",
     },
+    
     avalanchefuji: {
       accounts: { mnemonic },
       chainId: 43113,

@@ -2,6 +2,10 @@
 
 ## Next Release
 
+## 0.2.1-beta.21
+
+- \[router\] Potential double collateral edge case
+
 ## 0.2.1-beta.20
 
 - \[node\] Router config for cluster
