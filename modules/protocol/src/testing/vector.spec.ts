@@ -93,6 +93,8 @@ describe("Vector", () => {
     beforeEach(async () => {
       const signer = getRandomChannelSigner();
       storeService.getChannelStates.resolves([]);
+      chainReader.getChannelDispute.resolves(Result.ok(undefined));
+      chainReader.registerChannel.resolves(Result.ok(undefined));
       vector = await Vector.connect(
         messagingService,
         lockService,
