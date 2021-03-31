@@ -33,6 +33,8 @@ const VectorRouterConfigSchema = Type.Object({
     ]),
   ),
   messagingUrl: Type.Optional(TUrl),
+  natsUrl: Type.Optional(Type.String()),
+  authUrl: Type.Optional(TUrl),
   rebalanceProfiles: Type.Array(RebalanceProfileSchema),
   mnemonic: Type.Optional(Type.String()),
   autoRebalanceInterval: Type.Optional(Type.Number({ minimum: 1_800_000 })),

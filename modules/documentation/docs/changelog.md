@@ -2,6 +2,22 @@
 
 ## Next Release
 
+## 0.2.1-beta.22
+
+- \[router\] Fix autorebalancing
+
+## 0.2.1-beta.21
+
+- \[router\] Potential double collateral edge case
+
+## 0.2.1-beta.20
+
+- \[node\] Router config for cluster
+
+## 0.2.1-beta.19
+
+- \[node\] Use upgraded messaging cluster
+
 ## 0.2.1-beta.15
 
 - \[utils\] Add bsc testnet to chains.json
