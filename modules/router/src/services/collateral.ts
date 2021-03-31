@@ -16,6 +16,7 @@ import { BaseLogger } from "pino";
 import { CollateralError } from "../errors";
 
 import { getRebalanceProfile } from "./config";
+import { Zero } from "@ethersproject/constants";
 
 /**
  * This function should be called before a transfer is created/forwarded.
@@ -338,7 +339,12 @@ export const requestCollateral = async (
   const processed =
     participant === "alice" ? channel.processedDepositsA[assetIdx] : channel.processedDepositsB[assetIdx];
   const amountToDeposit = BigNumber.from(target).sub(myBalance);
-  const reconcilable = totalDeposited.getValue().sub(processed ?? "0");
+  const reconcilable = totalDeposited
+    .getValue()
+    .sub(processed ?? "0")
+    .lt(Zero)
+    ? Zero
+    : totalDeposited.getValue().sub(processed ?? "0");
   if (reconcilable.lt(amountToDeposit)) {
     // Deposit needed
     logger.info(
