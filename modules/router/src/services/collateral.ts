@@ -339,12 +339,7 @@ export const requestCollateral = async (
   const processed =
     participant === "alice" ? channel.processedDepositsA[assetIdx] : channel.processedDepositsB[assetIdx];
   const amountToDeposit = BigNumber.from(target).sub(myBalance);
-  const reconcilable = totalDeposited
-    .getValue()
-    .sub(processed ?? "0")
-    .lt(Zero)
-    ? Zero
-    : totalDeposited.getValue().sub(processed ?? "0");
+  const reconcilable = totalDeposited.getValue().sub(processed ?? "0");
   if (reconcilable.lt(amountToDeposit)) {
     // Deposit needed
     logger.info(
