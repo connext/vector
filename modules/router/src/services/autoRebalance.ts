@@ -461,30 +461,34 @@ export const completeRebalance = async (
       {
         method,
         intervalId: methodId,
-        rebalanceRes: statusRes.data,
+        statusRes: statusRes.data,
       },
       "Status request sent",
     );
-    const {
-      status: { completed },
-      transaction,
-    } = statusRes.data;
-    if (!completed) {
+    const { status } = statusRes.data;
+    if (!status || !status.completed) {
+      logger.info({ status, method, intervalId: methodId }, "Rebalance not completed");
       return Result.ok({ complete: false });
     }
     // is completed, check if tx is needed
-    if (!transaction) {
+    if (!status.transaction) {
+      logger.info({ intervalId: methodId }, "No completion tx required");
       return Result.ok({ complete: false });
     }
+    logger.info({ status, method, intervalId: methodId }, "Sending execute tx");
     // need to send tx to complete rebalance
     const transactionHash = await sendTransaction(
-      swap.fromChainId,
-      transaction,
+      status.transaction.chainId,
+      status.transaction,
       wallet,
       hydratedProviders,
       logger,
       method,
       methodId,
+    );
+    logger.info(
+      { transactionHash, transaction: status.transaction, method, intervalId: methodId },
+      "Sent execute tx, completed",
     );
     return Result.ok({ transactionHash, complete: true });
   } catch (e) {
@@ -508,8 +512,8 @@ const sendTransaction = async (
   method: string = "sendTransaction",
   methodId: string = getRandomBytes32(),
 ): Promise<string> => {
-  const fromProvider = providers[chainId];
-  if (!fromProvider) {
+  const provider = providers[chainId];
+  if (!provider) {
     throw new Error(`No provider for chain ${chainId}, cannot send tx`);
   }
   logger.info(
@@ -519,9 +523,15 @@ const sendTransaction = async (
     },
     "Sending tx",
   );
+  const gasPrice = (transaction as any).gasPrice ?? (await provider.getGasPrice());
   const response = await wallet
-    .connect(fromProvider)
-    .sendTransaction({ to: transaction.to, value: transaction.value, data: transaction.data });
+    .connect(provider)
+    .sendTransaction({
+      to: transaction.to,
+      value: transaction.value,
+      data: transaction.data,
+      gasPrice: BigNumber.from(gasPrice),
+    });
   logger.info(
     {
       method,
