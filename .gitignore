@@ -47,7 +47,6 @@ modules/contracts/typechain
 
 # Docs
 modules/client/docs
-modules/documentation/site
 
 # IDEs and editors
 **/*.launch
@@ -64,8 +63,6 @@ modules/documentation/site
 **/*.*_backup
 **/*.log
 **/*.patch
-cypress/screenshots
-cypress/videos
 
 # OS
 **/.bash_history

@@ -39,16 +39,6 @@ jobs:
           SSH_KEY: ${{ secrets.SSH_KEY }}
           CMD: 'echo "Successfully connected to $TESTNET_DOMAINNAME: `hostname`";'
 
-  docs:
-    runs-on: ubuntu-20.04
-    steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-python@v2
-        with:
-          python-version: 3.x
-      - run: pip install mkdocs-material
-      - run: cd modules/documentation && mkdocs gh-deploy --force && cd ../..
-
   utils:
     runs-on: ubuntu-20.04
     steps:
