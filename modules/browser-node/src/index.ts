@@ -52,6 +52,8 @@ export class BrowserNode implements INodeService {
   private chainProviders: ChainProviders = {};
   private chainAddresses?: ChainAddresses;
   private messagingUrl?: string;
+  private natsUrl?: string;
+  private authUrl?: string;
 
   constructor(params: {
     logger?: pino.BaseLogger;
@@ -60,6 +62,8 @@ export class BrowserNode implements INodeService {
     iframeSrc?: string;
     chainProviders: ChainProviders;
     messagingUrl?: string;
+    natsUrl?: string;
+    authUrl?: string;
     chainAddresses?: ChainAddresses;
   }) {
     this.logger = params.logger || pino();
@@ -69,6 +73,8 @@ export class BrowserNode implements INodeService {
     this.chainProviders = params.chainProviders;
     this.chainAddresses = params.chainAddresses;
     this.messagingUrl = params.messagingUrl;
+    this.natsUrl = params.natsUrl;
+    this.authUrl = params.authUrl;
   }
 
   // method for signer-based connections
@@ -79,7 +85,14 @@ export class BrowserNode implements INodeService {
     const node = new BrowserNode({ logger: config.logger, chainProviders: config.chainProviders });
     // TODO: validate schema GH issue #429
     config.logger.info(
-      { method: "connect", publicIdentifier: config.signer.publicIdentifier, signerAddress: config.signer.address },
+      {
+        method: "connect",
+        publicIdentifier: config.signer.publicIdentifier,
+        signerAddress: config.signer.address,
+        messagingUrl: config.messagingUrl,
+        natsUrl: config.natsUrl,
+        authUrl: config.authUrl,
+      },
       "Connecting with provided signer",
     );
     const chainJsonProviders = hydrateProviders(config.chainProviders!);
@@ -167,6 +180,8 @@ export class BrowserNode implements INodeService {
       chainProviders: this.chainProviders,
       chainAddresses: this.chainAddresses,
       messagingUrl: this.messagingUrl,
+      natsUrl: this.natsUrl,
+      authUrl: this.authUrl,
       signature: params.signature,
       signer: params.signer,
     });

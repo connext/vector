@@ -21,7 +21,7 @@ jobs:
 
   ssh:
     env:
-      MESSAGING_DOMAINNAME: messaging.connext.network
+      MESSAGING_DOMAINNAME: oldmessaging.connext.network
       TESTNET_DOMAINNAME: testnet-vector.connext.network
     runs-on: ubuntu-20.04
     steps:
@@ -162,7 +162,7 @@ jobs:
 
   deploy-messaging:
     env:
-      DOMAINNAME: messaging.connext.network
+      DOMAINNAME: oldmessaging.connext.network
     needs: [ssh, utils, contracts, protocol, engine, server-node, browser-node, router, messaging, duet, trio, messaging-prod, routing-node-prod]
     runs-on: ubuntu-20.04
     steps:

@@ -35,7 +35,7 @@ import {
 
 const configuredIdentifier = getPublicIdentifierFromPublicKey(Wallet.fromMnemonic(config.mnemonic).publicKey);
 export const logger = pino({ name: configuredIdentifier, level: config.logLevel ?? "info" });
-logger.info("Loaded config from environment");
+logger.info("Loaded config from environment", { ...config, mnemonic: "", adminToken: "" });
 const server = fastify({
   logger,
   pluginTimeout: 300_000,

@@ -150,6 +150,8 @@ const messagingService = new NatsRouterMessagingService({
   signer,
   logger: logger.child({ module: "NatsRouterMessagingService" }),
   messagingUrl: config.messagingUrl,
+  authUrl: config.authUrl,
+  natsUrl: config.natsUrl,
 });
 
 server.addHook("onReady", async () => {
