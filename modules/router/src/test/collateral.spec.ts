@@ -771,5 +771,48 @@ describe(testName, () => {
         expect(node.reconcileDeposit.callCount).to.be.eq(2);
       });
     });
+
+    it("should collateralize difference between owed and target", async () => {
+      const { channel } = createTestChannelState(UpdateType.deposit, {
+        aliceIdentifier: routerPublicIdentifier,
+        processedDepositsA: ["0"],
+        assetIds: [AddressZero],
+        balances: [{ amount: ["0", "0"], to: [AddressZero, AddressZero] }],
+      });
+      const requestedAmount = parseEther("0.001");
+      chainReader.getTotalDepositedA.resolves(Result.ok(requestedAmount.sub(10)));
+      node.getStateChannel.resolves(
+        Result.ok({
+          ...channel,
+          balances: [
+            {
+              to: [mkAddress("0xaaa"), mkAddress("0xbbb")],
+              amount: [requestedAmount.toString(), "0"],
+            },
+          ],
+        }),
+      );
+
+      const res = await requestCollateral(
+        channel,
+        AddressZero,
+        routerPublicIdentifier,
+        node as INodeService,
+        chainReader,
+        log,
+        requestedAmount.toString(),
+      );
+
+      expect(node.sendDepositTx.getCall(0).args[0]).to.deep.eq({
+        amount: "10",
+        assetId: AddressZero,
+        chainId: channel.networkContext.chainId,
+        channelAddress: channel.channelAddress,
+        publicIdentifier: routerPublicIdentifier,
+      });
+      expect(res.isError).to.be.false;
+      expect(node.sendDepositTx.callCount).to.be.eq(1);
+      expect(node.reconcileDeposit.callCount).to.be.eq(1);
+    });
   });
 });

@@ -349,6 +349,7 @@ export const requestCollateral = async (
         target: target.toString(),
         channelAddress: channel.channelAddress,
         assetId,
+        reconcilable: reconcilable.toString(),
       },
       "Deposit calculated, submitting tx",
     );
