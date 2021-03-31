@@ -516,22 +516,26 @@ const sendTransaction = async (
   if (!provider) {
     throw new Error(`No provider for chain ${chainId}, cannot send tx`);
   }
+  const gasPrice = (transaction as any).gasPrice ?? (await provider.getGasPrice());
   logger.info(
     {
       method,
-      methodId,
+      intervalId: methodId,
+      chainId,
+      gasPrice: gasPrice.toString(),
+      from: wallet.address,
+      data: transaction.data,
+      to: transaction.to,
+      value: transaction.value.toString(),
     },
     "Sending tx",
   );
-  const gasPrice = (transaction as any).gasPrice ?? (await provider.getGasPrice());
-  const response = await wallet
-    .connect(provider)
-    .sendTransaction({
-      to: transaction.to,
-      value: transaction.value,
-      data: transaction.data,
-      gasPrice: BigNumber.from(gasPrice),
-    });
+  const response = await wallet.connect(provider).sendTransaction({
+    to: transaction.to,
+    value: transaction.value,
+    data: transaction.data,
+    gasPrice: BigNumber.from(gasPrice),
+  });
   logger.info(
     {
       method,
