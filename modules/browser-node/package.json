@@ -1,6 +1,6 @@
 {
   "name": "@connext/vector-browser-node",
-  "version": "0.2.1-beta.22",
+  "version": "0.2.1-beta.23",
   "author": "",
   "license": "ISC",
   "description": "",
@@ -17,10 +17,10 @@
     "test": "nyc ts-mocha --bail --check-leaks --exit --timeout 60000 'src/**/*.spec.ts'"
   },
   "dependencies": {
-    "@connext/vector-contracts": "0.2.1-beta.22",
-    "@connext/vector-engine": "0.2.1-beta.22",
-    "@connext/vector-types": "0.2.1-beta.22",
-    "@connext/vector-utils": "0.2.1-beta.22",
+    "@connext/vector-contracts": "0.2.1-beta.23",
+    "@connext/vector-engine": "0.2.1-beta.23",
+    "@connext/vector-types": "0.2.1-beta.23",
+    "@connext/vector-utils": "0.2.1-beta.23",
     "@ethersproject/address": "5.1.0",
     "@ethersproject/bignumber": "5.1.0",
     "@ethersproject/constants": "5.1.0",
