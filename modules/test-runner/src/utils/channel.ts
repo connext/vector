@@ -1,4 +1,11 @@
-import { delay, expect, getBalanceForAssetId, getRandomBytes32, getParticipant } from "@connext/vector-utils";
+import {
+  delay,
+  expect,
+  getBalanceForAssetId,
+  getRandomBytes32,
+  getParticipant,
+  hashCoreChannelState,
+} from "@connext/vector-utils";
 import {
   DEFAULT_CHANNEL_TIMEOUT,
   EngineEvents,
@@ -12,6 +19,7 @@ import { BigNumber, constants, providers, utils, Wallet } from "ethers";
 
 import { env } from "./env";
 import { getOnchainBalance } from "./ethereum";
+import { waitForTransaction } from "@connext/vector-contracts";
 
 export const chainId1 = parseInt(Object.keys(env.chainProviders)[0]);
 export const provider1 = new providers.JsonRpcProvider(env.chainProviders[chainId1]);
@@ -380,4 +388,139 @@ export const withdraw = async (
     expect(postWithdrawRecipient).to.be.eq(amountWithdrawn.add(preWithdrawRecipient));
   }
   return postWithdrawChannel;
+};
+
+export const disputeChannel = async (
+  disputer: INodeService,
+  counterparty: INodeService,
+  channelAddress: string,
+  provider: providers.JsonRpcProvider,
+): Promise<void> => {
+  const channel = (await disputer.getStateChannel({ channelAddress })).getValue()!;
+  expect(channel).to.be.ok;
+
+  const counterpartyEventPromise = counterparty.waitFor(
+    EngineEvents.CHANNEL_DISPUTED,
+    30_000,
+    (payload) => payload.state.channelAddress === channelAddress,
+  );
+
+  const disputeRes = await disputer.sendDisputeChannelTx({ channelAddress });
+  expect(disputeRes.isError).to.be.false;
+  const [counterpartyEvent, transaction] = await Promise.all([
+    counterpartyEventPromise,
+    waitForTransaction(provider, disputeRes.getValue().transactionHash),
+    delay(3_000),
+  ]);
+
+  // Verify stored disputes
+  const block = await provider.getBlock(transaction.getValue().blockNumber);
+  const [disputerRecord, counterpartyRecord] = await Promise.all([
+    disputer.getChannelDispute({ channelAddress }),
+    counterparty.getChannelDispute({ channelAddress }),
+  ]);
+  expect(counterpartyRecord.isError).to.be.false;
+  expect(disputerRecord.isError).to.be.false;
+  const defundExpiry = BigNumber.from(channel.timeout).mul(2);
+  expect(disputerRecord.getValue()).to.be.deep.eq({
+    channelStateHash: hashCoreChannelState(channel!),
+    nonce: channel.nonce.toString(),
+    merkleRoot: channel.merkleRoot,
+    consensusExpiry: BigNumber.from(block.timestamp).add(channel.timeout).toString(),
+    defundExpiry: BigNumber.from(block.timestamp).add(defundExpiry).toString(),
+  });
+  expect(counterpartyRecord.getValue()).to.be.deep.eq(disputerRecord.getValue());
+
+  // Verify event payloads
+  expect(counterpartyEvent?.publicIdentifier).to.be.eq(counterparty.publicIdentifier);
+  expect(counterpartyEvent?.disputer).to.be.eq(disputer.signerAddress);
+  expect(counterpartyEvent?.dispute).to.be.deep.eq(disputerRecord.getValue());
+  expect(channel).to.containSubset(counterpartyEvent?.state);
+
+  // Verify channel is in dispute
+  const [disputerChannel, counterpartyChannel] = await Promise.all([
+    disputer.getStateChannel({ channelAddress }),
+    counterparty.getStateChannel({ channelAddress }),
+  ]);
+  expect(disputerChannel.getValue()?.inDispute).to.be.true;
+  expect(counterpartyChannel.getValue()?.inDispute).to.be.true;
+};
+
+export const defundChannel = async (
+  defunder: INodeService,
+  counterparty: INodeService,
+  channelAddress: string,
+  provider: providers.JsonRpcProvider,
+) => {
+  const defundEventPromise = counterparty.waitFor(
+    EngineEvents.CHANNEL_DEFUNDED,
+    30_000,
+    (payload) => payload.state.channelAddress === channelAddress,
+  );
+  const defundRes = await defunder.sendDefundChannelTx({ channelAddress });
+  expect(defundRes.isError).to.be.false;
+  const [event, transaction] = await Promise.all([
+    defundEventPromise,
+    waitForTransaction(provider, defundRes.getValue().transactionHash),
+    delay(3_000),
+  ]);
+
+  // Verify event payload
+  const channel = (await defunder.getStateChannel({ channelAddress })).getValue()!;
+  expect(channel).to.be.ok;
+  const dispute = await defunder.getChannelDispute({ channelAddress });
+  expect(dispute.getValue()).to.be.ok;
+  expect(transaction.isError).to.be.false;
+  expect(event?.defunder).to.be.eq(defunder.signerAddress);
+  expect(event?.publicIdentifier).to.be.eq(counterparty.publicIdentifier);
+  expect(event?.dispute).to.be.deep.eq(dispute.getValue());
+  expect(channel).to.containSubset(event?.state);
+  expect(event?.defundedAssets).to.be.deep.eq(channel.assetIds);
+};
+
+export const exitAssets = async (
+  defunder: INodeService,
+  channelAddress: string,
+  provider: providers.JsonRpcProvider,
+  assetIds: string[],
+  owner = defunder.signerAddress,
+  recipient = defunder.signerAddress,
+) => {
+  const channel = (await defunder.getStateChannel({ channelAddress })).getValue();
+  expect(channel).to.be.ok;
+  const participant = channel?.alice === recipient ? "alice" : "bob";
+  expect(channel![participant]).to.be.eq(recipient);
+  const diffs = assetIds.map((asset) => {
+    expect(channel?.assetIds.includes(asset)).to.be.true;
+    return getBalanceForAssetId(channel as FullChannelState, asset, participant);
+  });
+
+  const recipientPreExit = await Promise.all(
+    assetIds.map((assetId) => getOnchainBalance(assetId, recipient, provider)),
+  );
+  const exitRes = await defunder.sendExitChannelTx({
+    owner,
+    recipient,
+    assetIds,
+    channelAddress,
+  });
+  expect(exitRes.isError).to.be.false;
+  const results = exitRes.getValue();
+  expect(results.length).to.be.eq(assetIds.length);
+  results.map((result, idx) => {
+    expect(result.transactionHash).to.be.ok;
+    expect(result.assetId).to.be.eq(assetIds[idx]);
+    expect(result.error).to.be.undefined;
+  });
+  const txs = await Promise.all(results.map((r) => waitForTransaction(provider, r.transactionHash!)));
+  txs.map((tx) => {
+    expect(tx.isError).to.be.false;
+  });
+
+  const recipientPostExit = await Promise.all(
+    assetIds.map((assetId) => getOnchainBalance(assetId, recipient, provider)),
+  );
+  recipientPostExit.map((finalBal, idx) => {
+    expect(finalBal).to.be.eq(recipientPreExit[idx].add(diffs[idx]));
+  });
 };

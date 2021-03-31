@@ -9,7 +9,10 @@ import {
   advanceBlocktime,
   chainId1,
   chainId2,
+  defundChannel,
   deposit,
+  disputeChannel,
+  exitAssets,
   provider1,
   requestCollateral,
   setup,
@@ -118,54 +121,39 @@ describe(testName, () => {
     expect(cancelled.length).to.be.eq(0);
   });
 
-  // TODO: improve dispute tests (cleanup, verify events, test with
-  // transfer disputes as well)
-  it.only("ETH: should be able to dispute a channel", async () => {
+  it("ETH: should be able to dispute a channel", async () => {
     const assetId = constants.AddressZero;
     const depositAmt = utils.parseEther("0.1");
     const carolRogerPostSetup = await setup(carolService, rogerService, chainId1);
 
     // Carol deposits
-    await deposit(carolService, rogerService, carolRogerPostSetup.channelAddress, assetId, depositAmt);
-
-    const disputeEventPromise = carolService.waitFor(
-      EngineEvents.CHANNEL_DISPUTED,
-      30_000,
-      (payload) => payload.state.channelAddress === carolRogerPostSetup.channelAddress,
+    const carolRogerPostDeposit = await deposit(
+      carolService,
+      rogerService,
+      carolRogerPostSetup.channelAddress,
+      assetId,
+      depositAmt,
     );
+    expect(carolRogerPostDeposit.balances[0].to[1]).to.be.eq(carolService.signerAddress);
+    console.log("verified signer address");
 
-    const disputeRes = await rogerService.sendDisputeChannelTx({ channelAddress: carolRogerPostSetup.channelAddress });
-    expect(disputeRes.isError).to.be.false;
-    // TODO: verify event
-    await disputeEventPromise;
-    // wait for roger
-    await delay(2_000);
-    const [carolChannel, rogerChannel] = await Promise.all([
-      carolService.getStateChannel({ channelAddress: carolRogerPostSetup.channelAddress }),
-      rogerService.getStateChannel({ channelAddress: carolRogerPostSetup.channelAddress }),
-    ]);
-    expect(rogerChannel.getValue()?.inDispute).to.be.true;
-    expect(carolChannel.getValue()?.inDispute).to.be.true;
+    await disputeChannel(rogerService, carolService, carolRogerPostDeposit.channelAddress, provider1);
     console.log("successfully disputed");
 
-    // defund
     await advanceBlocktime(parseInt(carolRogerPostSetup.timeout) + 5_000);
 
-    const defundEventPromise = carolService.waitFor(
-      EngineEvents.CHANNEL_DEFUNDED,
-      30_000,
-      (payload) => payload.state.channelAddress === carolRogerPostSetup.channelAddress,
-    );
-    const carolPreDefund = await getOnchainBalance(assetId, carolService.signerAddress, provider1);
-    const defundRes = await rogerService.sendDefundChannelTx({ channelAddress: carolRogerPostSetup.channelAddress });
-    const event = await defundEventPromise;
-    expect(event).to.be.ok;
-    expect(defundRes.isError).to.be.false;
-    const txRes = await waitForTransaction(provider1, defundRes.getValue().transactionHash);
-    expect(txRes.isError).to.be.false;
-    const carolPostDefund = await getOnchainBalance(assetId, carolService.signerAddress, provider1);
-    expect(carolPostDefund).to.be.eq(carolPreDefund.add(depositAmt));
+    await defundChannel(rogerService, carolService, carolRogerPostDeposit.channelAddress, provider1);
     console.log("successfully defunded");
+
+    // exit carol (only one with balance)
+    await exitAssets(
+      rogerService,
+      carolRogerPostDeposit.channelAddress,
+      provider1,
+      [assetId],
+      carolService.signerAddress,
+      carolService.signerAddress,
+    );
   });
 
   it("ETH: deposit, transfer C -> R -> D, withdraw", async () => {
