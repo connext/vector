@@ -2,6 +2,10 @@
 
 ## Next Release
 
+## 0.2.1-beta.22
+
+- \[router\] Fix autorebalancing
+
 ## 0.2.1-beta.21
 
 - \[router\] Potential double collateral edge case
