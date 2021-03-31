@@ -20,7 +20,7 @@ RUN chmod +x /prisma-arm64/* &&\
     chmod +x /bin/wait-for
 
 RUN npm install --production
-RUN npm audit --audit-level=moderate
+RUN npm audit --audit-level=high
 RUN npm outdated || true
 
 COPY ops ops
