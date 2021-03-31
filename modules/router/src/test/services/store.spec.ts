@@ -142,16 +142,27 @@ describe("Router store", () => {
 
     const approveHash = getRandomBytes32();
     const executeHash = getRandomBytes32();
-    const completeHash = getRandomBytes32();
     await store.saveRebalance({
       id: id1,
       status: RouterRebalanceStatus.EXECUTED,
       swap,
       approveHash,
       executeHash,
+    });
+    latest = await store.getLatestRebalance(swap);
+    expect(latest!.id).to.eq(id1);
+    expect(latest!.status).to.eq(RouterRebalanceStatus.EXECUTED);
+    expect(latest!.approveHash).to.eq(approveHash);
+    expect(latest!.executeHash).to.eq(executeHash);
+    expect(latest!.completeHash).to.be.undefined;
+
+    const completeHash = getRandomBytes32();
+    await store.saveRebalance({
+      id: id1,
+      status: RouterRebalanceStatus.EXECUTED,
+      swap,
       completeHash,
     });
-
     latest = await store.getLatestRebalance(swap);
     expect(latest!.id).to.eq(id1);
     expect(latest!.status).to.eq(RouterRebalanceStatus.EXECUTED);

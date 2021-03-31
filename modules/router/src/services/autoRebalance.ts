@@ -359,7 +359,8 @@ export const executeRebalance = async (
   const method = "executeRebalance";
   logger.debug({ method, methodId, swap, amount: amount.toString() }, "Method started");
   try {
-    const rebalanceRes = await axios.post(`${swap.rebalancerUrl}/execute`, {
+    const rebalanceUrl = `${swap.rebalancerUrl}/execute`;
+    const postBody: RebalanceParams = {
       amount: amount.toString(),
       assetId: swap.fromAssetId,
       fromProvider: config.chainProviders[swap.fromChainId],
@@ -367,7 +368,17 @@ export const executeRebalance = async (
       toProvider: config.chainProviders[swap.toChainId],
       toChainId: swap.toChainId,
       signer: wallet.address,
-    } as RebalanceParams);
+    };
+    logger.info(
+      {
+        method,
+        methodId,
+        rebalanceUrl,
+        postBody,
+      },
+      "Sending rebalance execute request",
+    );
+    const rebalanceRes = await axios.post(rebalanceUrl, postBody);
     logger.info(
       {
         method,
@@ -425,15 +436,26 @@ export const completeRebalance = async (
   const method = "completeRebalance";
   logger.debug({ method, methodId, swap, amount: amount.toString() }, "Method started");
   try {
-    // check status
-    const statusRes = await axios.post(`${swap.rebalancerUrl}/status`, {
+    const statusUrl = `${swap.rebalancerUrl}/status`;
+    const postBody: CheckStatusParams = {
       txHash: executedHash,
       fromProvider: config.chainProviders[swap.fromChainId],
       fromChainId: swap.fromChainId,
       toProvider: config.chainProviders[swap.toChainId],
       toChainId: swap.toChainId,
       signer: wallet.address,
-    } as CheckStatusParams);
+    };
+    logger.info(
+      {
+        method,
+        methodId,
+        statusUrl,
+        postBody,
+      },
+      "Sending rebalance execute request",
+    );
+    // check status
+    const statusRes = await axios.post(statusUrl, postBody);
     logger.info(
       {
         method,
