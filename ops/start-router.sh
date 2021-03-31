@@ -445,10 +445,6 @@ do
     fi
   else
     echo ""
-    echo "===== Cleaning docker system"
-    docker system prune -f
-    docker system prune -af
-    echo ""
     echo "Good Morning!"
     exit;
   fi
