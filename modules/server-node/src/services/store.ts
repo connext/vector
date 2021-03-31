@@ -946,7 +946,6 @@ export class PrismaStore implements IServerNodeStore {
             responder: transfer.responder,
           },
         },
-        inDispute: transfer.inDispute,
         channelAddressId: transfer.channelAddress,
         transferId: transfer.transferId,
         routingId: transfer.meta?.routingId ?? getRandomBytes32(),
