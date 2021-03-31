@@ -23,7 +23,7 @@ interactive=$(shell if [[ -t 0 && -t 2 ]]; then echo "--interactive"; else echo 
 
 find_options=-type f -not -path "*/node_modules/*" -not -name "address-book.json" -not -name "*.swp" -not -path "*/.*" -not -path "*/cache/*" -not -path "*/build/*" -not -path "*/dist/*" -not -name "*.log" -not -path "*/artifacts/*"
 
-docker_run=docker run --name=$(project)_builder $(interactive) --tty --rm --volume=$(root):/root $(project)_builder $(id)
+docker_run=docker run --name=$(project)_builder $(interactive) --tty --rm --volume=$(root):/app $(project)_builder $(id)
 
 startTime=.flags/.startTime
 totalTime=.flags/.totalTime
@@ -238,7 +238,7 @@ test-load: test-runner trio
 
 test-concurrency: test-runner trio
 	bash ops/test-load.sh concurrency 3
-	
+
 test-node: node test-runner
 	bash ops/test-integration.sh node test
 watch-node: node test-runner
