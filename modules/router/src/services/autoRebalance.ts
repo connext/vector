@@ -192,6 +192,7 @@ export const rebalanceIfNeeded = async (
       swap,
       approveHash: undefined,
       executeHash: undefined,
+      completeHash: undefined,
       id: uuidv4(), // dummy value, set by db
     };
   }
