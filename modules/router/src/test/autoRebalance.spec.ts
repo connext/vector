@@ -119,6 +119,7 @@ describe(testName, () => {
       });
 
       const hash = mkBytes32("0xa");
+      // Based on the numbers hard coded below, the auto rebalancer should get 37.5 (half the difference).
       chainService.getOnchainBalance.onFirstCall().resolves(Result.ok(BigNumber.from(parseEther("175"))));
       chainService.getOnchainBalance.onSecondCall().resolves(Result.ok(BigNumber.from(parseEther("100"))));
       wallet.connect.returns(wallet);
@@ -152,7 +153,13 @@ describe(testName, () => {
         ...tx,
         value: 0,
       });
-      log.info(wallet.sendTransaction.getCall(2));
+      // Three phases of rebalance swap: approval, execution, completion.
+      // By the third phase we should have all three txHashes.
+      expect(store.saveRebalance.getCall(-1).firstArg).to.deep.include({
+        approveHash: hash,
+        executeHash: hash,
+        completeHash: hash
+      });
     });
   });
 });
