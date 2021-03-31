@@ -24,7 +24,7 @@
     "axios": "0.21.1",
     "babel-loader": "8.1.0",
     "copy-webpack-plugin": "6.2.1",
-    "ethers": "5.0.31",
+    "ethers": "5.1.0",
     "evt": "1.9.12",
     "fastify": "3.13.0",
     "p-queue": "6.6.2",
