@@ -2,6 +2,10 @@
 
 ## Next Release
 
+## 0.2.1
+
+Non-beta release
+
 ## 0.2.1-beta.24
 
 - \[router\] Fix autorebalancing for multiple rebalance cycles
