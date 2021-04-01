@@ -30,8 +30,6 @@ const config = getConfig();
 const DEFAULT_REBALANCE_THRESHOLD = 20;
 const MIN_INTERVAL = 1_800_000;
 
-type TxSentCallback = async () => {}
-
 // copied from chain-rebalancer-fastify
 export const RebalanceParamsSchema = Type.Object({
   amount: TIntegerString,
