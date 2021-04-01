@@ -30,7 +30,7 @@ import { ParameterConversionError } from "./errors";
 
 export async function convertSetupParams(
   params: EngineParams.Setup,
-  chainAddresses: ChainAddresses
+  chainAddresses: ChainAddresses,
 ): Promise<Result<SetupParams>> {
   return Result.ok({
     counterpartyIdentifier: params.counterpartyIdentifier,
@@ -260,37 +260,15 @@ export async function convertWithdrawParams(
     );
   }
 
-  // If you are not alice, request a quote
-  let quote = params.quote;
-  if (!quote) {
-    const quoteRes =
-      signer.publicIdentifier !== channel.aliceIdentifier && !initiatorSubmits
-        ? await messaging.sendWithdrawalQuoteMessage(
-            Result.ok({ channelAddress: channel.channelAddress, amount: params.amount, assetId: params.assetId }),
-            channel.aliceIdentifier,
-            signer.publicIdentifier,
-          )
-        : Result.ok({
-            // use hardcoded values
-            channelAddress: channel.channelAddress,
-            amount: params.amount,
-            assetId: params.assetId,
-            fee: "0",
-            expiry: (Date.now() + DEFAULT_FEE_EXPIRY).toString(),
-          });
-
-    if (quoteRes.isError) {
-      return Result.fail(
-        new ParameterConversionError(
-          ParameterConversionError.reasons.CouldNotGetQuote,
-          channelAddress,
-          signer.publicIdentifier,
-          { params, quoteError: jsonifyError(quoteRes.getError()!) },
-        ),
-      );
-    }
-    quote = quoteRes.getValue();
-  }
+  // No more withdrawal quotes: https://github.com/connext/vector/issues/529
+  const quote = {
+    // use hardcoded values
+    channelAddress: channel.channelAddress,
+    amount: params.amount,
+    assetId: params.assetId,
+    fee: "0",
+    expiry: (Date.now() + DEFAULT_FEE_EXPIRY).toString(),
+  };
 
   const fee = BigNumber.from(quote.fee);
   if (fee.gt(params.amount)) {

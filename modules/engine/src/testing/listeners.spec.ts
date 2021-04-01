@@ -46,7 +46,7 @@ import {
 import { Vector } from "@connext/vector-protocol";
 import { Evt } from "evt";
 import Sinon from "sinon";
-import { AddressZero } from "@ethersproject/constants";
+import { AddressZero, Zero } from "@ethersproject/constants";
 import { BigNumber } from "@ethersproject/bignumber";
 import { hexlify } from "@ethersproject/bytes";
 import { randomBytes } from "@ethersproject/random";
@@ -675,7 +675,18 @@ describe(testName, () => {
       });
     });
 
-    it("should return nonzero-valued signed quote if gasSubsidyPercentage != 100 and chain is fee-compatible when fee is gt amount", async () => {
+    it.only("should return 0 for withdrawal quote no matter what", async () => {
+      const { request } = setupMocks();
+      const result = await getWithdrawalQuote(request, 50, signer, store, chainService as IVectorChainService, log);
+      expect(result.getError()).to.be.undefined;
+      expect(result.getValue()).to.containSubset({
+        ...request,
+        amount: "0",
+        fee: Zero,
+      });
+    });
+
+    it.skip("should return nonzero-valued signed quote if gasSubsidyPercentage != 100 and chain is fee-compatible when fee is gt amount", async () => {
       const { request } = setupMocks();
       const result = await getWithdrawalQuote(request, 50, signer, store, chainService as IVectorChainService, log);
       expect(result.getError()).to.be.undefined;
@@ -686,7 +697,7 @@ describe(testName, () => {
       });
     });
 
-    it("should return nonzero-valued signed quote if gasSubsidyPercentage != 100 and chain is fee-compatible when fee is lt amount", async () => {
+    it.skip("should return nonzero-valued signed quote if gasSubsidyPercentage != 100 and chain is fee-compatible when fee is lt amount", async () => {
       const { request } = setupMocks(undefined, normalizedFee);
       const result = await getWithdrawalQuote(request, 50, signer, store, chainService as IVectorChainService, log);
       expect(result.getError()).to.be.undefined;
