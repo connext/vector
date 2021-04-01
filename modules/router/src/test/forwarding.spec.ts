@@ -621,5 +621,15 @@ describe(testName, () => {
     it("should work", async () => {});
   });
 
-  describe.skip("handleIsAlive", () => {});
+  describe.skip("handleIsAlive", () => {
+    describe("handlePendingUpdates", () => {
+      it("should fail if pending updates exist for non-existing channel", async () => {});
+      it("should handle an array of pending updates, marking as succeeded and failed ", async () => {});
+      it("should handle an array of all successful updates ", async () => {});
+    });
+
+    describe("handleUnverifiedUpdates", () => {});
+
+    describe("handleRouterDroppedTransfers", () => {});
+  });
 });
