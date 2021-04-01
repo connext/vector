@@ -213,14 +213,14 @@ export class Vector implements IVectorProtocol {
         return;
       }
       this.logger.warn({ ...payload }, "Channel in dispute");
-      await this.storeService.saveChannelDispute(payload.state.channelAddress, payload.dispute, payload.state);
+      await this.storeService.saveChannelDispute(payload.state.channelAddress, payload.dispute);
     });
 
     this.chainReader.on(ChainReaderEvents.TRANSFER_DISPUTED, async (payload) => {
       if (payload.state.initiator !== this.signerAddress && payload.state.responder !== this.signerAddress) {
         return;
       }
-      await this.storeService.saveTransferDispute(payload.state.channelAddress, payload.dispute, payload.state);
+      await this.storeService.saveTransferDispute(payload.state.channelAddress, payload.dispute);
     });
 
     // Check channel onchain to see if it is *currently* in dispute. This

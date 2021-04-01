@@ -13,10 +13,7 @@ CREATE TABLE "ChannelDispute" (
     "merkleRoot" TEXT NOT NULL,
     "consensusExpiry" TEXT NOT NULL,
     "defundExpiry" TEXT NOT NULL,
-    "offchainChannelId" TEXT NOT NULL,
-    "onchainChannelId" TEXT,
-    FOREIGN KEY ("offchainChannelId") REFERENCES "channel" ("channelAddress") ON DELETE CASCADE ON UPDATE CASCADE,
-    FOREIGN KEY ("onchainChannelId") REFERENCES "channel" ("channelAddress") ON DELETE SET NULL ON UPDATE CASCADE
+    FOREIGN KEY ("channelAddress") REFERENCES "channel" ("channelAddress") ON DELETE CASCADE ON UPDATE CASCADE
 );
 
 -- CreateTable
@@ -25,10 +22,7 @@ CREATE TABLE "TransferDispute" (
     "transferStateHash" TEXT NOT NULL,
     "transferDisputeExpiry" TEXT NOT NULL,
     "isDefunded" BOOLEAN NOT NULL,
-    "offchainTransferId" TEXT NOT NULL,
-    "onchainTransferId" TEXT,
-    FOREIGN KEY ("offchainTransferId") REFERENCES "transfer" ("transferId") ON DELETE CASCADE ON UPDATE CASCADE,
-    FOREIGN KEY ("onchainTransferId") REFERENCES "transfer" ("transferId") ON DELETE SET NULL ON UPDATE CASCADE
+    FOREIGN KEY ("transferId") REFERENCES "transfer" ("transferId") ON DELETE CASCADE ON UPDATE CASCADE
 );
 
 -- RedefineTables
@@ -84,15 +78,3 @@ CREATE UNIQUE INDEX "transfer_createUpdateChannelAddressId_createUpdateNonce_uni
 CREATE UNIQUE INDEX "transfer_resolveUpdateChannelAddressId_resolveUpdateNonce_unique" ON "transfer"("resolveUpdateChannelAddressId", "resolveUpdateNonce");
 PRAGMA foreign_key_check;
 PRAGMA foreign_keys=ON;
-
--- CreateIndex
-CREATE UNIQUE INDEX "ChannelDispute_offchainChannelId_unique" ON "ChannelDispute"("offchainChannelId");
-
--- CreateIndex
-CREATE UNIQUE INDEX "ChannelDispute_onchainChannelId_unique" ON "ChannelDispute"("onchainChannelId");
-
--- CreateIndex
-CREATE UNIQUE INDEX "TransferDispute_offchainTransferId_unique" ON "TransferDispute"("offchainTransferId");
-
--- CreateIndex
-CREATE UNIQUE INDEX "TransferDispute_onchainTransferId_unique" ON "TransferDispute"("onchainTransferId");

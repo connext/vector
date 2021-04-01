@@ -31,11 +31,7 @@ model ChannelDispute {
   consensusExpiry         String
   defundExpiry            String
 
-  offchainChannelId       String
-  offchainChannel         Channel @relation("OffchainChannel", fields: [offchainChannelId], references: [channelAddress])
-
-  onchainChannelId        String?
-  onchainChannel          Channel? @relation("OnchainChannel", fields: [onchainChannelId], references: [channelAddress])
+  channel                 Channel @relation("OffchainChannel", fields: [channelAddress], references: [channelAddress])
 }
 
 model TransferDispute {
@@ -44,11 +40,7 @@ model TransferDispute {
   transferDisputeExpiry  String
   isDefunded             Boolean
 
-  offchainTransferId     String
-  offchainTransfer       Transfer @relation("OffchainTransfer", fields: [offchainTransferId], references: [transferId])
-
-  onchainTransferId      String?
-  onchainTransfer        Transfer? @relation("OnchainTransfer", fields: [onchainTransferId], references: [transferId])
+  transfer               Transfer @relation("OffchainTransfer", fields: [transferId], references: [transferId])
 }
 
 model Channel {
@@ -78,8 +70,7 @@ model Channel {
   // The `*Reference` field links to the offchain transfer representation
   // while the `*Record` field links to the onchain representation that
   // has the transferId suffix `-dispute`
-  disputeReference        ChannelDispute? @relation("OffchainChannel")
-  disputeRecord           ChannelDispute? @relation("OnchainChannel")
+  dispute                 ChannelDispute? @relation("OffchainChannel")
 
   @@unique([publicIdentifierA, publicIdentifierB, chainId])
   @@unique([participantA, participantB, chainId])
@@ -176,12 +167,7 @@ model Transfer {
   resolveUpdateChannelAddressId String?
   resolveUpdateNonce            Int?
 
-  // NOTE: disputes can have a different offchain and onchain state.
-  // The `*Reference` field links to the offchain transfer representation
-  // while the `*Record` field links to the onchain representation that
-  // has the transferId suffix `-dispute`
-  disputeReference        TransferDispute? @relation("OffchainTransfer")
-  disputeRecord           TransferDispute? @relation("OnchainTransfer")
+  dispute                       TransferDispute? @relation("OffchainTransfer")
 
   @@unique([routingId, channelAddressId])
   @@map(name: "transfer")
