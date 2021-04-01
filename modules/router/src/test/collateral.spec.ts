@@ -822,7 +822,7 @@ describe(testName, () => {
         AddressZero,
         routerPublicIdentifier,
         node as INodeService,
-        chainReader,
+        chainReader as IVectorChainReader,
         log,
         requestedAmount.toString(),
       );
