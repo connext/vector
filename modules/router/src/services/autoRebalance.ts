@@ -260,6 +260,13 @@ export const rebalanceIfNeeded = async (
     };
     await store.saveRebalance(latestRebalance);
   }
+
+  if (latestRebalance.status === RouterRebalanceStatus.COMPLETE) {
+    
+  }
+
+
+
   return Result.ok(undefined);
 };
 
@@ -453,7 +460,7 @@ export const completeRebalance = async (
         statusUrl,
         postBody,
       },
-      "Sending rebalance complete request",
+      "Sending rebalance status request",
     );
     // check status
     const statusRes = await axios.post(statusUrl, postBody);

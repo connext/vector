@@ -34,9 +34,9 @@ export type RouterStoredUpdate<T extends RouterUpdateType> = {
 export const RouterRebalanceStatus = {
   PENDING: "PENDING",
   APPROVED: "APPROVED",
-  COMPLETE: "COMPLETE",
   EXECUTED: "EXECUTED",
-  // PROCESSING: "PROCESSING",
+  COMPLETE: "COMPLETE",
+  FINISHED: "FINISHED",
 } as const;
 export type RouterRebalanceStatus = keyof typeof RouterRebalanceStatus;
 
