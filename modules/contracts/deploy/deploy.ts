@@ -19,7 +19,7 @@ const func: DeployFunction = async () => {
   log.info(`Preparing to migrate contracts to chain ${chainId}`);
   log.info(`Deployer address=${deployer} nonce=${nonce} balance=${formatEther(balance)}`);
 
-  if (balance.eq(Zero)) {
+  if (balance.eq(0)) {
     throw new Error(`Account ${deployer} has zero balance on chain ${chainId}, aborting migration`);
   }
 

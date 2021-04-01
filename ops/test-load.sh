@@ -104,6 +104,6 @@ else
   docker run \
     "${common[@]}" \
     --entrypoint=bash \
-    --volume="$root:/root" \
+    --volume="$root:/app" \
     "${project}_builder" -c "cd modules/test-runner && $test_cmd"
 fi
