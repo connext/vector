@@ -801,7 +801,7 @@ async function handleConditionalTransferResolution(
   };
   evts[EngineEvents.CONDITIONAL_TRANSFER_RESOLVED].post(payload);
 }
-``;
+
 async function handleWithdrawalTransferCreation(
   event: ChannelUpdateEvent,
   signer: IChannelSigner,
