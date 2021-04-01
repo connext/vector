@@ -195,33 +195,34 @@ export class Vector implements IVectorProtocol {
     const allChannels = await this.storeService.getChannelStates();
     const channels = allChannels.filter((c) => c.alice === this.signerAddress || c.bob === this.signerAddress);
 
-    // Register listeners for each channel on chain service for
-    // any dispute event
-    await Promise.all(
-      channels.map((channel) => {
-        return this.chainReader.registerChannel(channel.channelAddress, channel.networkContext.chainId);
-      }),
-    );
+    // TODO: more efficient dispute events
+    // // Register listeners for each channel on chain service for
+    // // any dispute event
+    // await Promise.all(
+    //   channels.map((channel) => {
+    //     return this.chainReader.registerChannel(channel.channelAddress, channel.networkContext.chainId);
+    //   }),
+    // );
 
-    // Register callback on chainReader events to properly
-    // update the `channel.inDispute` flag
-    // NOTE: you only need to add it for the first dispute
-    // event. The channels should be updated if a dispute
-    // exists onchain otherwise
-    this.chainReader.on(ChainReaderEvents.CHANNEL_DISPUTED, async (payload) => {
-      if (payload.state.alice !== this.signerAddress && payload.state.bob !== this.signerAddress) {
-        return;
-      }
-      this.logger.warn({ ...payload }, "Channel in dispute");
-      await this.storeService.saveChannelDispute(payload.state.channelAddress, payload.dispute);
-    });
+    // // Register callback on chainReader events to properly
+    // // update the `channel.inDispute` flag
+    // // NOTE: you only need to add it for the first dispute
+    // // event. The channels should be updated if a dispute
+    // // exists onchain otherwise
+    // this.chainReader.on(ChainReaderEvents.CHANNEL_DISPUTED, async (payload) => {
+    //   if (payload.state.alice !== this.signerAddress && payload.state.bob !== this.signerAddress) {
+    //     return;
+    //   }
+    //   this.logger.warn({ ...payload }, "Channel in dispute");
+    //   await this.storeService.saveChannelDispute(payload.state.channelAddress, payload.dispute);
+    // });
 
-    this.chainReader.on(ChainReaderEvents.TRANSFER_DISPUTED, async (payload) => {
-      if (payload.state.initiator !== this.signerAddress && payload.state.responder !== this.signerAddress) {
-        return;
-      }
-      await this.storeService.saveTransferDispute(payload.state.channelAddress, payload.dispute);
-    });
+    // this.chainReader.on(ChainReaderEvents.TRANSFER_DISPUTED, async (payload) => {
+    //   if (payload.state.initiator !== this.signerAddress && payload.state.responder !== this.signerAddress) {
+    //     return;
+    //   }
+    //   await this.storeService.saveTransferDispute(payload.state.channelAddress, payload.dispute);
+    // });
 
     // Check channel onchain to see if it is *currently* in dispute. This
     // is done to make sure any disputes that happened while the user was
@@ -346,20 +347,21 @@ export class Vector implements IVectorProtocol {
 
         const { updatedChannel, updatedActiveTransfers, updatedTransfer } = inboundRes.getValue();
 
-        // If it is setup, watch for dispute events in channel
-        if (received.update.type === UpdateType.setup) {
-          this.logger.info({ channelAddress: updatedChannel.channelAddress }, "Registering channel for dispute events");
-          const registrationRes = await this.chainReader.registerChannel(
-            updatedChannel.channelAddress,
-            updatedChannel.networkContext.chainId,
-          );
-          if (registrationRes.isError) {
-            this.logger.warn(
-              { ...jsonifyError(registrationRes.getError()!) },
-              "Failed to register channel for dispute watching",
-            );
-          }
-        }
+        // TODO: more efficient dispute events
+        // // If it is setup, watch for dispute events in channel
+        // if (received.update.type === UpdateType.setup) {
+        //   this.logger.info({ channelAddress: updatedChannel.channelAddress }, "Registering channel for dispute events");
+        //   const registrationRes = await this.chainReader.registerChannel(
+        //     updatedChannel.channelAddress,
+        //     updatedChannel.networkContext.chainId,
+        //   );
+        //   if (registrationRes.isError) {
+        //     this.logger.warn(
+        //       { ...jsonifyError(registrationRes.getError()!) },
+        //       "Failed to register channel for dispute watching",
+        //     );
+        //   }
+        // }
 
         this.evts[ProtocolEventName.CHANNEL_UPDATE_EVENT].post({
           updatedChannelState: updatedChannel,
@@ -442,20 +444,21 @@ export class Vector implements IVectorProtocol {
     };
 
     const returnVal = await this.executeUpdate(updateParams);
-    if (!returnVal.isError) {
-      const channel = returnVal.getValue();
-      this.logger.debug({ channelAddress }, "Registering channel for dispute events");
-      const registrationRes = await this.chainReader.registerChannel(
-        channel.channelAddress,
-        channel.networkContext.chainId,
-      );
-      if (registrationRes.isError) {
-        this.logger.warn(
-          { ...jsonifyError(registrationRes.getError()!) },
-          "Failed to register channel for dispute watching",
-        );
-      }
-    }
+    // TODO: more efficient dispute events
+    // if (!returnVal.isError) {
+    //   const channel = returnVal.getValue();
+    //   this.logger.debug({ channelAddress }, "Registering channel for dispute events");
+    //   const registrationRes = await this.chainReader.registerChannel(
+    //     channel.channelAddress,
+    //     channel.networkContext.chainId,
+    //   );
+    //   if (registrationRes.isError) {
+    //     this.logger.warn(
+    //       { ...jsonifyError(registrationRes.getError()!) },
+    //       "Failed to register channel for dispute watching",
+    //     );
+    //   }
+    // }
     this.logger.debug(
       {
         result: returnVal.isError ? jsonifyError(returnVal.getError()!) : returnVal.getValue(),

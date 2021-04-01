@@ -140,7 +140,7 @@ describe(testName, () => {
 
     await advanceBlocktime(parseInt(carolRogerPostSetup.timeout) + 5_000);
 
-    await defundChannel(rogerService, carolService, carolRogerPostDeposit.channelAddress, provider1);
+    await defundChannel(rogerService, carolRogerPostDeposit.channelAddress, provider1);
 
     // exit carol (only one with balance)
     await exitAssets(

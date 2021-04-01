@@ -28,6 +28,7 @@ import {
   MinimalTransaction,
   WITHDRAWAL_RESOLVED_EVENT,
   VectorErrorJson,
+  getConfirmationsForChain,
 } from "@connext/vector-types";
 import {
   generateMerkleTreeData,
@@ -1315,6 +1316,26 @@ export class VectorEngine implements IVectorEngine {
     if (disputeRes.isError) {
       return Result.fail(disputeRes.getError()!);
     }
+
+    // register saving callback
+    disputeRes
+      .getValue()
+      .completed(getConfirmationsForChain(state.networkContext.chainId))
+      .then(async (receipt) => {
+        if (receipt.isError) {
+          return;
+        }
+        // save the dispute
+        // TODO: make this event driven
+        const dispute = await this.chainService.getChannelDispute(state.channelAddress, state.networkContext.chainId);
+        if (!dispute.isError && !!dispute.getValue()) {
+          try {
+            await this.store.saveChannelDispute(state.channelAddress, dispute.getValue()!);
+          } catch (e) {
+            this.logger.error({ ...jsonifyError(e) }, "Failed to save channel dispute");
+          }
+        }
+      });
 
     return Result.ok({ transactionHash: disputeRes.getValue().hash });
   }
