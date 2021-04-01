@@ -198,19 +198,6 @@ export const rebalanceIfNeeded = async (
     await store.saveRebalance(latestRebalance);
   }
 
-  // A factory-like method for creating callbacks below, depending on
-  // which hash we're saving.
-  const makeUpdateRebalanceCallback = (whichHash: string) => {
-    return async (txHash: string) => {
-      // save hash
-      latestRebalance = {
-        ...latestRebalance,
-        [whichHash]: txHash,
-      } as RouterRebalanceRecord;
-      await store.saveRebalance(latestRebalance);
-    }
-  }
-
   if (latestRebalance.status === RouterRebalanceStatus.PENDING) {
     // approve rebalance
     const approveResult = await approveRebalance(
