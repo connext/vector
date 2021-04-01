@@ -120,7 +120,7 @@ then
   arg=""
 else
   node_image_name="${project}_builder:$version"
-  mount_root="--volume=$root:/root"
+  mount_root="--volume=$root:/app"
   entrypoint="--entrypoint=bash"
   arg="modules/server-node/ops/entry.sh"
 fi
