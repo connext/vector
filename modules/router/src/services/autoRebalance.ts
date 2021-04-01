@@ -18,6 +18,7 @@ import { Wallet } from "@ethersproject/wallet";
 import { Type, Static } from "@sinclair/typebox";
 import axios from "axios";
 import { BaseLogger } from "pino";
+import { v4 as uuidv4 } from "uuid";
 
 import { getConfig } from "../config";
 import { AutoRebalanceServiceError } from "../errors";
@@ -170,7 +171,7 @@ export const rebalanceIfNeeded = async (
       method,
       intervalId: methodId,
       amountToSendNumber,
-      amountToSend,
+      amountToSend: amountToSend.toString(),
     },
     "Rebalance required",
   );
@@ -183,6 +184,7 @@ export const rebalanceIfNeeded = async (
 
   // check if an active rebalance is in progress
   let latest = await store.getLatestRebalance(swap);
+  console.log("latest: ", latest);
   if (!latest) {
     // set dummy value
     latest = {
@@ -190,7 +192,8 @@ export const rebalanceIfNeeded = async (
       swap,
       approveHash: undefined,
       executeHash: undefined,
-      id: getRandomBytes32(), // dummy value, set by db
+      completeHash: undefined,
+      id: uuidv4(), // dummy value, set by db
     };
   }
 
@@ -273,7 +276,8 @@ export const approveRebalance = async (
   logger.debug({ method, methodId, swap, amount: amount.toString() }, "Method started");
 
   try {
-    const approveRes = await axios.post(`${swap.rebalancerUrl}/approval`, {
+    const approveUrl = `${swap.rebalancerUrl}/approval`;
+    const postBody: RebalanceParams = {
       amount: amount.toString(),
       assetId: swap.fromAssetId,
       fromProvider: config.chainProviders[swap.fromChainId],
@@ -281,7 +285,17 @@ export const approveRebalance = async (
       toProvider: config.chainProviders[swap.toChainId],
       toChainId: swap.toChainId,
       signer: wallet.address,
-    } as RebalanceParams);
+    };
+    logger.info(
+      {
+        method,
+        methodId,
+        approveUrl,
+        postBody,
+      },
+      "Sending approval request",
+    );
+    const approveRes = await axios.post(approveUrl, postBody);
     logger.info(
       {
         method,
@@ -346,7 +360,8 @@ export const executeRebalance = async (
   const method = "executeRebalance";
   logger.debug({ method, methodId, swap, amount: amount.toString() }, "Method started");
   try {
-    const rebalanceRes = await axios.post(`${swap.rebalancerUrl}/execute`, {
+    const rebalanceUrl = `${swap.rebalancerUrl}/execute`;
+    const postBody: RebalanceParams = {
       amount: amount.toString(),
       assetId: swap.fromAssetId,
       fromProvider: config.chainProviders[swap.fromChainId],
@@ -354,7 +369,17 @@ export const executeRebalance = async (
       toProvider: config.chainProviders[swap.toChainId],
       toChainId: swap.toChainId,
       signer: wallet.address,
-    } as RebalanceParams);
+    };
+    logger.info(
+      {
+        method,
+        methodId,
+        rebalanceUrl,
+        postBody,
+      },
+      "Sending rebalance execute request",
+    );
+    const rebalanceRes = await axios.post(rebalanceUrl, postBody);
     logger.info(
       {
         method,
@@ -412,43 +437,58 @@ export const completeRebalance = async (
   const method = "completeRebalance";
   logger.debug({ method, methodId, swap, amount: amount.toString() }, "Method started");
   try {
-    // check status
-    const statusRes = await axios.post(`${swap.rebalancerUrl}/status`, {
+    const statusUrl = `${swap.rebalancerUrl}/status`;
+    const postBody: CheckStatusParams = {
       txHash: executedHash,
       fromProvider: config.chainProviders[swap.fromChainId],
       fromChainId: swap.fromChainId,
       toProvider: config.chainProviders[swap.toChainId],
       toChainId: swap.toChainId,
       signer: wallet.address,
-    } as CheckStatusParams);
+    };
+    logger.info(
+      {
+        method,
+        methodId,
+        statusUrl,
+        postBody,
+      },
+      "Sending rebalance execute request",
+    );
+    // check status
+    const statusRes = await axios.post(statusUrl, postBody);
     logger.info(
       {
         method,
         intervalId: methodId,
-        rebalanceRes: statusRes.data,
+        statusRes: statusRes.data,
       },
       "Status request sent",
     );
-    const {
-      status: { completed },
-      transaction,
-    } = statusRes.data;
-    if (!completed) {
+    const { status } = statusRes.data;
+    if (!status || !status.completed) {
+      logger.info({ status, method, intervalId: methodId }, "Rebalance not completed");
       return Result.ok({ complete: false });
     }
     // is completed, check if tx is needed
-    if (!transaction) {
-      return Result.ok({ complete: false });
+    if (!status.transaction) {
+      logger.info({ intervalId: methodId }, "No completion tx required");
+      return Result.ok({ complete: true });
     }
+    logger.info({ status, method, intervalId: methodId }, "Sending execute tx");
     // need to send tx to complete rebalance
     const transactionHash = await sendTransaction(
-      swap.fromChainId,
-      transaction,
+      status.transaction.chainId,
+      status.transaction,
       wallet,
       hydratedProviders,
       logger,
       method,
       methodId,
+    );
+    logger.info(
+      { transactionHash, transaction: status.transaction, method, intervalId: methodId },
+      "Sent execute tx, completed",
     );
     return Result.ok({ transactionHash, complete: true });
   } catch (e) {
@@ -472,20 +512,30 @@ const sendTransaction = async (
   method: string = "sendTransaction",
   methodId: string = getRandomBytes32(),
 ): Promise<string> => {
-  const fromProvider = providers[chainId];
-  if (!fromProvider) {
+  const provider = providers[chainId];
+  if (!provider) {
     throw new Error(`No provider for chain ${chainId}, cannot send tx`);
   }
+  const gasPrice = (transaction as any).gasPrice ?? (await provider.getGasPrice());
   logger.info(
     {
       method,
-      methodId,
+      intervalId: methodId,
+      chainId,
+      gasPrice: gasPrice.toString(),
+      from: wallet.address,
+      data: transaction.data,
+      to: transaction.to,
+      value: (transaction.value ?? 0).toString(),
     },
     "Sending tx",
   );
-  const response = await wallet
-    .connect(fromProvider)
-    .sendTransaction({ to: transaction.to, value: transaction.value, data: transaction.data });
+  const response = await wallet.connect(provider).sendTransaction({
+    to: transaction.to,
+    value: transaction.value ?? 0,
+    data: transaction.data,
+    gasPrice: BigNumber.from(gasPrice),
+  });
   logger.info(
     {
       method,

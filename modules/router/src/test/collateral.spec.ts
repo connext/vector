@@ -141,8 +141,11 @@ describe(testName, () => {
       const { channel } = createTestChannelState(UpdateType.deposit, {
         alice: mkAddress("0xaaa"),
         aliceIdentifier: routerPublicIdentifier,
+        bob: mkAddress("0xbbb"),
         assetIds: [AddressZero],
         balances: [{ to: [mkAddress("0xaaa"), mkAddress("0xbbb")], amount: ["0", "0"] }],
+        processedDepositsA: ["0"],
+        processedDepositsB: ["0"],
       });
       node.getStateChannel.onCall(0).resolves(Result.ok(channel));
       node.getStateChannel.onCall(1).resolves(
@@ -183,6 +186,8 @@ describe(testName, () => {
         aliceIdentifier: routerPublicIdentifier,
         assetIds: [AddressZero],
         balances: [{ to: [mkAddress("0xaaa"), mkAddress("0xbbb")], amount: ["0", "0"] }],
+        processedDepositsA: ["0"],
+        processedDepositsB: ["0"],
       });
       const profile = { ...ethProfile, target: "0" };
       getRebalanceProfile.returns(Result.ok(profile));
@@ -251,6 +256,8 @@ describe(testName, () => {
         aliceIdentifier: routerPublicIdentifier,
         assetIds: [AddressZero],
         balances: [{ to: [mkAddress("0xaaa"), mkAddress("0xbbb")], amount: ["0", "0"] }],
+        processedDepositsA: ["0"],
+        processedDepositsB: ["0"],
       });
       node.getStateChannel.onFirstCall().resolves(Result.ok(channel));
       node.getStateChannel.resolves(
@@ -374,6 +381,8 @@ describe(testName, () => {
             amount: [routerBalance.toString(), "0"],
           },
         ],
+        processedDepositsA: [routerBalance.toString()],
+        processedDepositsB: ["0"],
       });
       const profile = { ...ethProfile, target: "0" };
       getRebalanceProfile.returns(Result.ok(profile));
@@ -510,6 +519,8 @@ describe(testName, () => {
               amount: ["0", "0"],
             },
           ],
+          processedDepositsA: ["0"],
+          processedDepositsB: ["0"],
         });
         const requestedAmount = BigNumber.from(ethProfile.target).add(10000);
         node.getStateChannel.resolves(
@@ -553,6 +564,8 @@ describe(testName, () => {
               amount: ["0", "0"],
             },
           ],
+          processedDepositsA: ["0"],
+          processedDepositsB: ["0"],
         });
         const requestedAmount = BigNumber.from(ethProfile.target).sub(10000);
         node.getStateChannel.resolves(
@@ -596,6 +609,8 @@ describe(testName, () => {
               amount: ["0", "0"],
             },
           ],
+          processedDepositsA: ["0"],
+          processedDepositsB: ["0"],
         });
         node.getStateChannel.resolves(
           Result.ok({
@@ -688,6 +703,8 @@ describe(testName, () => {
               amount: ["0", "0"],
             },
           ],
+          processedDepositsA: ["0"],
+          processedDepositsB: ["0"],
         });
         const requestedAmount = BigNumber.from(ethProfile.target).add(10000);
         const profile = { ...ethProfile, target: "0" };
@@ -770,6 +787,56 @@ describe(testName, () => {
         expect(node.sendDepositTx.callCount).to.be.eq(2);
         expect(node.reconcileDeposit.callCount).to.be.eq(2);
       });
+    });
+
+    it("should collateralize difference between owed and target", async () => {
+      const { channel } = createTestChannelState(UpdateType.deposit, {
+        aliceIdentifier: routerPublicIdentifier,
+        alice: mkAddress("0xaaaaa"),
+        bob: mkAddress("0xbbbbcccc"),
+        processedDepositsA: ["0"],
+        assetIds: [AddressZero],
+        balances: [
+          {
+            amount: ["0", "0"],
+            to: [mkAddress("0xaaaaa"), mkAddress("0xbbbbcccc")],
+          },
+        ],
+      });
+      const requestedAmount = parseEther("0.001");
+      chainReader.getTotalDepositedA.resolves(Result.ok(requestedAmount.sub(10)));
+      node.getStateChannel.resolves(
+        Result.ok({
+          ...channel,
+          balances: [
+            {
+              to: [mkAddress("0xaaa"), mkAddress("0xbbb")],
+              amount: [requestedAmount.toString(), "0"],
+            },
+          ],
+        }),
+      );
+
+      const res = await requestCollateral(
+        channel,
+        AddressZero,
+        routerPublicIdentifier,
+        node as INodeService,
+        chainReader,
+        log,
+        requestedAmount.toString(),
+      );
+
+      expect(node.sendDepositTx.getCall(0).args[0]).to.deep.eq({
+        amount: "10",
+        assetId: AddressZero,
+        chainId: channel.networkContext.chainId,
+        channelAddress: channel.channelAddress,
+        publicIdentifier: routerPublicIdentifier,
+      });
+      expect(res.isError).to.be.false;
+      expect(node.sendDepositTx.callCount).to.be.eq(1);
+      expect(node.reconcileDeposit.callCount).to.be.eq(1);
     });
   });
 });

@@ -241,9 +241,7 @@ describe(testName, () => {
         expect(error.context).to.containSubset({
           ...errorContext,
         });
-        console.log("***** verifying queue");
         expect(store.queueUpdate.callCount).to.be.eq(sentSingleSigned ? 1 : 0);
-        console.log("***** verified");
         return;
       }
       expect(error.context).to.containSubset({
