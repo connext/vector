@@ -675,14 +675,13 @@ describe(testName, () => {
       });
     });
 
-    it.only("should return 0 for withdrawal quote no matter what", async () => {
+    it("should return 0 for withdrawal quote no matter what", async () => {
       const { request } = setupMocks();
       const result = await getWithdrawalQuote(request, 50, signer, store, chainService as IVectorChainService, log);
       expect(result.getError()).to.be.undefined;
       expect(result.getValue()).to.containSubset({
         ...request,
-        amount: "0",
-        fee: Zero,
+        fee: "0",
       });
     });
 
