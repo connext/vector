@@ -473,7 +473,7 @@ export const completeRebalance = async (
     // is completed, check if tx is needed
     if (!status.transaction) {
       logger.info({ intervalId: methodId }, "No completion tx required");
-      return Result.ok({ complete: false });
+      return Result.ok({ complete: true });
     }
     logger.info({ status, method, intervalId: methodId }, "Sending execute tx");
     // need to send tx to complete rebalance
