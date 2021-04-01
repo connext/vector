@@ -135,15 +135,12 @@ describe(testName, () => {
       depositAmt,
     );
     expect(carolRogerPostDeposit.balances[0].to[1]).to.be.eq(carolService.signerAddress);
-    console.log("verified signer address");
 
     await disputeChannel(rogerService, carolService, carolRogerPostDeposit.channelAddress, provider1);
-    console.log("successfully disputed");
 
     await advanceBlocktime(parseInt(carolRogerPostSetup.timeout) + 5_000);
 
     await defundChannel(rogerService, carolService, carolRogerPostDeposit.channelAddress, provider1);
-    console.log("successfully defunded");
 
     // exit carol (only one with balance)
     await exitAssets(

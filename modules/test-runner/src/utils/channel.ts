@@ -410,7 +410,7 @@ export const disputeChannel = async (
   const [counterpartyEvent, transaction] = await Promise.all([
     counterpartyEventPromise,
     waitForTransaction(provider, disputeRes.getValue().transactionHash),
-    delay(3_000),
+    delay(5_000),
   ]);
 
   // Verify stored disputes
@@ -462,7 +462,7 @@ export const defundChannel = async (
   const [event, transaction] = await Promise.all([
     defundEventPromise,
     waitForTransaction(provider, defundRes.getValue().transactionHash),
-    delay(3_000),
+    delay(5_000),
   ]);
 
   // Verify event payload
