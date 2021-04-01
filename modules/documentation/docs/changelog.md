@@ -2,6 +2,8 @@
 
 ## Next Release
 
+- \[engine\] Remove withdrawal fees
+
 ## 0.2.1
 
 Non-beta release
