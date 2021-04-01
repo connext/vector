@@ -2,6 +2,10 @@
 
 ## Next Release
 
+## 0.2.1-beta.24
+
+- \[router\] Fix autorebalancing for multiple rebalance cycles
+
 ## 0.2.1-beta.23
 
 - \[router\] Fix autorebalancing approval tx schema

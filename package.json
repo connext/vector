@@ -1,6 +1,6 @@
 {
   "name": "vector",
-  "version": "0.2.1-beta.23",
+  "version": "0.2.1-beta.24",
   "description": "Vector is an ultra-minimal state channel implementation that borrows ideas from the Counterfactual framework, the v1 Connext Payment Channel Hub, and the StateChannels framework.",
   "registry": "docker.io/connextproject",
   "repository": {
