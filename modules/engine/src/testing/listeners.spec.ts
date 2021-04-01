@@ -608,21 +608,22 @@ describe(testName, () => {
       expect(result.getError()?.context).to.containSubset(contextSubset);
     };
 
-    it("should fail if channel does not exist", async () => {
+    // skipping all quote related tests, see https://github.com/connext/vector/issues/529
+    it.skip("should fail if channel does not exist", async () => {
       const { request } = setupMocks();
       store.getChannelState.resolves(undefined);
 
       await runErrorTest(request, WithdrawQuoteError.reasons.ChannelNotFound);
     });
 
-    it("should fail if chainService.getCode fails", async () => {
+    it.skip("should fail if chainService.getCode fails", async () => {
       const { request } = setupMocks();
       chainService.getCode.resolves(Result.fail(new ChainError("fail")));
 
       await runErrorTest(request, WithdrawQuoteError.reasons.ChainServiceFailure, { chainServiceMethod: "getCode" });
     });
 
-    it("should fail if chainService.getGasPrice fails", async () => {
+    it.skip("should fail if chainService.getGasPrice fails", async () => {
       const { request } = setupMocks();
       chainService.getGasPrice.resolves(Result.fail(new ChainError("fail")));
 
@@ -631,7 +632,7 @@ describe(testName, () => {
       });
     });
 
-    it("should fail if chainService.getDecimals fails", async () => {
+    it.skip("should fail if chainService.getDecimals fails", async () => {
       const { request } = setupMocks();
       chainService.getDecimals.resolves(Result.fail(new ChainError("fail")));
 
@@ -640,21 +641,21 @@ describe(testName, () => {
       });
     });
 
-    it("should fail if normalizeFee fails", async () => {
+    it.skip("should fail if normalizeFee fails", async () => {
       const { request } = setupMocks();
       normalizeFeeStub.resolves(Result.fail(new Error("fail")));
 
       await runErrorTest(request, WithdrawQuoteError.reasons.ExchangeRateError);
     });
 
-    it("should fail if signer.signMessage", async () => {
+    it.skip("should fail if signer.signMessage", async () => {
       const { request } = setupMocks();
       signer.signMessage.rejects(new Error("fail"));
 
       await runErrorTest(request, WithdrawQuoteError.reasons.SignatureFailure);
     });
 
-    it("should return zero-valued signed quote if gasSubsidyPercentage is 100", async () => {
+    it.skip("should return zero-valued signed quote if gasSubsidyPercentage is 100", async () => {
       const { request } = setupMocks();
       const result = await getWithdrawalQuote(request, 100, signer, store, chainService as IVectorChainService, log);
       expect(result.isError).to.be.false;
@@ -664,21 +665,11 @@ describe(testName, () => {
       });
     });
 
-    it("should return zero-valued signed quote if chain is not fee-compatible", async () => {
+    it.skip("should return zero-valued signed quote if chain is not fee-compatible", async () => {
       const channel = createTestChannelState(UpdateType.deposit, { networkContext: { chainId: 1234567 } }).channel;
       const { request } = setupMocks(channel);
       const result = await getWithdrawalQuote(request, 100, signer, store, chainService as IVectorChainService, log);
       expect(result.isError).to.be.false;
-      expect(result.getValue()).to.containSubset({
-        ...request,
-        fee: "0",
-      });
-    });
-
-    it("should return 0 for withdrawal quote no matter what", async () => {
-      const { request } = setupMocks();
-      const result = await getWithdrawalQuote(request, 50, signer, store, chainService as IVectorChainService, log);
-      expect(result.getError()).to.be.undefined;
       expect(result.getValue()).to.containSubset({
         ...request,
         fee: "0",
@@ -704,6 +695,16 @@ describe(testName, () => {
         ...request,
         amount: BigNumber.from(request.amount).sub(normalizedFee.div(2)).toString(),
         fee: normalizedFee.div(2).toString(),
+      });
+    });
+
+    it("should return 0 for withdrawal quote no matter what", async () => {
+      const { request } = setupMocks();
+      const result = await getWithdrawalQuote(request, 50, signer, store, chainService as IVectorChainService, log);
+      expect(result.getError()).to.be.undefined;
+      expect(result.getValue()).to.containSubset({
+        ...request,
+        fee: "0",
       });
     });
   });

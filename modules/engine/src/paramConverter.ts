@@ -218,7 +218,7 @@ export async function convertWithdrawParams(
   channel: FullChannelState,
   chainAddresses: ChainAddresses,
   chainReader: IVectorChainReader,
-  messaging: IMessagingService,
+  _messaging: IMessagingService,
 ): Promise<Result<CreateTransferParams, EngineError>> {
   const { channelAddress, callTo, callData, meta, timeout } = params;
   const assetId = getAddress(params.assetId);
@@ -270,30 +270,13 @@ export async function convertWithdrawParams(
     expiry: (Date.now() + DEFAULT_FEE_EXPIRY).toString(),
   };
 
-  const fee = BigNumber.from(quote.fee);
-  if (fee.gt(params.amount)) {
-    return Result.fail(
-      new ParameterConversionError(
-        ParameterConversionError.reasons.FeeGreaterThanAmount,
-        channelAddress,
-        signer.publicIdentifier,
-        { params, quote },
-      ),
-    );
-  }
-
-  // If there is a fee being charged, recalculate the amount
-  const amount = BigNumber.from(params.amount).sub(fee).toString();
-
   const commitment = new WithdrawCommitment(
     channel.channelAddress,
     channel.alice,
     channel.bob,
     params.recipient,
     assetId,
-    // Important: Use amount here which doesn't include fee!!
-    // Should be the amount that will be withdrawn to user
-    amount.toString(),
+    params.amount,
     // Use channel nonce as a way to keep withdraw hashes unique
     channel.nonce.toString(),
     callTo,
@@ -326,7 +309,7 @@ export async function convertWithdrawParams(
     responder: channelCounterparty,
     data: commitment.hashToSign(),
     nonce: channel.nonce.toString(),
-    fee: fee.toString(),
+    fee: "0",
     callTo: callTo ?? AddressZero,
     callData: callData ?? "0x",
   };
@@ -365,7 +348,7 @@ export async function convertWithdrawParams(
       quote: {
         ...quote, // use our own values by default
         channelAddress,
-        amount,
+        amount: params.amount,
         assetId: params.assetId,
       },
       withdrawNonce: channel.nonce.toString(),
