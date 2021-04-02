@@ -12,14 +12,7 @@
     "@ethersproject/random": "5.1.0",
     "@ethersproject/strings": "5.1.0",
     "@ethersproject/wallet": "5.1.0",
-    "@types/node": "14.14.31",
-    "@types/react": "16.9.53",
-    "@types/react-dom": "16.9.8",
-    "pino": "6.11.1",
-    "react": "17.0.1",
-    "react-dom": "17.0.1",
-    "react-scripts": "3.4.3",
-    "typescript": "4.2.2"
+    "pino": "6.11.1"
   },
   "scripts": {
     "start": "BROWSER=none PORT=3030 react-scripts start",
@@ -46,6 +39,13 @@
     ]
   },
   "devDependencies": {
-    "@types/pino": "6.3.6"
+    "@types/pino": "6.3.6",
+    "@types/node": "14.14.31",
+    "@types/react": "16.9.53",
+    "@types/react-dom": "16.9.8",
+    "react": "17.0.1",
+    "react-dom": "17.0.1",
+    "react-scripts": "3.4.3",
+    "typescript": "4.2.2"
   }
 }
