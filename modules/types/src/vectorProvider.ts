@@ -43,6 +43,7 @@ export const ChannelRpcMethods = {
   chan_defundTransfer: "chan_defundTransfer",
   chan_getTransferDispute: "chan_getTransferDispute",
   chan_exit: "chan_exit",
+  chan_syncDisputes: "chan_syncDisputes",
   chan_decrypt: "chan_decrypt",
   chan_subscription: "chan_subscription",
 } as const;
@@ -93,6 +94,7 @@ export type ChannelRpcMethodsPayloadMap = {
   [ChannelRpcMethods.chan_defundTransfer]: EngineParams.DefundTransfer;
   [ChannelRpcMethods.chan_getTransferDispute]: EngineParams.GetTransferDispute;
   [ChannelRpcMethods.chan_exit]: EngineParams.ExitChannel;
+  [ChannelRpcMethods.chan_syncDisputes]: {};
   [ChannelRpcMethods.chan_decrypt]: string;
   [ChannelRpcMethods.chan_subscription]: {
     subscription: string;
@@ -144,6 +146,7 @@ export type ChannelRpcMethodsResponsesMap = {
   [ChannelRpcMethods.chan_defundTransfer]: { transactionHash: string };
   [ChannelRpcMethods.chan_getTransferDispute]: TransferDispute | undefined;
   [ChannelRpcMethods.chan_exit]: { assetId: string; transactionHash?: string; error?: VectorErrorJson }[];
+  [ChannelRpcMethods.chan_syncDisputes]: any;
   [ChannelRpcMethods.chan_decrypt]: string;
   [ChannelRpcMethods.chan_subscription]: any;
 };

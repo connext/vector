@@ -37,3 +37,12 @@ Content-Type: application/json
   "channelAddress": "{{channel}}",
   "publicIdentifier": "{{nodePublicIdentifier}}"
 }
+
+##############
+### Defund Channel
+POST {{nodeUrl}}/sync-disputes
+Content-Type: application/json
+
+{
+  "publicIdentifier": "{{nodePublicIdentifier}}"
+}

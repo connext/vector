@@ -192,8 +192,6 @@ export class Vector implements IVectorProtocol {
    */
   private async registerDisputes(): Promise<void> {
     // Get all channel states from store
-    const allChannels = await this.storeService.getChannelStates();
-    const channels = allChannels.filter((c) => c.alice === this.signerAddress || c.bob === this.signerAddress);
 
     // TODO: more efficient dispute events
     // // Register listeners for each channel on chain service for
@@ -228,42 +226,7 @@ export class Vector implements IVectorProtocol {
     // is done to make sure any disputes that happened while the user was
     // offline are properly accounted for
     // TODO: how to account for transfer disputes efficiently?
-    await Promise.all(
-      channels.map(async (channel) => {
-        const disputeRes = await this.chainReader.getChannelDispute(
-          channel.channelAddress,
-          channel.networkContext.chainId,
-        );
-        if (disputeRes.isError) {
-          this.logger.error(
-            { channelAddress: channel.channelAddress, error: disputeRes.getError()!.message },
-            "Could not get dispute",
-          );
-          return;
-        }
-        const dispute = disputeRes.getValue();
-        if (!dispute) {
-          return;
-        }
-        // Before saving the dispute record, you have to get the
-        // CoreChannelState that is associated with the dispute record.
-        // The CoreChannelState is only emitted in events, not stored
-        // onchain, so you must query events
-
-        // TODO: best way to query past events here? See `getCoreChannelState`
-        // in the ethReader class
-        try {
-          // save dispute record
-          // TODO: implement recovery from dispute #438
-          await this.storeService.saveChannelDispute(channel.channelAddress, dispute);
-        } catch (e) {
-          this.logger.error(
-            { channelAddress: channel.channelAddress, error: e.message },
-            "Failed to update dispute on startup",
-          );
-        }
-      }),
-    );
+    await this.syncDisputes();
   }
 
   private async setupServices(): Promise<Vector> {
@@ -625,5 +588,57 @@ export class Vector implements IVectorProtocol {
 
     Object.values(this.evts).forEach((evt) => evt.detach());
     await this.messagingService.disconnect();
+  }
+
+  public async syncDisputes(): Promise<void> {
+    const method = "syncDisputes";
+    const allChannels = await this.storeService.getChannelStates();
+    const channels = allChannels.filter((c) => c.alice === this.signerAddress || c.bob === this.signerAddress);
+
+    await Promise.all(
+      channels.map(async (channel) => {
+        const disputeRes = await this.chainReader.getChannelDispute(
+          channel.channelAddress,
+          channel.networkContext.chainId,
+        );
+        if (disputeRes.isError) {
+          this.logger.error(
+            { channelAddress: channel.channelAddress, error: disputeRes.getError()!.message },
+            "Could not get dispute",
+          );
+          return;
+        }
+        this.logger.info(
+          {
+            method,
+            disputeRes: disputeRes.getValue(),
+            channelAddress: channel.channelAddress,
+            chainId: channel.networkContext.chainId,
+          },
+          "Got onchain dispute",
+        );
+        const dispute = disputeRes.getValue();
+        if (!dispute) {
+          return;
+        }
+        // Before saving the dispute record, you have to get the
+        // CoreChannelState that is associated with the dispute record.
+        // The CoreChannelState is only emitted in events, not stored
+        // onchain, so you must query events
+
+        // TODO: best way to query past events here? See `getCoreChannelState`
+        // in the ethReader class
+        try {
+          // save dispute record
+          // TODO: implement recovery from dispute #438
+          await this.storeService.saveChannelDispute(channel.channelAddress, dispute);
+        } catch (e) {
+          this.logger.error(
+            { channelAddress: channel.channelAddress, error: e.message },
+            "Failed to update dispute on startup",
+          );
+        }
+      }),
+    );
   }
 }

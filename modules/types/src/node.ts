@@ -147,6 +147,8 @@ export interface INodeService {
     params: OptionalPublicIdentifier<NodeParams.SendExitChannelTx>,
   ): Promise<Result<NodeResponses.SendExitChannelTx, NodeError>>;
 
+  syncDisputes(params: {}): Promise<Result<void, NodeError>>;
+
   once<T extends EngineEvent>(
     event: T,
     callback: (payload: EngineEventMap[T]) => void | Promise<void>,
