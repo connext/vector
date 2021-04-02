@@ -14,6 +14,7 @@ import {
   jsonifyError,
   DEFAULT_CHANNEL_TIMEOUT,
   SetupParams,
+  IVectorChainReader,
 } from "@connext/vector-types";
 import {
   createTestChannelState,
@@ -197,7 +198,13 @@ describe("ParamConverter", () => {
           providerUrl,
         },
       });
-      const ret = await convertConditionalTransferParams(params, signerA, channelState, chainReader, messaging);
+      const ret = await convertConditionalTransferParams(
+        params,
+        signerA,
+        channelState,
+        chainReader as IVectorChainReader,
+        messaging,
+      );
       expect(ret.isError).to.be.true;
       const err = ret.getError();
       expect(err?.message).to.be.eq(ParameterConversionError.reasons.FailedToGetRegisteredTransfer);
@@ -219,7 +226,13 @@ describe("ParamConverter", () => {
           providerUrl,
         },
       });
-      const ret = await convertConditionalTransferParams(params, signerA, channelState, chainReader, messaging);
+      const ret = await convertConditionalTransferParams(
+        params,
+        signerA,
+        channelState,
+        chainReader as IVectorChainReader,
+        messaging,
+      );
       expect(ret.isError).to.be.true;
       expect(ret.getError()?.message).to.be.eq(ParameterConversionError.reasons.CouldNotGetQuote);
       expect(ret.getError()?.context.quoteError.message).to.be.eq("fail");
@@ -247,7 +260,13 @@ describe("ParamConverter", () => {
         fee: "0",
         expiry: (Date.now() + 30_000).toString(),
       };
-      const ret = await convertConditionalTransferParams(params, signerA, channelState, chainReader, messaging);
+      const ret = await convertConditionalTransferParams(
+        params,
+        signerA,
+        channelState,
+        chainReader as IVectorChainReader,
+        messaging,
+      );
       expect(ret.isError).to.be.false;
       expect(ret.getValue().meta.quote).to.be.deep.eq(params.quote);
       expect(messaging.sendTransferQuoteMessage.callCount).to.be.eq(0);
@@ -264,7 +283,13 @@ describe("ParamConverter", () => {
         },
       });
       signerA.publicIdentifier = channelState.aliceIdentifier;
-      const ret = await convertConditionalTransferParams(params, signerA, channelState, chainReader, messaging);
+      const ret = await convertConditionalTransferParams(
+        params,
+        signerA,
+        channelState,
+        chainReader as IVectorChainReader,
+        messaging,
+      );
       expect(ret.isError).to.be.false;
       expect(ret.getValue().meta.quote).to.containSubset({
         signature: undefined,
@@ -302,7 +327,13 @@ describe("ParamConverter", () => {
         fee: "10000000",
         expiry: (Date.now() + 30_000).toString(),
       };
-      const ret = await convertConditionalTransferParams(params, signerA, channelState, chainReader, messaging);
+      const ret = await convertConditionalTransferParams(
+        params,
+        signerA,
+        channelState,
+        chainReader as IVectorChainReader,
+        messaging,
+      );
       expect(ret.isError).to.be.true;
       expect(ret.getError()?.message).to.be.eq(ParameterConversionError.reasons.FeeGreaterThanAmount);
     });
@@ -321,7 +352,13 @@ describe("ParamConverter", () => {
           providerUrl,
         },
       });
-      const ret = await convertConditionalTransferParams(params, signerA, channelState, chainReader, messaging);
+      const ret = await convertConditionalTransferParams(
+        params,
+        signerA,
+        channelState,
+        chainReader as IVectorChainReader,
+        messaging,
+      );
       expect(ret.isError).to.be.true;
       const err = ret.getError();
       expect(err?.message).to.be.eq(ParameterConversionError.reasons.FailedToGetRegisteredTransfer);
@@ -342,7 +379,13 @@ describe("ParamConverter", () => {
         },
       });
 
-      const ret = await convertConditionalTransferParams(params, signerB, channelState, chainReader, messaging);
+      const ret = await convertConditionalTransferParams(
+        params,
+        signerB,
+        channelState,
+        chainReader as IVectorChainReader,
+        messaging,
+      );
 
       expect(ret.isError).to.be.true;
       const err = ret.getError();
@@ -404,8 +447,20 @@ describe("ParamConverter", () => {
       setMessagingStub(params, isUserA);
 
       const result = isUserA
-        ? await convertConditionalTransferParams(params, signerA, channelState, chainReader, messaging)
-        : await convertConditionalTransferParams(params, signerB, channelState, chainReader, messaging);
+        ? await convertConditionalTransferParams(
+            params,
+            signerA,
+            channelState,
+            chainReader as IVectorChainReader,
+            messaging,
+          )
+        : await convertConditionalTransferParams(
+            params,
+            signerB,
+            channelState,
+            chainReader as IVectorChainReader,
+            messaging,
+          );
 
       return result;
     };
@@ -568,8 +623,22 @@ describe("ParamConverter", () => {
         },
       });
       const result = isUserA
-        ? await convertWithdrawParams(params, signerA, channelState, chainAddresses, chainReader, messaging)
-        : await convertWithdrawParams(params, signerB, channelState, chainAddresses, chainReader, messaging);
+        ? await convertWithdrawParams(
+            params,
+            signerA,
+            channelState,
+            chainAddresses,
+            chainReader as IVectorChainReader,
+            messaging,
+          )
+        : await convertWithdrawParams(
+            params,
+            signerB,
+            channelState,
+            chainAddresses,
+            chainReader as IVectorChainReader,
+            messaging,
+          );
 
       return { channelState, result };
     };

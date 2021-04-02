@@ -10,12 +10,16 @@ import {
   RestoreStatePayload,
   IsAlivePayload,
   EngineEvents,
-  TransactionEvents,
+  ChainServiceEvents,
   TransactionSubmittedPayload,
   TransactionMinedPayload,
   TransactionFailedPayload,
   IVectorChainReader,
   Result,
+  ChannelDisputedPayload,
+  ChannelDefundedPayload,
+  TransferDisputedPayload,
+  TransferDefundedPayload,
 } from "@connext/vector-types";
 import { FeeCalculationError, normalizeFee } from "@connext/vector-utils";
 import { BigNumber } from "@ethersproject/bignumber";
@@ -36,9 +40,15 @@ export const getEngineEvtContainer = (): EngineEvtContainer => {
     [EngineEvents.WITHDRAWAL_CREATED]: Evt.create<WithdrawalCreatedPayload>(),
     [EngineEvents.WITHDRAWAL_RESOLVED]: Evt.create<WithdrawalResolvedPayload>(),
     [EngineEvents.WITHDRAWAL_RECONCILED]: Evt.create<WithdrawalReconciledPayload>(),
-    [TransactionEvents.TRANSACTION_SUBMITTED]: Evt.create<TransactionSubmittedPayload & { publicIdentifier: string }>(),
-    [TransactionEvents.TRANSACTION_MINED]: Evt.create<TransactionMinedPayload & { publicIdentifier: string }>(),
-    [TransactionEvents.TRANSACTION_FAILED]: Evt.create<TransactionFailedPayload & { publicIdentifier: string }>(),
+    [ChainServiceEvents.TRANSACTION_SUBMITTED]: Evt.create<
+      TransactionSubmittedPayload & { publicIdentifier: string }
+    >(),
+    [ChainServiceEvents.TRANSACTION_MINED]: Evt.create<TransactionMinedPayload & { publicIdentifier: string }>(),
+    [ChainServiceEvents.TRANSACTION_FAILED]: Evt.create<TransactionFailedPayload & { publicIdentifier: string }>(),
+    [ChainServiceEvents.CHANNEL_DISPUTED]: Evt.create<ChannelDisputedPayload & { publicIdentifier: string }>(),
+    [ChainServiceEvents.CHANNEL_DEFUNDED]: Evt.create<ChannelDefundedPayload & { publicIdentifier: string }>(),
+    [ChainServiceEvents.TRANSFER_DISPUTED]: Evt.create<TransferDisputedPayload & { publicIdentifier: string }>(),
+    [ChainServiceEvents.TRANSFER_DEFUNDED]: Evt.create<TransferDefundedPayload & { publicIdentifier: string }>(),
   };
 };
 

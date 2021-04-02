@@ -430,6 +430,22 @@ export async function setupEngineListeners(
   chainService.on(EngineEvents.TRANSACTION_FAILED, (data) => {
     evts[EngineEvents.TRANSACTION_FAILED].post({ ...data, publicIdentifier: signer.publicIdentifier });
   });
+
+  chainService.on(EngineEvents.CHANNEL_DISPUTED, (data) => {
+    evts[EngineEvents.CHANNEL_DISPUTED].post({ ...data, publicIdentifier: signer.publicIdentifier });
+  });
+
+  chainService.on(EngineEvents.CHANNEL_DEFUNDED, (data) => {
+    evts[EngineEvents.CHANNEL_DEFUNDED].post({ ...data, publicIdentifier: signer.publicIdentifier });
+  });
+
+  chainService.on(EngineEvents.TRANSFER_DISPUTED, (data) => {
+    evts[EngineEvents.TRANSFER_DISPUTED].post({ ...data, publicIdentifier: signer.publicIdentifier });
+  });
+
+  chainService.on(EngineEvents.TRANSFER_DEFUNDED, (data) => {
+    evts[EngineEvents.TRANSFER_DEFUNDED].post({ ...data, publicIdentifier: signer.publicIdentifier });
+  });
 }
 
 export async function getWithdrawalQuote(

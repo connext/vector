@@ -29,6 +29,9 @@ export const getTransferId = (
 export const encodeTransferState = (state: TransferState, encoding: string): string =>
   defaultAbiCoder.encode([encoding], [state]);
 
+export const decodeTransferState = <T extends TransferState = any>(encoded: string, encoding: string): T =>
+  defaultAbiCoder.decode([encoding], encoded)[0];
+
 export const encodeBalance = (balance: Balance): string => defaultAbiCoder.encode([BalanceEncoding], [balance]);
 
 export const decodeTransferResolver = <T extends TransferResolver = any>(encoded: string, encoding: string): T =>

@@ -17,6 +17,8 @@ import {
   FullChannelState,
   DEFAULT_CHANNEL_TIMEOUT,
   GetTransfersFilterOpts,
+  TransferDispute,
+  ChannelDispute,
 } from "@connext/vector-types";
 import { constructRpcRequest, hydrateProviders, NatsMessagingService } from "@connext/vector-utils";
 import pino, { BaseLogger } from "pino";
@@ -580,13 +582,25 @@ export class BrowserNode implements INodeService {
 
   //////////////////////
   /// DISPUTE METHODS
+  async getChannelDispute(
+    params: OptionalPublicIdentifier<NodeParams.GetChannelDispute>,
+  ): Promise<Result<NodeResponses.GetChannelDispute, BrowserNodeError>> {
+    const rpc = constructRpcRequest(ChannelRpcMethods.chan_getDispute, params);
+    try {
+      const res = (await this.channelProvider!.send(rpc)) as ChannelDispute | undefined;
+      return Result.ok(res);
+    } catch (e) {
+      return Result.fail(e);
+    }
+  }
+
   async sendDisputeChannelTx(
     params: OptionalPublicIdentifier<NodeParams.SendDisputeChannelTx>,
   ): Promise<Result<NodeResponses.SendDisputeChannelTx, BrowserNodeError>> {
     const rpc = constructRpcRequest(ChannelRpcMethods.chan_dispute, params);
     try {
       const res = await this.channelProvider!.send(rpc);
-      return Result.ok({ txHash: res.transactionHash });
+      return Result.ok({ transactionHash: res.transactionHash });
     } catch (e) {
       return Result.fail(e);
     }
@@ -598,7 +612,19 @@ export class BrowserNode implements INodeService {
     const rpc = constructRpcRequest(ChannelRpcMethods.chan_defund, params);
     try {
       const res = await this.channelProvider!.send(rpc);
-      return Result.ok({ txHash: res.transactionHash });
+      return Result.ok({ transactionHash: res.transactionHash });
+    } catch (e) {
+      return Result.fail(e);
+    }
+  }
+
+  async getTransferDispute(
+    params: OptionalPublicIdentifier<NodeParams.GetTransferDispute>,
+  ): Promise<Result<NodeResponses.GetTransferDispute, BrowserNodeError>> {
+    const rpc = constructRpcRequest(ChannelRpcMethods.chan_getTransferDispute, params);
+    try {
+      const res = (await this.channelProvider!.send(rpc)) as TransferDispute | undefined;
+      return Result.ok(res);
     } catch (e) {
       return Result.fail(e);
     }
@@ -610,7 +636,7 @@ export class BrowserNode implements INodeService {
     const rpc = constructRpcRequest(ChannelRpcMethods.chan_disputeTransfer, params);
     try {
       const res = await this.channelProvider!.send(rpc);
-      return Result.ok({ txHash: res.transactionHash });
+      return Result.ok({ transactionHash: res.transactionHash });
     } catch (e) {
       return Result.fail(e);
     }
@@ -622,7 +648,19 @@ export class BrowserNode implements INodeService {
     const rpc = constructRpcRequest(ChannelRpcMethods.chan_defundTransfer, params);
     try {
       const res = await this.channelProvider!.send(rpc);
-      return Result.ok({ txHash: res.transactionHash });
+      return Result.ok({ transactionHash: res.transactionHash });
+    } catch (e) {
+      return Result.fail(e);
+    }
+  }
+
+  async sendExitChannelTx(
+    params: OptionalPublicIdentifier<NodeParams.SendExitChannelTx>,
+  ): Promise<Result<NodeResponses.SendExitChannelTx, BrowserNodeError>> {
+    const rpc = constructRpcRequest(ChannelRpcMethods.chan_exit, params);
+    try {
+      const res = (await this.channelProvider!.send(rpc)) as NodeResponses.SendExitChannelTx;
+      return Result.ok(res);
     } catch (e) {
       return Result.fail(e);
     }

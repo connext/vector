@@ -3,7 +3,7 @@ import { Balance, FullTransferState } from "./channel";
 import { EngineParams } from "./schemas";
 import { TransferName } from "./transferDefinitions";
 import { ChannelRpcMethod, ChannelRpcMethodsResponsesMap } from "./vectorProvider";
-import { TransactionEventMap, TransactionEvents } from "./event";
+import { ChainServiceEventMap, ChainServiceEvents } from "./event";
 import { MinimalTransaction } from "./chain";
 
 ///////////////////////////////////
@@ -120,10 +120,10 @@ export const EngineEvents = {
   [WITHDRAWAL_CREATED_EVENT]: WITHDRAWAL_CREATED_EVENT,
   [WITHDRAWAL_RESOLVED_EVENT]: WITHDRAWAL_RESOLVED_EVENT,
   [WITHDRAWAL_RECONCILED_EVENT]: WITHDRAWAL_RECONCILED_EVENT,
-  ...TransactionEvents,
+  ...ChainServiceEvents,
 } as const;
 export type EngineEvent = typeof EngineEvents[keyof typeof EngineEvents];
-export interface EngineEventMap extends TransactionEventMap {
+export interface EngineEventMap extends ChainServiceEventMap {
   [IS_ALIVE_EVENT]: IsAlivePayload;
   [SETUP_EVENT]: SetupPayload;
   [CONDITIONAL_TRANSFER_CREATED_EVENT]: ConditionalTransferCreatedPayload;
@@ -136,13 +136,25 @@ export interface EngineEventMap extends TransactionEventMap {
   [WITHDRAWAL_RESOLVED_EVENT]: WithdrawalResolvedPayload;
   [WITHDRAWAL_RECONCILED_EVENT]: WithdrawalReconciledPayload;
   // Add public identifiers to transaction events
-  [TransactionEvents.TRANSACTION_SUBMITTED]: TransactionEventMap[typeof TransactionEvents.TRANSACTION_SUBMITTED] & {
+  [ChainServiceEvents.TRANSACTION_SUBMITTED]: ChainServiceEventMap[typeof ChainServiceEvents.TRANSACTION_SUBMITTED] & {
     publicIdentifier: string;
   };
-  [TransactionEvents.TRANSACTION_MINED]: TransactionEventMap[typeof TransactionEvents.TRANSACTION_MINED] & {
+  [ChainServiceEvents.TRANSACTION_MINED]: ChainServiceEventMap[typeof ChainServiceEvents.TRANSACTION_MINED] & {
     publicIdentifier: string;
   };
-  [TransactionEvents.TRANSACTION_FAILED]: TransactionEventMap[typeof TransactionEvents.TRANSACTION_FAILED] & {
+  [ChainServiceEvents.TRANSACTION_FAILED]: ChainServiceEventMap[typeof ChainServiceEvents.TRANSACTION_FAILED] & {
+    publicIdentifier: string;
+  };
+  [ChainServiceEvents.CHANNEL_DISPUTED]: ChainServiceEventMap[typeof ChainServiceEvents.CHANNEL_DISPUTED] & {
+    publicIdentifier: string;
+  };
+  [ChainServiceEvents.CHANNEL_DEFUNDED]: ChainServiceEventMap[typeof ChainServiceEvents.CHANNEL_DEFUNDED] & {
+    publicIdentifier: string;
+  };
+  [ChainServiceEvents.TRANSFER_DISPUTED]: ChainServiceEventMap[typeof ChainServiceEvents.TRANSFER_DISPUTED] & {
+    publicIdentifier: string;
+  };
+  [ChainServiceEvents.TRANSFER_DEFUNDED]: ChainServiceEventMap[typeof ChainServiceEvents.TRANSFER_DEFUNDED] & {
     publicIdentifier: string;
   };
 }
