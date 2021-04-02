@@ -26,7 +26,7 @@ const configConvict = convict({
     env: "VECTOR_DATABASE_URL",
   },
   messagingUrl: {
-    default: "http://messaging",
+    default: "",
     env: "VECTOR_MESSAGING_URL",
   },
   authUrl: {
@@ -83,6 +83,9 @@ configConvict.load(vectorConfig);
 
 configConvict.validate({ allowed: "strict" });
 vectorConfig = configConvict.getProperties() as any;
+if (vectorConfig.authUrl === "" && vectorConfig.messagingUrl === "" && vectorConfig.natsUrl === "") {
+  vectorConfig.messagingUrl = "http://messaging";
+}
 console.log("vectorConfig: ", vectorConfig);
 vectorConfig.chainAddresses = JSON.parse(configConvict.get("chainAddresses"));
 
@@ -109,12 +112,13 @@ for (const chainId of Object.keys(vectorConfig.chainProviders)) {
     vectorConfig.chainAddresses[chainId].transferRegistryAddress = deployments[chainId].TransferRegistry.address;
   }
 }
+console.log("vectorConfig: ", vectorConfig);
 
-const validate = ajv.compile(VectorNodeConfigSchema);
-const valid = validate(vectorConfig);
+// const validate = ajv.compile(VectorNodeConfigSchema);
+// const valid = validate(vectorConfig);
 
-if (!valid) {
-  throw new Error(validate.errors?.map((err) => err.message).join(","));
-}
+// if (!valid) {
+//   throw new Error(validate.errors?.map((err) => err.message).join(","));
+// }
 
 export const config = vectorConfig as Omit<VectorNodeConfig, "mnemonic"> & { mnemonic: string };
