@@ -30,7 +30,6 @@
     "@sinclair/typebox": "0.12.7",
     "ajv": "6.12.6",
     "axios": "0.21.1",
-    "convict": "^6.0.1",
     "core-js": "3.9.1",
     "evt": "1.9.12",
     "fastify": "3.13.0",

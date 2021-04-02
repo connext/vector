@@ -1,93 +1,81 @@
 import { deployments } from "@connext/vector-contracts";
 import { TContractAddresses, TUrl, VectorNodeConfig, VectorNodeConfigSchema } from "@connext/vector-types";
 import { Type } from "@sinclair/typebox";
+import { readFileSync } from "fs";
 import Ajv from "ajv";
-import convict from "convict";
+
+import { logger } from "./index";
 
 const ajv = new Ajv();
 
 console.log("process.cwd(): ", process.cwd());
 
-let vectorConfig: VectorNodeConfig;
+let configFile: any = {};
 try {
-  vectorConfig = JSON.parse(process.env.VECTOR_CONFIG ?? "{}");
+  let json;
+  if (process.env.VECTOR_CONFIG_FILE) {
+    console.log("process.env.VECTOR_CONFIG_FILE: ", process.env.VECTOR_CONFIG_FILE);
+    json = readFileSync(process.env.VECTOR_CONFIG_FILE, "utf-8");
+  } else {
+    json = readFileSync("config.json", "utf-8");
+  }
+  if (json) {
+    configFile = JSON.parse(json);
+    console.log("configFile: ", configFile);
+    console.log("Found configFile");
+  }
 } catch (e) {
-  throw new Error(`VECTOR_CONFIG contains invalid JSON: ${e.message}`);
+  console.warn("No config file available...");
 }
 
-convict.addParser([{ extension: "json", parse: JSON.parse }]);
-const configConvict = convict({
-  mnemonic: {
-    default: null,
-    env: "VECTOR_MNEMONIC",
-  },
-  dbUrl: {
-    default: null,
-    env: "VECTOR_DATABASE_URL",
-  },
-  messagingUrl: {
-    default: "",
-    env: "VECTOR_MESSAGING_URL",
-  },
-  authUrl: {
-    default: "",
-    env: "VECTOR_AUTH_URL",
-  },
-  natsUrl: {
-    default: "",
-    env: "VECTOR_NATS_URL",
-  },
-  skipCheckIn: {
-    default: false,
-    env: "VECTOR_SKIP_CHECK_IN",
-  },
-  adminToken: {
-    default: null,
-    env: "VECTOR_ADMIN_TOKEN",
-  },
-  baseGasSubsidyPercentage: {
-    default: 100,
-    env: "VECTOR_BASE_GAS_SUBSIDY_PERCENTAGE",
-  },
-  chainProviders: {
-    default: null,
-    env: "VECTOR_CHAIN_PROVIDERS",
-    format: function check(val: string) {
-      const cp = JSON.parse(val);
-      const validate = ajv.compile(Type.Dict(TUrl));
-      const valid = validate(cp);
-      if (!valid) {
-        throw new Error(validate.errors?.map((err) => err.message).join(","));
-      }
-    },
-  },
-  chainAddresses: {
-    default: "{}",
-    env: "VECTOR_CHAIN_ADDRESSES",
-    format: function check(val: string) {
-      const cp = JSON.parse(val);
-      const validate = ajv.compile(Type.Dict(TContractAddresses));
-      const valid = validate(cp);
-      if (!valid) {
-        throw new Error(validate.errors?.map((err) => err.message).join(","));
-      }
-    },
-  },
-  logLevel: {
-    default: "info",
-    env: "VECTOR_LOG_LEVEL",
-  },
-});
-configConvict.loadFile("config.json");
-configConvict.load(vectorConfig);
+let configJson: Record<string, any> = {};
+if (process.env.VECTOR_CONFIG) {
+  try {
+    configJson = JSON.parse(process.env.VECTOR_CONFIG);
+    console.log("Found process.env.VECTOR_CONFIG");
+  } catch (e) {
+    console.warn("No VECTOR_CONFIG exists...");
+  }
+}
 
-configConvict.validate({ allowed: "strict" });
-vectorConfig = configConvict.getProperties() as any;
-if (vectorConfig.authUrl === "" && vectorConfig.messagingUrl === "" && vectorConfig.natsUrl === "") {
+const vectorConfig: VectorNodeConfig = {
+  mnemonic: process.env.VECTOR_MNEMONIC || configJson.mnemonic || configFile.mnemonic,
+  dbUrl: process.env.VECTOR_DATABASE_URL || configJson.dbUrl || configFile.dbUrl,
+  messagingUrl: process.env.VECTOR_MESSAGING_URL || configJson.messagingUrl || configFile.messagingUrl,
+  authUrl: process.env.VECTOR_AUTH_URL || configJson.authUrl || configFile.authUrl,
+  natsUrl: process.env.VECTOR_NATS_URL || configJson.natsUrl || configFile.natsUrl,
+  skipCheckIn: process.env.VECTOR_SKIP_CHECK_IN
+    ? Boolean(process.env.VECTOR_SKIP_CHECK_IN)
+    : configJson.skipCheckIn
+    ? configJson.skipCheckIn
+    : configFile.skipCheckIn
+    ? configFile.skipCheckIn
+    : false,
+  adminToken: process.env.VECTOR_ADMIN_TOKEN || configJson.adminToken || configFile.adminToken,
+  baseGasSubsidyPercentage: process.env.VECTOR_BASE_GAS_SUBSIDY_PERCENTAGE
+    ? process.env.VECTOR_BASE_GAS_SUBSIDY_PERCENTAGE
+    : configJson.baseGasSubsidyPercentage
+    ? configJson.baseGasSubsidyPercentage
+    : configFile.baseGasSubsidyPercentage
+    ? configFile.baseGasSubsidyPercentage
+    : 100,
+  chainProviders: process.env.VECTOR_CHAIN_PROVIDERS
+    ? JSON.parse(process.env.VECTOR_CHAIN_PROVIDERS)
+    : configJson.chainProviders
+    ? configJson.chainProviders
+    : configFile.chainProviders,
+  chainAddresses: process.env.VECTOR_CHAIN_ADDRESSES
+    ? JSON.parse(process.env.VECTOR_CHAIN_ADDRESSES)
+    : configJson.chainAddresses
+    ? configJson.chainAddresses
+    : configFile.chainAddresses,
+  logLevel: process.env.VECTOR_LOG_LEVEL || configJson.logLevel || configFile.logLevel || "info",
+};
+
+console.log("vectorConfig: ", vectorConfig);
+if (!vectorConfig.authUrl && !vectorConfig.messagingUrl && !vectorConfig.natsUrl) {
   vectorConfig.messagingUrl = "http://messaging";
 }
-console.log("vectorConfig: ", vectorConfig);
-vectorConfig.chainAddresses = JSON.parse(configConvict.get("chainAddresses"));
 
 // Pull live network addresses out of public deployments if not provided explicitly
 for (const chainId of Object.keys(vectorConfig.chainProviders)) {
@@ -114,11 +102,11 @@ for (const chainId of Object.keys(vectorConfig.chainProviders)) {
 }
 console.log("vectorConfig: ", vectorConfig);
 
-// const validate = ajv.compile(VectorNodeConfigSchema);
-// const valid = validate(vectorConfig);
+const validate = ajv.compile(VectorNodeConfigSchema);
+const valid = validate(vectorConfig);
 
-// if (!valid) {
-//   throw new Error(validate.errors?.map((err) => err.message).join(","));
-// }
+if (!valid) {
+  throw new Error(validate.errors?.map((err) => err.message).join(","));
+}
 
 export const config = vectorConfig as Omit<VectorNodeConfig, "mnemonic"> & { mnemonic: string };
