@@ -36,7 +36,7 @@ if [[ -z "$VECTOR_DOMAINNAME" ]]
 then
   cp /etc/ssl/cert.pem ca-certs.pem
   echo "Entrypoint finished, executing haproxy in http mode..."; echo
-  exec haproxy -db -f http.cfg
+  exec haproxy -db -f /etc/haproxy/http.cfg
 fi
 
 ########################################
@@ -106,5 +106,5 @@ copycerts
 
 cp /etc/ssl/cert.pem ca-certs.pem
 
-echo "Entrypoint finished, executing haproxy in https mode..."; echo
-exec haproxy -db -f https.cfg
+echo "===== Starting HAProxy "
+exec "$@"

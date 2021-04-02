@@ -5,7 +5,7 @@ import {
   ConditionalTransferResolvedPayload,
   DepositReconciledPayload,
   EngineEvents,
-  TransactionEvents,
+  ChainServiceEvents,
   WithdrawalCreatedPayload,
   WithdrawalReconciledPayload,
   WithdrawalResolvedPayload,
@@ -49,9 +49,13 @@ export const aliceEvts = {
     evt: Evt.create<DepositReconciledPayload>(),
     url: `${serverBase}${depositReconciledPath}-alice`,
   },
-  [TransactionEvents.TRANSACTION_SUBMITTED]: {},
-  [TransactionEvents.TRANSACTION_MINED]: {},
-  [TransactionEvents.TRANSACTION_FAILED]: {},
+  [ChainServiceEvents.TRANSACTION_SUBMITTED]: {},
+  [ChainServiceEvents.TRANSACTION_MINED]: {},
+  [ChainServiceEvents.TRANSACTION_FAILED]: {},
+  [EngineEvents.CHANNEL_DISPUTED]: {},
+  [EngineEvents.CHANNEL_DEFUNDED]: {},
+  [EngineEvents.TRANSFER_DISPUTED]: {},
+  [EngineEvents.TRANSFER_DEFUNDED]: {},
 };
 
 export const bobEvts = {
@@ -83,9 +87,13 @@ export const bobEvts = {
     evt: Evt.create<DepositReconciledPayload>(),
     url: `${serverBase}${depositReconciledPath}-bob`,
   },
-  [TransactionEvents.TRANSACTION_SUBMITTED]: {},
-  [TransactionEvents.TRANSACTION_MINED]: {},
-  [TransactionEvents.TRANSACTION_FAILED]: {},
+  [ChainServiceEvents.TRANSACTION_SUBMITTED]: {},
+  [ChainServiceEvents.TRANSACTION_MINED]: {},
+  [ChainServiceEvents.TRANSACTION_FAILED]: {},
+  [EngineEvents.CHANNEL_DISPUTED]: {},
+  [EngineEvents.CHANNEL_DEFUNDED]: {},
+  [EngineEvents.TRANSFER_DISPUTED]: {},
+  [EngineEvents.TRANSFER_DEFUNDED]: {},
 };
 
 const server = fastify();

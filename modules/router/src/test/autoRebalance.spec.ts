@@ -11,14 +11,13 @@ import axios from "axios";
 import { rebalanceIfNeeded } from "../services/autoRebalance";
 import { getConfig } from "../config";
 import * as metrics from "../metrics";
-import { PrismaStore, RouterRebalanceStatus } from "../services/store";
+import { PrismaStore } from "../services/store";
 
 const config = getConfig();
 
 const testName = "Auto Rebalance";
 const { log } = getTestLoggers(testName, config.logLevel as any);
 describe(testName, () => {
-
   describe("rebalanceIfNeeded", () => {
     let wallet: Sinon.SinonStubbedInstance<Wallet>;
     let chainService: Sinon.SinonStubbedInstance<VectorChainReader>;
@@ -35,6 +34,8 @@ describe(testName, () => {
         1338: Sinon.createStubInstance(JsonRpcProvider),
       };
       const parseBalanceStub = Sinon.stub(metrics, "getDecimals").resolves(18);
+      hydratedProviders[1337].getGasPrice.resolves(BigNumber.from(138));
+      hydratedProviders[1338].getGasPrice.resolves(BigNumber.from(138));
 
       mockAxios = Sinon.stub(axios, "post");
 
@@ -87,7 +88,9 @@ describe(testName, () => {
       // vector/modules/types/src/schemas/autoRebalance.ts
       const transaction = {
         to: mkAddress("0xa"),
-        data: getRandomBytes32()
+        data: getRandomBytes32(),
+        chainId: 1338,
+        value: 0,
       };
       // First call is /approve endpoint.
       mockAxios.onCall(0).resolves({
@@ -95,27 +98,26 @@ describe(testName, () => {
           allowance: "10000",
           transaction: {
             ...transaction,
-            value: 0
-          }
-        }
+            value: 0,
+          },
+        },
       });
       // Second call is /execute endpoint.
       mockAxios.onCall(1).resolves({
         data: {
           transaction: {
             ...transaction,
-            value: 0
-          }
-        }
+            value: 0,
+          },
+        },
       });
       // Third call is /status endpoint.
       mockAxios.onCall(2).resolves({
         data: {
-          status: { completed: true },
-          transaction
-        }
+          status: { completed: true, transaction },
+        },
       });
-  
+
       const hash = mkBytes32("0xa");
       chainService.getOnchainBalance.onFirstCall().resolves(Result.ok(BigNumber.from(parseEther("175"))));
       chainService.getOnchainBalance.onSecondCall().resolves(Result.ok(BigNumber.from(parseEther("100"))));
@@ -138,19 +140,19 @@ describe(testName, () => {
         rebalancerUrl: "http://example.com",
       };
       const result = await rebalanceIfNeeded(swap, log, wallet, chainService as any, hydratedProviders, store);
-      
+
       expect(result.getError()).to.not.be.ok;
       expect(result.getValue()).to.eq(undefined);
-      expect(wallet.sendTransaction.getCall(0).args[0]).to.deep.eq({
-        ...transaction,
+      const { chainId, ...tx } = transaction;
+      expect(wallet.sendTransaction.getCall(0).args[0]).to.containSubset({
+        ...tx,
         value: 0,
       });
-      expect(wallet.sendTransaction.getCall(1).args[0]).to.deep.eq({
-        ...transaction,
+      expect(wallet.sendTransaction.getCall(1).args[0]).to.containSubset({
+        ...tx,
         value: 0,
       });
       log.info(wallet.sendTransaction.getCall(2));
     });
   });
-
 });

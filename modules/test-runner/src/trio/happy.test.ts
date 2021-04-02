@@ -2,12 +2,18 @@ import { delay, expect, getRandomBytes32, RestServerNodeService } from "@connext
 import { Wallet, utils, constants } from "ethers";
 import pino from "pino";
 import { EngineEvents, INodeService, TransferNames } from "@connext/vector-types";
+import { waitForTransaction } from "@connext/vector-contracts";
 
-import { env, fundIfBelow, getRandomIndex } from "../utils";
+import { env, fundIfBelow, getOnchainBalance, getRandomIndex } from "../utils";
 import {
+  advanceBlocktime,
   chainId1,
   chainId2,
+  defundChannel,
   deposit,
+  disputeChannel,
+  exitAssets,
+  provider1,
   requestCollateral,
   setup,
   transfer,
@@ -113,6 +119,38 @@ describe(testName, () => {
     await delay(15_000);
     expect(routingIds.sort()).to.be.deep.eq(routedSuccessfully.sort());
     expect(cancelled.length).to.be.eq(0);
+  });
+
+  it("ETH: should be able to dispute a channel", async () => {
+    const assetId = constants.AddressZero;
+    const depositAmt = utils.parseEther("0.1");
+    const carolRogerPostSetup = await setup(carolService, rogerService, chainId1);
+
+    // Carol deposits
+    const carolRogerPostDeposit = await deposit(
+      carolService,
+      rogerService,
+      carolRogerPostSetup.channelAddress,
+      assetId,
+      depositAmt,
+    );
+    expect(carolRogerPostDeposit.balances[0].to[1]).to.be.eq(carolService.signerAddress);
+
+    await disputeChannel(rogerService, carolService, carolRogerPostDeposit.channelAddress, provider1);
+
+    await advanceBlocktime(parseInt(carolRogerPostSetup.timeout) + 5_000);
+
+    await defundChannel(rogerService, carolRogerPostDeposit.channelAddress, provider1);
+
+    // exit carol (only one with balance)
+    await exitAssets(
+      rogerService,
+      carolRogerPostDeposit.channelAddress,
+      provider1,
+      [assetId],
+      carolService.signerAddress,
+      carolService.signerAddress,
+    );
   });
 
   it("ETH: deposit, transfer C -> R -> D, withdraw", async () => {

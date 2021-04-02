@@ -23,8 +23,8 @@ import {
   FullChannelState,
   FullTransferState,
   ChainError,
+  IVectorChainReader,
 } from "@connext/vector-types";
-import { BigNumber } from "@ethersproject/bignumber";
 import { AddressZero } from "@ethersproject/constants";
 import pino from "pino";
 import Sinon from "sinon";
@@ -87,7 +87,7 @@ describe("inbound", () => {
       update,
       {} as any,
       inbox,
-      chainService,
+      chainService as IVectorChainReader,
       store,
       messaging,
       externalValidation,
@@ -125,7 +125,7 @@ describe("inbound", () => {
       update,
       prevUpdate,
       inbox,
-      chainService,
+      chainService as IVectorChainReader,
       store,
       messaging,
       externalValidation,
@@ -162,7 +162,7 @@ describe("inbound", () => {
       update,
       update,
       inbox,
-      chainService,
+      chainService as IVectorChainReader,
       store,
       messaging,
       externalValidation,
@@ -196,7 +196,7 @@ describe("inbound", () => {
       update,
       update,
       inbox,
-      chainService,
+      chainService as IVectorChainReader,
       store,
       messaging,
       externalValidation,
@@ -230,7 +230,7 @@ describe("inbound", () => {
       update,
       update,
       inbox,
-      chainService,
+      chainService as IVectorChainReader,
       store,
       messaging,
       externalValidation,
@@ -259,7 +259,7 @@ describe("inbound", () => {
         update,
         undefined as any,
         inbox,
-        chainService,
+        chainService as IVectorChainReader,
         store,
         messaging,
         externalValidation,
@@ -292,7 +292,7 @@ describe("inbound", () => {
         update,
         toSync,
         inbox,
-        chainService,
+        chainService as IVectorChainReader,
         store,
         messaging,
         externalValidation,
@@ -328,7 +328,7 @@ describe("inbound", () => {
         update,
         toSync,
         inbox,
-        chainService,
+        chainService as IVectorChainReader,
         store,
         messaging,
         externalValidation,
@@ -365,7 +365,7 @@ describe("inbound", () => {
         update,
         toSync,
         inbox,
-        chainService,
+        chainService as IVectorChainReader,
         store,
         messaging,
         externalValidation,
@@ -397,7 +397,7 @@ describe("inbound", () => {
           proposed,
           toSync,
           inbox,
-          chainService,
+          chainService as IVectorChainReader,
           store,
           messaging,
           externalValidation,
@@ -461,7 +461,7 @@ describe("inbound", () => {
       update,
       prevUpdate,
       inbox,
-      chainService,
+      chainService as IVectorChainReader,
       store,
       messaging,
       externalValidation,
@@ -495,7 +495,7 @@ describe("inbound", () => {
       update,
       update,
       inbox,
-      chainService,
+      chainService as IVectorChainReader,
       store,
       messaging,
       externalValidation,
@@ -569,7 +569,7 @@ describe("outbound", () => {
         const result = await outbound(
           createTestUpdateParams(UpdateType.resolve),
           store,
-          chainService,
+          chainService as IVectorChainReader,
           messaging,
           externalValidation,
           signers[0],
@@ -592,7 +592,15 @@ describe("outbound", () => {
     const error = new OutboundChannelUpdateError(OutboundChannelUpdateError.reasons.InvalidParams, params);
     validateParamsAndApplyStub.resolves(Result.fail(error));
 
-    const res = await outbound(params, store, chainService, messaging, externalValidation, signers[0], log);
+    const res = await outbound(
+      params,
+      store,
+      chainService as IVectorChainReader,
+      messaging,
+      externalValidation,
+      signers[0],
+      log,
+    );
     expect(res.getError()).to.be.deep.eq(error);
   });
 
@@ -617,7 +625,15 @@ describe("outbound", () => {
     );
 
     // Call the outbound function
-    const res = await outbound(params, store, chainService, messaging, externalValidation, signers[0], log);
+    const res = await outbound(
+      params,
+      store,
+      chainService as IVectorChainReader,
+      messaging,
+      externalValidation,
+      signers[0],
+      log,
+    );
 
     // Verify the error is returned as an outbound error
     const error = res.getError();
@@ -650,7 +666,7 @@ describe("outbound", () => {
     const res = await outbound(
       createTestUpdateParams(UpdateType.deposit),
       store,
-      chainService,
+      chainService as IVectorChainReader,
       messaging,
       externalValidation,
       signers[0],
@@ -680,7 +696,15 @@ describe("outbound", () => {
     // Set the messaging mocks to return the proper update from the counterparty
     messaging.sendProtocolMessage.onFirstCall().resolves(Result.ok({ update: {}, previousUpdate: {} } as any));
 
-    const result = await outbound(params, store, chainService, messaging, externalValidation, signers[0], log);
+    const result = await outbound(
+      params,
+      store,
+      chainService as IVectorChainReader,
+      messaging,
+      externalValidation,
+      signers[0],
+      log,
+    );
 
     expect(result.isError).to.be.true;
     const error = result.getError()!;
@@ -716,7 +740,15 @@ describe("outbound", () => {
       .resolves(Result.ok({ update: {}, previousUpdate: {} } as any));
 
     // Call the outbound function
-    const res = await outbound(params, store, chainService, messaging, externalValidation, signers[0], log);
+    const res = await outbound(
+      params,
+      store,
+      chainService as IVectorChainReader,
+      messaging,
+      externalValidation,
+      signers[0],
+      log,
+    );
 
     // Verify return values
     expect(res.getError()).to.be.undefined;
@@ -755,7 +787,7 @@ describe("outbound", () => {
       const result = await outbound(
         proposedParams,
         store,
-        chainService,
+        chainService as IVectorChainReader,
         messaging,
         externalValidation,
         signers[0],
@@ -798,7 +830,7 @@ describe("outbound", () => {
       const result = await outbound(
         proposedParams,
         store,
-        chainService,
+        chainService as IVectorChainReader,
         messaging,
         externalValidation,
         signers[0],
@@ -845,7 +877,7 @@ describe("outbound", () => {
       const result = await outbound(
         createTestUpdateParams(UpdateType.deposit),
         store,
-        chainService,
+        chainService as IVectorChainReader,
         messaging,
         externalValidation,
         signers[0],
@@ -894,7 +926,7 @@ describe("outbound", () => {
       const result = await outbound(
         createTestUpdateParams(UpdateType.deposit),
         store,
-        chainService,
+        chainService as IVectorChainReader,
         messaging,
         externalValidation,
         signers[0],
@@ -942,7 +974,7 @@ describe("outbound", () => {
       const result = await outbound(
         createTestUpdateParams(UpdateType.deposit),
         store,
-        chainService,
+        chainService as IVectorChainReader,
         messaging,
         externalValidation,
         signers[0],
@@ -1035,7 +1067,15 @@ describe("outbound", () => {
         createTestEnv(typeToSync);
 
         // Call the outbound function
-        const res = await outbound(params, store, chainService, messaging, externalValidation, signers[0], log);
+        const res = await outbound(
+          params,
+          store,
+          chainService as IVectorChainReader,
+          messaging,
+          externalValidation,
+          signers[0],
+          log,
+        );
 
         // Verify the update was successfully sent + retried
         expect(res.getError()).to.be.undefined;

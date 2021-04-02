@@ -1,7 +1,9 @@
-import { DEFAULT_TRANSFER_TIMEOUT, NodeParams, TransferNames } from "@connext/vector-types";
-import { expect, getRandomBytes32, mkAddress, mkPublicIdentifier } from "@connext/vector-utils";
+import { AllowedSwap, DEFAULT_TRANSFER_TIMEOUT, NodeParams, TransferNames } from "@connext/vector-types";
+import { delay, expect, getRandomBytes32, mkAddress, mkPublicIdentifier } from "@connext/vector-utils";
+import { AddressZero } from "@ethersproject/constants";
+import { v4 as uuidv4 } from "uuid";
 
-import { PrismaStore, RouterUpdateStatus, RouterUpdateType } from "../../services/store";
+import { PrismaStore, RouterRebalanceStatus, RouterUpdateStatus, RouterUpdateType } from "../../services/store";
 import { getConfig } from "../../config";
 
 const config = getConfig();
@@ -98,5 +100,74 @@ describe("Router store", () => {
       const updated = await store.getQueuedUpdates(channelAddress, [status]);
       expect(updated).to.be.deep.eq([{ ...pending[0], status }]);
     }
+  });
+
+  it("saveRebalance / getLatestRebalance should work", async () => {
+    const swap: AllowedSwap = {
+      fromAssetId: AddressZero,
+      fromChainId: 1337,
+      hardcodedRate: "1",
+      priceType: "hardcoded",
+      toAssetId: AddressZero,
+      toChainId: 1338,
+    };
+    const blank = await store.getLatestRebalance(swap);
+    expect(blank).to.be.undefined;
+    await store.saveRebalance({
+      id: uuidv4(),
+      status: RouterRebalanceStatus.APPROVED,
+      swap,
+    });
+
+    await delay(10);
+    await store.saveRebalance({
+      id: uuidv4(),
+      status: RouterRebalanceStatus.APPROVED,
+      swap,
+    });
+
+    await delay(10);
+    const id1 = uuidv4();
+    await store.saveRebalance({
+      id: id1,
+      status: RouterRebalanceStatus.APPROVED,
+      swap,
+    });
+
+    const all = await store.prisma.autoRebalance.findMany();
+    expect(all.length).to.eq(3);
+
+    let latest = await store.getLatestRebalance(swap);
+    expect(latest!.id).to.eq(id1);
+
+    const approveHash = getRandomBytes32();
+    const executeHash = getRandomBytes32();
+    await store.saveRebalance({
+      id: id1,
+      status: RouterRebalanceStatus.EXECUTED,
+      swap,
+      approveHash,
+      executeHash,
+    });
+    latest = await store.getLatestRebalance(swap);
+    expect(latest!.id).to.eq(id1);
+    expect(latest!.status).to.eq(RouterRebalanceStatus.EXECUTED);
+    expect(latest!.approveHash).to.eq(approveHash);
+    expect(latest!.executeHash).to.eq(executeHash);
+    expect(latest!.completeHash).to.be.undefined;
+
+    const completeHash = getRandomBytes32();
+    await store.saveRebalance({
+      id: id1,
+      status: RouterRebalanceStatus.EXECUTED,
+      swap,
+      completeHash,
+    });
+    latest = await store.getLatestRebalance(swap);
+    expect(latest!.id).to.eq(id1);
+    expect(latest!.status).to.eq(RouterRebalanceStatus.EXECUTED);
+    expect(latest!.approveHash).to.eq(approveHash);
+    expect(latest!.executeHash).to.eq(executeHash);
+    expect(latest!.completeHash).to.eq(completeHash);
   });
 });

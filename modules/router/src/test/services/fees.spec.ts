@@ -1,6 +1,12 @@
 import { VectorChainReader } from "@connext/vector-contracts";
 import * as vectorUtils from "@connext/vector-utils";
-import { Result, UpdateType, FullChannelState, SIMPLE_WITHDRAWAL_GAS_ESTIMATE } from "@connext/vector-types";
+import {
+  Result,
+  UpdateType,
+  FullChannelState,
+  SIMPLE_WITHDRAWAL_GAS_ESTIMATE,
+  IVectorChainReader,
+} from "@connext/vector-types";
 import { BigNumber } from "@ethersproject/bignumber";
 import { expect } from "chai";
 import Sinon from "sinon";
@@ -113,7 +119,7 @@ describe(testName, () => {
         fromChannel,
         toAssetId,
         toChannel,
-        ethReader,
+        ethReader as IVectorChainReader,
         routerIdentifier,
         log,
       );
@@ -134,7 +140,7 @@ describe(testName, () => {
         fromChannel,
         toAssetId,
         toChannel,
-        ethReader,
+        ethReader as IVectorChainReader,
         routerIdentifier,
         log,
       );
@@ -155,7 +161,7 @@ describe(testName, () => {
         fromChannel,
         toAssetId,
         toChannel,
-        ethReader,
+        ethReader as IVectorChainReader,
         routerIdentifier,
         log,
       );
@@ -177,7 +183,7 @@ describe(testName, () => {
         fromChannel,
         toAssetId,
         toChannel,
-        ethReader,
+        ethReader as IVectorChainReader,
         routerIdentifier,
         log,
       );
@@ -201,7 +207,7 @@ describe(testName, () => {
         fromChannel,
         toAssetId,
         toChannel,
-        ethReader,
+        ethReader as IVectorChainReader,
         routerIdentifier,
         log,
       );
@@ -226,7 +232,7 @@ describe(testName, () => {
         fromChannel,
         toAssetId,
         toChannel,
-        ethReader,
+        ethReader as IVectorChainReader,
         routerIdentifier,
         log,
       );
@@ -250,7 +256,7 @@ describe(testName, () => {
         fromChannel,
         toAssetId,
         toChannel,
-        ethReader,
+        ethReader as IVectorChainReader,
         routerIdentifier,
         log,
       );
@@ -271,7 +277,7 @@ describe(testName, () => {
         fromChannel,
         toAssetId,
         toChannel,
-        ethReader,
+        ethReader as IVectorChainReader,
         routerIdentifier,
         log,
       );
@@ -295,7 +301,7 @@ describe(testName, () => {
         fromChannel,
         toAssetId,
         toChannel,
-        ethReader,
+        ethReader as IVectorChainReader,
         routerIdentifier,
         log,
       );
@@ -320,7 +326,7 @@ describe(testName, () => {
         fromChannel,
         toAssetId,
         toChannel,
-        ethReader,
+        ethReader as IVectorChainReader,
         routerIdentifier,
         log,
       );
@@ -338,7 +344,7 @@ describe(testName, () => {
         fromChannel,
         toAssetId,
         toChannel,
-        ethReader,
+        ethReader as IVectorChainReader,
         routerIdentifier,
         log,
       );
@@ -355,7 +361,7 @@ describe(testName, () => {
         fromChannel,
         toAssetId,
         toChannel,
-        ethReader,
+        ethReader as IVectorChainReader,
         routerIdentifier,
         log,
       );
@@ -373,7 +379,7 @@ describe(testName, () => {
         fromChannel,
         toAssetId,
         toChannel,
-        ethReader,
+        ethReader as IVectorChainReader,
         routerIdentifier,
         log,
       );
@@ -430,7 +436,7 @@ describe(testName, () => {
         fromAssetId,
         fromChannel,
         toChannel,
-        ethReader,
+        ethReader as IVectorChainReader,
         routerIdentifier,
         log,
       );
@@ -447,7 +453,7 @@ describe(testName, () => {
         fromAssetId,
         fromChannel,
         toChannel,
-        ethReader,
+        ethReader as IVectorChainReader,
         routerIdentifier,
         log,
       );
@@ -464,7 +470,7 @@ describe(testName, () => {
         fromAssetId,
         fromChannel,
         toChannel,
-        ethReader,
+        ethReader as IVectorChainReader,
         routerIdentifier,
         log,
       );
@@ -481,7 +487,7 @@ describe(testName, () => {
         fromAssetId,
         fromChannel,
         toChannel,
-        ethReader,
+        ethReader as IVectorChainReader,
         routerIdentifier,
         log,
       );
@@ -498,7 +504,7 @@ describe(testName, () => {
         fromAssetId,
         fromChannel,
         toChannel,
-        ethReader,
+        ethReader as IVectorChainReader,
         routerIdentifier,
         log,
       );
@@ -515,7 +521,7 @@ describe(testName, () => {
         fromAssetId,
         fromChannel,
         toChannel,
-        ethReader,
+        ethReader as IVectorChainReader,
         routerIdentifier,
         log,
       );
@@ -534,7 +540,7 @@ describe(testName, () => {
           fromAssetId,
           fromChannel,
           toChannel,
-          ethReader,
+          ethReader as IVectorChainReader,
           routerIdentifier,
           log,
         );
@@ -552,7 +558,7 @@ describe(testName, () => {
           fromAssetId,
           fromChannel,
           toChannel,
-          ethReader,
+          ethReader as IVectorChainReader,
           routerIdentifier,
           log,
         );
@@ -576,7 +582,7 @@ describe(testName, () => {
           fromAssetId,
           fromChannel,
           toChannel,
-          ethReader,
+          ethReader as IVectorChainReader,
           routerIdentifier,
           log,
         );
@@ -596,7 +602,7 @@ describe(testName, () => {
           fromAssetId,
           fromChannel,
           toChannel,
-          ethReader,
+          ethReader as IVectorChainReader,
           routerIdentifier,
           log,
         );
@@ -615,7 +621,7 @@ describe(testName, () => {
           fromAssetId,
           fromChannel,
           toChannel,
-          ethReader,
+          ethReader as IVectorChainReader,
           routerIdentifier,
           log,
         );
@@ -633,7 +639,7 @@ describe(testName, () => {
           fromAssetId,
           fromChannel,
           toChannel,
-          ethReader,
+          ethReader as IVectorChainReader,
           routerIdentifier,
           log,
         );
@@ -654,7 +660,7 @@ describe(testName, () => {
           fromAssetId,
           fromChannel,
           toChannel,
-          ethReader,
+          ethReader as IVectorChainReader,
           routerIdentifier,
           log,
         );
@@ -672,7 +678,7 @@ describe(testName, () => {
           fromAssetId,
           fromChannel,
           toChannel,
-          ethReader,
+          ethReader as IVectorChainReader,
           routerIdentifier,
           log,
         );
@@ -689,7 +695,7 @@ describe(testName, () => {
           fromAssetId,
           fromChannel,
           toChannel,
-          ethReader,
+          ethReader as IVectorChainReader,
           routerIdentifier,
           log,
         );

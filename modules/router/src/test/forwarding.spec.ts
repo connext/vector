@@ -13,6 +13,7 @@ import {
   HashlockTransferStateEncoding,
   HashlockTransferResolverEncoding,
   ChainError,
+  IVectorChainReader,
 } from "@connext/vector-types";
 import {
   createTestChannelState,
@@ -240,9 +241,7 @@ describe(testName, () => {
         expect(error.context).to.containSubset({
           ...errorContext,
         });
-        console.log("***** verifying queue");
         expect(store.queueUpdate.callCount).to.be.eq(sentSingleSigned ? 1 : 0);
-        console.log("***** verified");
         return;
       }
       expect(error.context).to.containSubset({
@@ -312,7 +311,7 @@ describe(testName, () => {
         node as INodeService,
         store,
         testLog,
-        chainReader,
+        chainReader as IVectorChainReader,
       );
 
       await verifySuccessfulResult(result, ctx, 0);
@@ -332,7 +331,7 @@ describe(testName, () => {
         node as INodeService,
         store,
         testLog,
-        chainReader,
+        chainReader as IVectorChainReader,
       );
 
       await verifySuccessfulResult(result, mocked, 1);
@@ -351,7 +350,7 @@ describe(testName, () => {
         node as INodeService,
         store,
         testLog,
-        chainReader,
+        chainReader as IVectorChainReader,
       );
 
       await verifySuccessfulResult(result, mocked, 1);
@@ -371,7 +370,7 @@ describe(testName, () => {
         node as INodeService,
         store,
         testLog,
-        chainReader,
+        chainReader as IVectorChainReader,
       );
 
       await verifySuccessfulResult(result, mocked, 1);
@@ -392,7 +391,7 @@ describe(testName, () => {
         node as INodeService,
         store,
         testLog,
-        chainReader,
+        chainReader as IVectorChainReader,
       );
 
       await verifyErrorResult(
@@ -420,7 +419,7 @@ describe(testName, () => {
         node as INodeService,
         store,
         testLog,
-        chainReader,
+        chainReader as IVectorChainReader,
       );
 
       await verifyErrorResult(
@@ -448,7 +447,7 @@ describe(testName, () => {
         node as INodeService,
         store,
         testLog,
-        chainReader,
+        chainReader as IVectorChainReader,
       );
 
       await verifyErrorResult(
@@ -476,7 +475,7 @@ describe(testName, () => {
         node as INodeService,
         store,
         testLog,
-        chainReader,
+        chainReader as IVectorChainReader,
       );
 
       const { stack, ...sanitized } = err.toJson();
@@ -502,7 +501,7 @@ describe(testName, () => {
         node as INodeService,
         store,
         testLog,
-        chainReader,
+        chainReader as IVectorChainReader,
       );
 
       await verifyErrorResult(
@@ -532,7 +531,7 @@ describe(testName, () => {
         node as INodeService,
         store,
         testLog,
-        chainReader,
+        chainReader as IVectorChainReader,
       );
 
       const { stack, ...sanitized } = err.toJson();
@@ -553,7 +552,7 @@ describe(testName, () => {
         node as INodeService,
         store,
         testLog,
-        chainReader,
+        chainReader as IVectorChainReader,
       );
 
       const { stack, ...sanitized } = err.toJson();
@@ -573,7 +572,7 @@ describe(testName, () => {
         node as INodeService,
         store,
         testLog,
-        chainReader,
+        chainReader as IVectorChainReader,
       );
 
       await verifyErrorResult(result, ctx, ForwardTransferCreationError.reasons.RecipientChannelNotFound, {
@@ -598,7 +597,7 @@ describe(testName, () => {
         node as INodeService,
         store,
         testLog,
-        chainReader,
+        chainReader as IVectorChainReader,
       );
 
       const { stack, ...sanitized } = err.toJson();

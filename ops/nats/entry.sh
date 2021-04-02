@@ -18,4 +18,5 @@ JWT_SIGNER_PUBLIC_KEY=$(
 
 export JWT_SIGNER_PUBLIC_KEY
 
-exec /bin/nats-server -D -V
+echo "===== Starting NATS "
+exec "$@"

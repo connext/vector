@@ -95,7 +95,7 @@ public_url="http://localhost:$roger_node_port"
 node_image="image: '${project}_builder'
     entrypoint: 'bash modules/server-node/ops/entry.sh'
     volumes:
-      - '$root:/root'
+      - '$root:/app'
     tmpfs: /tmp"
 
 node_env="environment:
@@ -111,7 +111,7 @@ echo "$stack.router will be exposed on *:$router_public_port"
 router_image="image: '${project}_builder'
     entrypoint: 'bash modules/router/ops/entry.sh'
     volumes:
-      - '$root:/root'
+      - '$root:/app'
     ports:
       - '$router_public_port:$router_port'"
 
