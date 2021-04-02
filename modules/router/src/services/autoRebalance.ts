@@ -90,14 +90,6 @@ export const rebalanceIfNeeded = async (
   hydratedProviders: HydratedProviders,
   store: IRouterStore,
 ): Promise<Result<undefined, AutoRebalanceServiceError>> => {
-  // const resourcesInUse = inProgressRebalances[hashAllowedSwap(swap)];
-  // if (resourcesInUse) {
-  //   // @TODO: Should we return AutoRebalanceServiceError here?
-  //   // Pro: lets user know this is being called 'too many' times.
-  //   // Con: it may happen regardless due to this just being a race condition, and we're
-  //   // circumventing here with this logic anyway.
-  //   return Result.ok(undefined);
-  // } else {
   return await queueRebalance<Result<undefined, AutoRebalanceServiceError>>(hashAllowedSwap(swap), () => {
     return _rebalanceIfNeeded(
       swap,
@@ -676,14 +668,6 @@ const sendTransaction = async (
     },
     "Tx sent",
   );
-
-  // We need to await this callback before proceeding (as it's used to store state, and
-  // we want to avoid a race condition).
-  // await onSendTx(response.hash);
-
-  // Get confirmation receipt, then return.
-  // const receipt = await response.wait(getConfirmationsForChain(chainId));
-  
   return response.hash;
 };
 
