@@ -195,6 +195,10 @@ export class RestServerNodeService implements INodeService {
     return this.executeHttpRequest(`send-exit-channel-tx`, "post", params, NodeParams.SendExitChannelTxSchema);
   }
 
+  syncDisputes(params: {}): Promise<Result<void, NodeError>> {
+    return this.executeHttpRequest(`sync-disputes`, "post", params, undefined);
+  }
+
   async createNode(params: NodeParams.CreateNode): Promise<Result<NodeResponses.CreateNode, ServerNodeServiceError>> {
     const res = await this.executeHttpRequest<NodeResponses.CreateNode>(
       `node`,
@@ -613,23 +617,25 @@ export class RestServerNodeService implements INodeService {
     paramSchema: any,
   ): Promise<Result<U, ServerNodeServiceError>> {
     const url = `${this.serverNodeUrl}/${urlPath}`;
-    // Validate parameters are in line with schema
-    const validate = ajv.compile(paramSchema);
-    // IFF the public identifier is undefined, it should be overridden by
-    // the pubId defined in the parameters.
     const filled = { publicIdentifier: this.publicIdentifier, ...params };
-    if (!validate(filled)) {
-      return Result.fail(
-        new ServerNodeServiceError(
-          ServerNodeServiceError.reasons.InvalidParams,
-          (filled as any).publicIdentifer,
-          urlPath,
-          params,
-          {
-            paramsError: validate.errors?.map((err) => err.message).join(","),
-          },
-        ),
-      );
+    if (paramSchema) {
+      // Validate parameters are in line with schema
+      const validate = ajv.compile(paramSchema);
+      // IFF the public identifier is undefined, it should be overridden by
+      // the pubId defined in the parameters.
+      if (!validate(filled)) {
+        return Result.fail(
+          new ServerNodeServiceError(
+            ServerNodeServiceError.reasons.InvalidParams,
+            (filled as any).publicIdentifer,
+            urlPath,
+            params,
+            {
+              paramsError: validate.errors?.map((err) => err.message).join(","),
+            },
+          ),
+        );
+      }
     }
 
     // Attempt request

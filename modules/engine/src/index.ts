@@ -1528,6 +1528,11 @@ export class VectorEngine implements IVectorEngine {
     return Result.ok(results);
   }
 
+  private async syncDisputes(): Promise<Result<void, EngineError>> {
+    await this.vector.syncDisputes();
+    return Result.ok(undefined);
+  }
+
   // JSON RPC interface -- this will accept:
   // - "chan_deposit"
   // - "chan_createTransfer"
