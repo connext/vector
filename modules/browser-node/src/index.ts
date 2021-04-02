@@ -666,6 +666,16 @@ export class BrowserNode implements INodeService {
     }
   }
 
+  async syncDisputes(): Promise<Result<void, BrowserNodeError>> {
+    const rpc = constructRpcRequest(ChannelRpcMethods.chan_syncDisputes, {});
+    try {
+      const res = await this.channelProvider!.send(rpc);
+      return Result.ok(res);
+    } catch (e) {
+      return Result.fail(e);
+    }
+  }
+
   waitFor<T extends EngineEvent>(
     event: T,
     timeout: number,

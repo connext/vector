@@ -37,3 +37,12 @@ Content-Type: application/json
   "channelAddress": "{{channel}}",
   "publicIdentifier": "{{nodePublicIdentifier}}"
 }
+
+##############
+### Sync Disputes
+POST {{nodeUrl}}/sync-disputes
+Content-Type: application/json
+
+{
+  "publicIdentifier": "{{nodePublicIdentifier}}"
+}
