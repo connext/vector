@@ -31,7 +31,7 @@ import Sinon from "sinon";
 import { getAddress } from "@ethersproject/address";
 
 import { PrismaStore } from "../services/store";
-import { forwardTransferCreation } from "../forwarding";
+import { forwardTransferCreation, handlePendingUpdates } from "../forwarding";
 import * as config from "../config";
 import * as configService from "../services/config";
 import * as swapService from "../services/swap";
@@ -51,24 +51,49 @@ type TransferCreatedTestContext = {
   event: ConditionalTransferCreatedPayload;
 };
 
-describe(testName, () => {
-  describe("forwardTransferCreation", () => {
-    let node: Sinon.SinonStubbedInstance<RestServerNodeService>;
-    let store: Sinon.SinonStubbedInstance<PrismaStore>;
-    let chainReader: Sinon.SinonStubbedInstance<VectorChainReader>;
-    let data: ConditionalTransferCreatedPayload;
-    let senderChannel: FullChannelState;
-    let receiverChannel: FullChannelState;
-    let getSwappedAmount: Sinon.SinonStub;
-    let cancelTransfer: Sinon.SinonStub;
-    let justInTimeCollateral: Sinon.SinonStub;
-    let getConfig: Sinon.SinonStub;
-    let shouldChargeFees: Sinon.SinonStub;
+let node: Sinon.SinonStubbedInstance<RestServerNodeService>;
+let store: Sinon.SinonStubbedInstance<PrismaStore>;
+let chainReader: Sinon.SinonStubbedInstance<VectorChainReader>;
+let data: ConditionalTransferCreatedPayload;
+let senderChannel: FullChannelState;
+let receiverChannel: FullChannelState;
+let getSwappedAmount: Sinon.SinonStub;
+let cancelTransfer: Sinon.SinonStub;
+let justInTimeCollateral: Sinon.SinonStub;
+let getConfig: Sinon.SinonStub;
+let shouldChargeFees: Sinon.SinonStub;
+let transferWithCollateralization: Sinon.SinonStub;
 
-    const routerPublicIdentifier = mkPublicIdentifier("vectorRRR");
-    const aliceIdentifier = mkPublicIdentifier("vectorA");
-    const bobIdentifier = mkPublicIdentifier("vectorB");
-    const signerAddress = mkAddress("0xBBB");
+const routerPublicIdentifier = mkPublicIdentifier("vectorRRR");
+const aliceIdentifier = mkPublicIdentifier("vectorA");
+const bobIdentifier = mkPublicIdentifier("vectorB");
+const signerAddress = mkAddress("0xBBB");
+
+describe(testName, () => {
+  beforeEach(async () => {
+    // Declare stubs
+    node = Sinon.createStubInstance(RestServerNodeService, {});
+
+    store = Sinon.createStubInstance(PrismaStore);
+
+    getSwappedAmount = Sinon.stub(swapService, "getSwappedAmount");
+
+    cancelTransfer = Sinon.stub(transferService, "cancelCreatedTransfer");
+
+    chainReader = Sinon.createStubInstance(VectorChainReader);
+
+    justInTimeCollateral = Sinon.stub(collateralService, "justInTimeCollateral");
+
+    getConfig = Sinon.stub(config, "getConfig");
+    shouldChargeFees = Sinon.stub(configService, "shouldChargeFees");
+  });
+
+  afterEach(() => {
+    Sinon.restore();
+    Sinon.reset();
+  });
+
+  describe("forwardTransferCreation", () => {
     const testLog = logger.child({ module: "forwardTransferCreation" });
 
     const generateDefaultTestContext = (): TransferCreatedTestContext => {
@@ -271,28 +296,11 @@ describe(testName, () => {
         ],
       }).channel;
 
-      // Declare stubs
-      node = Sinon.createStubInstance(RestServerNodeService, {
-        sendDepositTx: Promise.resolve(Result.ok({ txHash: getRandomBytes32() })),
-      });
       node.getStateChannel.resolves(Result.ok(senderChannel));
       node.getStateChannelByParticipants.resolves(Result.ok(receiverChannel));
       node.conditionalTransfer.resolves(Result.ok({} as any));
       node.sendDepositTx.resolves(Result.ok({ txHash: getRandomBytes32() }));
       node.reconcileDeposit.resolves(Result.ok({ channelAddress: data.channelAddress }));
-
-      store = Sinon.createStubInstance(PrismaStore);
-
-      getSwappedAmount = Sinon.stub(swapService, "getSwappedAmount");
-
-      cancelTransfer = Sinon.stub(transferService, "cancelCreatedTransfer");
-
-      chainReader = Sinon.createStubInstance(VectorChainReader);
-
-      justInTimeCollateral = Sinon.stub(collateralService, "justInTimeCollateral");
-
-      getConfig = Sinon.stub(config, "getConfig");
-      shouldChargeFees = Sinon.stub(configService, "shouldChargeFees");
     });
 
     afterEach(() => {
@@ -621,11 +629,102 @@ describe(testName, () => {
     it("should work", async () => {});
   });
 
-  describe.skip("handleIsAlive", () => {
+  describe("handleIsAlive", () => {
     describe("handlePendingUpdates", () => {
-      it("should fail if pending updates exist for non-existing channel", async () => {});
+      beforeEach(async () => {
+        transferWithCollateralization = Sinon.stub(transferService, "transferWithCollateralization");
+      });
+
+      it("should fail if pending updates exist for non-existing channel", async () => {
+        store.getQueuedUpdates.resolves([
+          {
+            id: "foo",
+            payload: {
+              channelAddress: mkAddress("0xababab"),
+              assetId: AddressZero,
+              amount: "0",
+              type: "HashlockTransfer",
+              transferId: getRandomBytes32(),
+              publicIdentifier: aliceIdentifier,
+              details: {},
+            },
+            status: "PENDING",
+            type: "TRANSFER_CREATION",
+          },
+        ]);
+
+        node.getStateChannel.resolves(Result.ok(undefined));
+
+        const res = await handlePendingUpdates(
+          { channelAddress: mkAddress("0xababab"), chainId: 1, aliceIdentifier, bobIdentifier },
+          routerPublicIdentifier,
+          node as any,
+          store,
+          chainReader,
+          logger,
+        );
+        expect(res.isError).to.be.true;
+        expect(res.getError()?.message).eq("Could not get channel, or not found");
+      });
+
+      it("should handle an array of all successful updates ", async () => {
+        senderChannel = createTestChannelState("create").channel;
+        store.getQueuedUpdates.resolves([
+          {
+            id: "foo",
+            payload: {
+              channelAddress: senderChannel.channelAddress,
+              assetId: AddressZero,
+              amount: "0",
+              type: "HashlockTransfer",
+              transferId: getRandomBytes32(),
+              publicIdentifier: aliceIdentifier,
+              details: {},
+            },
+            status: "PENDING",
+            type: "TRANSFER_CREATION",
+          },
+          {
+            id: "foo",
+            payload: {
+              channelAddress: senderChannel.channelAddress,
+              assetId: AddressZero,
+              amount: "0",
+              type: "HashlockTransfer",
+              transferId: getRandomBytes32(),
+              publicIdentifier: aliceIdentifier,
+              details: {},
+            },
+            status: "PENDING",
+            type: "TRANSFER_RESOLUTION",
+          },
+        ]);
+        node.getStateChannel.resolves(Result.ok(senderChannel));
+        node.resolveTransfer.resolves(
+          Result.ok({ channelAddress: senderChannel.alice, transferId: getRandomBytes32() }),
+        );
+        transferWithCollateralization.resolves(Result.ok(undefined));
+
+        const res = await handlePendingUpdates(
+          { channelAddress: senderChannel.channelAddress, chainId: 1, aliceIdentifier, bobIdentifier },
+          routerPublicIdentifier,
+          node as any,
+          store,
+          chainReader,
+          logger,
+        );
+        expect(res.isError).to.be.false;
+        expect(res.getValue()).to.be.undefined;
+
+        const calls = store.setUpdateStatus.getCalls();
+        expect(store.setUpdateStatus.callCount).to.eq(4);
+        expect(calls[0].args[1]).to.eq("PROCESSING");
+        expect(calls[1].args[1]).to.eq("COMPLETE");
+        expect(calls[2].args[1]).to.eq("PROCESSING");
+        expect(calls[3].args[1]).to.eq("COMPLETE");
+      });
+      it("should handle timeout errors and keep as pending", async () => {});
       it("should handle an array of pending updates, marking as succeeded and failed ", async () => {});
-      it("should handle an array of all successful updates ", async () => {});
     });
 
     describe("handleUnverifiedUpdates", () => {});

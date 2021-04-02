@@ -1017,7 +1017,7 @@ const handleUnverifiedUpdates = async (
   return Result.ok(undefined);
 };
 
-const handlePendingUpdates = async (
+export const handlePendingUpdates = async (
   data: IsAlivePayload,
   routerPublicIdentifier: string,
   nodeService: INodeService,
@@ -1094,35 +1094,34 @@ const handlePendingUpdates = async (
         logger.info({ method, methodId, updateId: routerUpdate.id }, "Successfully handled checkIn update");
       }
       continue;
-    }
-
-    // Handle transfer resolution updates
-    if (type !== RouterUpdateType.TRANSFER_RESOLUTION) {
+    } else if (type === RouterUpdateType.TRANSFER_RESOLUTION) {
+      // Handle transfer resolution updates
+      const resolveRes = await nodeService.resolveTransfer(payload as NodeParams.ResolveTransfer);
+      // If failed, retry later
+      if (resolveRes.isError) {
+        logger.error(
+          { method, methodId, resolveError: jsonifyError(resolveRes.getError()!), update: routerUpdate },
+          "Handling update failed",
+        );
+        const error = resolveRes.getError()?.message;
+        await store.setUpdateStatus(
+          routerUpdate.id,
+          error === NodeError.reasons.Timeout ? RouterUpdateStatus.PENDING : RouterUpdateStatus.FAILED,
+          error,
+        );
+        erroredUpdates.push(routerUpdate);
+      } else {
+        await store.setUpdateStatus(
+          routerUpdate.id,
+          RouterUpdateStatus.COMPLETE,
+          "Update complete: forwarded transfer resolution",
+        );
+        logger.info({ method, methodId, updateId: routerUpdate.id }, "Successfully handled update");
+      }
+    } else {
       logger.error({ update: routerUpdate }, "Unknown update type");
       await store.setUpdateStatus(routerUpdate.id, RouterUpdateStatus.FAILED, "Unknown update type");
       continue;
-    }
-    const resolveRes = await nodeService.resolveTransfer(payload as NodeParams.ResolveTransfer);
-    // If failed, retry later
-    if (resolveRes.isError) {
-      logger.error(
-        { method, methodId, resolveError: jsonifyError(resolveRes.getError()!), update: routerUpdate },
-        "Handling update failed",
-      );
-      const error = resolveRes.getError()?.message;
-      await store.setUpdateStatus(
-        routerUpdate.id,
-        error === NodeError.reasons.Timeout ? RouterUpdateStatus.PENDING : RouterUpdateStatus.FAILED,
-        error,
-      );
-      erroredUpdates.push(routerUpdate);
-    } else {
-      await store.setUpdateStatus(
-        routerUpdate.id,
-        RouterUpdateStatus.COMPLETE,
-        "Update complete: forwarded transfer resolution",
-      );
-      logger.info({ method, methodId, updateId: routerUpdate.id }, "Successfully handled update");
     }
   }
   if (erroredUpdates.length > 0) {

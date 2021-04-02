@@ -488,7 +488,9 @@ export async function getWithdrawalQuote(
   }
 
   const gasEstimate =
-    code.getValue() !== "0x" ? SIMPLE_WITHDRAWAL_GAS_ESTIMATE : SIMPLE_WITHDRAWAL_GAS_ESTIMATE.add(GAS_ESTIMATES.createChannel);
+    code.getValue() !== "0x"
+      ? SIMPLE_WITHDRAWAL_GAS_ESTIMATE
+      : SIMPLE_WITHDRAWAL_GAS_ESTIMATE.add(GAS_ESTIMATES.createChannel);
 
   // Get the gas price
   const gasPrice = await chainService.getGasPrice(channel.networkContext.chainId);
