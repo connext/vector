@@ -31,8 +31,7 @@
     "axios": "0.21.1",
     "dexie": "3.0.3",
     "merkletreejs": "0.2.13",
-    "pino": "6.11.1",
-    "ts-nats": "1.2.15"
+    "pino": "6.11.1"
   },
   "devDependencies": {
     "@types/chai": "4.2.15",
@@ -52,6 +51,7 @@
     "ts-loader": "8.0.7",
     "ts-mocha": "8.0.0",
     "ts-node": "9.1.1",
+    "ts-nats": "1.2.15",
     "typescript": "4.2.2",
     "webpack": "4.44.2",
     "webpack-cli": "4.1.0"
