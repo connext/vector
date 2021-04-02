@@ -4,7 +4,7 @@ import {
   WithdrawDataEncoding,
   ChannelCommitmentTypes,
 } from "@connext/vector-types";
-import { recoverAddressFromChannelMessage } from "@connext/vector-utils";
+import { mkSig, recoverAddressFromChannelMessage } from "@connext/vector-utils";
 import { AddressZero } from "@ethersproject/constants";
 import { Interface, defaultAbiCoder } from "@ethersproject/abi";
 import { keccak256 as solidityKeccak256 } from "@ethersproject/solidity";
@@ -113,16 +113,22 @@ export class WithdrawCommitment {
         continue;
       }
       let recovered: string;
-      try {
-        recovered = await recoverAddressFromChannelMessage(hash, sig);
-      } catch (e) {
-        recovered = e.message;
+      if (sig === mkSig("0x0")) {
+        this.aliceSignature = this.alice ? sig : this.aliceSignature;
+        this.bobSignature = this.bob ? sig : this.bobSignature;
+      } else {
+        try {
+          recovered = await recoverAddressFromChannelMessage(hash, sig);
+        } catch (e) {
+          recovered = e.message;
+        }
+        if (recovered !== this.alice && recovered !== this.bob) {
+          throw new Error(`Invalid signer detected. Got ${recovered}, expected one of: ${this.alice} / ${this.bob}`);
+        }
+
+        this.aliceSignature = recovered === this.alice ? sig : this.aliceSignature;
+        this.bobSignature = recovered === this.bob ? sig : this.bobSignature;
       }
-      if (recovered !== this.alice && recovered !== this.bob) {
-        throw new Error(`Invalid signer detected. Got ${recovered}, expected one of: ${this.alice} / ${this.bob}`);
-      }
-      this.aliceSignature = recovered === this.alice ? sig : this.aliceSignature;
-      this.bobSignature = recovered === this.bob ? sig : this.bobSignature;
     }
   }
 }

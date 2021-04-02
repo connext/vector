@@ -51,8 +51,15 @@ import { BigNumber } from "@ethersproject/bignumber";
 import { hexlify } from "@ethersproject/bytes";
 import { randomBytes } from "@ethersproject/random";
 
-import { getWithdrawalQuote, resolveExistingWithdrawals, setupEngineListeners } from "../listeners";
+import {
+  getWithdrawalQuote,
+  handleWithdrawalTransferResolution,
+  resolveExistingWithdrawals,
+  setupEngineListeners,
+} from "../listeners";
 import * as utils from "../utils";
+import * as listeners from "../listeners";
+
 const { getEngineEvtContainer } = utils;
 
 import { env } from "./env";
@@ -162,15 +169,41 @@ describe(testName, () => {
     it("should work if responder is alice (submit withdraw to chain + resolve transfer)", () => {});
     it("should work if responder is bob (DONT submit withdraw to chain + resolve transfer)", () => {});
   });
-  describe.skip("withdrawal resolution", () => {
-    it("should not handle transfers", () => {});
-    it("should fail if getting transfer from store fails", () => {});
-    it("should fail if there is no transfer in store", () => {});
-    it("should work for initiator", () => {});
-    it("should fail if responder cannot addSignatures to commitment", () => {});
-    it("should fail if responder cannot save commitment", () => {});
-    it("should should work if responder is alice (submit withdraw to chain)", () => {});
-    it("should should work if responder is bob (DONT submit withdraw to chain)", () => {});
+
+  describe("withdrawal resolution", () => {
+    it("should not create commitments for cancelled withdrawals", async () => {
+      const alice = getRandomChannelSigner();
+      const bob = getRandomChannelSigner();
+      const test = createTestChannelState("create", { alice: alice.address, bob: bob.address });
+      test.transfer.transferState.fee = "0";
+      test.transfer.transferState.nonce = "0";
+      test.transfer.transferState.initiatorSignature = mkSig("0x0");
+      test.transfer.transferResolver = { responderSignature: mkSig("0x0") };
+      console.log("test: ", test.transfer);
+      Sinon.stub(listeners, "isWithdrawTransfer").resolves(Result.ok(true));
+
+      await handleWithdrawalTransferResolution(
+        {
+          updatedChannelState: test.channel,
+          updatedTransfer: test.transfer,
+        },
+        alice,
+        store,
+        getEngineEvtContainer(),
+        {},
+        chainService as any,
+        log,
+      );
+      expect(store.saveWithdrawalCommitment.callCount).to.eq(0);
+    });
+    it.skip("should not handle transfers", () => {});
+    it.skip("should fail if getting transfer from store fails", () => {});
+    it.skip("should fail if there is no transfer in store", () => {});
+    it.skip("should work for initiator", () => {});
+    it.skip("should fail if responder cannot addSignatures to commitment", () => {});
+    it.skip("should fail if responder cannot save commitment", () => {});
+    it.skip("should should work if responder is alice (submit withdraw to chain)", () => {});
+    it.skip("should should work if responder is bob (DONT submit withdraw to chain)", () => {});
   });
 
   describe("withdrawals", () => {

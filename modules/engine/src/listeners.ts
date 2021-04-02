@@ -762,7 +762,7 @@ async function handleWithdrawalTransferCreation(
   );
 }
 
-async function handleWithdrawalTransferResolution(
+export async function handleWithdrawalTransferResolution(
   event: ChannelUpdateEvent,
   signer: IChannelSigner,
   store: IEngineStore,
@@ -862,6 +862,15 @@ async function handleWithdrawalTransferResolution(
   };
   evts[EngineEvents.WITHDRAWAL_RESOLVED].post(payload);
 
+  // if the transfer got cancelled, no need to do anything
+  if (event.updatedTransfer.transferResolver!.responderSignature === mkSig("0x0")) {
+    logger.warn(
+      { method, methodId, withdrawalAmount: withdrawalAmount.toString(), assetId, transfer: event.updatedTransfer },
+      "Withdrawal was cancelled",
+    );
+    return;
+  }
+
   // If it is not from counterparty, do not respond
   if (fromIdentifier === signer.publicIdentifier) {
     logger.debug(
@@ -940,7 +949,7 @@ async function handleWithdrawalTransferResolution(
   }
 }
 
-const isWithdrawTransfer = async (
+export const isWithdrawTransfer = async (
   transfer: FullTransferState,
   chainAddresses: ChainAddresses,
   chainService: IVectorChainReader,
