@@ -1,4 +1,4 @@
-import { VectorChainReader } from "@connext/vector-contracts";
+import { VectorChainReader, waitForTransaction } from "@connext/vector-contracts";
 import {
   AllowedSwap,
   HydratedProviders,
@@ -10,8 +10,10 @@ import {
   MinimalTransaction,
   CheckStatusParams,
   getConfirmationsForChain,
+  ChainError,
 } from "@connext/vector-types";
 import { getRandomBytes32 } from "@connext/vector-utils";
+import { TransactionReceipt } from "@ethersproject/abstract-provider";
 import { BigNumber } from "@ethersproject/bignumber";
 import { parseUnits } from "@ethersproject/units";
 import { Wallet } from "@ethersproject/wallet";
@@ -227,28 +229,44 @@ const _rebalanceIfNeeded = async (
     await store.saveRebalance(latestRebalance);
   }
 
+  // STEP 1: Approve rebalance.
   if (latestRebalance.status === RouterRebalanceStatus.PENDING) {
-    // approve rebalance
-    const approveResult = await approveRebalance(
-      amountToSend,
-      swap,
-      hydratedProviders,
-      wallet,
-      logger,
-      methodId,
-      async (txHash: string) => {
-        // save hash
-        latestRebalance = {
-          ...latestRebalance,
-          approveHash: txHash,
-        } as RouterRebalanceRecord;
-        await store.saveRebalance(latestRebalance);
+    // Check if Tx already sent.
+    let { approveHash } = latestRebalance;
+    if (!approveHash) {
+      const approveResult = await approveRebalance(
+        amountToSend,
+        swap,
+        hydratedProviders,
+        wallet,
+        logger,
+        methodId,
+      );
+      // Check for error.
+      if (approveResult.isError) {
+        return Result.fail(approveResult.getError()!);
       }
-    );
-    if (approveResult.isError) {
-      return Result.fail(approveResult.getError()!);
+      // @TODO: is this force unwrap here safe?
+      approveHash = approveResult.getValue()!;
+      // Tx was successfully sent; save hash.
+      latestRebalance = {
+        ...latestRebalance,
+        approveHash,
+      } as RouterRebalanceRecord;
+      await store.saveRebalance(latestRebalance);
     }
 
+    // Await confirmation.
+    const confirmationResult = await getConfirmation(
+      approveHash,
+      swap,
+      hydratedProviders,
+      logger,
+      methodId,
+    );
+    if (confirmationResult.isError) {
+      return Result.fail(confirmationResult.getError()!);
+    }
     // Save approved status. Once method above returns, receipt has been received.
     latestRebalance = {
       ...latestRebalance,
@@ -257,25 +275,43 @@ const _rebalanceIfNeeded = async (
     await store.saveRebalance(latestRebalance);
   }
 
+  // STEP 2. Execute.
   if (latestRebalance.status === RouterRebalanceStatus.APPROVED) {
-    const executeResult = await executeRebalance(
-      amountToSend,
+    // Check if Tx already sent.
+    let { executeHash } = latestRebalance;
+    if (!executeHash) {
+      const executeResult = await executeRebalance(
+        amountToSend,
+        swap,
+        hydratedProviders,
+        wallet,
+        logger,
+        methodId,
+      );
+      // Check for error.
+      if (executeResult.isError) {
+        return Result.fail(executeResult.getError()!);
+      }
+      // @TODO: is this force unwrap here safe?
+      executeHash = executeResult.getValue()!;
+      // Save hash.
+      latestRebalance = {
+        ...latestRebalance,
+        executeHash,
+      } as RouterRebalanceRecord;
+      await store.saveRebalance(latestRebalance);
+    }
+
+    // Await confirmation.
+    const confirmationResult = await getConfirmation(
+      executeHash,
       swap,
       hydratedProviders,
-      wallet,
       logger,
       methodId,
-      async (txHash: string) => {
-        // save hash
-        latestRebalance = {
-          ...latestRebalance,
-          executeHash: txHash,
-        } as RouterRebalanceRecord;
-        await store.saveRebalance(latestRebalance);
-      }
     );
-    if (executeResult.isError) {
-      return Result.fail(executeResult.getError()!);
+    if (confirmationResult.isError) {
+      return Result.fail(confirmationResult.getError()!);
     }
     // Save executed status. Once method above returns, receipt has been received.
     latestRebalance = {
@@ -285,7 +321,9 @@ const _rebalanceIfNeeded = async (
     await store.saveRebalance(latestRebalance);
   }
 
+  // STEP 3. Complete rebalance.
   if (latestRebalance.status === RouterRebalanceStatus.EXECUTED) {
+    // Ensure that the rebalance has been executed.
     if (!latestRebalance.executeHash) {
       return Result.fail(
         new AutoRebalanceServiceError(
@@ -297,32 +335,56 @@ const _rebalanceIfNeeded = async (
       );
     }
 
-    const completedResult = await completeRebalance(
-      amountToSend,
-      latestRebalance.executeHash,
-      swap,
-      hydratedProviders,
-      wallet,
-      logger,
-      methodId,
-      async (txHash: string) => {
-        // save hash
+    // Check if Tx already sent.
+    let { completeHash } = latestRebalance;
+    if (!completeHash) {
+      const completedResult = await completeRebalance(
+        amountToSend,
+        latestRebalance.executeHash,
+        swap,
+        hydratedProviders,
+        wallet,
+        logger,
+        methodId,
+      );
+      if (completedResult.isError) {
+        return Result.fail(completedResult.getError()!);
+      }
+      if (!completedResult.getValue().complete) {
+        // Rebalance hasn't completed yet, so we'll return here
+        // and retry on the next call of this method.
+        return Result.ok(undefined);
+      }
+      // @TODO: is this force unwrap here safe?
+      completeHash = completedResult.getValue().transactionHash;
+      // Save hash if it is defined (it will be undefined in the event a completion
+      // tx was not needed).
+      if (completeHash) {
         latestRebalance = {
           ...latestRebalance,
-          completeHash: txHash,
+          completeHash,
         } as RouterRebalanceRecord;
         await store.saveRebalance(latestRebalance);
       }
-    );
-    if (completedResult.isError) {
-      return Result.fail(completedResult.getError()!);
     }
-    if (!completedResult.getValue().complete) {
-      // Completion tx failed to receive confirmation receipt, so we'll close this out
-      // and retry on another call of this method.
-      return Result.ok(undefined);
+
+    // We do a separate check here once we're certain the above block has executed,
+    // guaranteeing completion tx has been sent if needed.
+    if (completeHash) {
+      // Completion tx was needed and has been sent. Wait for confirmation.
+      const confirmationResult = await getConfirmation(
+        completeHash,
+        swap,
+        hydratedProviders,
+        logger,
+        methodId,
+      );
+      if (confirmationResult.isError) {
+        return Result.fail(confirmationResult.getError()!);
+      }
     }
-    // Save complete status. Once method above returns, receipt has been received.
+
+    // Save complete status.
     latestRebalance = {
       ...latestRebalance,
       status: RouterRebalanceStatus.COMPLETE
@@ -341,7 +403,6 @@ export const approveRebalance = async (
   wallet: Wallet,
   logger: BaseLogger,
   methodId: string = getRandomBytes32(),
-  onSendTx: (txHash: string) => Promise<void>,
 ): Promise<Result<string | undefined, AutoRebalanceServiceError>> => {
   const method = "approveRebalance";
   logger.debug({ method, methodId, swap, amount: amount.toString() }, "Method started");
@@ -404,7 +465,6 @@ export const approveRebalance = async (
       logger,
       method,
       methodId,
-      onSendTx,
     );
     return Result.ok(transactionHash);
   } catch (e) {
@@ -427,7 +487,6 @@ export const executeRebalance = async (
   wallet: Wallet,
   logger: BaseLogger,
   methodId: string = getRandomBytes32(),
-  onSendTx: (txHash: string) => Promise<void>,
 ): Promise<Result<string, AutoRebalanceServiceError>> => {
   // execute rebalance
   const method = "executeRebalance";
@@ -481,7 +540,6 @@ export const executeRebalance = async (
       logger,
       method,
       methodId,
-      onSendTx,
     );
     return Result.ok(transactionHash);
   } catch (e) {
@@ -506,7 +564,6 @@ export const completeRebalance = async (
   wallet: Wallet,
   logger: BaseLogger,
   methodId: string = getRandomBytes32(),
-  onSendTx: (txHash: string) => Promise<void>,
 ): Promise<Result<{ transactionHash?: string; complete: boolean }, AutoRebalanceServiceError>> => {
   // complete/check rebalance status
   const method = "completeRebalance";
@@ -560,7 +617,6 @@ export const completeRebalance = async (
       logger,
       method,
       methodId,
-      onSendTx,
     );
     logger.info(
       { transactionHash, transaction: status.transaction, method, intervalId: methodId },
@@ -587,7 +643,6 @@ const sendTransaction = async (
   logger: BaseLogger,
   method: string = "sendTransaction",
   methodId: string = getRandomBytes32(),
-  onSendTx: (txHash: string) => Promise<void>,
 ): Promise<string> => {
   const provider = providers[chainId];
   if (!provider) {
@@ -624,17 +679,42 @@ const sendTransaction = async (
 
   // We need to await this callback before proceeding (as it's used to store state, and
   // we want to avoid a race condition).
-  await onSendTx(response.hash);
+  // await onSendTx(response.hash);
 
   // Get confirmation receipt, then return.
-  const receipt = await response.wait(getConfirmationsForChain(chainId));
+  // const receipt = await response.wait(getConfirmationsForChain(chainId));
+  
+  return response.hash;
+};
+
+
+const getConfirmation = async (
+  txHash: string,
+  swap: AllowedSwap,
+  providers: HydratedProviders,
+  logger: BaseLogger,
+  method: string = "getConfirmation",
+  methodId: string = getRandomBytes32()
+): Promise<Result<TransactionReceipt, AutoRebalanceServiceError>> => {
+  const result = await waitForTransaction(providers[swap.fromChainId], txHash, getConfirmationsForChain(swap.fromChainId));
   logger.info(
     {
       method,
       intervalId: methodId,
-      hash: receipt.transactionHash,
+      hash: txHash,
     },
     "Tx mined",
   );
-  return receipt.transactionHash;
-};
+  if (result.isError) {
+    return Result.fail(
+      new AutoRebalanceServiceError(
+        AutoRebalanceServiceError.reasons.CouldNotCompleteRebalance,
+        swap.fromChainId,
+        swap.fromAssetId,
+        { methodId, method, error: jsonifyError(result.getError()!) },
+      ),
+    );
+  } else {
+    return Result.ok(result.getValue());
+  }
+}
