@@ -23,6 +23,7 @@ import { v4 as uuidv4 } from "uuid";
 import { getConfig } from "../config";
 import { AutoRebalanceServiceError } from "../errors";
 import { parseBalanceToNumber, rebalancedTokens } from "../metrics";
+import { hashAllowedSwap, inProgressRebalances, queueRebalance } from "./rebalanceQueue";
 import { IRouterStore, RouterRebalanceRecord, RouterRebalanceStatus } from "./store";
 
 const config = getConfig();
@@ -80,6 +81,34 @@ export const autoRebalanceTask = async (
 };
 
 export const rebalanceIfNeeded = async (
+  swap: AllowedSwap,
+  logger: BaseLogger,
+  wallet: Wallet,
+  chainService: VectorChainReader,
+  hydratedProviders: HydratedProviders,
+  store: IRouterStore,
+): Promise<Result<undefined, AutoRebalanceServiceError>> => {
+  // const resourcesInUse = inProgressRebalances[hashAllowedSwap(swap)];
+  // if (resourcesInUse) {
+  //   // @TODO: Should we return AutoRebalanceServiceError here?
+  //   // Pro: lets user know this is being called 'too many' times.
+  //   // Con: it may happen regardless due to this just being a race condition, and we're
+  //   // circumventing here with this logic anyway.
+  //   return Result.ok(undefined);
+  // } else {
+  return await queueRebalance<Result<undefined, AutoRebalanceServiceError>>(hashAllowedSwap(swap), () => {
+    return _rebalanceIfNeeded(
+      swap,
+      logger,
+      wallet,
+      chainService,
+      hydratedProviders,
+      store,
+    )
+  });
+}
+
+const _rebalanceIfNeeded = async (
   swap: AllowedSwap,
   logger: BaseLogger,
   wallet: Wallet,
