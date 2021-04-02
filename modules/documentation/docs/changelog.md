@@ -2,6 +2,11 @@
 
 ## Next Release
 
+## 0.2.2-beta.1
+
+- \[contracts, engine, protocol, server-node\] Channel dispute MVP
+- \[engine\] Remove withdrawal fees
+
 ## 0.2.1
 
 Non-beta release

@@ -430,15 +430,31 @@ export async function setupEngineListeners(
   chainService.on(EngineEvents.TRANSACTION_FAILED, (data) => {
     evts[EngineEvents.TRANSACTION_FAILED].post({ ...data, publicIdentifier: signer.publicIdentifier });
   });
+
+  chainService.on(EngineEvents.CHANNEL_DISPUTED, (data) => {
+    evts[EngineEvents.CHANNEL_DISPUTED].post({ ...data, publicIdentifier: signer.publicIdentifier });
+  });
+
+  chainService.on(EngineEvents.CHANNEL_DEFUNDED, (data) => {
+    evts[EngineEvents.CHANNEL_DEFUNDED].post({ ...data, publicIdentifier: signer.publicIdentifier });
+  });
+
+  chainService.on(EngineEvents.TRANSFER_DISPUTED, (data) => {
+    evts[EngineEvents.TRANSFER_DISPUTED].post({ ...data, publicIdentifier: signer.publicIdentifier });
+  });
+
+  chainService.on(EngineEvents.TRANSFER_DEFUNDED, (data) => {
+    evts[EngineEvents.TRANSFER_DEFUNDED].post({ ...data, publicIdentifier: signer.publicIdentifier });
+  });
 }
 
 export async function getWithdrawalQuote(
   request: EngineParams.GetWithdrawalQuote,
-  gasSubsidyPercentage: number,
+  _gasSubsidyPercentage: number,
   signer: IChannelSigner,
-  store: IVectorStore,
-  chainService: IVectorChainService,
-  logger: BaseLogger,
+  _store: IVectorStore,
+  _chainService: IVectorChainService,
+  _logger: BaseLogger,
 ): Promise<Result<WithdrawalQuote, WithdrawQuoteError>> {
   const receiveExactAmount = request.receiveExactAmount ?? false;
   // Helper to sign the quote + return to user
@@ -446,7 +462,7 @@ export async function getWithdrawalQuote(
     const withdrawalAmount = receiveExactAmount ? BigNumber.from(request.amount).add(_fee) : request.amount;
     const quote = {
       channelAddress: request.channelAddress,
-      amount: _fee.gt(withdrawalAmount) ? "0" : BigNumber.from(withdrawalAmount).sub(_fee).toString(), // hash of negative value fails
+      amount: withdrawalAmount.toString(), // hash of negative value fails
       assetId: request.assetId,
       fee: _fee.toString(),
       expiry: (Date.now() + DEFAULT_FEE_EXPIRY).toString(), // TODO: make this configurable #436
@@ -463,82 +479,9 @@ export async function getWithdrawalQuote(
     }
   };
 
-  // Exit early if no fees
-  if (gasSubsidyPercentage === 100) {
-    return createAndSignQuote(Zero);
-  }
-
-  // Get channel from store
-  const channel = await store.getChannelState(request.channelAddress);
-  if (!channel) {
-    return Result.fail(
-      new WithdrawQuoteError(WithdrawQuoteError.reasons.ChannelNotFound, signer.publicIdentifier, request),
-    );
-  }
-
-  // First check to see if the channel is deployed
-  const code = await chainService.getCode(request.channelAddress, channel.networkContext.chainId);
-  if (code.isError) {
-    return Result.fail(
-      new WithdrawQuoteError(WithdrawQuoteError.reasons.ChainServiceFailure, signer.publicIdentifier, request, {
-        chainServiceMethod: "getCode",
-        error: jsonifyError(code.getError()!),
-      }),
-    );
-  }
-
-  const gasEstimate =
-    code.getValue() !== "0x" ? SIMPLE_WITHDRAWAL_GAS_ESTIMATE : SIMPLE_WITHDRAWAL_GAS_ESTIMATE.add(GAS_ESTIMATES.createChannel);
-
-  // Get the gas price
-  const gasPrice = await chainService.getGasPrice(channel.networkContext.chainId);
-  if (gasPrice.isError) {
-    return Result.fail(
-      new WithdrawQuoteError(WithdrawQuoteError.reasons.ChainServiceFailure, signer.publicIdentifier, request, {
-        chainServiceMethod: "getGasPrice",
-        error: jsonifyError(gasPrice.getError()!),
-      }),
-    );
-  }
-
-  // Convert ethFee to price in given `assetId`
-  const assetDecimals = await chainService.getDecimals(request.assetId, channel.networkContext.chainId);
-  if (assetDecimals.isError) {
-    return Result.fail(
-      new WithdrawQuoteError(WithdrawQuoteError.reasons.ChainServiceFailure, signer.publicIdentifier, request, {
-        chainServiceMethod: "getDecimals",
-        error: jsonifyError(assetDecimals.getError()!),
-      }),
-    );
-  }
-
-  const normalizedGasCost =
-    channel.networkContext.chainId === 1 || TESTNETS_WITH_FEES.includes(channel.networkContext.chainId) // fromAsset MUST be on mainnet or hardcoded
-      ? await normalizeGasFees(
-          gasEstimate,
-          18,
-          request.assetId,
-          assetDecimals.getValue(),
-          channel.networkContext.chainId,
-          chainService,
-          logger,
-        )
-      : Result.ok(Zero);
-
-  if (normalizedGasCost.isError) {
-    return Result.fail(
-      new WithdrawQuoteError(WithdrawQuoteError.reasons.ExchangeRateError, signer.publicIdentifier, request, {
-        error: jsonifyError(normalizedGasCost.getError()!),
-      }),
-    );
-  }
-
-  const fee = normalizedGasCost
-    .getValue()
-    .mul(100 - gasSubsidyPercentage)
-    .div(100);
-
-  return createAndSignQuote(fee);
+  // removing withdrawal fees since they are currently trusted and they show up on the wrong side of the channel
+  // see https://github.com/connext/vector/issues/529
+  return createAndSignQuote(Zero);
 }
 
 export async function resolveExistingWithdrawals(
@@ -1085,67 +1028,7 @@ export const resolveWithdrawal = async (
     return;
   }
 
-  // Verify fee is present, signed correctly, and not expired IFF configured and
-  // channel is on proper chain
-  const relevantChain = transfer.chainId === 1 || TESTNETS_WITH_FEES.includes(transfer.chainId);
-  if (gasSubsidyPercentage !== 100 && signer.address === channelState.alice && relevantChain && !initiatorSubmits) {
-    const cancelWithdrawal = async (cancellationReason: string) => {
-      logger.warn({ cancellationReason, transferId, channelAddress, method, methodId }, "Cancelling withdrawal");
-      const resolveRes = await vector.resolve({
-        transferResolver: { responderSignature: mkSig("0x0") },
-        transferId,
-        channelAddress,
-        meta: { ...(meta ?? {}), cancellationReason },
-      });
-
-      // Handle the error
-      if (resolveRes.isError) {
-        logger.error(
-          {
-            method,
-            error: resolveRes.getError()!.message,
-            transferId,
-            channelAddress,
-            transactionHash,
-          },
-          "Failed to cancel withdrawal",
-        );
-        return;
-      }
-    };
-    // configured
-    const { quote } = meta ?? {};
-    if (!quote) {
-      // cancel withdrawal
-      await cancelWithdrawal("Missing withdrawal quote");
-      return;
-    }
-    if (parseInt(quote.expiry) < Date.now()) {
-      await cancelWithdrawal("Withdrawal quote expired, please retry");
-      return;
-    }
-    try {
-      const recreated = {
-        channelAddress: transfer.channelAddress,
-        amount: withdrawalAmount.toString(),
-        assetId,
-        fee,
-        expiry: quote.expiry,
-      };
-      const recovered = await recoverAddressFromChannelMessage(hashWithdrawalQuote(recreated), quote.signature);
-      if (recovered !== channelState.alice) {
-        throw new Error(
-          `Got ${recovered} expected ${channelState.alice} on ${safeJsonStringify(
-            recreated,
-          )}. (Quote: ${safeJsonStringify(quote)})`,
-        );
-      }
-    } catch (e) {
-      await cancelWithdrawal(`Withdrawal quote recovery failed: ${e.message}`);
-      return;
-    }
-    logger.info({ quote, method, methodId }, "Withdrawal fees verified");
-  }
+  // no longer checking withdrawal quote, see https://github.com/connext/vector/issues/529
 
   const commitment = new WithdrawCommitment(
     channelAddress,

@@ -16,6 +16,17 @@ import {
   HydratedProviders,
   WithdrawCommitmentJson,
   ETH_READER_MAX_RETRIES,
+  ChainReaderEventMap,
+  ChainReaderEvent,
+  ChainReaderEvents,
+  ChannelDisputedPayload,
+  ChannelDefundedPayload,
+  TransferDisputedPayload,
+  TransferDefundedPayload,
+  CoreChannelState,
+  CoreTransferState,
+  TransferDispute,
+  jsonifyError,
 } from "@connext/vector-types";
 import axios from "axios";
 import { encodeBalance, encodeTransferResolver, encodeTransferState } from "@connext/vector-utils";
@@ -26,6 +37,7 @@ import { JsonRpcProvider, TransactionRequest } from "@ethersproject/providers";
 import pino from "pino";
 
 import { ChannelFactory, ChannelMastercopy, TransferDefinition, TransferRegistry, VectorChannel } from "../artifacts";
+import { Evt } from "evt";
 
 // https://github.com/rustwasm/wasm-bindgen/issues/700#issuecomment-419708471
 const execEvmBytecode = (bytecode: string, payload: string): Uint8Array =>
@@ -36,6 +48,13 @@ const execEvmBytecode = (bytecode: string, payload: string): Uint8Array =>
 
 export class EthereumChainReader implements IVectorChainReader {
   private transferRegistries: Map<string, RegisteredTransfer[]> = new Map();
+  protected disputeEvts: { [eventName in ChainReaderEvent]: Evt<ChainReaderEventMap[eventName]> } = {
+    [ChainReaderEvents.CHANNEL_DISPUTED]: new Evt(),
+    [ChainReaderEvents.CHANNEL_DEFUNDED]: new Evt(),
+    [ChainReaderEvents.TRANSFER_DISPUTED]: new Evt(),
+    [ChainReaderEvents.TRANSFER_DEFUNDED]: new Evt(),
+  };
+  private contracts: Map<string, Contract> = new Map();
   constructor(
     public readonly chainProviders: { [chainId: string]: JsonRpcProvider },
     public readonly log: pino.BaseLogger,
@@ -107,7 +126,6 @@ export class EthereumChainReader implements IVectorChainReader {
           merkleRoot: dispute.merkleRoot,
           consensusExpiry: dispute.consensusExpiry.toString(),
           defundExpiry: dispute.defundExpiry.toString(),
-          defundNonce: dispute.defundNonce.toString(),
         });
       } catch (e) {
         return Result.fail(e);
@@ -519,6 +537,176 @@ export class EthereumChainReader implements IVectorChainReader {
         return Result.fail(e);
       }
     });
+  }
+
+  // // When you are checking for disputes that have happened while you were
+  // // offline, you query the `getChannelDispute` function onchain. This will
+  // // give you the `ChannelDispute` record, but *not* the `CoreChannelState`
+  // // that was disputed. To find the `CoreChannelState` that was disputed,
+  // // you need to look at the emitted event corresponding to the
+  // // `ChannelDispute`.
+  // async getCoreChannelState(): Promise<Result<CoreChannelState, ChainError>> {
+  //   // Get the expiry from dispute
+  //   // Find the approximate timestamp for when the dispute event was emitted
+  //   // Binary search from blocks to find which one corresponds to the timestamp
+  //   // for the emitted dispute
+  //   // Get events for that block
+  //   // Parse events + return the core channel state
+  // }
+
+  async registerChannel(channelAddress: string, chainId: number): Promise<Result<void, ChainError>> {
+    return this.retryWrapper<void>(chainId, async (provider: JsonRpcProvider) => {
+      if (this.contracts.has(channelAddress)) {
+        // channel is already registered
+        return Result.ok(undefined);
+      }
+      // Create channel contract
+      const contract = new Contract(channelAddress, ChannelMastercopy.abi, provider);
+
+      // Create helpers to clean contract-emitted types. Ethers emits
+      // very oddly structured types, and any uint256 is a BigNumber.
+      // Clean that bad boi up
+      const processCCS = (state: any): CoreChannelState => {
+        return {
+          channelAddress: state.channelAddress,
+          alice: state.alice,
+          bob: state.bob,
+          assetIds: state.assetIds,
+          balances: state.balances.map((balance: any) => {
+            return {
+              amount: balance.amount.map((a: BigNumber) => a.toString()),
+              to: balance.to,
+            };
+          }),
+          processedDepositsA: state.processedDepositsA.map((deposit: BigNumber) => deposit.toString()),
+          processedDepositsB: state.processedDepositsB.map((deposit: BigNumber) => deposit.toString()),
+          defundNonces: state.defundNonces.map((nonce: BigNumber) => nonce.toString()),
+          timeout: state.timeout.toString(),
+          nonce: state.nonce.toNumber(),
+          merkleRoot: state.merkleRoot,
+        };
+      };
+
+      const processChannelDispute = (dispute: any): ChannelDispute => {
+        return {
+          channelStateHash: dispute.channelStateHash,
+          nonce: dispute.nonce.toString(),
+          merkleRoot: dispute.merkleRoot,
+          consensusExpiry: dispute.consensusExpiry.toString(),
+          defundExpiry: dispute.defundExpiry.toString(),
+        };
+      };
+
+      const processCTS = (state: any): CoreTransferState => {
+        return {
+          channelAddress: state.channelAddress,
+          transferId: state.transferId,
+          transferDefinition: state.transferDefinition,
+          initiator: state.initiator,
+          responder: state.responder,
+          assetId: state.assetId,
+          balance: {
+            amount: state.balance.amount.map((a: BigNumber) => a.toString()),
+            to: state.balance.to,
+          },
+          transferTimeout: state.transferTimeout.toString(),
+          initialStateHash: state.initialStateHash,
+        };
+      };
+
+      const processTransferDispute = (state: any, dispute: any): TransferDispute => {
+        return {
+          transferId: state.transferId,
+          transferDisputeExpiry: dispute.transferDisputeExpiry.toString(),
+          isDefunded: dispute.isDefunded,
+          transferStateHash: dispute.transferStateHash,
+        };
+      };
+
+      // Register all dispute event listeners
+      contract.on("ChannelDisputed", async (disputer, state, dispute) => {
+        const payload: ChannelDisputedPayload = {
+          disputer,
+          state: processCCS(state),
+          dispute: processChannelDispute(dispute),
+        };
+        this.disputeEvts[ChainReaderEvents.CHANNEL_DISPUTED].post(payload);
+      });
+
+      contract.on("ChannelDefunded", async (defunder, state, dispute, assets) => {
+        const payload: ChannelDefundedPayload = {
+          defunder,
+          state: processCCS(state),
+          dispute: processChannelDispute(dispute),
+          defundedAssets: assets,
+        };
+        this.disputeEvts[ChainReaderEvents.CHANNEL_DEFUNDED].post(payload);
+      });
+
+      contract.on("TransferDisputed", async (disputer, state, dispute) => {
+        const payload: TransferDisputedPayload = {
+          disputer,
+          state: processCTS(state),
+          dispute: processTransferDispute(state, dispute),
+        };
+        this.disputeEvts[ChainReaderEvents.TRANSFER_DISPUTED].post(payload);
+      });
+
+      contract.on(
+        "TransferDefunded",
+        async (defunder, state, dispute, encodedInitialState, encodedTransferResolver, balance) => {
+          const payload: TransferDefundedPayload = {
+            defunder,
+            state: processCTS(state),
+            dispute: processTransferDispute(state, dispute),
+            encodedInitialState,
+            encodedTransferResolver,
+            balance: {
+              amount: balance.amount.map((a: BigNumber) => a.toString()),
+              to: balance.to,
+            },
+          };
+          this.disputeEvts[ChainReaderEvents.TRANSFER_DEFUNDED].post(payload);
+        },
+      );
+
+      this.contracts.set(channelAddress, contract);
+      return Result.ok(undefined);
+    });
+  }
+
+  ////////////////////////////
+  /// CHAIN READER EVENTS
+  public on<T extends ChainReaderEvent>(
+    event: T,
+    callback: (payload: ChainReaderEventMap[T]) => void | Promise<void>,
+    filter: (payload: ChainReaderEventMap[T]) => boolean = () => true,
+  ): void {
+    (this.disputeEvts[event].pipe(filter) as Evt<ChainReaderEventMap[T]>).attach(callback);
+  }
+
+  public once<T extends ChainReaderEvent>(
+    event: T,
+    callback: (payload: ChainReaderEventMap[T]) => void | Promise<void>,
+    filter: (payload: ChainReaderEventMap[T]) => boolean = () => true,
+  ): void {
+    (this.disputeEvts[event].pipe(filter) as Evt<ChainReaderEventMap[T]>).attachOnce(callback);
+  }
+
+  public off<T extends ChainReaderEvent>(event?: T): void {
+    if (event) {
+      this.disputeEvts[event].detach();
+      return;
+    }
+    Object.values(this.disputeEvts).forEach((evt) => evt.detach());
+  }
+
+  public waitFor<T extends ChainReaderEvent>(
+    event: T,
+    timeout: number,
+    filter: (payload: ChainReaderEventMap[T]) => boolean = () => true,
+  ): Promise<ChainReaderEventMap[T]> {
+    return this.disputeEvts[event].pipe(filter).waitFor(timeout) as Promise<ChainReaderEventMap[T]>;
   }
 
   private tryEvm(encodedFunctionData: string, bytecode: string): Result<Uint8Array, Error> {

@@ -6,7 +6,7 @@ import {
   ConditionalTransferResolvedPayload,
   DepositReconciledPayload,
   EngineEvents,
-  TransactionEvents,
+  ChainServiceEvents,
 } from "@connext/vector-types";
 
 import { env } from "../../utils";
@@ -36,9 +36,13 @@ export const carolEvts = {
     evt: Evt.create<DepositReconciledPayload>(),
     url: `${serverBase}${depositReconciledPath}`,
   },
-  [TransactionEvents.TRANSACTION_SUBMITTED]: {},
-  [TransactionEvents.TRANSACTION_MINED]: {},
-  [TransactionEvents.TRANSACTION_FAILED]: {},
+  [ChainServiceEvents.TRANSACTION_SUBMITTED]: {},
+  [ChainServiceEvents.TRANSACTION_MINED]: {},
+  [ChainServiceEvents.TRANSACTION_FAILED]: {},
+  [EngineEvents.CHANNEL_DISPUTED]: {},
+  [EngineEvents.CHANNEL_DEFUNDED]: {},
+  [EngineEvents.TRANSFER_DISPUTED]: {},
+  [EngineEvents.TRANSFER_DEFUNDED]: {},
 };
 
 export const logger = pino({ level: "info" });

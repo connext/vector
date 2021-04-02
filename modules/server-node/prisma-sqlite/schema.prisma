@@ -23,6 +23,26 @@ model Balance {
   @@map(name: "balance")
 }
 
+model ChannelDispute {
+  channelAddress          String    @id  // TODO: better ID?
+  channelStateHash        String
+  nonce                   String
+  merkleRoot              String
+  consensusExpiry         String
+  defundExpiry            String
+
+  channel                 Channel @relation("OffchainChannel", fields: [channelAddress], references: [channelAddress])
+}
+
+model TransferDispute {
+  transferId             String     @id // TODO: better ID?
+  transferStateHash      String
+  transferDisputeExpiry  String
+  isDefunded             Boolean
+
+  transfer               Transfer @relation("OffchainTransfer", fields: [transferId], references: [transferId])
+}
+
 model Channel {
   channelAddress          String    @id
   publicIdentifierA       String
@@ -38,13 +58,20 @@ model Channel {
   transferRegistryAddress String
   chainId                 String
   latestUpdate            Update?
-  inDispute               Boolean
 
   activeTransfers Transfer[]
 
   createdAt DateTime @default(now())
 
   OnchainTransaction OnchainTransaction[]
+
+  // Disputes
+  // NOTE: disputes can have a different offchain and onchain state.
+  // The `*Reference` field links to the offchain transfer representation
+  // while the `*Record` field links to the onchain representation that
+  // has the transferId suffix `-dispute`
+  dispute                 ChannelDispute? @relation("OffchainChannel")
+
   @@unique([publicIdentifierA, publicIdentifierB, chainId])
   @@unique([participantA, participantB, chainId])
   @@map(name: "channel")
@@ -107,7 +134,6 @@ model Update {
 model Transfer {
   transferId   String   @id
   routingId    String
-  inDispute    Boolean
   channelNonce Int
   createdAt    DateTime @default(now())
 
@@ -140,6 +166,8 @@ model Transfer {
   // resolved will not always exist
   resolveUpdateChannelAddressId String?
   resolveUpdateNonce            Int?
+
+  dispute                       TransferDispute? @relation("OffchainTransfer")
 
   @@unique([routingId, channelAddressId])
   @@map(name: "transfer")

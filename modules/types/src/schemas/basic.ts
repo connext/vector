@@ -24,6 +24,13 @@ export const TBalance = Type.Object({
   amount: Type.Array(TIntegerString),
 });
 
+export const TVectorErrorJson = Type.Object({
+  message: Type.String(),
+  context: Type.Dict(Type.Any()),
+  type: Type.String(),
+  stack: Type.Optional(Type.String()),
+});
+
 export const TBasicMeta = Type.Optional(Type.Dict(Type.Any()));
 export const TTransferMeta = Type.Intersect([
   Type.Object({
@@ -205,3 +212,21 @@ export const WithdrawalQuoteSchema = Type.Object({
   signature: Type.Optional(TSignature),
 });
 export type WithdrawalQuote = Static<typeof WithdrawalQuoteSchema>;
+
+// Dispute Schemas
+export const TransferDisputeSchema = Type.Object({
+  transferId: TBytes32,
+  transferStateHash: TBytes32,
+  transferDisputeExpiry: TIntegerString,
+  isDefunded: Type.Boolean(),
+});
+export type TTransferDispute = Static<typeof TransferDisputeSchema>;
+
+export const ChannelDisputeSchema = Type.Object({
+  channelStateHash: TBytes32,
+  nonce: TIntegerString,
+  merkleRoot: TBytes32,
+  consensusExpiry: TIntegerString,
+  defundExpiry: TIntegerString,
+});
+export type TChannelDispute = Static<typeof ChannelDisputeSchema>;

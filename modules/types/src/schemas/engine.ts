@@ -180,6 +180,11 @@ const DefundChannelParamsSchema = Type.Object({
   channelAddress: TAddress,
 });
 
+// Get channel dispute engine params
+const GetChannelDisputeParamsSchema = Type.Object({
+  channelAddress: TAddress,
+});
+
 // Dispute transfer engine params
 const DisputeTransferParamsSchema = Type.Object({
   transferId: TBytes32,
@@ -188,6 +193,19 @@ const DisputeTransferParamsSchema = Type.Object({
 // Defund transfer engine params
 const DefundTransferParamsSchema = Type.Object({
   transferId: TBytes32,
+});
+
+// Get transfer dispute engine params
+const GetTransferDisputeParamsSchema = Type.Object({
+  transferId: TBytes32,
+});
+
+// Exit funds from channel params
+const ExitChannelParamsSchema = Type.Object({
+  channelAddress: TAddress,
+  assetIds: Type.Array(TAddress),
+  recipient: Type.Optional(TAddress),
+  owner: Type.Optional(TAddress),
 });
 
 // Utility-sign a message
@@ -293,11 +311,20 @@ export namespace EngineParams {
   export const DefundChannelSchema = DefundChannelParamsSchema;
   export type DefundChannel = Static<typeof DefundChannelParamsSchema>;
 
+  export const GetChannelDisputeSchema = GetChannelDisputeParamsSchema;
+  export type GetChannelDispute = Static<typeof GetChannelDisputeParamsSchema>;
+
   export const DisputeTransferSchema = DisputeTransferParamsSchema;
   export type DisputeTransfer = Static<typeof DisputeTransferParamsSchema>;
 
   export const DefundTransferSchema = DefundTransferParamsSchema;
   export type DefundTransfer = Static<typeof DefundTransferParamsSchema>;
+
+  export const GetTransferDisputeSchema = GetTransferDisputeParamsSchema;
+  export type GetTransferDispute = Static<typeof GetTransferDisputeParamsSchema>;
+
+  export const ExitChannelSchema = ExitChannelParamsSchema;
+  export type ExitChannel = Static<typeof ExitChannelParamsSchema>;
 
   export const GetTransferQuoteSchema = GetTransferQuoteParamsSchema;
   export type GetTransferQuote = Static<typeof GetTransferQuoteParamsSchema>;

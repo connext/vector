@@ -1,7 +1,21 @@
-FROM haproxy:2.1.3-alpine
-WORKDIR /root
-ENV HOME /root
-RUN apk add --update --no-cache bash ca-certificates certbot curl iputils openssl
-RUN curl https://raw.githubusercontent.com/vishnubob/wait-for-it/ed77b63706ea721766a62ff22d3a251d8b4a6a30/wait-for-it.sh > /bin/wait-for && chmod +x /bin/wait-for
-COPY . .
-ENTRYPOINT ["bash", "/root/entry.sh"]
+FROM haproxy:2.3.5-alpine
+LABEL website="Secure Docker Images https://secureimages.dev"
+LABEL description="We secure your business from scratch"
+LABEL maintainer="support@secureimages.dev"
+
+ENV HOME=/app
+
+WORKDIR /app
+
+COPY entry.sh /entry.sh
+COPY *.cfg /etc/haproxy/
+
+RUN apk add --no-cache bash ca-certificates certbot curl iputils openssl git &&\
+    curl https://raw.githubusercontent.com/vishnubob/wait-for-it/$(git ls-remote https://github.com/vishnubob/wait-for-it.git refs/heads/master | cut -f1)/wait-for-it.sh > /bin/wait-for &&\
+    chmod +x /bin/wait-for &&\
+    chmod +x /*.sh &&\
+    rm -rf /var/cache/apk/* /tmp/*
+
+ENTRYPOINT ["/entry.sh"]
+
+CMD ["haproxy", "-db", "-f", "/etc/haproxy/https.cfg"]
