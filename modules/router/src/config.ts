@@ -102,7 +102,7 @@ export const getEnvConfig = (): VectorRouterConfig => {
       ? configJson.allowedSwaps
       : configFile.allowedSwaps,
     nodeUrl: process.env.VECTOR_NODE_URL || configJson.nodeUrl || configFile.nodeUrl || "http://node:8000",
-    routerUrl: process.env.VECTOR_ROUTER_URL || configJson.routerUrl || configFile.routerUrl || "http://node:8000",
+    routerUrl: process.env.VECTOR_ROUTER_URL || configJson.routerUrl || configFile.routerUrl || "http://router:8000",
     rebalanceProfiles:
       process.env.VECTOR_REBALANCE_PROFILES || configJson.rebalanceProfiles || configFile.rebalanceProfiles,
     autoRebalanceInterval:

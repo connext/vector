@@ -39,8 +39,7 @@ import { ServerError } from "./errors";
 
 const config = getConfig();
 
-const routerPort = 8000;
-const routerBase = `http://router:${routerPort}`;
+const routerBase = config.routerUrl;
 const isAlivePath = "/is-alive";
 const setupPath = "/setup";
 const conditionalTransferCreatedPath = "/conditional-transfer-created";
