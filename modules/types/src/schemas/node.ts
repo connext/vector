@@ -18,6 +18,9 @@ import {
   WithdrawalQuoteSchema,
   TSignature,
   TBytes,
+  TransferDisputeSchema,
+  ChannelDisputeSchema,
+  TVectorErrorJson,
 } from "./basic";
 
 ////////////////////////////////////////
@@ -469,6 +472,16 @@ const PostAdminSubmitWithdrawalsResponseSchema = {
 //////////////////
 /// Dispute Methods
 
+// GET CHANNEL DISPUTE
+const GetChannelDisputeParamsSchema = Type.Intersect([
+  EngineParams.GetChannelDisputeSchema,
+  Type.Object({ publicIdentifier: TPublicIdentifier }),
+]);
+
+const GetChannelDisputeResponseSchema = {
+  200: Type.Union([Type.Undefined(), ChannelDisputeSchema]),
+};
+
 // DISPUTE CHANNEL
 const PostSendDisputeChannelTxBodySchema = Type.Intersect([
   EngineParams.DisputeChannelSchema,
@@ -477,7 +490,7 @@ const PostSendDisputeChannelTxBodySchema = Type.Intersect([
 
 const PostSendDisputeChannelTxResponseSchema = {
   200: Type.Object({
-    txHash: TBytes32,
+    transactionHash: TBytes32,
   }),
 };
 
@@ -489,8 +502,18 @@ const PostSendDefundChannelTxBodySchema = Type.Intersect([
 
 const PostSendDefundChannelTxResponseSchema = {
   200: Type.Object({
-    txHash: TBytes32,
+    transactionHash: TBytes32,
   }),
+};
+
+// GET TRANSFER DISPUTE
+const GetTransferDisputeParamsSchema = Type.Intersect([
+  EngineParams.GetTransferDisputeSchema,
+  Type.Object({ publicIdentifier: TPublicIdentifier }),
+]);
+
+const GetTransferDisputeResponseSchema = {
+  200: Type.Union([Type.Undefined(), TransferDisputeSchema]),
 };
 
 // DISPUTE TRANSFER
@@ -501,7 +524,7 @@ const PostSendDisputeTransferTxBodySchema = Type.Intersect([
 
 const PostSendDisputeTransferTxResponseSchema = {
   200: Type.Object({
-    txHash: TBytes32,
+    transactionHash: TBytes32,
   }),
 };
 
@@ -513,8 +536,24 @@ const PostSendDefundTransferTxBodySchema = Type.Intersect([
 
 const PostSendDefundTransferTxResponseSchema = {
   200: Type.Object({
-    txHash: TBytes32,
+    transactionHash: TBytes32,
   }),
+};
+
+// EXIT CHANNEL
+const PostSendExitChannelTxBodySchema = Type.Intersect([
+  EngineParams.ExitChannelSchema,
+  Type.Object({ publicIdentifier: TPublicIdentifier }),
+]);
+
+const PostSendExitChannelTxResponseSchema = {
+  200: Type.Array(
+    Type.Object({
+      assetId: TAddress,
+      transactionHash: Type.Optional(TBytes32),
+      error: Type.Optional(TVectorErrorJson),
+    }),
+  ),
 };
 
 // IS ALIVE
@@ -625,17 +664,26 @@ export namespace NodeParams {
   export const CreateNodeSchema = PostCreateNodeBodySchema;
   export type CreateNode = Static<typeof CreateNodeSchema>;
 
+  export const GetChannelDisputeSchema = GetChannelDisputeParamsSchema;
+  export type GetChannelDispute = Static<typeof GetChannelDisputeSchema>;
+
   export const SendDisputeChannelTxSchema = PostSendDisputeChannelTxBodySchema;
   export type SendDisputeChannelTx = Static<typeof SendDisputeChannelTxSchema>;
 
   export const SendDefundChannelTxSchema = PostSendDefundChannelTxBodySchema;
   export type SendDefundChannelTx = Static<typeof SendDefundChannelTxSchema>;
 
+  export const GetTransferDisputeSchema = GetTransferDisputeParamsSchema;
+  export type GetTransferDispute = Static<typeof GetTransferDisputeSchema>;
+
   export const SendDisputeTransferTxSchema = PostSendDisputeTransferTxBodySchema;
   export type SendDisputeTransferTx = Static<typeof SendDisputeTransferTxSchema>;
 
   export const SendDefundTransferTxSchema = PostSendDefundTransferTxBodySchema;
   export type SendDefundTransferTx = Static<typeof SendDefundTransferTxSchema>;
+
+  export const SendExitChannelTxSchema = PostSendExitChannelTxBodySchema;
+  export type SendExitChannelTx = Static<typeof SendExitChannelTxSchema>;
 
   export const SendIsAliveSchema = PostSendIsAliveBodySchema;
   export type SendIsAlive = Static<typeof SendIsAliveSchema>;
@@ -746,17 +794,26 @@ export namespace NodeResponses {
   export const CreateNodeSchema = PostCreateNodeResponseSchema;
   export type CreateNode = Static<typeof CreateNodeSchema["200"]>;
 
+  export const GetChannelDisputeSchema = GetChannelDisputeResponseSchema;
+  export type GetChannelDispute = Static<typeof GetChannelDisputeResponseSchema["200"]>;
+
   export const SendDisputeChannelTxSchema = PostSendDisputeChannelTxResponseSchema;
   export type SendDisputeChannelTx = Static<typeof PostSendDisputeChannelTxResponseSchema["200"]>;
 
   export const SendDefundChannelTxSchema = PostSendDefundChannelTxResponseSchema;
   export type SendDefundChannelTx = Static<typeof PostSendDefundChannelTxResponseSchema["200"]>;
 
+  export const GetTransferDisputeSchema = GetTransferDisputeResponseSchema;
+  export type GetTransferDispute = Static<typeof GetTransferDisputeResponseSchema["200"]>;
+
   export const SendDisputeTransferTxSchema = PostSendDisputeTransferTxResponseSchema;
   export type SendDisputeTransferTx = Static<typeof PostSendDisputeTransferTxResponseSchema["200"]>;
 
   export const SendDefundTransferTxSchema = PostSendDefundTransferTxResponseSchema;
   export type SendDefundTransferTx = Static<typeof PostSendDefundTransferTxResponseSchema["200"]>;
+
+  export const SendExitChannelTxSchema = PostSendExitChannelTxResponseSchema;
+  export type SendExitChannelTx = Static<typeof PostSendExitChannelTxResponseSchema["200"]>;
 
   export const SendIsAliveSchema = PostSendIsAliveResponseSchema;
   export type SendIsAlive = Static<typeof PostSendIsAliveResponseSchema["200"]>;

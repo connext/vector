@@ -1,5 +1,7 @@
 import {
   ChannelDispute,
+  CoreChannelState,
+  CoreTransferState,
   FullChannelState,
   FullTransferState,
   GetTransfersFilterOpts,
@@ -42,6 +44,14 @@ class VectorIndexedDBDatabase extends Dexie {
   transfers: Dexie.Table<StoredTransfer, string>;
   transactions: Dexie.Table<StoredTransaction, string>;
   withdrawCommitment: Dexie.Table<WithdrawCommitmentJson & { transferId: string }, string>;
+  channelDisputes: Dexie.Table<
+    { channelAddress: string; channelDispute: ChannelDispute; disputedChannel?: CoreChannelState },
+    string
+  >;
+  transferDisputes: Dexie.Table<
+    { transferId: string; transferDispute: TransferDispute; disputedTransfer?: CoreTransferState },
+    string
+  >;
   values: Dexie.Table<any, string>;
   // database name
   name: string;
@@ -92,10 +102,17 @@ class VectorIndexedDBDatabase extends Dexie {
       withdrawCommitment: "transferId,transactionHash",
     });
 
+    this.version(4).stores({
+      channelDisputes: "channelAddress",
+      transferDisputes: "transferId",
+    });
+
     this.channels = this.table("channels");
     this.transfers = this.table("transfers");
     this.transactions = this.table("transactions");
     this.withdrawCommitment = this.table("withdrawCommitment");
+    this.channelDisputes = this.table("channelDisputes");
+    this.transferDisputes = this.table("transferDisputes");
     this.values = this.table("values");
     this.name = name;
   }
@@ -117,17 +134,6 @@ export class BrowserStore implements IEngineStore, IChainServiceStore {
     idbKeyRange?: { bound: Function; lowerBound: Function; upperBound: Function },
   ) {
     this.db = new VectorIndexedDBDatabase(dbName, indexedDB, idbKeyRange);
-  }
-
-  async saveChannelDispute(
-    channel: FullChannelState,
-    channelDispute: ChannelDispute,
-    transferDispute?: TransferDispute,
-  ): Promise<void> {
-    await this.db.channels.update(channel.channelAddress, { inDispute: channel.inDispute });
-    if (transferDispute) {
-      await this.db.transfers.update(transferDispute.transferId, { inDispute: true });
-    }
   }
 
   public static async create(
@@ -382,5 +388,37 @@ export class BrowserStore implements IEngineStore, IChainServiceStore {
     }
     const { transferId, ...commitment } = w;
     return commitment;
+  }
+
+  async saveTransferDispute(
+    transferId: string,
+    transferDispute: TransferDispute,
+    disputedTransfer?: CoreTransferState,
+  ): Promise<void> {
+    await this.db.transferDisputes.put({ transferDispute, transferId, disputedTransfer });
+  }
+
+  async getTransferDispute(transferId: string): Promise<TransferDispute | undefined> {
+    const entity = await this.db.transferDisputes.get({ transferId });
+    if (!entity) {
+      return undefined;
+    }
+    return entity.transferDispute;
+  }
+
+  async saveChannelDispute(
+    channelAddress: string,
+    channelDispute: ChannelDispute,
+    disputedChannel?: CoreChannelState,
+  ): Promise<void> {
+    await this.db.channelDisputes.put({ channelDispute, disputedChannel, channelAddress });
+  }
+
+  async getChannelDispute(channelAddress: string): Promise<ChannelDispute | undefined> {
+    const entity = await this.db.channelDisputes.get({ channelAddress });
+    if (!entity) {
+      return undefined;
+    }
+    return entity.channelDispute;
   }
 }

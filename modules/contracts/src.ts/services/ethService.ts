@@ -10,9 +10,9 @@ import {
   FullTransferState,
   UINT_MAX,
   jsonifyError,
-  EngineEvents,
-  TransactionEvent,
-  TransactionEventMap,
+  ChainServiceEvents,
+  ChainServiceEvent,
+  ChainServiceEventMap,
   StringifiedTransactionReceipt,
   StringifiedTransactionResponse,
   TransactionResponseWithResult,
@@ -65,10 +65,11 @@ export const waitForTransaction = async (
 export class EthereumChainService extends EthereumChainReader implements IVectorChainService {
   private signers: Map<number, Signer> = new Map();
   private queue: PriorityQueue = new PriorityQueue({ concurrency: 1 });
-  private evts: { [eventName in TransactionEvent]: Evt<TransactionEventMap[eventName]> } = {
-    [EngineEvents.TRANSACTION_SUBMITTED]: new Evt(),
-    [EngineEvents.TRANSACTION_MINED]: new Evt(),
-    [EngineEvents.TRANSACTION_FAILED]: new Evt(),
+  private evts: { [eventName in ChainServiceEvent]: Evt<ChainServiceEventMap[eventName]> } = {
+    ...this.disputeEvts,
+    [ChainServiceEvents.TRANSACTION_SUBMITTED]: new Evt(),
+    [ChainServiceEvents.TRANSACTION_MINED]: new Evt(),
+    [ChainServiceEvents.TRANSACTION_FAILED]: new Evt(),
   };
   constructor(
     private readonly store: IChainServiceStore,
@@ -89,6 +90,9 @@ export class EthereumChainService extends EthereumChainReader implements IVector
   async sendDisputeChannelTx(
     channelState: FullChannelState,
   ): Promise<Result<TransactionResponseWithResult, ChainError>> {
+    const method = "sendDisputeChannelTx";
+    const methodId = getRandomBytes32();
+    this.log.info({ method, methodId, channelAddress: channelState.channelAddress }, "Method started");
     const signer = this.signers.get(channelState.networkContext.chainId);
     if (!signer?._isSigner) {
       return Result.fail(new ChainError(ChainError.reasons.SignerNotFound));
@@ -97,6 +101,44 @@ export class EthereumChainService extends EthereumChainReader implements IVector
     if (!channelState.latestUpdate.aliceSignature || !channelState.latestUpdate.bobSignature) {
       return Result.fail(new ChainError(ChainError.reasons.MissingSigs));
     }
+
+    const code = await this.getCode(channelState.channelAddress, channelState.networkContext.chainId);
+    if (code.isError) {
+      return Result.fail(code.getError()!);
+    }
+    if (code.getValue() === "0x") {
+      this.log.info(
+        { method, methodId, channelAddress: channelState.channelAddress, chainId: channelState.networkContext.chainId },
+        "Deploying channel",
+      );
+      const gasPrice = await this.getGasPrice(channelState.networkContext.chainId);
+      if (gasPrice.isError) {
+        Result.fail(gasPrice.getError()!);
+      }
+
+      const deploy = await this.sendDeployChannelTx(channelState, gasPrice.getValue());
+      if (deploy.isError) {
+        return Result.fail(deploy.getError()!);
+      }
+      this.log.debug(
+        { method, methodId, channelAddress: channelState.channelAddress, transactionHash: deploy.getValue().hash },
+        "Deploy channel tx",
+      );
+      const result = await deploy.getValue().completed();
+      if (result.isError) {
+        return Result.fail(result.getError()!);
+      }
+      this.log.info(
+        {
+          method,
+          methodId,
+          channelAddress: channelState.channelAddress,
+          transactionHash: result.getValue().transactionHash,
+        },
+        "Channel deployed",
+      );
+    }
+
     return this.sendTxWithRetries(
       channelState.channelAddress,
       channelState.networkContext.chainId,
@@ -131,7 +173,11 @@ export class EthereumChainService extends EthereumChainReader implements IVector
       TransactionReason.defundChannel,
       () => {
         const channel = new Contract(channelState.channelAddress, VectorChannel.abi, signer);
-        return channel.defundChannel(channelState, assetsToDefund, indices);
+        return channel.defundChannel(
+          channelState,
+          assetsToDefund,
+          indices.length > 0 ? indices : assetsToDefund.map((_asset, idx) => idx),
+        );
       },
     ) as Promise<Result<TransactionResponseWithResult, ChainError>>;
   }
@@ -198,6 +244,25 @@ export class EthereumChainService extends EthereumChainReader implements IVector
         return channel.defundTransfer(transferState, encodedState, encodedResolver, responderSignature);
       },
     ) as Promise<Result<TransactionResponseWithResult, ChainError>>;
+  }
+
+  public async sendExitChannelTx(
+    channelAddress: string,
+    chainId: number,
+    assetId: string,
+    owner: string,
+    recipient: string,
+  ): Promise<Result<TransactionResponseWithResult, ChainError>> {
+    const signer = this.signers.get(chainId);
+    if (!signer?._isSigner) {
+      return Result.fail(new ChainError(ChainError.reasons.SignerNotFound));
+    }
+    this.log.info({ channelAddress, chainId, assetId, owner, recipient }, "Defunding channel");
+
+    return this.sendTxWithRetries(channelAddress, chainId, TransactionReason.exitChannel, () => {
+      const channel = new Contract(channelAddress, VectorChannel.abi, signer);
+      return channel.exit(assetId, owner, recipient);
+    }) as Promise<Result<TransactionResponseWithResult, ChainError>>;
   }
 
   public async sendDeployChannelTx(
@@ -592,23 +657,23 @@ export class EthereumChainService extends EthereumChainReader implements IVector
 
   ////////////////////////////
   /// CHAIN SERVICE EVENTS
-  public on<T extends TransactionEvent>(
+  public on<T extends ChainServiceEvent>(
     event: T,
-    callback: (payload: TransactionEventMap[T]) => void | Promise<void>,
-    filter: (payload: TransactionEventMap[T]) => boolean = () => true,
+    callback: (payload: ChainServiceEventMap[T]) => void | Promise<void>,
+    filter: (payload: ChainServiceEventMap[T]) => boolean = () => true,
   ): void {
-    (this.evts[event].pipe(filter) as Evt<TransactionEventMap[T]>).attach(callback);
+    (this.evts[event].pipe(filter) as Evt<ChainServiceEventMap[T]>).attach(callback);
   }
 
-  public once<T extends TransactionEvent>(
+  public once<T extends ChainServiceEvent>(
     event: T,
-    callback: (payload: TransactionEventMap[T]) => void | Promise<void>,
-    filter: (payload: TransactionEventMap[T]) => boolean = () => true,
+    callback: (payload: ChainServiceEventMap[T]) => void | Promise<void>,
+    filter: (payload: ChainServiceEventMap[T]) => boolean = () => true,
   ): void {
-    (this.evts[event].pipe(filter) as Evt<TransactionEventMap[T]>).attachOnce(callback);
+    (this.evts[event].pipe(filter) as Evt<ChainServiceEventMap[T]>).attachOnce(callback);
   }
 
-  public off<T extends TransactionEvent>(event?: T): void {
+  public off<T extends ChainServiceEvent>(event?: T): void {
     if (event) {
       this.evts[event].detach();
       return;
@@ -616,12 +681,12 @@ export class EthereumChainService extends EthereumChainReader implements IVector
     Object.values(this.evts).forEach((evt) => evt.detach());
   }
 
-  public waitFor<T extends TransactionEvent>(
+  public waitFor<T extends ChainServiceEvent>(
     event: T,
     timeout: number,
-    filter: (payload: TransactionEventMap[T]) => boolean = () => true,
-  ): Promise<TransactionEventMap[T]> {
-    return this.evts[event].pipe(filter).waitFor(timeout) as Promise<TransactionEventMap[T]>;
+    filter: (payload: ChainServiceEventMap[T]) => boolean = () => true,
+  ): Promise<ChainServiceEventMap[T]> {
+    return this.evts[event].pipe(filter).waitFor(timeout) as Promise<ChainServiceEventMap[T]>;
   }
 
   ////////////////////////////
@@ -698,7 +763,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
 
         // save to store
         await this.store.saveTransactionResponse(channelAddress, reason, response);
-        this.evts[EngineEvents.TRANSACTION_SUBMITTED].post({
+        this.evts[ChainServiceEvents.TRANSACTION_SUBMITTED].post({
           response: Object.fromEntries(
             Object.entries(response).map(([key, value]) => {
               return [key, BigNumber.isBigNumber(value) ? value.toString() : value];
@@ -715,7 +780,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
             if (receipt.status === 0) {
               this.log.error({ method: "sendTxAndParseResponse", receipt }, "Transaction reverted");
               await this.store.saveTransactionFailure(channelAddress, response.hash, "Tx reverted");
-              this.evts[EngineEvents.TRANSACTION_FAILED].post({
+              this.evts[ChainServiceEvents.TRANSACTION_FAILED].post({
                 receipt: Object.fromEntries(
                   Object.entries(receipt).map(([key, value]) => {
                     return [key, BigNumber.isBigNumber(value) ? value.toString() : value];
@@ -726,7 +791,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
               });
             } else {
               await this.store.saveTransactionReceipt(channelAddress, receipt);
-              this.evts[EngineEvents.TRANSACTION_MINED].post({
+              this.evts[ChainServiceEvents.TRANSACTION_MINED].post({
                 receipt: Object.fromEntries(
                   Object.entries(receipt).map(([key, value]) => {
                     return [key, BigNumber.isBigNumber(value) ? value.toString() : value];
@@ -740,7 +805,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
           .catch(async (e) => {
             this.log.error({ method: "sendTxAndParseResponse", error: jsonifyError(e) }, "Transaction reverted");
             await this.store.saveTransactionFailure(channelAddress, response.hash, e.message);
-            this.evts[EngineEvents.TRANSACTION_FAILED].post({
+            this.evts[ChainServiceEvents.TRANSACTION_FAILED].post({
               error: e,
               channelAddress,
               reason,

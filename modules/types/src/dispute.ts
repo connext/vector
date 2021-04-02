@@ -4,7 +4,6 @@ export type ChannelDispute = {
   merkleRoot: string;
   consensusExpiry: string;
   defundExpiry: string;
-  defundNonce: string;
 };
 
 export type TransferDispute = {
