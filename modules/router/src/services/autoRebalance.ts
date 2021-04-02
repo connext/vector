@@ -238,27 +238,34 @@ const _rebalanceIfNeeded = async (
       if (approveResult.isError) {
         return Result.fail(approveResult.getError()!);
       }
-      // @TODO: is this force unwrap here safe?
-      approveHash = approveResult.getValue()!;
-      // Tx was successfully sent; save hash.
-      latestRebalance = {
-        ...latestRebalance,
-        approveHash,
-      } as RouterRebalanceRecord;
-      await store.saveRebalance(latestRebalance);
+
+      approveHash = approveResult.getValue();
+      if (approveHash) {
+        // Tx was successfully sent if needed.
+        latestRebalance = {
+          ...latestRebalance,
+          approveHash,
+        } as RouterRebalanceRecord;
+        await store.saveRebalance(latestRebalance);
+      }
     }
 
-    // Await confirmation.
-    const confirmationResult = await getConfirmation(
-      approveHash,
-      swap,
-      hydratedProviders,
-      logger,
-      methodId,
-    );
-    if (confirmationResult.isError) {
-      return Result.fail(confirmationResult.getError()!);
+    // wait confirmation if the approveHash is defined (it will be undefined in the event
+    // an approve tx was not needed).
+    if (approveHash) {
+      // Await confirmation.
+      const confirmationResult = await getConfirmation(
+        approveHash,
+        swap,
+        hydratedProviders,
+        logger,
+        methodId,
+      );
+      if (confirmationResult.isError) {
+        return Result.fail(confirmationResult.getError()!);
+      }
     }
+    
     // Save approved status. Once method above returns, receipt has been received.
     latestRebalance = {
       ...latestRebalance,
@@ -284,8 +291,7 @@ const _rebalanceIfNeeded = async (
       if (executeResult.isError) {
         return Result.fail(executeResult.getError()!);
       }
-      // @TODO: is this force unwrap here safe?
-      executeHash = executeResult.getValue()!;
+      executeHash = executeResult.getValue();
       // Save hash.
       latestRebalance = {
         ...latestRebalance,
@@ -294,7 +300,7 @@ const _rebalanceIfNeeded = async (
       await store.saveRebalance(latestRebalance);
     }
 
-    // Await confirmation.
+    // Await confirmation,
     const confirmationResult = await getConfirmation(
       executeHash,
       swap,
@@ -347,8 +353,8 @@ const _rebalanceIfNeeded = async (
         // and retry on the next call of this method.
         return Result.ok(undefined);
       }
-      // @TODO: is this force unwrap here safe?
       completeHash = completedResult.getValue().transactionHash;
+
       // Save hash if it is defined (it will be undefined in the event a completion
       // tx was not needed).
       if (completeHash) {
