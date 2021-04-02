@@ -39,8 +39,7 @@ import { ServerError } from "./errors";
 
 const config = getConfig();
 
-const routerPort = 8000;
-const routerBase = `http://router:${routerPort}`;
+const routerBase = config.routerUrl;
 const isAlivePath = "/is-alive";
 const setupPath = "/setup";
 const conditionalTransferCreatedPath = "/conditional-transfer-created";
@@ -313,7 +312,7 @@ server.post(transferDefundedPath, async (request, response) => {
   return response.status(200).send({ message: "success" });
 });
 
-server.listen(routerPort, "0.0.0.0", (err, address) => {
+server.listen(config.routerUrl.split(":").pop() ?? 8000, "0.0.0.0", (err, address) => {
   if (err) {
     console.error(err);
     process.exit(1);
