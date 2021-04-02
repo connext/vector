@@ -1529,8 +1529,17 @@ export class VectorEngine implements IVectorEngine {
   }
 
   private async syncDisputes(): Promise<Result<void, EngineError>> {
-    await this.vector.syncDisputes();
-    return Result.ok(undefined);
+    try {
+      await this.vector.syncDisputes();
+      return Result.ok(undefined);
+    } catch (e) {
+      return Result.fail(
+        new RpcError(RpcError.reasons.ProtocolMethodFailed, "", this.publicIdentifier, {
+          method: "syncDisputes",
+          error: jsonifyError(e),
+        }),
+      );
+    }
   }
 
   // JSON RPC interface -- this will accept:
