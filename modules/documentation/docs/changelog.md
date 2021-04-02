@@ -2,6 +2,9 @@
 
 ## Next Release
 
+- \[protocol\] Don't sync disputes
+- \[node\] Expose sync dispute method
+
 ## 0.2.2-beta.2
 - \[browser-node\] Fix dev-dependency
 
