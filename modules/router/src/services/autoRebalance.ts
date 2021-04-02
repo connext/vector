@@ -90,7 +90,7 @@ export const rebalanceIfNeeded = async (
   hydratedProviders: HydratedProviders,
   store: IRouterStore,
 ): Promise<Result<undefined, AutoRebalanceServiceError>> => {
-  return await queueRebalance<Result<undefined, AutoRebalanceServiceError>>(hashAllowedSwap(swap), () => {
+  return await queueRebalance<Result<undefined, AutoRebalanceServiceError>>(swap, () => {
     return _rebalanceIfNeeded(
       swap,
       logger,

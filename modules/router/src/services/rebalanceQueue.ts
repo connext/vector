@@ -2,7 +2,7 @@ import { AllowedSwap } from "@connext/vector-types";
 import PriorityQueue from "p-queue";
 
 // Helper to create a pseudo 'hash-string' for an allowed swap to make it usable as a key.
-function hashAllowedSwap(swap: AllowedSwap): string {
+function getAllowedSwapKey(swap: AllowedSwap): string {
   return swap.fromChainId.toString()
   + swap.toChainId.toString()
   + swap.fromAssetId.toString()
@@ -21,7 +21,7 @@ export async function queueRebalance<T = any>(
   swap: AllowedSwap,
   rebalanceFn: () => Promise<T>,
 ): Promise<any> {
-  const swapHash = hashAllowedSwap(swap);
+  const swapHash = getAllowedSwapKey(swap);
   // Check to see if resources are already being used for rebalancing for this
   // particular swap.
   if (!rebalanceQueues[swapHash]) {
