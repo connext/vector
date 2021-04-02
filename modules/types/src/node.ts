@@ -108,23 +108,6 @@ export interface INodeService {
     params: OptionalPublicIdentifier<NodeParams.SendIsAlive>,
   ): Promise<Result<NodeResponses.SendIsAlive, NodeError>>;
 
-  // Dispute methods
-  sendDisputeChannelTx(
-    params: OptionalPublicIdentifier<NodeParams.SendDisputeChannelTx>,
-  ): Promise<Result<NodeResponses.SendDisputeChannelTx, NodeError>>;
-
-  sendDefundChannelTx(
-    params: OptionalPublicIdentifier<NodeParams.SendDefundChannelTx>,
-  ): Promise<Result<NodeResponses.SendDefundChannelTx, NodeError>>;
-
-  sendDisputeTransferTx(
-    params: OptionalPublicIdentifier<NodeParams.SendDisputeTransferTx>,
-  ): Promise<Result<NodeResponses.SendDisputeTransferTx, NodeError>>;
-
-  sendDefundTransferTx(
-    params: OptionalPublicIdentifier<NodeParams.SendDefundTransferTx>,
-  ): Promise<Result<NodeResponses.SendDefundTransferTx, NodeError>>;
-
   withdraw(params: OptionalPublicIdentifier<NodeParams.Withdraw>): Promise<Result<NodeResponses.Withdraw, NodeError>>;
 
   getWithdrawalQuote(
@@ -134,6 +117,37 @@ export interface INodeService {
   restoreState(
     params: OptionalPublicIdentifier<NodeParams.RestoreState>,
   ): Promise<Result<NodeResponses.RestoreState, NodeError>>;
+
+  // Dispute methods
+  getChannelDispute(
+    params: OptionalPublicIdentifier<NodeParams.GetChannelDispute>,
+  ): Promise<Result<NodeResponses.GetChannelDispute, NodeError>>;
+
+  sendDisputeChannelTx(
+    params: OptionalPublicIdentifier<NodeParams.SendDisputeChannelTx>,
+  ): Promise<Result<NodeResponses.SendDisputeChannelTx, NodeError>>;
+
+  sendDefundChannelTx(
+    params: OptionalPublicIdentifier<NodeParams.SendDefundChannelTx>,
+  ): Promise<Result<NodeResponses.SendDefundChannelTx, NodeError>>;
+
+  getTransferDispute(
+    params: OptionalPublicIdentifier<NodeParams.GetTransferDispute>,
+  ): Promise<Result<NodeResponses.GetTransferDispute, NodeError>>;
+
+  sendDisputeTransferTx(
+    params: OptionalPublicIdentifier<NodeParams.SendDisputeTransferTx>,
+  ): Promise<Result<NodeResponses.SendDisputeTransferTx, NodeError>>;
+
+  sendDefundTransferTx(
+    params: OptionalPublicIdentifier<NodeParams.SendDefundTransferTx>,
+  ): Promise<Result<NodeResponses.SendDefundTransferTx, NodeError>>;
+
+  sendExitChannelTx(
+    params: OptionalPublicIdentifier<NodeParams.SendExitChannelTx>,
+  ): Promise<Result<NodeResponses.SendExitChannelTx, NodeError>>;
+
+  syncDisputes(params: {}): Promise<Result<void, NodeError>>;
 
   once<T extends EngineEvent>(
     event: T,

@@ -40,6 +40,7 @@ export interface IVectorProtocol {
   getChannelStates(): Promise<FullChannelState[]>;
   getTransferState(transferId: string): Promise<FullTransferState | undefined>;
   getActiveTransfers(channelAddress: string): Promise<FullTransferState[]>;
+  syncDisputes(): Promise<void>;
 }
 
 type VectorChannelMessageData<T extends UpdateType = any> = {

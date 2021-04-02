@@ -5,10 +5,12 @@ import {
   ConditionalTransferResolvedPayload,
   DepositReconciledPayload,
   EngineEvents,
-  TransactionEvents,
+  ChainServiceEvents,
   WithdrawalCreatedPayload,
   WithdrawalReconciledPayload,
   WithdrawalResolvedPayload,
+  ChannelDisputedPayload,
+  ChannelDefundedPayload,
 } from "@connext/vector-types";
 
 import { env } from "../utils";
@@ -20,6 +22,8 @@ const depositReconciledPath = "/deposit-reconciled";
 const withdrawalCreatedPath = "/withdrawal-created";
 const withdrawalResolvedPath = "/withdrawal-resolved";
 const withdrawalReconciledPath = "/withdrawal-reconciled";
+const channelDisputedPath = "/channel-disputed";
+const channelDefundedPath = "/channel-defunded";
 export const carolEvts = {
   [EngineEvents.IS_ALIVE]: {},
   [EngineEvents.SETUP]: {},
@@ -49,9 +53,19 @@ export const carolEvts = {
     evt: Evt.create<DepositReconciledPayload>(),
     url: `${serverBase}${depositReconciledPath}-carol`,
   },
-  [TransactionEvents.TRANSACTION_SUBMITTED]: {},
-  [TransactionEvents.TRANSACTION_MINED]: {},
-  [TransactionEvents.TRANSACTION_FAILED]: {},
+  [ChainServiceEvents.TRANSACTION_SUBMITTED]: {},
+  [ChainServiceEvents.TRANSACTION_MINED]: {},
+  [ChainServiceEvents.TRANSACTION_FAILED]: {},
+  [EngineEvents.CHANNEL_DISPUTED]: {
+    evt: Evt.create<ChannelDisputedPayload & { publicIdentifier: string }>(),
+    url: `${serverBase}${channelDisputedPath}-carol`,
+  },
+  [EngineEvents.CHANNEL_DEFUNDED]: {
+    evt: Evt.create<ChannelDefundedPayload & { publicIdentifier: string }>(),
+    url: `${serverBase}${channelDefundedPath}-carol`,
+  },
+  [EngineEvents.TRANSFER_DISPUTED]: {},
+  [EngineEvents.TRANSFER_DEFUNDED]: {},
 };
 
 export const daveEvts = {
@@ -83,9 +97,19 @@ export const daveEvts = {
     evt: Evt.create<DepositReconciledPayload>(),
     url: `${serverBase}${depositReconciledPath}-dave`,
   },
-  [TransactionEvents.TRANSACTION_SUBMITTED]: {},
-  [TransactionEvents.TRANSACTION_MINED]: {},
-  [TransactionEvents.TRANSACTION_FAILED]: {},
+  [ChainServiceEvents.TRANSACTION_SUBMITTED]: {},
+  [ChainServiceEvents.TRANSACTION_MINED]: {},
+  [ChainServiceEvents.TRANSACTION_FAILED]: {},
+  [EngineEvents.CHANNEL_DISPUTED]: {
+    evt: Evt.create<ChannelDisputedPayload & { publicIdentifier: string }>(),
+    url: `${serverBase}${channelDisputedPath}-dave`,
+  },
+  [EngineEvents.CHANNEL_DEFUNDED]: {
+    evt: Evt.create<ChannelDefundedPayload & { publicIdentifier: string }>(),
+    url: `${serverBase}${channelDefundedPath}-dave`,
+  },
+  [EngineEvents.TRANSFER_DISPUTED]: {},
+  [EngineEvents.TRANSFER_DEFUNDED]: {},
 };
 
 const server = fastify();
@@ -124,6 +148,20 @@ server.post(`${withdrawalReconciledPath}-carol`, async (request, response) => {
   return response.status(200).send({ message: "success" });
 });
 
+server.post(`${channelDisputedPath}-carol`, async (request, response) => {
+  carolEvts[EngineEvents.CHANNEL_DISPUTED].evt.post(
+    request.body as ChannelDisputedPayload & { publicIdentifier: string },
+  );
+  return response.status(200).send({ message: "success" });
+});
+
+server.post(`${channelDefundedPath}-carol`, async (request, response) => {
+  carolEvts[EngineEvents.CHANNEL_DEFUNDED].evt.post(
+    request.body as ChannelDefundedPayload & { publicIdentifier: string },
+  );
+  return response.status(200).send({ message: "success" });
+});
+
 server.post(`${conditionalTransferCreatedPath}-dave`, async (request, response) => {
   daveEvts[EngineEvents.CONDITIONAL_TRANSFER_CREATED].evt.post(request.body as ConditionalTransferCreatedPayload);
   return response.status(200).send({ message: "success" });
@@ -151,6 +189,20 @@ server.post(`${withdrawalResolvedPath}-dave`, async (request, response) => {
 
 server.post(`${withdrawalReconciledPath}-dave`, async (request, response) => {
   daveEvts[EngineEvents.WITHDRAWAL_RECONCILED].evt.post(request.body as WithdrawalReconciledPayload);
+  return response.status(200).send({ message: "success" });
+});
+
+server.post(`${channelDisputedPath}-dave`, async (request, response) => {
+  daveEvts[EngineEvents.CHANNEL_DISPUTED].evt.post(
+    request.body as ChannelDisputedPayload & { publicIdentifier: string },
+  );
+  return response.status(200).send({ message: "success" });
+});
+
+server.post(`${channelDefundedPath}-dave`, async (request, response) => {
+  carolEvts[EngineEvents.CHANNEL_DEFUNDED].evt.post(
+    request.body as ChannelDefundedPayload & { publicIdentifier: string },
+  );
   return response.status(200).send({ message: "success" });
 });
 

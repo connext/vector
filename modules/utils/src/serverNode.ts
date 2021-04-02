@@ -143,6 +143,17 @@ export class RestServerNodeService implements INodeService {
     );
   }
 
+  getChannelDispute(
+    params: OptionalPublicIdentifier<NodeParams.GetChannelDispute>,
+  ): Promise<Result<NodeResponses.GetChannelDispute, ServerNodeServiceError>> {
+    return this.executeHttpRequest(
+      `${params.publicIdentifier ?? this.publicIdentifier}/channels/channel/${params.channelAddress}/dispute`,
+      "get",
+      params,
+      NodeParams.SendDefundChannelTxSchema,
+    );
+  }
+
   sendDisputeChannelTx(
     params: OptionalPublicIdentifier<NodeParams.SendDisputeChannelTx>,
   ): Promise<Result<NodeResponses.SendDisputeChannelTx, ServerNodeServiceError>> {
@@ -155,6 +166,17 @@ export class RestServerNodeService implements INodeService {
     return this.executeHttpRequest(`send-defund-channel-tx`, "post", params, NodeParams.SendDefundChannelTxSchema);
   }
 
+  getTransferDispute(
+    params: OptionalPublicIdentifier<NodeParams.GetTransferDispute>,
+  ): Promise<Result<NodeResponses.GetTransferDispute, ServerNodeServiceError>> {
+    return this.executeHttpRequest(
+      `${params.publicIdentifier ?? this.publicIdentifier}/transfers/transfer/${params.transferId}/dispute`,
+      "get",
+      params,
+      NodeParams.SendDefundChannelTxSchema,
+    );
+  }
+
   sendDisputeTransferTx(
     params: OptionalPublicIdentifier<NodeParams.SendDisputeTransferTx>,
   ): Promise<Result<NodeResponses.SendDisputeTransferTx, ServerNodeServiceError>> {
@@ -165,6 +187,16 @@ export class RestServerNodeService implements INodeService {
     params: OptionalPublicIdentifier<NodeParams.SendDefundTransferTx>,
   ): Promise<Result<NodeResponses.SendDefundTransferTx, ServerNodeServiceError>> {
     return this.executeHttpRequest(`send-defund-transfer-tx`, "post", params, NodeParams.SendDefundTransferTxSchema);
+  }
+
+  sendExitChannelTx(
+    params: OptionalPublicIdentifier<NodeParams.SendExitChannelTx>,
+  ): Promise<Result<NodeResponses.SendExitChannelTx, ServerNodeServiceError>> {
+    return this.executeHttpRequest(`send-exit-channel-tx`, "post", params, NodeParams.SendExitChannelTxSchema);
+  }
+
+  syncDisputes(params: {}): Promise<Result<void, NodeError>> {
+    return this.executeHttpRequest(`sync-disputes`, "post", params, undefined);
   }
 
   async createNode(params: NodeParams.CreateNode): Promise<Result<NodeResponses.CreateNode, ServerNodeServiceError>> {
@@ -585,23 +617,25 @@ export class RestServerNodeService implements INodeService {
     paramSchema: any,
   ): Promise<Result<U, ServerNodeServiceError>> {
     const url = `${this.serverNodeUrl}/${urlPath}`;
-    // Validate parameters are in line with schema
-    const validate = ajv.compile(paramSchema);
-    // IFF the public identifier is undefined, it should be overridden by
-    // the pubId defined in the parameters.
     const filled = { publicIdentifier: this.publicIdentifier, ...params };
-    if (!validate(filled)) {
-      return Result.fail(
-        new ServerNodeServiceError(
-          ServerNodeServiceError.reasons.InvalidParams,
-          (filled as any).publicIdentifer,
-          urlPath,
-          params,
-          {
-            paramsError: validate.errors?.map((err) => err.message).join(","),
-          },
-        ),
-      );
+    if (paramSchema) {
+      // Validate parameters are in line with schema
+      const validate = ajv.compile(paramSchema);
+      // IFF the public identifier is undefined, it should be overridden by
+      // the pubId defined in the parameters.
+      if (!validate(filled)) {
+        return Result.fail(
+          new ServerNodeServiceError(
+            ServerNodeServiceError.reasons.InvalidParams,
+            (filled as any).publicIdentifer,
+            urlPath,
+            params,
+            {
+              paramsError: validate.errors?.map((err) => err.message).join(","),
+            },
+          ),
+        );
+      }
     }
 
     // Attempt request

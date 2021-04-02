@@ -30,7 +30,7 @@ import { ParameterConversionError } from "./errors";
 
 export async function convertSetupParams(
   params: EngineParams.Setup,
-  chainAddresses: ChainAddresses
+  chainAddresses: ChainAddresses,
 ): Promise<Result<SetupParams>> {
   return Result.ok({
     counterpartyIdentifier: params.counterpartyIdentifier,
@@ -218,7 +218,7 @@ export async function convertWithdrawParams(
   channel: FullChannelState,
   chainAddresses: ChainAddresses,
   chainReader: IVectorChainReader,
-  messaging: IMessagingService,
+  _messaging: IMessagingService,
 ): Promise<Result<CreateTransferParams, EngineError>> {
   const { channelAddress, callTo, callData, meta, timeout } = params;
   const assetId = getAddress(params.assetId);
@@ -260,52 +260,15 @@ export async function convertWithdrawParams(
     );
   }
 
-  // If you are not alice, request a quote
-  let quote = params.quote;
-  if (!quote) {
-    const quoteRes =
-      signer.publicIdentifier !== channel.aliceIdentifier && !initiatorSubmits
-        ? await messaging.sendWithdrawalQuoteMessage(
-            Result.ok({ channelAddress: channel.channelAddress, amount: params.amount, assetId: params.assetId }),
-            channel.aliceIdentifier,
-            signer.publicIdentifier,
-          )
-        : Result.ok({
-            // use hardcoded values
-            channelAddress: channel.channelAddress,
-            amount: params.amount,
-            assetId: params.assetId,
-            fee: "0",
-            expiry: (Date.now() + DEFAULT_FEE_EXPIRY).toString(),
-          });
-
-    if (quoteRes.isError) {
-      return Result.fail(
-        new ParameterConversionError(
-          ParameterConversionError.reasons.CouldNotGetQuote,
-          channelAddress,
-          signer.publicIdentifier,
-          { params, quoteError: jsonifyError(quoteRes.getError()!) },
-        ),
-      );
-    }
-    quote = quoteRes.getValue();
-  }
-
-  const fee = BigNumber.from(quote.fee);
-  if (fee.gt(params.amount)) {
-    return Result.fail(
-      new ParameterConversionError(
-        ParameterConversionError.reasons.FeeGreaterThanAmount,
-        channelAddress,
-        signer.publicIdentifier,
-        { params, quote },
-      ),
-    );
-  }
-
-  // If there is a fee being charged, recalculate the amount
-  const amount = BigNumber.from(params.amount).sub(fee).toString();
+  // No more withdrawal quotes: https://github.com/connext/vector/issues/529
+  const quote = {
+    // use hardcoded values
+    channelAddress: channel.channelAddress,
+    amount: params.amount,
+    assetId: params.assetId,
+    fee: "0",
+    expiry: (Date.now() + DEFAULT_FEE_EXPIRY).toString(),
+  };
 
   const commitment = new WithdrawCommitment(
     channel.channelAddress,
@@ -313,9 +276,7 @@ export async function convertWithdrawParams(
     channel.bob,
     params.recipient,
     assetId,
-    // Important: Use amount here which doesn't include fee!!
-    // Should be the amount that will be withdrawn to user
-    amount.toString(),
+    params.amount,
     // Use channel nonce as a way to keep withdraw hashes unique
     channel.nonce.toString(),
     callTo,
@@ -348,7 +309,7 @@ export async function convertWithdrawParams(
     responder: channelCounterparty,
     data: commitment.hashToSign(),
     nonce: channel.nonce.toString(),
-    fee: fee.toString(),
+    fee: "0",
     callTo: callTo ?? AddressZero,
     callData: callData ?? "0x",
   };
@@ -387,7 +348,7 @@ export async function convertWithdrawParams(
       quote: {
         ...quote, // use our own values by default
         channelAddress,
-        amount,
+        amount: params.amount,
         assetId: params.assetId,
       },
       withdrawNonce: channel.nonce.toString(),

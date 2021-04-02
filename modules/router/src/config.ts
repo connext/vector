@@ -3,6 +3,7 @@ import { Static, Type } from "@sinclair/typebox";
 import Ajv from "ajv";
 import { getAddress } from "@ethersproject/address";
 import { BigNumber } from "@ethersproject/bignumber";
+import { readFileSync } from "fs";
 
 const ajv = new Ajv();
 
@@ -21,6 +22,7 @@ const VectorRouterConfigSchema = Type.Object({
   chainProviders: Type.Dict(TUrl),
   dbUrl: Type.Optional(TUrl),
   nodeUrl: TUrl,
+  routerUrl: TUrl,
   logLevel: Type.Optional(
     Type.Union([
       Type.Literal("fatal"),
@@ -46,26 +48,81 @@ const VectorRouterConfigSchema = Type.Object({
 
 export type VectorRouterConfig = Static<typeof VectorRouterConfigSchema>;
 
-export const getEnvConfig = (): { dbUrl?: string; mnemonicEnv?: string; vectorConfig: VectorRouterConfig } => {
-  let vectorConfig: VectorRouterConfig;
+export const getEnvConfig = (): VectorRouterConfig => {
+  let configFile: any = {};
   try {
-    vectorConfig = JSON.parse(process.env.VECTOR_CONFIG!);
+    let json;
+    if (process.env.VECTOR_CONFIG_FILE) {
+      console.log("process.env.VECTOR_CONFIG_FILE: ", process.env.VECTOR_CONFIG_FILE);
+      json = readFileSync(process.env.VECTOR_CONFIG_FILE, "utf-8");
+    } else {
+      json = readFileSync("config.json", "utf-8");
+    }
+    if (json) {
+      configFile = JSON.parse(json);
+      console.log("configFile: ", configFile);
+      console.log("Found configFile");
+    }
   } catch (e) {
-    throw new Error(`VECTOR_CONFIG contains invalid JSON: ${e.message}`);
+    console.warn("No config file available...");
   }
-  return {
-    dbUrl: process.env.VECTOR_DATABASE_URL,
-    mnemonicEnv: process.env.VECTOR_MNEMONIC,
-    vectorConfig,
+
+  let configJson: Record<string, any> = {};
+  if (process.env.VECTOR_CONFIG) {
+    try {
+      configJson = JSON.parse(process.env.VECTOR_CONFIG);
+      console.log("Found process.env.VECTOR_CONFIG");
+    } catch (e) {
+      console.warn("No VECTOR_CONFIG exists...");
+    }
+  }
+
+  const vectorConfig: VectorRouterConfig = {
+    mnemonic: process.env.VECTOR_MNEMONIC || configJson.mnemonic || configFile.mnemonic,
+    dbUrl: process.env.VECTOR_DATABASE_URL || configJson.dbUrl || configFile.dbUrl,
+    messagingUrl: process.env.VECTOR_MESSAGING_URL || configJson.messagingUrl || configFile.messagingUrl,
+    authUrl: process.env.VECTOR_AUTH_URL || configJson.authUrl || configFile.authUrl,
+    natsUrl: process.env.VECTOR_NATS_URL || configJson.natsUrl || configFile.natsUrl,
+    adminToken: process.env.VECTOR_ADMIN_TOKEN || configJson.adminToken || configFile.adminToken,
+    baseGasSubsidyPercentage: process.env.VECTOR_BASE_GAS_SUBSIDY_PERCENTAGE
+      ? process.env.VECTOR_BASE_GAS_SUBSIDY_PERCENTAGE
+      : configJson.baseGasSubsidyPercentage
+      ? configJson.baseGasSubsidyPercentage
+      : configFile.baseGasSubsidyPercentage
+      ? configFile.baseGasSubsidyPercentage
+      : 100,
+    chainProviders: process.env.VECTOR_CHAIN_PROVIDERS
+      ? JSON.parse(process.env.VECTOR_CHAIN_PROVIDERS)
+      : configJson.chainProviders
+      ? configJson.chainProviders
+      : configFile.chainProviders,
+    allowedSwaps: process.env.VECTOR_ALLOWED_SWAPS
+      ? JSON.parse(process.env.VECTOR_ALLOWED_SWAPS)
+      : configJson.allowedSwaps
+      ? configJson.allowedSwaps
+      : configFile.allowedSwaps,
+    nodeUrl: process.env.VECTOR_NODE_URL || configJson.nodeUrl || configFile.nodeUrl || "http://node:8000",
+    routerUrl: process.env.VECTOR_ROUTER_URL || configJson.routerUrl || configFile.routerUrl || "http://router:8000",
+    rebalanceProfiles:
+      process.env.VECTOR_REBALANCE_PROFILES || configJson.rebalanceProfiles || configFile.rebalanceProfiles,
+    autoRebalanceInterval:
+      process.env.VECTOR_AUTOREBALANCE_INTERVAL || configJson.autoRebalanceInterval || configFile.autoRebalanceInterval,
+    baseFlatFee: process.env.VECTOR_BASE_FLAT_FEE || configJson.baseFlatFee || configFile.baseFlatFee,
+    basePercentageFee:
+      process.env.VECTOR_BASE_PERCENTAGE_FEE || configJson.basePercentageFee || configFile.basePercentageFee,
+    feeQuoteExpiry: process.env.VECTOR_FEE_QUOTE_EXPIRY || configJson.feeQuoteExpiry || configFile.feeQuoteExpiry,
+    logLevel: process.env.VECTOR_FEE_LOG_LEVEL || configJson.logLevel || configFile.logLevel,
   };
+  return vectorConfig;
 };
 
-const { dbUrl, mnemonicEnv, vectorConfig } = getEnvConfig();
-const mnemonic = mnemonicEnv || vectorConfig.mnemonic;
+const vectorConfig = getEnvConfig();
+const mnemonic = vectorConfig.mnemonic;
 
 // Set defaults
-vectorConfig.nodeUrl = vectorConfig.nodeUrl || "http://node:8000";
-vectorConfig.messagingUrl = vectorConfig.messagingUrl || "http://messaging";
+if (!vectorConfig.authUrl && !vectorConfig.messagingUrl && !vectorConfig.natsUrl) {
+  vectorConfig.messagingUrl = "http://messaging";
+}
 
 const validate = ajv.compile(VectorRouterConfigSchema);
 const valid = validate(vectorConfig);
@@ -104,10 +161,6 @@ vectorConfig.rebalanceProfiles = vectorConfig.rebalanceProfiles.map((profile) =>
   };
 });
 
-const config = {
-  dbUrl,
-  ...vectorConfig,
-  mnemonic,
-} as Omit<VectorRouterConfig, "mnemonic"> & { mnemonic: string };
+const config = vectorConfig as Omit<VectorRouterConfig, "mnemonic"> & { mnemonic: string };
 
 export const getConfig = (): Omit<VectorRouterConfig, "mnemonic"> & { mnemonic: string } => config;

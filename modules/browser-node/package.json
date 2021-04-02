@@ -1,6 +1,6 @@
 {
   "name": "@connext/vector-browser-node",
-  "version": "0.2.1-beta.21",
+  "version": "0.2.2-beta.2",
   "author": "",
   "license": "ISC",
   "description": "",
@@ -17,10 +17,10 @@
     "test": "nyc ts-mocha --bail --check-leaks --exit --timeout 60000 'src/**/*.spec.ts'"
   },
   "dependencies": {
-    "@connext/vector-contracts": "0.2.1-beta.21",
-    "@connext/vector-engine": "0.2.1-beta.21",
-    "@connext/vector-types": "0.2.1-beta.21",
-    "@connext/vector-utils": "0.2.1-beta.21",
+    "@connext/vector-contracts": "0.2.2-beta.2",
+    "@connext/vector-engine": "0.2.2-beta.2",
+    "@connext/vector-types": "0.2.2-beta.2",
+    "@connext/vector-utils": "0.2.2-beta.2",
     "@ethersproject/address": "5.1.0",
     "@ethersproject/bignumber": "5.1.0",
     "@ethersproject/constants": "5.1.0",
@@ -31,8 +31,7 @@
     "axios": "0.21.1",
     "dexie": "3.0.3",
     "merkletreejs": "0.2.13",
-    "pino": "6.11.1",
-    "ts-nats": "1.2.15"
+    "pino": "6.11.1"
   },
   "devDependencies": {
     "@types/chai": "4.2.15",
@@ -52,6 +51,7 @@
     "ts-loader": "8.0.7",
     "ts-mocha": "8.0.0",
     "ts-node": "9.1.1",
+    "ts-nats": "1.2.15",
     "typescript": "4.2.2",
     "webpack": "4.44.2",
     "webpack-cli": "4.1.0"

@@ -13,6 +13,7 @@ import {
   HashlockTransferStateEncoding,
   HashlockTransferResolverEncoding,
   ChainError,
+  IVectorChainReader,
 } from "@connext/vector-types";
 import {
   createTestChannelState,
@@ -42,7 +43,7 @@ import * as collateralService from "../services/collateral";
 const testName = "Forwarding";
 
 const realConfig = config.getEnvConfig();
-const { log: logger } = getTestLoggers(testName, realConfig.vectorConfig.logLevel as any);
+const { log: logger } = getTestLoggers(testName, realConfig.logLevel as any);
 
 type TransferCreatedTestContext = {
   senderTransfer: FullTransferState;
@@ -91,8 +92,8 @@ describe(testName, () => {
         {
           meta: transferMeta,
           initiator: mkAddress("0xeee"),
-          assetId: realConfig.vectorConfig.allowedSwaps[0].fromAssetId,
-          chainId: realConfig.vectorConfig.allowedSwaps[0].fromChainId,
+          assetId: realConfig.allowedSwaps[0].fromAssetId,
+          chainId: realConfig.allowedSwaps[0].fromChainId,
         },
       );
 
@@ -123,9 +124,7 @@ describe(testName, () => {
       // Set mock methods for default happy case
       // config
       getConfig.returns({
-        dbUrl: realConfig.dbUrl,
-        mnemonicEnv: realConfig.mnemonicEnv,
-        ...realConfig.vectorConfig,
+        ...realConfig,
         allowedSwaps: [
           {
             fromAssetId: ctx.event.transfer.assetId,
@@ -240,9 +239,7 @@ describe(testName, () => {
         expect(error.context).to.containSubset({
           ...errorContext,
         });
-        console.log("***** verifying queue");
         expect(store.queueUpdate.callCount).to.be.eq(sentSingleSigned ? 1 : 0);
-        console.log("***** verified");
         return;
       }
       expect(error.context).to.containSubset({
@@ -312,7 +309,7 @@ describe(testName, () => {
         node as INodeService,
         store,
         testLog,
-        chainReader,
+        chainReader as IVectorChainReader,
       );
 
       await verifySuccessfulResult(result, ctx, 0);
@@ -332,7 +329,7 @@ describe(testName, () => {
         node as INodeService,
         store,
         testLog,
-        chainReader,
+        chainReader as IVectorChainReader,
       );
 
       await verifySuccessfulResult(result, mocked, 1);
@@ -351,7 +348,7 @@ describe(testName, () => {
         node as INodeService,
         store,
         testLog,
-        chainReader,
+        chainReader as IVectorChainReader,
       );
 
       await verifySuccessfulResult(result, mocked, 1);
@@ -360,8 +357,8 @@ describe(testName, () => {
     it("successfully forwards a transfer creation with swaps, cross-chain, and collateralization", async () => {
       const ctx = generateDefaultTestContext();
       ctx.receiverChannel.networkContext.chainId = 1338;
-      ctx.senderTransfer.meta.path[0].recipientChainId = realConfig.vectorConfig.allowedSwaps[0].toChainId;
-      ctx.senderTransfer.meta.path[0].recipientAssetId = realConfig.vectorConfig.allowedSwaps[0].toAssetId;
+      ctx.senderTransfer.meta.path[0].recipientChainId = realConfig.allowedSwaps[0].toChainId;
+      ctx.senderTransfer.meta.path[0].recipientAssetId = realConfig.allowedSwaps[0].toAssetId;
       const mocked = prepEnv({ ...ctx });
 
       const result = await forwardTransferCreation(
@@ -371,7 +368,7 @@ describe(testName, () => {
         node as INodeService,
         store,
         testLog,
-        chainReader,
+        chainReader as IVectorChainReader,
       );
 
       await verifySuccessfulResult(result, mocked, 1);
@@ -392,7 +389,7 @@ describe(testName, () => {
         node as INodeService,
         store,
         testLog,
-        chainReader,
+        chainReader as IVectorChainReader,
       );
 
       await verifyErrorResult(
@@ -420,7 +417,7 @@ describe(testName, () => {
         node as INodeService,
         store,
         testLog,
-        chainReader,
+        chainReader as IVectorChainReader,
       );
 
       await verifyErrorResult(
@@ -448,7 +445,7 @@ describe(testName, () => {
         node as INodeService,
         store,
         testLog,
-        chainReader,
+        chainReader as IVectorChainReader,
       );
 
       await verifyErrorResult(
@@ -476,7 +473,7 @@ describe(testName, () => {
         node as INodeService,
         store,
         testLog,
-        chainReader,
+        chainReader as IVectorChainReader,
       );
 
       const { stack, ...sanitized } = err.toJson();
@@ -502,7 +499,7 @@ describe(testName, () => {
         node as INodeService,
         store,
         testLog,
-        chainReader,
+        chainReader as IVectorChainReader,
       );
 
       await verifyErrorResult(
@@ -532,7 +529,7 @@ describe(testName, () => {
         node as INodeService,
         store,
         testLog,
-        chainReader,
+        chainReader as IVectorChainReader,
       );
 
       const { stack, ...sanitized } = err.toJson();
@@ -553,7 +550,7 @@ describe(testName, () => {
         node as INodeService,
         store,
         testLog,
-        chainReader,
+        chainReader as IVectorChainReader,
       );
 
       const { stack, ...sanitized } = err.toJson();
@@ -573,7 +570,7 @@ describe(testName, () => {
         node as INodeService,
         store,
         testLog,
-        chainReader,
+        chainReader as IVectorChainReader,
       );
 
       await verifyErrorResult(result, ctx, ForwardTransferCreationError.reasons.RecipientChannelNotFound, {
@@ -598,7 +595,7 @@ describe(testName, () => {
         node as INodeService,
         store,
         testLog,
-        chainReader,
+        chainReader as IVectorChainReader,
       );
 
       const { stack, ...sanitized } = err.toJson();

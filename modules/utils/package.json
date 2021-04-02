@@ -1,6 +1,6 @@
 {
   "name": "@connext/vector-utils",
-  "version": "0.2.1-beta.21",
+  "version": "0.2.2-beta.2",
   "description": "Crypto & other utils for vector state channels",
   "main": "dist/index.js",
   "files": [
@@ -13,7 +13,7 @@
     "test": "nyc ts-mocha --check-leaks --exit 'src/**/*.spec.ts'"
   },
   "dependencies": {
-    "@connext/vector-types": "0.2.1-beta.21",
+    "@connext/vector-types": "0.2.2-beta.2",
     "@ethersproject/abi": "5.1.0",
     "@ethersproject/abstract-provider": "5.1.0",
     "@ethersproject/abstract-signer": "5.1.0",

@@ -11,7 +11,7 @@ import {
 import Sinon from "sinon";
 import { BigNumber } from "@ethersproject/bignumber";
 import { AddressZero } from "@ethersproject/constants";
-import { ChainError, INodeService, Result, UpdateType } from "@connext/vector-types";
+import { ChainError, INodeService, IVectorChainReader, Result, UpdateType } from "@connext/vector-types";
 import { parseEther } from "@ethersproject/units";
 
 import { getConfig } from "../config";
@@ -72,7 +72,7 @@ describe(testName, () => {
         AddressZero,
         routerPublicIdentifier,
         node as INodeService,
-        chainReader,
+        chainReader as IVectorChainReader,
         log,
         transferAmount.toString(),
       );
@@ -87,7 +87,7 @@ describe(testName, () => {
         AddressZero,
         routerPublicIdentifier,
         node as INodeService,
-        chainReader,
+        chainReader as IVectorChainReader,
         log,
         transferAmount.toString(),
       );
@@ -108,7 +108,7 @@ describe(testName, () => {
         AddressZero,
         routerPublicIdentifier,
         node as INodeService,
-        chainReader,
+        chainReader as IVectorChainReader,
         log,
         transferAmount.toString(),
       );
@@ -129,7 +129,7 @@ describe(testName, () => {
         AddressZero,
         routerPublicIdentifier,
         node as INodeService,
-        chainReader,
+        chainReader as IVectorChainReader,
         log,
         transferAmount.toString(),
       );
@@ -164,7 +164,7 @@ describe(testName, () => {
         AddressZero,
         routerPublicIdentifier,
         node as INodeService,
-        chainReader,
+        chainReader as IVectorChainReader,
         log,
         transferAmount.toString(),
       );
@@ -210,7 +210,7 @@ describe(testName, () => {
         AddressZero,
         routerPublicIdentifier,
         node as INodeService,
-        chainReader,
+        chainReader as IVectorChainReader,
         log,
         transferAmount.toString(),
       );
@@ -241,7 +241,7 @@ describe(testName, () => {
         AddressZero,
         routerPublicIdentifier,
         node as INodeService,
-        chainReader,
+        chainReader as IVectorChainReader,
         log,
       );
       expect(res.getError()).to.be.undefined;
@@ -276,7 +276,7 @@ describe(testName, () => {
         AddressZero,
         routerPublicIdentifier,
         node as INodeService,
-        chainReader,
+        chainReader as IVectorChainReader,
         log,
       );
       expect(res.getError()).to.be.undefined;
@@ -318,7 +318,7 @@ describe(testName, () => {
         AddressZero,
         routerPublicIdentifier,
         node as INodeService,
-        chainReader,
+        chainReader as IVectorChainReader,
         log,
       );
       expect(res.getError()).to.be.undefined;
@@ -355,7 +355,7 @@ describe(testName, () => {
         AddressZero,
         routerPublicIdentifier,
         node as INodeService,
-        chainReader,
+        chainReader as IVectorChainReader,
         log,
       );
       expect(res.getError()!.message).to.be.eq(CollateralError.reasons.UnableToReclaim);
@@ -399,7 +399,7 @@ describe(testName, () => {
         AddressZero,
         routerPublicIdentifier,
         node as INodeService,
-        chainReader,
+        chainReader as IVectorChainReader,
         log,
       );
       expect(res.getError()).to.be.undefined;
@@ -430,7 +430,7 @@ describe(testName, () => {
         AddressZero,
         routerPublicIdentifier,
         node as INodeService,
-        chainReader,
+        chainReader as IVectorChainReader,
         log,
       );
       expect(res.getError()).to.be.undefined;
@@ -452,7 +452,7 @@ describe(testName, () => {
         AddressZero,
         routerPublicIdentifier,
         node as INodeService,
-        chainReader,
+        chainReader as IVectorChainReader,
         log,
       );
       expect(res.getError()!.message).to.be.eq(CollateralError.reasons.UnableToGetRebalanceProfile);
@@ -469,7 +469,7 @@ describe(testName, () => {
         AddressZero,
         routerPublicIdentifier,
         node as INodeService,
-        chainReader,
+        chainReader as IVectorChainReader,
         log,
       );
       expect(res.getError()!.message).to.be.eq(CollateralError.reasons.ProviderNotFound);
@@ -486,7 +486,7 @@ describe(testName, () => {
         AddressZero,
         routerPublicIdentifier,
         node as INodeService,
-        chainReader,
+        chainReader as IVectorChainReader,
         log,
       );
       expect(res.getError()!.message).to.be.eq(CollateralError.reasons.ProviderNotFound);
@@ -503,7 +503,7 @@ describe(testName, () => {
         AddressZero,
         routerPublicIdentifier,
         node as INodeService,
-        chainReader,
+        chainReader as IVectorChainReader,
         log,
       );
       expect(res.getError()!.message).to.be.eq(CollateralError.reasons.CouldNotGetOnchainDeposits);
@@ -539,7 +539,7 @@ describe(testName, () => {
           AddressZero,
           routerPublicIdentifier,
           node as INodeService,
-          chainReader,
+          chainReader as IVectorChainReader,
           log,
           requestedAmount.toString(),
         );
@@ -584,7 +584,7 @@ describe(testName, () => {
           AddressZero,
           routerPublicIdentifier,
           node as INodeService,
-          chainReader,
+          chainReader as IVectorChainReader,
           log,
           requestedAmount.toString(),
         );
@@ -628,7 +628,7 @@ describe(testName, () => {
           AddressZero,
           routerPublicIdentifier,
           node as INodeService,
-          chainReader,
+          chainReader as IVectorChainReader,
           log,
         );
         expect(res.isError).to.be.false;
@@ -655,7 +655,7 @@ describe(testName, () => {
           AddressZero,
           routerPublicIdentifier,
           node as INodeService,
-          chainReader,
+          chainReader as IVectorChainReader,
           log,
         );
         expect(res.isError).to.be.false;
@@ -686,7 +686,7 @@ describe(testName, () => {
           AddressZero,
           routerPublicIdentifier,
           node as INodeService,
-          chainReader,
+          chainReader as IVectorChainReader,
           log,
         );
         expect(res.isError).to.be.false;
@@ -725,7 +725,7 @@ describe(testName, () => {
           AddressZero,
           routerPublicIdentifier,
           node as INodeService,
-          chainReader,
+          chainReader as IVectorChainReader,
           log,
           requestedAmount.toString(),
         );
@@ -767,7 +767,7 @@ describe(testName, () => {
           AddressZero,
           routerPublicIdentifier,
           node as INodeService,
-          chainReader,
+          chainReader as IVectorChainReader,
           log,
           requestedAmount.toString(),
         );
@@ -778,7 +778,7 @@ describe(testName, () => {
           AddressZero,
           routerPublicIdentifier,
           node as INodeService,
-          chainReader,
+          chainReader as IVectorChainReader,
           log,
           requestedAmount.toString(),
         );
@@ -822,7 +822,7 @@ describe(testName, () => {
         AddressZero,
         routerPublicIdentifier,
         node as INodeService,
-        chainReader,
+        chainReader as IVectorChainReader,
         log,
         requestedAmount.toString(),
       );

@@ -1,0 +1,10 @@
+@routerUrl = http://localhost:8009
+
+##############
+### Auto Rebalance
+POST {{routerUrl}}/auto-rebalance
+Content-Type: application/json
+
+{
+  "adminToken": "cxt1234"
+}

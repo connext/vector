@@ -2,6 +2,33 @@
 
 ## Next Release
 
+- \[protocol\] Don't sync disputes
+- \[node\] Expose sync dispute method
+
+## 0.2.2-beta.2
+- \[browser-node\] Fix dev-dependency
+
+## 0.2.2-beta.1
+
+- \[contracts, engine, protocol, server-node\] Channel dispute MVP
+- \[engine\] Remove withdrawal fees
+
+## 0.2.1
+
+Non-beta release
+
+## 0.2.1-beta.24
+
+- \[router\] Fix autorebalancing for multiple rebalance cycles
+
+## 0.2.1-beta.23
+
+- \[router\] Fix autorebalancing approval tx schema
+
+## 0.2.1-beta.22
+
+- \[router\] Fix autorebalancing
+
 ## 0.2.1-beta.21
 
 - \[router\] Potential double collateral edge case

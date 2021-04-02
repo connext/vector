@@ -21,6 +21,10 @@ import {
   TransactionFailedPayload,
   SetupPayload,
   NodeParams,
+  TransferDefundedPayload,
+  TransferDisputedPayload,
+  ChannelDefundedPayload,
+  ChannelDisputedPayload,
 } from "@connext/vector-types";
 import { collectDefaultMetrics, register } from "prom-client";
 import { Wallet } from "ethers";
@@ -35,8 +39,7 @@ import { ServerError } from "./errors";
 
 const config = getConfig();
 
-const routerPort = 8000;
-const routerBase = `http://router:${routerPort}`;
+const routerBase = config.routerUrl;
 const isAlivePath = "/is-alive";
 const setupPath = "/setup";
 const conditionalTransferCreatedPath = "/conditional-transfer-created";
@@ -50,6 +53,10 @@ const withdrawResolvedPath = "/withdrawal-resolved";
 const transactionSubmittedPath = "/transaction-submitted";
 const transactionMinedPath = "/transaction-mined";
 const transactionFailedPath = "/transaction-failed";
+const channelDisputedPath = "/channel-disputed";
+const channelDefundedPath = "/channel-defunded";
+const transferDisputedPath = "/transfer-disputed";
+const transferDefundedPath = "/transfer-defunded";
 const evts: EventCallbackConfig = {
   [EngineEvents.IS_ALIVE]: {
     evt: Evt.create<IsAlivePayload>(),
@@ -102,6 +109,22 @@ const evts: EventCallbackConfig = {
   [EngineEvents.TRANSACTION_FAILED]: {
     evt: Evt.create<TransactionFailedPayload & { publicIdentifier: string }>(),
     url: `${routerBase}${transactionFailedPath}`,
+  },
+  [EngineEvents.CHANNEL_DISPUTED]: {
+    evt: Evt.create<ChannelDisputedPayload & { publicIdentifier: string }>(),
+    url: `${routerBase}${channelDisputedPath}`,
+  },
+  [EngineEvents.CHANNEL_DEFUNDED]: {
+    evt: Evt.create<ChannelDefundedPayload & { publicIdentifier: string }>(),
+    url: `${routerBase}${channelDefundedPath}`,
+  },
+  [EngineEvents.TRANSFER_DISPUTED]: {
+    evt: Evt.create<TransferDisputedPayload & { publicIdentifier: string }>(),
+    url: `${routerBase}${transferDisputedPath}`,
+  },
+  [EngineEvents.TRANSFER_DEFUNDED]: {
+    evt: Evt.create<TransferDefundedPayload & { publicIdentifier: string }>(),
+    url: `${routerBase}${transferDefundedPath}`,
   },
 };
 
@@ -265,7 +288,31 @@ server.post(transactionFailedPath, async (request, response) => {
   return response.status(200).send({ message: "success" });
 });
 
-server.listen(routerPort, "0.0.0.0", (err, address) => {
+server.post(channelDisputedPath, async (request, response) => {
+  evts[EngineEvents.CHANNEL_DISPUTED].evt!.post(request.body as ChannelDisputedPayload & { publicIdentifier: string });
+  return response.status(200).send({ message: "success" });
+});
+
+server.post(channelDefundedPath, async (request, response) => {
+  evts[EngineEvents.CHANNEL_DEFUNDED].evt!.post(request.body as ChannelDefundedPayload & { publicIdentifier: string });
+  return response.status(200).send({ message: "success" });
+});
+
+server.post(transferDisputedPath, async (request, response) => {
+  evts[EngineEvents.TRANSFER_DISPUTED].evt!.post(
+    request.body as TransferDisputedPayload & { publicIdentifier: string },
+  );
+  return response.status(200).send({ message: "success" });
+});
+
+server.post(transferDefundedPath, async (request, response) => {
+  evts[EngineEvents.TRANSFER_DEFUNDED].evt!.post(
+    request.body as TransferDefundedPayload & { publicIdentifier: string },
+  );
+  return response.status(200).send({ message: "success" });
+});
+
+server.listen(config.routerUrl.split(":").pop() ?? 8000, "0.0.0.0", (err, address) => {
   if (err) {
     console.error(err);
     process.exit(1);

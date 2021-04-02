@@ -32,14 +32,33 @@ export interface IVectorStore {
   // Setters
   saveChannelState(channelState: FullChannelState, transfer?: FullTransferState): Promise<void>;
 
-  saveChannelDispute(
-    channel: FullChannelState,
-    channelDispute: ChannelDispute,
-    transferDispute?: TransferDispute,
-  ): Promise<void>;
-  // TODO: full disputes #445
-  // getChannelDispute(channelAddress: string): Promise<ChannelDispute | undefined>;
-  // getTransferDispute(transferAddress: string): Promise<TransferDispute | undefined>;
+  /**
+   * Saves information about a channel dispute from the onchain record
+   * @param channelAddress multisig address of channel
+   * @param channelDispute record of dispute corresponding to channelAddress
+   * @param disputedChannel channel state that was disputed onchain, may not be the same as what is otherwise stored. Will be undefined if you did not get the information about the dispute from events, but instead got them from querying the chain (ccs not stored onchain)
+   */
+  saveChannelDispute(channelAddress: string, channelDispute: ChannelDispute): Promise<void>;
+
+  /**
+   * Returns stored record of channel dispute or undefined iff doesn't exist
+   * @param channelAddress channel address of disputed channel
+   */
+  getChannelDispute(channelAddress: string): Promise<ChannelDispute | undefined>;
+
+  /**
+   * Stores information about a transfer dispute from chain
+   * @param channelAddress address of the channel
+   * @param transferDispute record of dispute corresponding to disputedTransfer
+   * @param disputedTransfer transfer state that was disputed onchain, may not be the same as what is otherwise stored. Will be undefined if you did not get the information about the dispute from events, but instead got them from querying the chain (ccs not stored onchain)
+   */
+  saveTransferDispute(channelAddress: string, transferDispute: TransferDispute): Promise<void>;
+
+  /**
+   * Returns stored record of transfer dispute or undefined iff doesn't exist
+   * @param transferId Transfer id of disputed transfer
+   */
+  getTransferDispute(transferId: string): Promise<TransferDispute | undefined>;
 }
 
 export const StoredTransactionStatus = {
@@ -60,6 +79,7 @@ export const TransactionReason = {
   depositB: "depositB",
   deploy: "deploy",
   deployWithDepositAlice: "deployWithDepositAlice",
+  exitChannel: "exitChannel",
   transferTokens: "transferTokens",
   withdraw: "withdraw",
 } as const;

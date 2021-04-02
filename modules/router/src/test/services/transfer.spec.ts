@@ -31,6 +31,7 @@ import { ForwardTransferCreationError } from "../../errors";
 import { PrismaStore, RouterUpdateType } from "../../services/store";
 import { cancelCreatedTransfer, attemptTransferWithCollateralization } from "../../services/transfer";
 import * as collateral from "../../services/collateral";
+import { IVectorChainReader } from "@connext/vector-types";
 
 const config = getConfig();
 
@@ -110,7 +111,7 @@ describe(testName, () => {
         routerPublicIdentifier,
         nodeService as INodeService,
         store,
-        chainReader,
+        chainReader as IVectorChainReader,
         log,
         false,
       );
@@ -136,7 +137,7 @@ describe(testName, () => {
         routerPublicIdentifier,
         nodeService as INodeService,
         store,
-        chainReader,
+        chainReader as IVectorChainReader,
         log,
         false,
       );
@@ -160,7 +161,7 @@ describe(testName, () => {
         routerPublicIdentifier,
         nodeService as INodeService,
         store,
-        chainReader,
+        chainReader as IVectorChainReader,
         log,
         false,
       );
@@ -186,7 +187,7 @@ describe(testName, () => {
         routerPublicIdentifier,
         nodeService as INodeService,
         store,
-        chainReader,
+        chainReader as IVectorChainReader,
         log,
         true,
       );
@@ -212,7 +213,7 @@ describe(testName, () => {
         routerPublicIdentifier,
         nodeService as INodeService,
         store,
-        chainReader,
+        chainReader as IVectorChainReader,
         log,
         false,
       );
@@ -238,7 +239,7 @@ describe(testName, () => {
         routerPublicIdentifier,
         nodeService as INodeService,
         store,
-        chainReader,
+        chainReader as IVectorChainReader,
         log,
         true,
       );
@@ -263,7 +264,7 @@ describe(testName, () => {
         routerPublicIdentifier,
         nodeService as INodeService,
         store,
-        chainReader,
+        chainReader as IVectorChainReader,
         log,
         true,
       );

@@ -30,6 +30,7 @@ import {
   MINIMUM_TRANSFER_TIMEOUT,
   MAXIMUM_CHANNEL_TIMEOUT,
   jsonifyError,
+  IVectorChainReader,
 } from "@connext/vector-types";
 import Sinon from "sinon";
 import { AddressZero } from "@ethersproject/constants";
@@ -177,7 +178,7 @@ describe("validateUpdateParams", () => {
   ) => {
     const result = await validation.validateUpdateParams(
       signer,
-      chainReader,
+      chainReader as IVectorChainReader,
       params,
       state,
       activeTransfers,
@@ -295,7 +296,7 @@ describe("validateUpdateParams", () => {
       const { previousState, activeTransfers, initiatorIdentifier, params } = createValidSetupContext();
       const result = await validation.validateUpdateParams(
         initiator,
-        chainReader,
+        chainReader as IVectorChainReader,
         params,
         previousState,
         activeTransfers,
@@ -309,7 +310,7 @@ describe("validateUpdateParams", () => {
       const { previousState, activeTransfers, initiatorIdentifier, params } = createValidSetupContext();
       const result = await validation.validateUpdateParams(
         responder,
-        chainReader,
+        chainReader as IVectorChainReader,
         params,
         previousState,
         activeTransfers,
@@ -401,7 +402,7 @@ describe("validateUpdateParams", () => {
       const { previousState, activeTransfers, initiatorIdentifier, params } = createValidDepositContext();
       const result = await validation.validateUpdateParams(
         initiator,
-        chainReader,
+        chainReader as IVectorChainReader,
         params,
         previousState,
         activeTransfers,
@@ -414,7 +415,7 @@ describe("validateUpdateParams", () => {
       const { previousState, activeTransfers, initiatorIdentifier, params } = createValidDepositContext();
       const result = await validation.validateUpdateParams(
         responder,
-        chainReader,
+        chainReader as IVectorChainReader,
         params,
         previousState,
         activeTransfers,
@@ -442,7 +443,7 @@ describe("validateUpdateParams", () => {
       const { previousState, activeTransfers, initiatorIdentifier, params } = createValidCreateContext();
       const result = await validation.validateUpdateParams(
         initiator,
-        chainReader,
+        chainReader as IVectorChainReader,
         params,
         previousState,
         activeTransfers,
@@ -456,7 +457,7 @@ describe("validateUpdateParams", () => {
       const { previousState, activeTransfers, initiatorIdentifier, params } = createValidCreateContext();
       const result = await validation.validateUpdateParams(
         responder,
-        chainReader,
+        chainReader as IVectorChainReader,
         params,
         previousState,
         activeTransfers,
@@ -638,7 +639,7 @@ describe("validateUpdateParams", () => {
       const { previousState, activeTransfers, initiatorIdentifier, params } = createValidResolveContext();
       const result = await validation.validateUpdateParams(
         initiator,
-        chainReader,
+        chainReader as IVectorChainReader,
         params,
         previousState,
         activeTransfers,
@@ -651,7 +652,7 @@ describe("validateUpdateParams", () => {
       const { previousState, activeTransfers, initiatorIdentifier, params } = createValidResolveContext();
       const result = await validation.validateUpdateParams(
         responder,
-        chainReader,
+        chainReader as IVectorChainReader,
         params,
         previousState,
         activeTransfers,
@@ -749,7 +750,7 @@ describe.skip("validateParamsAndApplyUpdate", () => {
     validateUpdateParamsStub.resolves(Result.fail(new Error("fail")));
     const result = await validation.validateParamsAndApplyUpdate(
       signer,
-      chainReader,
+      chainReader as IVectorChainReader,
       externalValidationStub,
       params,
       previousState,
@@ -768,7 +769,7 @@ describe.skip("validateParamsAndApplyUpdate", () => {
     validateUpdateParamsStub.resolves(Result.ok(undefined));
     const result = await validation.validateParamsAndApplyUpdate(
       signer,
-      chainReader,
+      chainReader as IVectorChainReader,
       externalValidationStub,
       params,
       previousState,
@@ -808,7 +809,7 @@ describe("validateAndApplyInboundUpdate", () => {
     context: any = {},
   ) => {
     const result = await validation.validateAndApplyInboundUpdate(
-      chainReader,
+      chainReader as IVectorChainReader,
       externalValidationStub,
       signer,
       update,
@@ -1271,7 +1272,7 @@ describe("validateAndApplyInboundUpdate", () => {
 
       // Run test
       const result = await validation.validateAndApplyInboundUpdate(
-        chainReader,
+        chainReader as IVectorChainReader,
         externalValidationStub,
         signers[0],
         update,
@@ -1312,7 +1313,7 @@ describe("validateAndApplyInboundUpdate", () => {
 
       // Run test
       const result = await validation.validateAndApplyInboundUpdate(
-        chainReader,
+        chainReader as IVectorChainReader,
         externalValidationStub,
         signers[0],
         update,
@@ -1459,7 +1460,7 @@ describe("validateAndApplyInboundUpdate", () => {
     update = createTestChannelUpdate(UpdateType.setup, { nonce: 1, aliceSignature: undefined });
 
     const result = await validation.validateAndApplyInboundUpdate(
-      chainReader,
+      chainReader as IVectorChainReader,
       externalValidationStub,
       signers[0],
       update,

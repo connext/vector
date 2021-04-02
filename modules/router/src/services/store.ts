@@ -90,6 +90,7 @@ export class PrismaStore implements IRouterStore {
 
   async clear(): Promise<void> {
     await this.prisma.queuedUpdate.deleteMany({});
+    await this.prisma.autoRebalance.deleteMany({});
   }
 
   // Interface methods
@@ -134,40 +135,32 @@ export class PrismaStore implements IRouterStore {
     });
   }
 
+  // Do we need the orderBy / findFirst ? According to schema, the query should result in only
+  // 1 unique entry being returned (if found).
   async getLatestRebalance(swap: AllowedSwap): Promise<RouterRebalanceRecord | undefined> {
-    return new Promise<RouterRebalanceRecord | undefined>((resolve, reject) => {
-      // Do we need the orderBy / findFirst ? According to schema, the query should result in only
-      // 1 unique entry being returned (if found).
-      this.prisma.autoRebalance
-        .findFirst({
-          orderBy: [
-            {
-              updatedAt: "desc",
-            },
-          ],
-          where: {
-            fromAssetId: swap.fromAssetId.toString(),
-            toAssetId: swap.toAssetId.toString(),
-            fromChainId: swap.fromChainId.toString(),
-            toChainId: swap.toChainId.toString(),
-          },
-        })
-        .then((result) => {
-          if (result) {
-            resolve({
-              id: result.id,
-              swap: swap,
-              status: result.status as RouterRebalanceStatus,
-              approveHash: result.approveHash ? result.approveHash : undefined,
-              executeHash: result.executeHash ? result.executeHash : undefined,
-              completeHash: result.completeHash ? result.completeHash : undefined,
-            });
-          }
-        })
-        .catch((error) => {
-          reject(error);
-        });
+    const result = await this.prisma.autoRebalance.findFirst({
+      orderBy: [
+        {
+          updatedAt: "desc",
+        },
+      ],
+      where: {
+        fromAssetId: swap.fromAssetId.toString(),
+        toAssetId: swap.toAssetId.toString(),
+        fromChainId: swap.fromChainId.toString(),
+        toChainId: swap.toChainId.toString(),
+      },
     });
+    return result
+      ? {
+          id: result.id,
+          swap: swap,
+          status: result.status as RouterRebalanceStatus,
+          approveHash: result.approveHash ? result.approveHash : undefined,
+          executeHash: result.executeHash ? result.executeHash : undefined,
+          completeHash: result.completeHash ? result.completeHash : undefined,
+        }
+      : undefined;
   }
 
   async saveRebalance(record: RouterRebalanceRecord): Promise<void> {
