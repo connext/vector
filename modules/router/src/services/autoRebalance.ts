@@ -25,7 +25,7 @@ import { v4 as uuidv4 } from "uuid";
 import { getConfig } from "../config";
 import { AutoRebalanceServiceError } from "../errors";
 import { parseBalanceToNumber, rebalancedTokens } from "../metrics";
-import { hashAllowedSwap, inProgressRebalances, queueRebalance } from "./rebalanceQueue";
+import { queueRebalance } from "./rebalanceQueue";
 import { IRouterStore, RouterRebalanceRecord, RouterRebalanceStatus } from "./store";
 
 const config = getConfig();
