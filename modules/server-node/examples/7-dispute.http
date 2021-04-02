@@ -39,7 +39,7 @@ Content-Type: application/json
 }
 
 ##############
-### Defund Channel
+### Sync Disputes
 POST {{nodeUrl}}/sync-disputes
 Content-Type: application/json
 

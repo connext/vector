@@ -11,6 +11,7 @@ import {
   IEngineStore,
   IServerNodeStore,
 } from "@connext/vector-types";
+import { HashZero } from "@ethersproject/constants";
 import {
   createTestChannelState,
   mkBytes32,
@@ -809,6 +810,31 @@ export const testStore = <T extends IEngineStore>(
         const t2 = transfers.find((t) => t.transferId === createState2.transfer.transferId);
         expect(t1).to.deep.eq(createState.transfer);
         expect(t2).to.deep.eq(createState2.transfer);
+      });
+    });
+
+    describe("saveChannelDispute", () => {
+      it("should work", async () => {
+        const { channel, transfer } = createTestChannelState(
+          "create",
+          { nonce: 10 },
+          {
+            transferId: mkHash("0x111"),
+            meta: { routingId: mkBytes32("0xddd") },
+          },
+        );
+        await store.saveChannelState(channel, transfer);
+
+        await store.saveChannelDispute(channel.channelAddress, {
+          channelStateHash: HashZero,
+          consensusExpiry: "hello",
+          defundExpiry: "world",
+          merkleRoot: HashZero,
+          nonce: "1",
+        });
+
+        const dispute = await store.getChannelDispute(channel.channelAddress);
+        console.log("dispute: ", dispute);
       });
     });
   });
