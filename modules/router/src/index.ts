@@ -312,7 +312,7 @@ server.post(transferDefundedPath, async (request, response) => {
   return response.status(200).send({ message: "success" });
 });
 
-server.listen(config.routerUrl.split(":")[config.routerUrl.split(":").length - 1], "0.0.0.0", (err, address) => {
+server.listen(config.routerUrl.split(":").pop() ?? 8000, "0.0.0.0", (err, address) => {
   if (err) {
     console.error(err);
     process.exit(1);
