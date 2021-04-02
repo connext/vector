@@ -377,7 +377,10 @@ export class Vector implements IVectorProtocol {
     // server-node startup (double check on prod). If it is *not* awaited
     // then you could have a race condition where this is not completed
     // before your channel is updated
-    await this.registerDisputes();
+    if (!this.skipCheckIn) {
+      // TODO: gating this behind skipCheckIn for now to let router start up properly
+      await this.registerDisputes();
+    }
     return this;
   }
 
