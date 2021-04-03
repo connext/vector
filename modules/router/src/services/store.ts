@@ -45,8 +45,11 @@ export type RouterRebalanceRecord = {
   swap: AllowedSwap;
   status: RouterRebalanceStatus;
   approveHash?: string;
+  approveChain?: string;
   executeHash?: string;
+  executeChain?: string;
   completeHash?: string;
+  completeChain?: string;
   // createdAt
   // updatedAt
 };
@@ -157,8 +160,11 @@ export class PrismaStore implements IRouterStore {
           swap: swap,
           status: result.status as RouterRebalanceStatus,
           approveHash: result.approveHash ? result.approveHash : undefined,
+          approveChain: result.approveChain ? result.approveChain : undefined,
           executeHash: result.executeHash ? result.executeHash : undefined,
+          executeChain: result.executeChain ? result.executeChain : undefined,
           completeHash: result.completeHash ? result.completeHash : undefined,
+          completeChain: result.completeChain ? result.completeChain : undefined,
         }
       : undefined;
   }

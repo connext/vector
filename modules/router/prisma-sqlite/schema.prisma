@@ -22,8 +22,11 @@ model AutoRebalance {
   id                      String  @id @default(uuid())
   status                  String
   approveHash             String?
+  approveChain            String?
   executeHash             String?
+  executeChain            String?
   completeHash            String?
+  completeChain           String?
   
   // Swap info
   fromChainId             String

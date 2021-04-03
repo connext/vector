@@ -12,9 +12,6 @@ function getAllowedSwapKey(swap: AllowedSwap): string {
 // Used to track all the rebalances we are currently executing, to avoid
 // accidentally running operations on the same model (rebalance record)
 // at the same time.
-const inProgressRebalances: { [swap: string]: boolean } = {};
-
-// 
 const rebalanceQueues: { [swap: string]: PriorityQueue } = {};
 
 export async function queueRebalance<T = any>(
