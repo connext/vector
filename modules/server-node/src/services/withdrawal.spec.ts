@@ -7,6 +7,7 @@ import {
   mkHash,
   getRandomChannelSigner,
   getRandomBytes32,
+  mkSig,
 } from "@connext/vector-utils";
 import { HashZero } from "@ethersproject/constants";
 import { parseUnits } from "@ethersproject/units";
@@ -261,6 +262,18 @@ describe(testName, () => {
           transferId: transfer.transferId,
         },
       ]);
+    });
+
+    it.only("should not submit cancelled withdrawals", async () => {
+      const { channel, transfer, commitment } = await prepEnv();
+      store.getChannelStates.resolves([channel]);
+      transfer.transferResolver.responderSignature = mkSig("0x0");
+      store.getUnsubmittedWithdrawals.resolves([{ commitment, transfer }]);
+      chainService.getGasPrice.resolves(Result.ok(parseUnits("100", "gwei")));
+
+      const result = await submitMainnetWithdrawalsIfNeeded([alice.publicIdentifier], store);
+      expect(result.isError).to.be.false;
+      expect(result.getValue()).to.be.deep.eq([]);
     });
   });
 });

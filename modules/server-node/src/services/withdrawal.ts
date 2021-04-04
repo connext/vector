@@ -8,7 +8,7 @@ import {
   WithdrawCommitmentJson,
   REDUCED_GAS_PRICE,
 } from "@connext/vector-types";
-import { getRandomBytes32 } from "@connext/vector-utils";
+import { getRandomBytes32, mkSig } from "@connext/vector-utils";
 import { HashZero, AddressZero } from "@ethersproject/constants";
 
 import { logger } from "..";
@@ -340,6 +340,10 @@ export const submitMainnetWithdrawalsIfNeeded = async (
     : unsubmitted.getValue().filter((u) => {
         const resolvedTimestamp = u.transfer.meta.resolvedAt;
         if (!resolvedTimestamp) {
+          return false;
+        }
+        // don't submit cancelled transfers
+        if (u.transfer.transferResolver?.responderSignature === mkSig("0x0")) {
           return false;
         }
         return resolvedTimestamp < creationCutoff;
