@@ -775,7 +775,7 @@ describe(testName, () => {
     });
   });
 
-  describe.only("handlePendingUpdates", () => {
+  describe("handlePendingUpdates", () => {
     // constants
     const channelAddress = mkAddress("0xccc");
     const aliceIdentifier = mkPublicIdentifier("vectorAAA");
@@ -976,9 +976,98 @@ describe(testName, () => {
       expect(store.setUpdateStatus.getCall(1).args).to.containSubset([storedUpdates[0].id, RouterUpdateStatus.FAILED]);
     });
 
-    it("should handle an unknown update type", async () => {});
-    it("should handle timeout errors and keep as pending for creation + resolution updates", async () => {});
-    it("should handle an array of pending updates, marking as succeeded and failed", async () => {});
-    it("should handle an array of all successful updates", async () => {});
+    it("should handle an unknown update type", async () => {
+      const { payload, storedUpdates } = setupMocks([{ type: RouterUpdateType.TRANSFER_RESOLUTION }]);
+      store.getQueuedUpdates.resolves([{ ...storedUpdates[0], type: "unknown" as any }]);
+      const result = await forwarding.handlePendingUpdates(
+        payload,
+        routerPublicIdentifier,
+        nodeService as INodeService,
+        store,
+        chainReader as IVectorChainReader,
+        logger,
+      );
+      expect(result.isError).to.be.true;
+      expect(result.getError()?.message).to.be.eq(CheckInError.reasons.UpdatesFailed);
+      expect(store.setUpdateStatus.callCount).to.be.eq(2);
+      expect(store.setUpdateStatus.getCall(1).args).to.containSubset([storedUpdates[0].id, RouterUpdateStatus.FAILED]);
+    });
+
+    it("should handle timeout errors and keep as pending for creation + resolution updates", async () => {
+      const { payload, storedUpdates } = setupMocks([{ type: RouterUpdateType.TRANSFER_RESOLUTION }]);
+      nodeService.resolveTransfer.resolves(Result.fail(new ChainError(ServerNodeServiceError.reasons.Timeout) as any));
+      const result = await forwarding.handlePendingUpdates(
+        payload,
+        routerPublicIdentifier,
+        nodeService as INodeService,
+        store,
+        chainReader as IVectorChainReader,
+        logger,
+      );
+      expect(result.isError).to.be.true;
+      expect(result.getError()?.message).to.be.eq(CheckInError.reasons.UpdatesFailed);
+      expect(store.setUpdateStatus.callCount).to.be.eq(2);
+      expect(store.setUpdateStatus.getCall(1).args).to.containSubset([storedUpdates[0].id, RouterUpdateStatus.PENDING]);
+    });
+
+    it("should handle an array of pending updates, marking as succeeded and failed", async () => {
+      const { payload, storedUpdates } = setupMocks([
+        { type: RouterUpdateType.TRANSFER_RESOLUTION },
+        { type: RouterUpdateType.TRANSFER_CREATION },
+        { type: RouterUpdateType.TRANSFER_RESOLUTION },
+      ]);
+      transferWithCollateralization.resolves(Result.fail(new ChainError("fail", { transferError: "fail" }) as any));
+      const result = await forwarding.handlePendingUpdates(
+        payload,
+        routerPublicIdentifier,
+        nodeService as INodeService,
+        store,
+        chainReader as IVectorChainReader,
+        logger,
+      );
+      expect(result.isError).to.be.true;
+      expect(result.getError()?.message).to.be.eq(CheckInError.reasons.UpdatesFailed);
+      expect(store.setUpdateStatus.callCount).to.be.eq(6);
+      expect(store.setUpdateStatus.getCall(1).args).to.containSubset([
+        storedUpdates[0].id,
+        RouterUpdateStatus.COMPLETE,
+      ]);
+      expect(store.setUpdateStatus.getCall(3).args).to.containSubset([storedUpdates[1].id, RouterUpdateStatus.FAILED]);
+      expect(store.setUpdateStatus.getCall(5).args).to.containSubset([
+        storedUpdates[2].id,
+        RouterUpdateStatus.COMPLETE,
+      ]);
+    });
+
+    it("should handle an array of all successful updates", async () => {
+      const { payload, storedUpdates } = setupMocks([
+        { type: RouterUpdateType.TRANSFER_RESOLUTION },
+        { type: RouterUpdateType.TRANSFER_CREATION },
+        { type: RouterUpdateType.TRANSFER_RESOLUTION },
+      ]);
+      const result = await forwarding.handlePendingUpdates(
+        payload,
+        routerPublicIdentifier,
+        nodeService as INodeService,
+        store,
+        chainReader as IVectorChainReader,
+        logger,
+      );
+      expect(result.isError).to.be.false;
+      expect(result.getValue()).to.be.undefined;
+      expect(store.setUpdateStatus.callCount).to.be.eq(6);
+      expect(store.setUpdateStatus.getCall(1).args).to.containSubset([
+        storedUpdates[0].id,
+        RouterUpdateStatus.COMPLETE,
+      ]);
+      expect(store.setUpdateStatus.getCall(3).args).to.containSubset([
+        storedUpdates[1].id,
+        RouterUpdateStatus.COMPLETE,
+      ]);
+      expect(store.setUpdateStatus.getCall(5).args).to.containSubset([
+        storedUpdates[2].id,
+        RouterUpdateStatus.COMPLETE,
+      ]);
+    });
   });
 });
