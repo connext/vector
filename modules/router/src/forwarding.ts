@@ -25,6 +25,7 @@ import {
   getSignerAddressFromPublicIdentifier,
   hashTransferQuote,
   recoverAddressFromChannelMessage,
+  ServerNodeServiceError,
 } from "@connext/vector-utils";
 import { AddressZero } from "@ethersproject/constants";
 import { getAddress } from "@ethersproject/address";
@@ -635,7 +636,7 @@ export async function handleIsAlive(
 // eg. router is restarted to change config or to update software
 // and transfers that were being processed were not properly
 // checkpointed
-const handleRouterDroppedTransfers = async (
+export const handleRouterDroppedTransfers = async (
   data: IsAlivePayload,
   routerPublicIdentifier: string,
   nodeService: INodeService,
@@ -845,7 +846,7 @@ const handleRouterDroppedTransfers = async (
 // the transfer with a recipient was generated, but the router does
 // not know whether or not the transfer was installed or should be
 // cancelled with the sender
-const handleUnverifiedUpdates = async (
+export const handleUnverifiedUpdates = async (
   data: IsAlivePayload,
   routerPublicIdentifier: string,
   nodeService: INodeService,
@@ -1017,7 +1018,7 @@ const handleUnverifiedUpdates = async (
   return Result.ok(undefined);
 };
 
-const handlePendingUpdates = async (
+export const handlePendingUpdates = async (
   data: IsAlivePayload,
   routerPublicIdentifier: string,
   nodeService: INodeService,
@@ -1081,7 +1082,7 @@ const handlePendingUpdates = async (
         const error = createRes.getError()?.context?.transferError;
         await store.setUpdateStatus(
           routerUpdate.id,
-          error === NodeError.reasons.Timeout ? RouterUpdateStatus.PENDING : RouterUpdateStatus.FAILED,
+          error === ServerNodeServiceError.reasons.Timeout ? RouterUpdateStatus.PENDING : RouterUpdateStatus.FAILED,
           error,
         );
         erroredUpdates.push(routerUpdate);
@@ -1112,7 +1113,7 @@ const handlePendingUpdates = async (
       const error = resolveRes.getError()?.message;
       await store.setUpdateStatus(
         routerUpdate.id,
-        error === NodeError.reasons.Timeout ? RouterUpdateStatus.PENDING : RouterUpdateStatus.FAILED,
+        error === ServerNodeServiceError.reasons.Timeout ? RouterUpdateStatus.PENDING : RouterUpdateStatus.FAILED,
         error,
       );
       erroredUpdates.push(routerUpdate);

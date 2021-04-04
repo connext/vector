@@ -14,6 +14,9 @@ import {
   HashlockTransferResolverEncoding,
   ChainError,
   IVectorChainReader,
+  IsAlivePayload,
+  NodeParams,
+  NodeError,
 } from "@connext/vector-types";
 import {
   createTestChannelState,
@@ -31,13 +34,13 @@ import { BigNumber } from "@ethersproject/bignumber";
 import Sinon from "sinon";
 import { getAddress } from "@ethersproject/address";
 
-import { PrismaStore } from "../services/store";
-import { forwardTransferCreation } from "../forwarding";
+import { IRouterStore, PrismaStore, RouterStoredUpdate, RouterUpdateStatus, RouterUpdateType } from "../services/store";
+import * as forwarding from "../forwarding";
 import * as config from "../config";
 import * as configService from "../services/config";
 import * as swapService from "../services/swap";
 import * as transferService from "../services/transfer";
-import { ForwardTransferCreationError } from "../errors";
+import { CheckInError, ForwardTransferCreationError } from "../errors";
 import * as collateralService from "../services/collateral";
 
 const testName = "Forwarding";
@@ -302,7 +305,7 @@ describe(testName, () => {
     // Successful forwards
     it("successfully forwards a transfer creation with no swaps, no cross-chain no collateralization, no fees", async () => {
       const ctx = prepEnv();
-      const result = await forwardTransferCreation(
+      const result = await forwarding.forwardTransferCreation(
         ctx.event,
         routerPublicIdentifier,
         signerAddress,
@@ -322,7 +325,7 @@ describe(testName, () => {
       ctx.senderTransfer.meta.path[0].recipientAssetId = getAddress(mkAddress("0xfff"));
       const mocked = prepEnv({ ...ctx });
 
-      const result = await forwardTransferCreation(
+      const result = await forwarding.forwardTransferCreation(
         mocked.event,
         routerPublicIdentifier,
         signerAddress,
@@ -341,7 +344,7 @@ describe(testName, () => {
       ctx.senderTransfer.meta.path[0].recipientChainId = 1338;
       const mocked = prepEnv({ ...ctx });
 
-      const result = await forwardTransferCreation(
+      const result = await forwarding.forwardTransferCreation(
         mocked.event,
         routerPublicIdentifier,
         signerAddress,
@@ -361,7 +364,7 @@ describe(testName, () => {
       ctx.senderTransfer.meta.path[0].recipientAssetId = realConfig.allowedSwaps[0].toAssetId;
       const mocked = prepEnv({ ...ctx });
 
-      const result = await forwardTransferCreation(
+      const result = await forwarding.forwardTransferCreation(
         mocked.event,
         routerPublicIdentifier,
         signerAddress,
@@ -382,7 +385,7 @@ describe(testName, () => {
       ctx.senderTransfer.meta.routingId = undefined;
       const mocked = prepEnv({ ...ctx });
 
-      const result = await forwardTransferCreation(
+      const result = await forwarding.forwardTransferCreation(
         mocked.event,
         routerPublicIdentifier,
         signerAddress,
@@ -410,7 +413,7 @@ describe(testName, () => {
       ctx.senderTransfer.meta.path = undefined;
       const mocked = prepEnv({ ...ctx });
 
-      const result = await forwardTransferCreation(
+      const result = await forwarding.forwardTransferCreation(
         mocked.event,
         routerPublicIdentifier,
         signerAddress,
@@ -438,7 +441,7 @@ describe(testName, () => {
       ctx.senderTransfer.meta.path = [{}];
       const mocked = prepEnv({ ...ctx });
 
-      const result = await forwardTransferCreation(
+      const result = await forwarding.forwardTransferCreation(
         mocked.event,
         routerPublicIdentifier,
         signerAddress,
@@ -466,7 +469,7 @@ describe(testName, () => {
       const err = (new ChainError(ChainError.reasons.TransferNotFound) as unknown) as ServerNodeServiceError;
       node.getStateChannel.onFirstCall().resolves(Result.fail(err));
 
-      const result = await forwardTransferCreation(
+      const result = await forwarding.forwardTransferCreation(
         ctx.event,
         routerPublicIdentifier,
         signerAddress,
@@ -492,7 +495,7 @@ describe(testName, () => {
       const ctx = prepEnv();
       node.getStateChannel.onFirstCall().resolves(Result.ok(undefined));
 
-      const result = await forwardTransferCreation(
+      const result = await forwarding.forwardTransferCreation(
         ctx.event,
         routerPublicIdentifier,
         signerAddress,
@@ -522,7 +525,7 @@ describe(testName, () => {
       const err = new ChainError("fail");
       getSwappedAmount.returns(Result.fail(err));
 
-      const result = await forwardTransferCreation(
+      const result = await forwarding.forwardTransferCreation(
         mocked.event,
         routerPublicIdentifier,
         signerAddress,
@@ -543,7 +546,7 @@ describe(testName, () => {
       const err = new ServerNodeServiceError(ServerNodeServiceError.reasons.InternalServerError, "", "", {});
       node.getStateChannelByParticipants.onFirstCall().resolves(Result.fail(err));
 
-      const result = await forwardTransferCreation(
+      const result = await forwarding.forwardTransferCreation(
         ctx.event,
         routerPublicIdentifier,
         signerAddress,
@@ -563,7 +566,7 @@ describe(testName, () => {
       const ctx = prepEnv();
       node.getStateChannelByParticipants.onFirstCall().resolves(Result.ok(undefined));
 
-      const result = await forwardTransferCreation(
+      const result = await forwarding.forwardTransferCreation(
         ctx.event,
         routerPublicIdentifier,
         signerAddress,
@@ -588,7 +591,7 @@ describe(testName, () => {
       const err = new ServerNodeServiceError(ServerNodeServiceError.reasons.InternalServerError, "", "", {});
       node.conditionalTransfer.onFirstCall().resolves(Result.fail(err));
 
-      const result = await forwardTransferCreation(
+      const result = await forwarding.forwardTransferCreation(
         ctx.event,
         routerPublicIdentifier,
         signerAddress,
@@ -620,5 +623,362 @@ describe(testName, () => {
     it("should work", async () => {});
   });
 
-  describe.skip("handleIsAlive", () => {});
+  describe("handleIsAlive", () => {
+    // constants
+    const channelAddress = mkAddress("0xccc");
+    const aliceIdentifier = mkPublicIdentifier("vectorAAA");
+    const bobIdentifier = mkPublicIdentifier("vectorBBB");
+    const chainId = 1337;
+    const skipCheckIn = undefined;
+    const routerPublicIdentifier = mkPublicIdentifier("vectorRRR");
+    const signerAddress = mkAddress("0xrrr");
+    const defaultData = {
+      channelAddress,
+      aliceIdentifier,
+      bobIdentifier,
+      chainId,
+      skipCheckIn,
+    };
+
+    // stubs
+    let handlePendingUpdates: Sinon.SinonStub;
+    let handleUnverifiedUpdates: Sinon.SinonStub;
+    let handleRouterDroppedTransfers: Sinon.SinonStub;
+    let nodeService: Sinon.SinonStubbedInstance<RestServerNodeService>;
+    let store: Sinon.SinonStubbedInstance<PrismaStore>;
+    let chainReader: Sinon.SinonStubbedInstance<VectorChainReader>;
+
+    // Sets up mocks needed for test (all of the)
+    const setupMocks = (data: Partial<IsAlivePayload> = {}): IsAlivePayload => {
+      handlePendingUpdates.resolves(Result.ok(undefined));
+      handleUnverifiedUpdates.resolves(Result.ok(undefined));
+      handleRouterDroppedTransfers.resolves(Result.ok(undefined));
+
+      const payload = {
+        ...defaultData,
+        ...data,
+      };
+      return payload;
+    };
+
+    beforeEach(async () => {
+      // Generate mocks
+      handlePendingUpdates = Sinon.stub(forwarding, "handlePendingUpdates");
+      handleUnverifiedUpdates = Sinon.stub(forwarding, "handleUnverifiedUpdates");
+      handleRouterDroppedTransfers = Sinon.stub(forwarding, "handleRouterDroppedTransfers");
+      nodeService = Sinon.createStubInstance(RestServerNodeService);
+      store = Sinon.createStubInstance(PrismaStore);
+      chainReader = Sinon.createStubInstance(VectorChainReader);
+    });
+
+    afterEach(() => {
+      Sinon.restore();
+      Sinon.reset();
+    });
+
+    it("should fail if handlePendingUpdates fails", async () => {
+      const payload = setupMocks();
+      handlePendingUpdates.resolves(
+        Result.fail(new CheckInError(CheckInError.reasons.UpdatesFailed, mkAddress("0xccc"))),
+      );
+
+      const result = await forwarding.handleIsAlive(
+        payload,
+        routerPublicIdentifier,
+        signerAddress,
+        nodeService as INodeService,
+        store,
+        chainReader as IVectorChainReader,
+        logger,
+      );
+      expect(result.isError).to.be.true;
+      expect(result.getError()?.message).to.be.eq(CheckInError.reasons.TasksFailed);
+      expect(result.getError()?.context.unverified).to.be.undefined;
+      expect(result.getError()?.context.pending.message).to.be.eq(CheckInError.reasons.UpdatesFailed);
+    });
+
+    it("should fail if handleUnverifiedUpdates fails", async () => {
+      const payload = setupMocks();
+      handleUnverifiedUpdates.resolves(
+        Result.fail(new CheckInError(CheckInError.reasons.UpdatesFailed, mkAddress("0xccc"))),
+      );
+
+      const result = await forwarding.handleIsAlive(
+        payload,
+        routerPublicIdentifier,
+        signerAddress,
+        nodeService as INodeService,
+        store,
+        chainReader as IVectorChainReader,
+        logger,
+      );
+      expect(result.isError).to.be.true;
+      expect(result.getError()?.message).to.be.eq(CheckInError.reasons.TasksFailed);
+      expect(result.getError()?.context.pending).to.be.undefined;
+      expect(result.getError()?.context.unverified.message).to.be.eq(CheckInError.reasons.UpdatesFailed);
+    });
+
+    it("should fail if handleRouterDroppedTransfers fails", async () => {
+      const payload = setupMocks();
+      handleRouterDroppedTransfers.resolves(
+        Result.fail(new CheckInError(CheckInError.reasons.UpdatesFailed, mkAddress("0xccc"))),
+      );
+
+      const result = await forwarding.handleIsAlive(
+        payload,
+        routerPublicIdentifier,
+        signerAddress,
+        nodeService as INodeService,
+        store,
+        chainReader as IVectorChainReader,
+        logger,
+      );
+      expect(result.isError).to.be.true;
+      expect(result.getError()?.message).to.be.eq(CheckInError.reasons.UpdatesFailed);
+    });
+
+    it("should do nothing if skipCheckIn flag included", async () => {
+      const payload = setupMocks({ skipCheckIn: true });
+      const result = await forwarding.handleIsAlive(
+        payload,
+        routerPublicIdentifier,
+        signerAddress,
+        nodeService as INodeService,
+        store,
+        chainReader as IVectorChainReader,
+        logger,
+      );
+      expect(result.isError).to.be.false;
+      expect(result.getValue()).to.be.undefined;
+      expect(handleRouterDroppedTransfers.callCount).to.be.eq(0);
+      expect(handleUnverifiedUpdates.callCount).to.be.eq(0);
+      expect(handlePendingUpdates.callCount).to.be.eq(0);
+    });
+
+    it("should work", async () => {
+      const payload = setupMocks();
+
+      const result = await forwarding.handleIsAlive(
+        payload,
+        routerPublicIdentifier,
+        signerAddress,
+        nodeService as INodeService,
+        store,
+        chainReader as IVectorChainReader,
+        logger,
+      );
+      expect(result.isError).to.be.false;
+      expect(result.getValue()).to.be.undefined;
+      expect(handleRouterDroppedTransfers.callCount).to.be.eq(1);
+      expect(handleUnverifiedUpdates.callCount).to.be.eq(1);
+      expect(handlePendingUpdates.callCount).to.be.eq(1);
+    });
+  });
+
+  describe.only("handlePendingUpdates", () => {
+    // constants
+    const channelAddress = mkAddress("0xccc");
+    const aliceIdentifier = mkPublicIdentifier("vectorAAA");
+    const bobIdentifier = mkPublicIdentifier("vectorBBB");
+    const chainId = 1337;
+    const skipCheckIn = undefined;
+    const routerPublicIdentifier = aliceIdentifier;
+    const signerAddress = mkAddress("0xrrr");
+    const defaultData = {
+      channelAddress,
+      aliceIdentifier,
+      bobIdentifier,
+      chainId,
+      skipCheckIn,
+    };
+
+    // stubs
+    let nodeService: Sinon.SinonStubbedInstance<RestServerNodeService>;
+    let store: Sinon.SinonStubbedInstance<PrismaStore>;
+    let chainReader: Sinon.SinonStubbedInstance<VectorChainReader>;
+    let transferWithCollateralization: Sinon.SinonStub;
+
+    const setupMocks = (
+      updateParams: Partial<NodeParams.ConditionalTransfer | NodeParams.ResolveTransfer> &
+        { type: RouterUpdateType }[] = [],
+      data: Partial<IsAlivePayload> = {},
+    ) => {
+      // Generate channel that matches payload
+      const { channel } = createTestChannelState(UpdateType.deposit, {
+        channelAddress: data.channelAddress ?? channelAddress,
+        aliceIdentifier: data.aliceIdentifier ?? aliceIdentifier,
+        bobIdentifier: data.bobIdentifier ?? bobIdentifier,
+        alice: signerAddress,
+        networkContext: {
+          chainId: data.chainId ?? chainId,
+        },
+      });
+      const payload = {
+        ...defaultData,
+        ...data,
+      };
+
+      // Set default to have once create update
+      const storedUpdates = updateParams.map((params) => {
+        const { type, ...overloads } = params;
+        const defaults =
+          type === RouterUpdateType.TRANSFER_CREATION
+            ? {
+                channelAddress: channel.channelAddress,
+                publicIdentifier: channel.aliceIdentifier,
+                amount: "1000",
+                assetId: mkAddress(),
+                type: TransferNames.HashlockTransfer,
+                details: { lockHash: getRandomBytes32() },
+              }
+            : {
+                transferId: getRandomBytes32(),
+                transferResolver: { preImage: getRandomBytes32() },
+                channelAddress: channel.channelAddress,
+                publicIdentifier: channel.aliceIdentifier,
+              };
+        const val: RouterStoredUpdate<typeof type> = {
+          id: getRandomBytes32(),
+          type,
+          status: RouterUpdateStatus.PENDING,
+          payload: {
+            ...defaults,
+            ...overloads,
+          },
+        };
+        return val;
+      });
+
+      // Set default mocked values
+      store.getQueuedUpdates.resolves(storedUpdates);
+      nodeService.getStateChannel.resolves(Result.ok(channel));
+      // NOTE: return value in Result from `transferWithCollateralization`
+      // and `nodeService.resolveTransfer` are not used. Error context is
+      // the only thing if failing (set in tests themselves)
+      transferWithCollateralization.resolves(Result.ok("Yay you did it"));
+      nodeService.resolveTransfer.resolves(
+        Result.ok({
+          channelAddress: channel.channelAddress,
+          transferId: getRandomBytes32(),
+          routingId: getRandomBytes32(),
+        }),
+      );
+      return { channel, storedUpdates, payload };
+    };
+
+    beforeEach(async () => {
+      // Generate mocks
+      nodeService = Sinon.createStubInstance(RestServerNodeService);
+      store = Sinon.createStubInstance(PrismaStore);
+      chainReader = Sinon.createStubInstance(VectorChainReader);
+      transferWithCollateralization = Sinon.stub(transferService, "transferWithCollateralization");
+    });
+
+    afterEach(() => {
+      Sinon.restore();
+      Sinon.reset();
+    });
+
+    it("should fail if store.getQueuedUpdates fails", async () => {
+      const { payload } = setupMocks();
+      store.getQueuedUpdates.rejects(new Error("fail"));
+      await expect(
+        forwarding.handlePendingUpdates(
+          payload,
+          routerPublicIdentifier,
+          nodeService as INodeService,
+          store,
+          chainReader as IVectorChainReader,
+          logger,
+        ),
+      ).rejectedWith("fail");
+    });
+
+    it("should fail if nodeService.getStateChannel fails", async () => {
+      const { payload } = setupMocks();
+      nodeService.getStateChannel.resolves(
+        Result.fail(new ServerNodeServiceError(ServerNodeServiceError.reasons.InternalServerError, "", "", {})),
+      );
+      const result = await forwarding.handlePendingUpdates(
+        payload,
+        routerPublicIdentifier,
+        nodeService as INodeService,
+        store,
+        chainReader as IVectorChainReader,
+        logger,
+      );
+      expect(result.isError).to.be.true;
+      expect(result.getError()?.message).to.be.eq(CheckInError.reasons.CouldNotGetChannel);
+    });
+
+    it("should fail if there is no channel in the store", async () => {
+      const { payload } = setupMocks();
+      nodeService.getStateChannel.resolves(Result.ok(undefined));
+      const result = await forwarding.handlePendingUpdates(
+        payload,
+        routerPublicIdentifier,
+        nodeService as INodeService,
+        store,
+        chainReader as IVectorChainReader,
+        logger,
+      );
+      expect(result.isError).to.be.true;
+      expect(result.getError()?.message).to.be.eq(CheckInError.reasons.CouldNotGetChannel);
+    });
+
+    it("should fail if store.setUpdateStatus fails", async () => {
+      const { payload } = setupMocks([{ type: RouterUpdateType.TRANSFER_RESOLUTION }]);
+      store.setUpdateStatus.rejects(new Error("fail"));
+      await expect(
+        forwarding.handlePendingUpdates(
+          payload,
+          routerPublicIdentifier,
+          nodeService as INodeService,
+          store,
+          chainReader as IVectorChainReader,
+          logger,
+        ),
+      ).rejectedWith("fail");
+    });
+
+    it("should handle a failed transfer creation", async () => {
+      const { payload, storedUpdates } = setupMocks([{ type: RouterUpdateType.TRANSFER_CREATION }]);
+      transferWithCollateralization.resolves(Result.fail(new ChainError("fail", { transferError: "fail" })));
+      const result = await forwarding.handlePendingUpdates(
+        payload,
+        routerPublicIdentifier,
+        nodeService as INodeService,
+        store,
+        chainReader as IVectorChainReader,
+        logger,
+      );
+      expect(result.isError).to.be.true;
+      expect(result.getError()?.message).to.be.eq(CheckInError.reasons.UpdatesFailed);
+      expect(store.setUpdateStatus.callCount).to.be.eq(2);
+      expect(store.setUpdateStatus.getCall(1).args).to.containSubset([storedUpdates[0].id, RouterUpdateStatus.FAILED]);
+    });
+
+    it("should handle a failed transfer resolution", async () => {
+      const { payload, storedUpdates } = setupMocks([{ type: RouterUpdateType.TRANSFER_RESOLUTION }]);
+      nodeService.resolveTransfer.resolves(Result.fail(new ChainError("fail", { transferError: "fail" }) as any));
+      const result = await forwarding.handlePendingUpdates(
+        payload,
+        routerPublicIdentifier,
+        nodeService as INodeService,
+        store,
+        chainReader as IVectorChainReader,
+        logger,
+      );
+      expect(result.isError).to.be.true;
+      expect(result.getError()?.message).to.be.eq(CheckInError.reasons.UpdatesFailed);
+      expect(nodeService.resolveTransfer.calledOnceWithExactly(storedUpdates[0].payload as any)).to.be.true;
+      expect(store.setUpdateStatus.callCount).to.be.eq(2);
+      expect(store.setUpdateStatus.getCall(1).args).to.containSubset([storedUpdates[0].id, RouterUpdateStatus.FAILED]);
+    });
+
+    it("should handle an unknown update type", async () => {});
+    it("should handle timeout errors and keep as pending for creation + resolution updates", async () => {});
+    it("should handle an array of pending updates, marking as succeeded and failed", async () => {});
+    it("should handle an array of all successful updates", async () => {});
+  });
 });
