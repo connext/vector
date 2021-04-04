@@ -1101,6 +1101,7 @@ export const handlePendingUpdates = async (
     if (type !== RouterUpdateType.TRANSFER_RESOLUTION) {
       logger.error({ update: routerUpdate }, "Unknown update type");
       await store.setUpdateStatus(routerUpdate.id, RouterUpdateStatus.FAILED, "Unknown update type");
+      erroredUpdates.push(routerUpdate);
       continue;
     }
     const resolveRes = await nodeService.resolveTransfer(payload as NodeParams.ResolveTransfer);
