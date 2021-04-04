@@ -264,10 +264,10 @@ describe(testName, () => {
       ]);
     });
 
-    it.only("should not submit cancelled withdrawals", async () => {
+    it("should not submit cancelled withdrawals", async () => {
       const { channel, transfer, commitment } = await prepEnv();
       store.getChannelStates.resolves([channel]);
-      transfer.transferResolver.responderSignature = mkSig("0x0");
+      transfer.transferResolver = { responderSignature: mkSig("0x0") };
       store.getUnsubmittedWithdrawals.resolves([{ commitment, transfer }]);
       chainService.getGasPrice.resolves(Result.ok(parseUnits("100", "gwei")));
 
