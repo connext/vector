@@ -197,12 +197,6 @@ export class EthereumChainService extends EthereumChainReader implements IVector
             return this.sendDepositATx(channelState, amount, AddressZero, gasPrice);
           }
           // otherwise deploy with deposit
-          const data = new Interface(ChannelFactory.abi).encodeFunctionData("createChannelAndDepositAlice", [
-            channelState.alice,
-            channelState.bob,
-            assetId,
-            amount,
-          ]);
           return channelFactory.createChannelAndDepositAlice(channelState.alice, channelState.bob, assetId, amount, {
             value: amount,
             gasPrice,
@@ -665,7 +659,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
     }
   }
 
-  private async approveTokens(
+  public async approveTokens(
     channelAddress: string,
     spender: string,
     owner: string,

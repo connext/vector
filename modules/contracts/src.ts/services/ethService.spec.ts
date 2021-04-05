@@ -13,12 +13,13 @@ import {
   getBalanceForAssetId,
   getTestLoggers,
   MemoryStoreService,
+  mkAddress,
   mkHash,
 } from "@connext/vector-utils";
 import { AddressZero, One, Zero } from "@ethersproject/constants";
-import { JsonRpcProvider } from "@ethersproject/providers";
+import { JsonRpcProvider, TransactionReceipt } from "@ethersproject/providers";
 import { BigNumber } from "ethers";
-import { restore, reset, createStubInstance, SinonStubbedInstance, stub } from "sinon";
+import { restore, reset, createStubInstance, SinonStubbedInstance, stub, SinonStub } from "sinon";
 
 import { EthereumChainService } from "./ethService";
 
@@ -27,12 +28,35 @@ let signer: SinonStubbedInstance<IChannelSigner>;
 let ethService: EthereumChainService;
 let provider1337: SinonStubbedInstance<JsonRpcProvider>;
 let provider1338: SinonStubbedInstance<JsonRpcProvider>;
+let sendTxWithRetriesMock: SinonStub;
+let approveMock: SinonStub;
 
-const assertResult = (result: Result<any>, isError: boolean, errorMessage?: string) => {
+const assertResult = (result: Result<any>, isError: boolean, unwrappedVal?: string) => {
   if (isError) {
     expect(result.isError).to.be.true;
-    expect(result.getError()?.message).to.be.eq(errorMessage);
+    if (unwrappedVal) {
+      expect(result.getError()?.message).to.be.eq(unwrappedVal);
+    }
+  } else {
+    expect(result.isError).to.be.false;
+    if (unwrappedVal) {
+      expect(result.getValue()).to.be.eq(unwrappedVal);
+    }
   }
+};
+
+const txResponse: TransactionResponseWithResult = {
+  chainId: 1337,
+  completed: () => Promise.resolve(Result.ok({} as any)),
+  confirmations: 1,
+  data: "0x",
+  from: AddressZero,
+  gasLimit: One,
+  gasPrice: One,
+  hash: mkHash(),
+  nonce: 1,
+  value: Zero,
+  wait: () => Promise.resolve({} as TransactionReceipt),
 };
 
 const { log } = getTestLoggers("ethService");
@@ -54,21 +78,11 @@ describe("ethService", () => {
       log,
     );
     stub(ethService, "getCode").resolves(Result.ok("0x"));
-    stub(ethService, "sendTxWithRetries").resolves(
-      Result.ok({
-        chainId: 1337,
-        completed: () => Promise.resolve(Result.ok({} as any)),
-        confirmations: 1,
-        data: "0x",
-        from: AddressZero,
-        gasLimit: One,
-        gasPrice: One,
-        hash: mkHash(),
-        nonce: 1,
-        value: Zero,
-        wait: () => Promise.resolve({}),
-      } as TransactionResponseWithResult),
-    );
+    sendTxWithRetriesMock = stub(ethService, "sendTxWithRetries");
+    approveMock = stub(ethService, "approveTokens");
+    approveMock.resolves(Result.ok(txResponse));
+    sendTxWithRetriesMock.resolves(Result.ok(txResponse));
+    stub(ethService, "getOnchainBalance").resolves(Result.ok(BigNumber.from("100")));
   });
 
   afterEach(() => {
@@ -141,6 +155,35 @@ describe("ethService", () => {
         assetId: AddressZero,
       });
       assertResult(result, true, ChainError.reasons.NotEnoughFunds);
+    });
+
+    it("calls sendDepositATx with native asset if eth deposit + multisig deployed", async () => {
+      const result = await ethService.sendDeployChannelTx(channelState, One, {
+        amount: "1",
+        assetId: AddressZero,
+      });
+      assertResult(result, false);
+      const call = sendTxWithRetriesMock.getCall(0);
+      expect(call.args[0]).to.eq(channelState.channelAddress);
+      expect(call.args[1]).to.eq(channelState.networkContext.chainId);
+      expect(call.args[2]).to.eq("deployWithDepositAlice");
+    });
+
+    it.only("calls sendDepositATx with tokens if eth deposit + multisig deployed", async () => {
+      const result = await ethService.sendDeployChannelTx(channelState, One, {
+        amount: "1",
+        assetId: mkAddress("0xa"),
+      });
+      assertResult(result, false);
+      const approveCall = approveMock.getCall(0);
+      console.log("approveCall: ", approveCall);
+      expect(approveCall.args[0]).to.eq(channelState.channelAddress);
+      expect(approveCall.args[1]).to.eq(channelState.networkContext.chainId);
+      expect(approveCall.args[2]).to.eq("deployWithDepositAlice");
+      const call = sendTxWithRetriesMock.getCall(0);
+      expect(call.args[0]).to.eq(channelState.channelAddress);
+      expect(call.args[1]).to.eq(channelState.networkContext.chainId);
+      expect(call.args[2]).to.eq("deployWithDepositAlice");
     });
   });
 });
