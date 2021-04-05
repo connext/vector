@@ -1554,4 +1554,47 @@ describe(testName, () => {
       ]);
     });
   });
+
+  describe("handleRouterDroppedTransfers", () => {
+    // constants
+    const channelAddress = mkAddress("0xccc");
+    const aliceIdentifier = mkPublicIdentifier("vectorAAA");
+    const bobIdentifier = mkPublicIdentifier("vectorBBB");
+    const chainId = 1337;
+    const skipCheckIn = undefined;
+    const routerPublicIdentifier = mkPublicIdentifier("vectorRRR");
+    const signerAddress = mkAddress("0xrrr");
+    const defaultData = {
+      channelAddress,
+      aliceIdentifier,
+      bobIdentifier,
+      chainId,
+      skipCheckIn,
+    };
+
+    // stubs
+    let handlePendingUpdates: Sinon.SinonStub;
+    let handleUnverifiedUpdates: Sinon.SinonStub;
+    let handleRouterDroppedTransfers: Sinon.SinonStub;
+    let nodeService: Sinon.SinonStubbedInstance<RestServerNodeService>;
+    let store: Sinon.SinonStubbedInstance<PrismaStore>;
+    let chainReader: Sinon.SinonStubbedInstance<VectorChainReader>;
+
+    const setupMocks = () => {};
+
+    beforeEach(async () => {
+      // Generate mocks
+      handlePendingUpdates = Sinon.stub(forwarding, "handlePendingUpdates");
+      handleUnverifiedUpdates = Sinon.stub(forwarding, "handleUnverifiedUpdates");
+      handleRouterDroppedTransfers = Sinon.stub(forwarding, "handleRouterDroppedTransfers");
+      nodeService = Sinon.createStubInstance(RestServerNodeService);
+      store = Sinon.createStubInstance(PrismaStore);
+      chainReader = Sinon.createStubInstance(VectorChainReader);
+    });
+
+    afterEach(() => {
+      Sinon.restore();
+      Sinon.reset();
+    });
+  });
 });
