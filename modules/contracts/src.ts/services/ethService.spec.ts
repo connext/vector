@@ -1,164 +1,146 @@
-import { FullChannelState, FullTransferState, HashlockTransferStateEncoding } from "@connext/vector-types";
+import {
+  ChainError,
+  FullChannelState,
+  IChainServiceStore,
+  IChannelSigner,
+  Result,
+  TransactionResponseWithResult,
+} from "@connext/vector-types";
 import {
   ChannelSigner,
-  hashChannelCommitment,
-  createlockHash,
-  createTestChannelStateWithSigners,
-  createTestFullHashlockTransferState,
+  createTestChannelState,
   expect,
-  getRandomAddress,
-  getRandomBytes32,
-  hashCoreTransferState,
-  hashTransferState,
+  getBalanceForAssetId,
+  getTestLoggers,
   MemoryStoreService,
+  mkHash,
 } from "@connext/vector-utils";
-import { AddressZero } from "@ethersproject/constants";
-import { Contract } from "@ethersproject/contracts";
-import { keccak256 } from "@ethersproject/keccak256";
-import { parseEther } from "@ethersproject/units";
-import { BigNumber } from "@ethersproject/bignumber";
-import { deployments } from "hardhat";
-import { MerkleTree } from "merkletreejs";
-
-import { alice, bob, chainIdReq, logger, provider, rando } from "../constants";
-import { advanceBlocktime, getContract, createChannel } from "../utils";
+import { AddressZero, One, Zero } from "@ethersproject/constants";
+import { JsonRpcProvider } from "@ethersproject/providers";
+import { BigNumber } from "ethers";
+import { restore, reset, createStubInstance, SinonStubbedInstance, stub } from "sinon";
 
 import { EthereumChainService } from "./ethService";
 
-describe("EthereumChainService", function () {
-  this.timeout(120_000);
-  const aliceSigner = new ChannelSigner(alice.privateKey);
-  const bobSigner = new ChannelSigner(bob.privateKey);
-  let channel: Contract;
-  let channelFactory: Contract;
-  let transferDefinition: Contract;
-  let chainService: EthereumChainService;
-  let channelState: FullChannelState;
-  let transferState: FullTransferState;
-  let token: Contract;
-  let chainId: number;
+let storeMock: SinonStubbedInstance<IChainServiceStore>;
+let signer: SinonStubbedInstance<IChannelSigner>;
+let ethService: EthereumChainService;
+let provider1337: SinonStubbedInstance<JsonRpcProvider>;
+let provider1338: SinonStubbedInstance<JsonRpcProvider>;
 
-  beforeEach(async () => {
-    await deployments.fixture(); // Start w fresh deployments
-    chainId = await chainIdReq;
-    channel = await createChannel();
-    channelFactory = await getContract("ChannelFactory", alice);
-    chainService = new EthereumChainService(
-      new MemoryStoreService(),
-      { [chainId]: provider },
-      alice.privateKey,
-      logger,
-    );
-    token = await getContract("TestToken", alice);
-    transferDefinition = await getContract("HashlockTransfer", alice);
-    await (await token.mint(alice.address, parseEther("1"))).wait();
-    await (await token.mint(bob.address, parseEther("1"))).wait();
-    const preImage = getRandomBytes32();
-    const state = {
-      lockHash: createlockHash(preImage),
-      expiry: "0",
-    };
-    transferState = createTestFullHashlockTransferState({
-      chainId,
-      initiator: alice.address,
-      responder: bob.address,
-      transferDefinition: transferDefinition.address,
-      assetId: AddressZero,
-      channelAddress: channel.address,
-      // use random receiver addr to verify transfer when bob must dispute
-      balance: { to: [alice.address, getRandomAddress()], amount: ["7", "0"] },
-      transferState: state,
-      transferResolver: { preImage },
-      transferTimeout: "2",
-      initialStateHash: hashTransferState(state, HashlockTransferStateEncoding),
-    });
+const assertResult = (result: Result<any>, isError: boolean, errorMessage?: string) => {
+  if (isError) {
+    expect(result.isError).to.be.true;
+    expect(result.getError()?.message).to.be.eq(errorMessage);
+  }
+};
 
-    channelState = createTestChannelStateWithSigners([aliceSigner, bobSigner], "create", {
-      channelAddress: channel.address,
-      assetIds: [AddressZero],
-      balances: [{ to: [alice.address, bob.address], amount: ["17", "45"] }],
-      processedDepositsA: ["0"],
-      processedDepositsB: ["62"],
-      timeout: "20",
-      nonce: 3,
-      merkleRoot: new MerkleTree([hashCoreTransferState(transferState)], keccak256).getHexRoot(),
-    });
-    const channelHash = hashChannelCommitment(channelState);
-    channelState.latestUpdate.aliceSignature = await aliceSigner.signMessage(channelHash);
-    channelState.latestUpdate.bobSignature = await bobSigner.signMessage(channelHash);
-  });
-
-  it("should be created without error", async () => {
-    expect(channel.address).to.be.ok;
-    expect(chainService).to.be.ok;
-  });
-
-  it("should run sendDepositTx without error", async () => {
-    const res = await chainService.sendDepositTx(channelState, alice.address, "10", AddressZero);
-    expect(res.getValue()).to.be.ok;
-  });
-
-  it("should run sendWithdrawTx without error", async () => {
-    const res = await chainService.sendWithdrawTx(channelState, {
-      to: bob.address,
-      data: "0x",
-      value: "0x01",
-    });
-    expect(res.getValue()).to.be.ok;
-  });
-
-  // Need to setup a channel between alice & rando else it'll error w "channel already deployed"
-  it("should run sendDeployChannelTx without error", async () => {
-    const channelAddress = (
-      await chainService.getChannelAddress(alice.address, rando.address, channelFactory.address, chainId)
-    ).getValue();
-    const res = await chainService.sendDeployChannelTx(
+const { log } = getTestLoggers("ethService");
+describe("ethService", () => {
+  beforeEach(() => {
+    storeMock = createStubInstance(MemoryStoreService);
+    signer = createStubInstance(ChannelSigner);
+    provider1337 = createStubInstance(JsonRpcProvider);
+    provider1338 = createStubInstance(JsonRpcProvider);
+    signer.connect.returns(signer as any);
+    (signer as any)._isSigner = true;
+    ethService = new EthereumChainService(
+      storeMock,
       {
-        ...channelState,
-        bob: rando.address,
-        channelAddress,
+        1337: provider1337,
+        1338: provider1338,
       },
-      BigNumber.from(1000),
-      {
-        amount: "0x01",
+      signer,
+      log,
+    );
+    stub(ethService, "getCode").resolves(Result.ok("0x"));
+    stub(ethService, "sendTxWithRetries").resolves(
+      Result.ok({
+        chainId: 1337,
+        completed: () => Promise.resolve(Result.ok({} as any)),
+        confirmations: 1,
+        data: "0x",
+        from: AddressZero,
+        gasLimit: One,
+        gasPrice: One,
+        hash: mkHash(),
+        nonce: 1,
+        value: Zero,
+        wait: () => Promise.resolve({}),
+      } as TransactionResponseWithResult),
+    );
+  });
+
+  afterEach(() => {
+    restore();
+    reset();
+  });
+
+  describe("sendDeployChannelTx", () => {
+    let channelState: FullChannelState;
+
+    beforeEach(() => {
+      const test = createTestChannelState("create");
+      channelState = test.channel;
+      channelState.networkContext.chainId = 1337;
+      signer.getAddress.resolves(channelState.alice);
+    });
+
+    it("errors if cannot get a signer", async () => {
+      channelState.networkContext.chainId = 1234;
+      const result = await ethService.sendDeployChannelTx(channelState, One);
+      assertResult(result, true, ChainError.reasons.SignerNotFound);
+    });
+
+    it("errors if multisig code cannot be retrieved", async () => {
+      stub(ethService, "getCode").resolves(Result.fail(new ChainError("getCode error")));
+      const result = await ethService.sendDeployChannelTx(channelState, One);
+      assertResult(result, true, "getCode error");
+    });
+
+    it("errors if multisig is already deployed", async () => {
+      stub(ethService, "getCode").resolves(Result.ok(mkHash("0xabc")));
+      const result = await ethService.sendDeployChannelTx(channelState, One);
+      assertResult(result, true, ChainError.reasons.MultisigDeployed);
+    });
+
+    it("errors if multisig deployment fails without deposit", async () => {
+      stub(ethService, "sendTxWithRetries").resolves(Result.fail(new ChainError(ChainError.reasons.TxReverted)));
+      const result = await ethService.sendDeployChannelTx(channelState, One);
+      assertResult(result, true, ChainError.reasons.TxReverted);
+    });
+
+    it("errors if multisig deployment returns nothing", async () => {
+      stub(ethService, "sendTxWithRetries").resolves(Result.ok(undefined));
+      const result = await ethService.sendDeployChannelTx(channelState, One);
+      assertResult(result, true, ChainError.reasons.MultisigDeployed);
+    });
+
+    it("errors if deposit and is not alice", async () => {
+      signer.getAddress.resolves(channelState.bob);
+      const result = await ethService.sendDeployChannelTx(channelState, One, {
+        amount: "1",
         assetId: AddressZero,
-      },
-    );
-    expect(res.getValue()).to.be.ok;
-  });
+      });
+      assertResult(result, true, ChainError.reasons.FailedToDeploy);
+    });
 
-  it("should run sendDisputeChannelTx without error", async () => {
-    const res = await chainService.sendDisputeChannelTx(channelState);
-    expect(res.getValue()).to.be.ok;
-  });
+    it("errors if deposit and cannot get onchain balance", async () => {
+      stub(ethService, "getOnchainBalance").resolves(Result.fail(new ChainError(ChainError.reasons.TxNotFound)));
+      const result = await ethService.sendDeployChannelTx(channelState, One, {
+        amount: "1",
+        assetId: AddressZero,
+      });
+      assertResult(result, true, ChainError.reasons.TxNotFound);
+    });
 
-  it("should run sendDefundChannelTx without error", async () => {
-    await chainService.sendDisputeChannelTx(channelState);
-    await advanceBlocktime(BigNumber.from(channelState.timeout).toNumber());
-    const res = await chainService.sendDefundChannelTx(channelState);
-    expect(res.getValue()).to.be.ok;
-  });
-
-  it("should run sendDisputeTransferTx without error", async () => {
-    await chainService.sendDisputeChannelTx(channelState);
-    await advanceBlocktime(BigNumber.from(channelState.timeout).toNumber());
-    const res = await chainService.sendDisputeTransferTx(transferState.transferId, [transferState]);
-    expect(res.getValue()).to.be.ok;
-  });
-
-  // Fails with INVALID_MSG_SENDER
-  it("should run sendDefundTransferTx without error", async () => {
-    await chainService.sendDisputeChannelTx(channelState);
-    await advanceBlocktime(BigNumber.from(channelState.timeout).toNumber());
-    await chainService.sendDisputeTransferTx(transferState.transferId, [transferState]);
-    // Bob is the one who will defund, create a chainService for him to do so
-    const bobChainService = new EthereumChainService(
-      new MemoryStoreService(),
-      { [chainId]: provider },
-      bob.privateKey,
-      logger,
-    );
-    const res = await bobChainService.sendDefundTransferTx(transferState);
-    expect(res.getValue()).to.be.ok;
+    it("errors if deposit and not enough onchain balance", async () => {
+      stub(ethService, "getOnchainBalance").resolves(Result.ok(BigNumber.from("9")));
+      const result = await ethService.sendDeployChannelTx(channelState, One, {
+        amount: "10",
+        assetId: AddressZero,
+      });
+      assertResult(result, true, ChainError.reasons.NotEnoughFunds);
+    });
   });
 });

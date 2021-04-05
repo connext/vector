@@ -512,8 +512,8 @@ export class EthereumChainService extends EthereumChainReader implements IVector
   }
 
   ////////////////////////////
-  /// PRIVATE METHODS
-  private async sendTxWithRetries(
+  /// INTERNAL METHODS
+  public async sendTxWithRetries(
     channelAddress: string,
     chainId: number,
     reason: TransactionReason,
