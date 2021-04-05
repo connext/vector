@@ -28,6 +28,7 @@ import {
   getTestLoggers,
   encodeTransferResolver,
   ServerNodeServiceError,
+  createTestFullHashlockTransferState,
 } from "@connext/vector-utils";
 import { AddressZero, HashZero } from "@ethersproject/constants";
 import { BigNumber } from "@ethersproject/bignumber";
@@ -772,6 +773,489 @@ describe(testName, () => {
       expect(handleRouterDroppedTransfers.callCount).to.be.eq(1);
       expect(handleUnverifiedUpdates.callCount).to.be.eq(1);
       expect(handlePendingUpdates.callCount).to.be.eq(1);
+    });
+  });
+
+  describe("handleUnverifiedUpdates", () => {
+    // constants
+    const channelAddress = mkAddress("0xccc");
+    const aliceIdentifier = mkPublicIdentifier("vectorRRRR");
+    const bobIdentifier = mkPublicIdentifier("vectorBBB");
+    const chainId = 1337;
+    const skipCheckIn = undefined;
+    const routerPublicIdentifier = aliceIdentifier;
+    const signerAddress = mkAddress("0xrrr");
+    const defaultData = {
+      channelAddress,
+      aliceIdentifier,
+      bobIdentifier,
+      chainId,
+      skipCheckIn,
+    };
+
+    // stubs
+    let nodeService: Sinon.SinonStubbedInstance<RestServerNodeService>;
+    let store: Sinon.SinonStubbedInstance<PrismaStore>;
+    let chainReader: Sinon.SinonStubbedInstance<VectorChainReader>;
+    let transferWithCollateralization: Sinon.SinonStub;
+    let cancelCreatedTransfer: Sinon.SinonStub;
+
+    const setupMocks = (
+      receiverInstalled: boolean = false,
+      data: Partial<IsAlivePayload> = {},
+      numberOfUpdates: number = 1,
+    ) => {
+      // Generate channel that matches payload
+      const { channel } = createTestChannelState(UpdateType.deposit, {
+        channelAddress: data.channelAddress ?? channelAddress,
+        aliceIdentifier: data.aliceIdentifier ?? aliceIdentifier,
+        bobIdentifier: data.bobIdentifier ?? bobIdentifier,
+        alice: signerAddress,
+        networkContext: {
+          chainId: data.chainId ?? chainId,
+        },
+      });
+      const payload = {
+        ...defaultData,
+        ...data,
+      };
+
+      // Set default to have once create update
+      const storedUpdates = Array(numberOfUpdates)
+        .fill(0)
+        .map((_) => {
+          const val: RouterStoredUpdate<typeof RouterUpdateType.TRANSFER_CREATION> = {
+            id: getRandomBytes32(),
+            type: RouterUpdateType.TRANSFER_CREATION,
+            status: RouterUpdateStatus.UNVERIFIED,
+            payload: {
+              channelAddress: channel.channelAddress,
+              publicIdentifier: channel.aliceIdentifier,
+              amount: "1000",
+              assetId: mkAddress(),
+              type: TransferNames.HashlockTransfer,
+              details: { lockHash: getRandomBytes32() },
+              meta: { routingId: getRandomBytes32() },
+            },
+          };
+          return val;
+        });
+
+      // Set default mocked values
+      store.getQueuedUpdates.resolves(storedUpdates);
+      nodeService.getStateChannel.resolves(Result.ok(channel));
+      // NOTE: return value in Result from `transferWithCollateralization`
+      // and `nodeService.resolveTransfer` are not used. Error context is
+      // the only thing if failing (set in tests themselves)
+      nodeService.reconcileDeposit.resolves(Result.ok({ channelAddress: channel.channelAddress }));
+      const transfers = [
+        createTestFullHashlockTransferState({
+          channelAddress: channel.channelAddress,
+          responderIdentifier: routerPublicIdentifier,
+        }),
+      ];
+      nodeService.getTransfersByRoutingId.resolves(
+        Result.ok(
+          receiverInstalled
+            ? [
+                ...transfers,
+                createTestFullHashlockTransferState({
+                  channelAddress: mkAddress("0xccc22222"),
+                  initiatorIdentifier: routerPublicIdentifier,
+                }),
+              ]
+            : (transfers as any),
+        ),
+      );
+      transferWithCollateralization.resolves(Result.ok("Yay you did it"));
+      cancelCreatedTransfer.resolves(Result.ok("You did it again, superstar!"));
+      return { channel, storedUpdates, payload };
+    };
+
+    beforeEach(async () => {
+      // Generate mocks
+      nodeService = Sinon.createStubInstance(RestServerNodeService);
+      store = Sinon.createStubInstance(PrismaStore);
+      chainReader = Sinon.createStubInstance(VectorChainReader);
+      transferWithCollateralization = Sinon.stub(transferService, "transferWithCollateralization");
+      cancelCreatedTransfer = Sinon.stub(transferService, "cancelCreatedTransfer");
+    });
+
+    afterEach(() => {
+      Sinon.restore();
+      Sinon.reset();
+    });
+
+    it("should fail if it fails to get unverified updates", async () => {
+      const { payload } = setupMocks();
+      store.getQueuedUpdates.rejects(new Error("fail"));
+      await expect(
+        forwarding.handleUnverifiedUpdates(
+          payload,
+          routerPublicIdentifier,
+          nodeService as INodeService,
+          store,
+          chainReader as IVectorChainReader,
+          logger,
+        ),
+      ).rejectedWith("fail");
+    });
+
+    it("should fail if it fails to get channel", async () => {
+      const { payload } = setupMocks();
+      nodeService.getStateChannel.resolves(
+        Result.fail(new ServerNodeServiceError(ServerNodeServiceError.reasons.InternalServerError, "", "", {})),
+      );
+      const result = await forwarding.handlePendingUpdates(
+        payload,
+        routerPublicIdentifier,
+        nodeService as INodeService,
+        store,
+        chainReader as IVectorChainReader,
+        logger,
+      );
+      expect(result.isError).to.be.true;
+      expect(result.getError()?.message).to.be.eq(CheckInError.reasons.CouldNotGetChannel);
+    });
+
+    it("should fail if channel is undefined", async () => {
+      const { payload } = setupMocks();
+      nodeService.getStateChannel.resolves(Result.ok(undefined));
+      const result = await forwarding.handleUnverifiedUpdates(
+        payload,
+        routerPublicIdentifier,
+        nodeService as INodeService,
+        store,
+        chainReader as IVectorChainReader,
+        logger,
+      );
+      expect(result.isError).to.be.true;
+      expect(result.getError()?.message).to.be.eq(CheckInError.reasons.CouldNotGetChannel);
+    });
+
+    it("should handle updates if they are non-create updates", async () => {
+      const { payload, storedUpdates } = setupMocks();
+      store.getQueuedUpdates.resolves([{ ...storedUpdates[0], type: RouterUpdateType.TRANSFER_RESOLUTION }]);
+      const result = await forwarding.handleUnverifiedUpdates(
+        payload,
+        routerPublicIdentifier,
+        nodeService as INodeService,
+        store,
+        chainReader as IVectorChainReader,
+        logger,
+      );
+      expect(result.isError).to.be.true;
+      expect(result.getError()?.message).to.be.eq(CheckInError.reasons.UpdatesFailed);
+      expect(store.setUpdateStatus.callCount).to.be.eq(1);
+      expect(store.setUpdateStatus.getCall(0).args).to.be.deep.eq([
+        storedUpdates[0].id,
+        RouterUpdateStatus.FAILED,
+        "Can't verify non-create updates",
+      ]);
+    });
+
+    it("should handle updates if reconciling deposits fail", async () => {
+      const { payload, storedUpdates } = setupMocks();
+      nodeService.reconcileDeposit.resolves(
+        Result.fail(new ServerNodeServiceError(ServerNodeServiceError.reasons.Timeout, "", "", {})),
+      );
+      const result = await forwarding.handleUnverifiedUpdates(
+        payload,
+        routerPublicIdentifier,
+        nodeService as INodeService,
+        store,
+        chainReader as IVectorChainReader,
+        logger,
+      );
+      expect(result.isError).to.be.true;
+      expect(result.getError()?.message).to.be.eq(CheckInError.reasons.UpdatesFailed);
+      expect(store.setUpdateStatus.callCount).to.be.eq(2);
+      expect(store.setUpdateStatus.getCall(1).args).to.be.deep.eq([
+        storedUpdates[0].id,
+        RouterUpdateStatus.FAILED,
+        "Could not reconcile deposit",
+      ]);
+    });
+
+    it("should handle updates if there is no routingId", async () => {
+      const { payload, storedUpdates } = setupMocks();
+      store.getQueuedUpdates.resolves([{ ...storedUpdates[0], payload: { ...storedUpdates[0].payload, meta: {} } }]);
+      const result = await forwarding.handleUnverifiedUpdates(
+        payload,
+        routerPublicIdentifier,
+        nodeService as INodeService,
+        store,
+        chainReader as IVectorChainReader,
+        logger,
+      );
+      expect(result.isError).to.be.true;
+      expect(result.getError()?.message).to.be.eq(CheckInError.reasons.UpdatesFailed);
+      expect(store.setUpdateStatus.callCount).to.be.eq(2);
+      expect(store.setUpdateStatus.getCall(1).args).to.be.deep.eq([
+        storedUpdates[0].id,
+        RouterUpdateStatus.FAILED,
+        "No routingId in update.payload.meta",
+      ]);
+    });
+
+    it("should handle updates if it cannot get transfers by routing id", async () => {
+      const { payload, storedUpdates } = setupMocks();
+      nodeService.getTransfersByRoutingId.resolves(
+        Result.fail(new ServerNodeServiceError(ServerNodeServiceError.reasons.Timeout, "", "", {})),
+      );
+      const result = await forwarding.handleUnverifiedUpdates(
+        payload,
+        routerPublicIdentifier,
+        nodeService as INodeService,
+        store,
+        chainReader as IVectorChainReader,
+        logger,
+      );
+      expect(result.isError).to.be.true;
+      expect(result.getError()?.message).to.be.eq(CheckInError.reasons.UpdatesFailed);
+      expect(store.setUpdateStatus.callCount).to.be.eq(2);
+      expect(store.setUpdateStatus.getCall(1).args).to.be.deep.eq([
+        storedUpdates[0].id,
+        RouterUpdateStatus.FAILED,
+        "Could not get transfers by routingId",
+      ]);
+    });
+
+    it("should handle case where receiver has already installed the transfer", async () => {
+      const { payload, storedUpdates } = setupMocks(true);
+      const result = await forwarding.handleUnverifiedUpdates(
+        payload,
+        routerPublicIdentifier,
+        nodeService as INodeService,
+        store,
+        chainReader as IVectorChainReader,
+        logger,
+      );
+      expect(result.isError).to.be.false;
+      expect(result.getValue()).to.be.undefined;
+      expect(store.setUpdateStatus.callCount).to.be.eq(2);
+      expect(store.setUpdateStatus.getCall(1).args).to.be.deep.eq([
+        storedUpdates[0].id,
+        RouterUpdateStatus.COMPLETE,
+        "Update verified: receiver installed transfer",
+      ]);
+    });
+
+    it("should handle updates where requireOnline == false (attempts to transfer successfully)", async () => {
+      const { payload, storedUpdates } = setupMocks();
+      const result = await forwarding.handleUnverifiedUpdates(
+        payload,
+        routerPublicIdentifier,
+        nodeService as INodeService,
+        store,
+        chainReader as IVectorChainReader,
+        logger,
+      );
+      expect(result.isError).to.be.false;
+      expect(result.getValue()).to.be.undefined;
+      expect(store.setUpdateStatus.callCount).to.be.eq(2);
+      expect(store.setUpdateStatus.getCall(1).args).to.be.deep.eq([
+        storedUpdates[0].id,
+        RouterUpdateStatus.COMPLETE,
+        "Update verified: receiver transfer created",
+      ]);
+    });
+
+    it("should handle updates where requireOnline == false and attempt to transfer fails w/o timeout error (update failed)", async () => {
+      const { payload, storedUpdates } = setupMocks();
+      transferWithCollateralization.resolves(
+        Result.fail(new ServerNodeServiceError(ServerNodeServiceError.reasons.InternalServerError, "", "", {})),
+      );
+      const result = await forwarding.handleUnverifiedUpdates(
+        payload,
+        routerPublicIdentifier,
+        nodeService as INodeService,
+        store,
+        chainReader as IVectorChainReader,
+        logger,
+      );
+      expect(result.isError).to.be.true;
+      expect(result.getError()?.message).to.be.eq(CheckInError.reasons.UpdatesFailed);
+      expect(store.setUpdateStatus.callCount).to.be.eq(2);
+      expect(store.setUpdateStatus.getCall(1).args).to.be.deep.eq([
+        storedUpdates[0].id,
+        RouterUpdateStatus.FAILED,
+        "Failed to create with receiver",
+      ]);
+    });
+
+    it("should handle updates where requireOnline == false and attempt to transfer fails w/timeout error (update now pending)", async () => {
+      const { payload, storedUpdates } = setupMocks();
+      transferWithCollateralization.resolves(
+        Result.fail(
+          new ServerNodeServiceError(
+            ServerNodeServiceError.reasons.Timeout,
+            "",
+            "",
+            {},
+            { transferError: ServerNodeServiceError.reasons.Timeout },
+          ),
+        ),
+      );
+      const result = await forwarding.handleUnverifiedUpdates(
+        payload,
+        routerPublicIdentifier,
+        nodeService as INodeService,
+        store,
+        chainReader as IVectorChainReader,
+        logger,
+      );
+      expect(result.isError).to.be.false;
+      expect(result.getValue()).to.be.undefined;
+      expect(store.setUpdateStatus.callCount).to.be.eq(2);
+      expect(store.setUpdateStatus.getCall(1).args).to.be.deep.eq([
+        storedUpdates[0].id,
+        RouterUpdateStatus.PENDING,
+        ServerNodeServiceError.reasons.Timeout,
+      ]);
+    });
+
+    it("should handle updates where requireOnline == true and there is no sender transfer", async () => {
+      const { payload, storedUpdates } = setupMocks();
+      storedUpdates[0].payload.meta = { routingId: getRandomBytes32(), requireOnline: true };
+      store.getQueuedUpdates.resolves(storedUpdates);
+      nodeService.getTransfersByRoutingId.resolves(Result.ok([]));
+      const result = await forwarding.handleUnverifiedUpdates(
+        payload,
+        routerPublicIdentifier,
+        nodeService as INodeService,
+        store,
+        chainReader as IVectorChainReader,
+        logger,
+      );
+      expect(result.isError).to.be.true;
+      expect(result.getError()?.message).to.be.eq(CheckInError.reasons.UpdatesFailed);
+      expect(store.setUpdateStatus.callCount).to.be.eq(2);
+      expect(store.setUpdateStatus.getCall(1).args).to.be.deep.eq([
+        storedUpdates[0].id,
+        RouterUpdateStatus.FAILED,
+        "No sender transfer to cancel",
+      ]);
+    });
+
+    it("should handle updates where requireOnline == true (attempts to cancel transfer, but fails)", async () => {
+      const { payload, storedUpdates } = setupMocks();
+      storedUpdates[0].payload.meta = { routingId: getRandomBytes32(), requireOnline: true };
+      store.getQueuedUpdates.resolves(storedUpdates);
+      cancelCreatedTransfer.resolves(
+        Result.fail(new ServerNodeServiceError(ServerNodeServiceError.reasons.InternalServerError, "", "", {})),
+      );
+      const result = await forwarding.handleUnverifiedUpdates(
+        payload,
+        routerPublicIdentifier,
+        nodeService as INodeService,
+        store,
+        chainReader as IVectorChainReader,
+        logger,
+      );
+      expect(result.isError).to.be.false;
+      expect(result.getValue()).to.be.undefined;
+      expect(store.setUpdateStatus.callCount).to.be.eq(1);
+      // set to pending handled in `cancelCreatedTransfer`
+    });
+
+    it("should handle updates where requireOnline == true (cancels transfer)", async () => {
+      const { payload, storedUpdates } = setupMocks();
+      storedUpdates[0].payload.meta = { routingId: getRandomBytes32(), requireOnline: true };
+      store.getQueuedUpdates.resolves(storedUpdates);
+      const result = await forwarding.handleUnverifiedUpdates(
+        payload,
+        routerPublicIdentifier,
+        nodeService as INodeService,
+        store,
+        chainReader as IVectorChainReader,
+        logger,
+      );
+      expect(result.isError).to.be.false;
+      expect(result.getValue()).to.be.undefined;
+      expect(store.setUpdateStatus.callCount).to.be.eq(2);
+      expect(store.setUpdateStatus.getCall(1).args).to.be.deep.eq([
+        storedUpdates[0].id,
+        RouterUpdateStatus.COMPLETE,
+        "Update verified: receiver transfer not installed, sender cancelled",
+      ]);
+    });
+
+    it("should handle a mix of requireOnline and successful updates", async () => {
+      const { payload, storedUpdates } = setupMocks(false, {}, 3);
+      storedUpdates[1].payload.meta = { routingId: getRandomBytes32(), requireOnline: true };
+      store.getQueuedUpdates.resolves(storedUpdates);
+      const result = await forwarding.handleUnverifiedUpdates(
+        payload,
+        routerPublicIdentifier,
+        nodeService as INodeService,
+        store,
+        chainReader as IVectorChainReader,
+        logger,
+      );
+      expect(result.isError).to.be.false;
+      expect(result.getValue()).to.be.undefined;
+      expect(store.setUpdateStatus.callCount).to.be.eq(6);
+      expect(store.setUpdateStatus.getCall(1).args).to.be.deep.eq([
+        storedUpdates[0].id,
+        RouterUpdateStatus.COMPLETE,
+        "Update verified: receiver transfer created",
+      ]);
+      expect(store.setUpdateStatus.getCall(3).args).to.be.deep.eq([
+        storedUpdates[1].id,
+        RouterUpdateStatus.COMPLETE,
+        "Update verified: receiver transfer not installed, sender cancelled",
+      ]);
+      expect(store.setUpdateStatus.getCall(5).args).to.be.deep.eq([
+        storedUpdates[2].id,
+        RouterUpdateStatus.COMPLETE,
+        "Update verified: receiver transfer created",
+      ]);
+    });
+
+    it("should handle a mix of requireOnline and failing/successful updates", async () => {
+      const { payload, storedUpdates } = setupMocks(false, {}, 3);
+      storedUpdates[1].payload.meta = { routingId: getRandomBytes32(), requireOnline: true };
+      transferWithCollateralization
+        .onCall(1)
+        .resolves(
+          Result.fail(
+            new ServerNodeServiceError(
+              ServerNodeServiceError.reasons.InvalidParams,
+              "",
+              "",
+              {},
+              { transferError: ServerNodeServiceError.reasons.InternalServerError },
+            ),
+          ),
+        );
+      store.getQueuedUpdates.resolves(storedUpdates);
+      const result = await forwarding.handleUnverifiedUpdates(
+        payload,
+        routerPublicIdentifier,
+        nodeService as INodeService,
+        store,
+        chainReader as IVectorChainReader,
+        logger,
+      );
+      expect(result.isError).to.be.true;
+      expect(result.getError()?.message).to.be.eq(CheckInError.reasons.UpdatesFailed);
+      expect(store.setUpdateStatus.callCount).to.be.eq(6);
+      expect(store.setUpdateStatus.getCall(1).args).to.be.deep.eq([
+        storedUpdates[0].id,
+        RouterUpdateStatus.COMPLETE,
+        "Update verified: receiver transfer created",
+      ]);
+      expect(store.setUpdateStatus.getCall(3).args).to.be.deep.eq([
+        storedUpdates[1].id,
+        RouterUpdateStatus.COMPLETE,
+        "Update verified: receiver transfer not installed, sender cancelled",
+      ]);
+      expect(store.setUpdateStatus.getCall(5).args).to.be.deep.eq([
+        storedUpdates[2].id,
+        RouterUpdateStatus.FAILED,
+        "Failed to create with receiver",
+      ]);
     });
   });
 

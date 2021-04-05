@@ -956,12 +956,19 @@ export const handleUnverifiedUpdates = async (
         logger,
       );
       if (createRes.isError) {
-        await handleUpdateErr(update, "Failed to create with receiver", {
-          createError: jsonifyError(createRes.getError()!),
-        });
+        const error = createRes.getError()?.context?.transferError;
+        logger.error({ method, methodId, update: update.id, error }, "Failed to create with receiver");
+        // If it is just a timeout, it did not fail but must be marked
+        // as pending
+        error === ServerNodeServiceError.reasons.Timeout
+          ? await store.setUpdateStatus(update.id, RouterUpdateStatus.PENDING, error)
+          : await handleUpdateErr(update, "Failed to create with receiver", {
+              createError: jsonifyError(createRes.getError()!),
+            });
         continue;
       }
       logger.info({ method, methodId, update: update.id }, "Update verified: receiver transfer created");
+      await store.setUpdateStatus(update.id, RouterUpdateStatus.COMPLETE, "Update verified: receiver transfer created");
       continue;
     }
 
@@ -994,6 +1001,11 @@ export const handleUnverifiedUpdates = async (
         { cancelError: jsonifyError(cancelRes.getError()!) },
         "Update verified: could not cancel sender transfer, cancellation enqueued",
       );
+      // Status is updated in `cancelCreatedTransfer` to pending
+      // TODO: remove the PROCESSING status from the db
+      // then dont have to worry about bringing it back into UNVERIFIED
+      // if it didnt make it all the way to cancellation
+      continue;
     }
     await store.setUpdateStatus(
       update.id,
