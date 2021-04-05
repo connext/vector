@@ -5,6 +5,7 @@
 - \[protocol\] Don't sync disputes
 - \[node\] Expose sync dispute method
 - \[utils\] Add HUSD and Huobi chain to `chains.json`
+- \[contract,server-node\] Add `speedUp` method to resend transaction with higher gas
 
 ## 0.2.2-beta.2
 
