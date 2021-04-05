@@ -269,6 +269,12 @@ export interface IVectorChainService extends IVectorChainReader {
     recipient: string,
   ): Promise<Result<TransactionResponseWithResult, ChainError>>;
 
+  // Resend tx at the same nonce
+  speedUpTx(
+    chainId: number,
+    tx: MinimalTransaction & { transactionHash: string; nonce: number },
+  ): Promise<Result<TransactionResponseWithResult, ChainError>>;
+
   // Event methods
   on<T extends ChainServiceEvent>(
     event: T,

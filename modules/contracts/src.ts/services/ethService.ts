@@ -42,6 +42,7 @@ import { Evt } from "evt";
 import { ChannelFactory, VectorChannel } from "../artifacts";
 
 import { EthereumChainReader } from "./ethReader";
+import { parseUnits } from "ethers/lib/utils";
 
 export const EXTRA_GAS = 50_000;
 export const BIG_GAS_LIMIT = BigNumber.from(1_000_000); // 1M gas should cover all Connext txs
@@ -85,6 +86,58 @@ export class EthereumChainService extends EthereumChainReader implements IVector
         typeof signer === "string" ? new Wallet(signer, provider) : (signer.connect(provider) as Signer),
       );
     });
+  }
+
+  async speedUpTx(
+    chainId: number,
+    tx: MinimalTransaction & { transactionHash: string; nonce: number },
+  ): Promise<Result<TransactionResponseWithResult, ChainError>> {
+    const method = "speedUpTx";
+    const methodId = getRandomBytes32();
+    this.log.info({ method, methodId, transactionHash: tx.transactionHash }, "Method started");
+    const signer = this.signers.get(chainId);
+    if (!signer?._isSigner) {
+      return Result.fail(new ChainError(ChainError.reasons.SignerNotFound));
+    }
+
+    // Make sure tx is not mined already
+    let receipt: TransactionResponse | null;
+    try {
+      receipt = await signer.provider!.getTransaction(tx.transactionHash);
+    } catch (e) {
+      return Result.fail(
+        new ChainError("Could not get transaction", { error: e.message, transactionHash: tx.transactionHash }),
+      );
+    }
+    if (receipt && receipt.confirmations > 0) {
+      return Result.fail(
+        new ChainError("Transaction mined", {
+          transactionHash: tx.transactionHash,
+          confirmations: receipt.confirmations,
+          blockNumber: receipt.blockNumber,
+        }),
+      );
+    }
+
+    // Safe to retry sending
+    return this.sendTxWithRetries(tx.to, chainId, TransactionReason.speedUpTransaction, async () => {
+      const price = await this.getGasPrice(chainId);
+      if (price.isError) {
+        throw price.getError()!;
+      }
+      const current = price.getValue().add(parseUnits("20", "gwei"));
+      const increased = current.gt(receipt?.gasPrice ?? 0)
+        ? current
+        : BigNumber.from(receipt?.gasPrice ?? 0).add(parseUnits("20", "gwei"));
+      return signer.sendTransaction({
+        to: tx.to,
+        data: tx.data,
+        chainId,
+        gasPrice: increased,
+        nonce: tx.nonce,
+        value: BigNumber.from(tx.value),
+      });
+    }) as Promise<Result<TransactionResponseWithResult, ChainError>>;
   }
 
   async sendDisputeChannelTx(

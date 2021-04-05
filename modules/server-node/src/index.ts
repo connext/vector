@@ -17,6 +17,7 @@ import {
   GetTransfersFilterOpts,
   GetTransfersFilterOptsSchema,
   VectorErrorJson,
+  StoredTransaction,
 } from "@connext/vector-types";
 import { constructRpcRequest, getPublicIdentifierFromPublicKey, hydrateProviders } from "@connext/vector-utils";
 import { WithdrawCommitment } from "@connext/vector-contracts";
@@ -1336,6 +1337,60 @@ server.post<{ Body: NodeParams.SendExitChannelTx }>(
     }
   },
 );
+
+server.post<{ Body: NodeParams.SpeedUpTx }>("/speed-up", async (request, reply) => {
+  if (request.body.adminToken !== config.adminToken) {
+    return reply.status(401).send({ message: "Unauthorized" });
+  }
+
+  const chainService = getChainService(request.body.publicIdentifier);
+  if (!chainService) {
+    return reply
+      .status(404)
+      .send(
+        new ServerNodeError(
+          ServerNodeError.reasons.ChainServiceNotFound,
+          request.body.publicIdentifier,
+          request.body,
+        ).toJson(),
+      );
+  }
+
+  let record: StoredTransaction | undefined;
+  try {
+    record = await store.getTransactionByHash(request.body.transactionHash);
+  } catch (e) {
+    return reply.status(500).send(
+      new ServerNodeError(ServerNodeError.reasons.StoreMethodFailed, request.body.publicIdentifier, request.body, {
+        storeError: e.message,
+        storeMethod: "getTransactionByHash",
+      }).toJson(),
+    );
+  }
+
+  if (!record) {
+    return reply
+      .status(404)
+      .send(
+        new ServerNodeError(
+          ServerNodeError.reasons.TransactionNotFound,
+          request.body.publicIdentifier,
+          request.body,
+        ).toJson(),
+      );
+  }
+  const result = await chainService.speedUpTx(record.chainId, {
+    to: record.to,
+    data: record.data,
+    value: record.value,
+    nonce: record.nonce,
+    transactionHash: record.transactionHash,
+  });
+  if (result.isError) {
+    return reply.status(500).send(jsonifyError(result.getError()!));
+  }
+  return reply.status(200).send({ transactionHash: result.getValue().hash });
+});
 
 server.post<{ Body: NodeParams.SendExitChannelTx }>("/sync-disputes", async (request, reply) => {
   const engine = getNode(request.body.publicIdentifier);
