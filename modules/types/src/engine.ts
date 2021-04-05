@@ -90,7 +90,7 @@ export type WithdrawalCreatedPayload = {
 
 // Emitted when a withdrawal transfer is resolved
 export const WITHDRAWAL_RESOLVED_EVENT = "WITHDRAWAL_RESOLVED";
-export type WithdrawalResolvedPayload = WithdrawalCreatedPayload & { transaction: MinimalTransaction };
+export type WithdrawalResolvedPayload = WithdrawalCreatedPayload & { transaction?: MinimalTransaction };
 
 // Emitted when withdrawal commitment is submitted to chain
 export const WITHDRAWAL_RECONCILED_EVENT = "WITHDRAWAL_RECONCILED";

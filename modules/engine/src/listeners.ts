@@ -36,17 +36,8 @@ import {
   IVectorStore,
   DEFAULT_FEE_EXPIRY,
   DEFAULT_CHANNEL_TIMEOUT,
-  SIMPLE_WITHDRAWAL_GAS_ESTIMATE,
-  GAS_ESTIMATES,
 } from "@connext/vector-types";
-import {
-  getRandomBytes32,
-  TESTNETS_WITH_FEES,
-  hashWithdrawalQuote,
-  recoverAddressFromChannelMessage,
-  safeJsonStringify,
-  mkSig,
-} from "@connext/vector-utils";
+import { getRandomBytes32, hashWithdrawalQuote, mkSig } from "@connext/vector-utils";
 import { getAddress } from "@ethersproject/address";
 import { BigNumber } from "@ethersproject/bignumber";
 import { Zero } from "@ethersproject/constants";
@@ -826,23 +817,27 @@ export async function handleWithdrawalTransferResolution(
     "Withdrawal info",
   );
 
-  // Generate commitment, and save the double signed version
-  const commitment = new WithdrawCommitment(
-    channelAddress,
-    alice,
-    bob,
-    event.updatedTransfer.balance.to[0],
-    assetId,
-    withdrawalAmount.toString(),
-    event.updatedTransfer.transferState.nonce,
-    event.updatedTransfer.transferState.callTo,
-    event.updatedTransfer.transferState.callData,
-    meta?.transactionHash ?? undefined,
-  );
-  await commitment.addSignatures(
-    event.updatedTransfer.transferState.initiatorSignature,
-    event.updatedTransfer.transferResolver!.responderSignature,
-  );
+  // if the transfer got cancelled, do not create commitment
+  let commitment: WithdrawCommitment | undefined;
+  if (event.updatedTransfer.transferResolver!.responderSignature !== mkSig("0x0")) {
+    // Generate commitment, and save the double signed version
+    commitment = new WithdrawCommitment(
+      channelAddress,
+      alice,
+      bob,
+      event.updatedTransfer.balance.to[0],
+      assetId,
+      withdrawalAmount.toString(),
+      event.updatedTransfer.transferState.nonce,
+      event.updatedTransfer.transferState.callTo,
+      event.updatedTransfer.transferState.callData,
+      meta?.transactionHash ?? undefined,
+    );
+    await commitment.addSignatures(
+      event.updatedTransfer.transferState.initiatorSignature,
+      event.updatedTransfer.transferResolver!.responderSignature,
+    );
+  }
 
   // Post to evt
   const assetIdx = assetIds.findIndex((a) => getAddress(a) === getAddress(assetId));
@@ -858,7 +853,7 @@ export async function handleWithdrawalTransferResolution(
     transfer: event.updatedTransfer,
     callTo: event.updatedTransfer.transferState.callTo,
     callData: event.updatedTransfer.transferState.callData,
-    transaction: commitment.getSignedTransaction(),
+    transaction: commitment?.getSignedTransaction(),
   };
   evts[EngineEvents.WITHDRAWAL_RESOLVED].post(payload);
 
@@ -879,12 +874,11 @@ export async function handleWithdrawalTransferResolution(
     );
     return;
   }
-
   // Try to submit the transaction to chain IFF you are alice
   // Otherwise, alice should have submitted the tx (hash is in meta)
   if (signer.address !== alice) {
     // Store the double signed commitment
-    await store.saveWithdrawalCommitment(transferId, commitment.toJson());
+    await store.saveWithdrawalCommitment(transferId, commitment!.toJson());
     // Withdrawal resolution meta will include the transaction hash,
     // post to EVT here
     evts[WITHDRAWAL_RECONCILED_EVENT].post({
@@ -908,7 +902,7 @@ export async function handleWithdrawalTransferResolution(
   // will *NOT* be alice. This is safe because this assumption is also made
   // on setup when the browser-node will always `requestSetup`
   if (event.updatedChannelState.networkContext.chainId === 1) {
-    await store.saveWithdrawalCommitment(transferId, commitment.toJson());
+    await store.saveWithdrawalCommitment(transferId, commitment!.toJson());
     logger.debug({ method, channel: event.updatedChannelState.channelAddress }, "Holding mainnet withdrawal");
     return;
   }
@@ -916,12 +910,12 @@ export async function handleWithdrawalTransferResolution(
   // Submit withdrawal to chain IFF not mainnet
   const withdrawalResponse = await chainService.sendWithdrawTx(
     event.updatedChannelState,
-    commitment.getSignedTransaction(),
+    commitment!.getSignedTransaction(),
   );
 
   if (withdrawalResponse.isError) {
     // Store the double signed commitment
-    await store.saveWithdrawalCommitment(transferId, commitment.toJson());
+    await store.saveWithdrawalCommitment(transferId, commitment!.toJson());
     logger.warn(
       { method, error: withdrawalResponse.getError()!.message, channelAddress, transferId },
       "Failed to submit withdraw",
@@ -929,8 +923,8 @@ export async function handleWithdrawalTransferResolution(
     return;
   }
   const tx = withdrawalResponse.getValue();
-  commitment.addTransaction(tx.hash);
-  await store.saveWithdrawalCommitment(transferId, commitment.toJson());
+  commitment!.addTransaction(tx.hash);
+  await store.saveWithdrawalCommitment(transferId, commitment!.toJson());
 
   // alice submitted her own withdrawal, post to evt
   evts[WITHDRAWAL_RECONCILED_EVENT].post({

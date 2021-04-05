@@ -113,22 +113,18 @@ export class WithdrawCommitment {
         continue;
       }
       let recovered: string;
-      if (sig === mkSig("0x0")) {
-        this.aliceSignature = this.alice ? sig : this.aliceSignature;
-        this.bobSignature = this.bob ? sig : this.bobSignature;
-      } else {
-        try {
-          recovered = await recoverAddressFromChannelMessage(hash, sig);
-        } catch (e) {
-          recovered = e.message;
-        }
-        if (recovered !== this.alice && recovered !== this.bob) {
-          throw new Error(`Invalid signer detected. Got ${recovered}, expected one of: ${this.alice} / ${this.bob}`);
-        }
 
-        this.aliceSignature = recovered === this.alice ? sig : this.aliceSignature;
-        this.bobSignature = recovered === this.bob ? sig : this.bobSignature;
+      try {
+        recovered = await recoverAddressFromChannelMessage(hash, sig);
+      } catch (e) {
+        recovered = e.message;
       }
+      if (recovered !== this.alice && recovered !== this.bob) {
+        throw new Error(`Invalid signer detected. Got ${recovered}, expected one of: ${this.alice} / ${this.bob}`);
+      }
+
+      this.aliceSignature = recovered === this.alice ? sig : this.aliceSignature;
+      this.bobSignature = recovered === this.bob ? sig : this.bobSignature;
     }
   }
 }
