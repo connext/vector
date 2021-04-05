@@ -4,8 +4,10 @@
 
 - \[protocol\] Don't sync disputes
 - \[node\] Expose sync dispute method
+- \[utils\] Add HUSD and Huobi chain to `chains.json`
 
 ## 0.2.2-beta.2
+
 - \[browser-node\] Fix dev-dependency
 
 ## 0.2.2-beta.1
