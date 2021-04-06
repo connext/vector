@@ -56,13 +56,14 @@ export default class ConnextManager {
     if (!localStorage) {
       throw new Error("localStorage not available in this window, please enable cross-site cookies and try again.");
     }
-    if (signature) {
-      const recovered = verifyMessage(NonEIP712Message, signature);
-      if (recovered !== signerAddress) {
-        throw new Error(
-          `Signature not properly recovered. expected ${signerAddress}, got ${recovered}, signature: ${signature}`,
-        );
-      }
+    if (!signature) {
+      throw new Error("Signature is required");
+    }
+    const recovered = verifyMessage(NonEIP712Message, signature);
+    if (recovered !== signerAddress) {
+      throw new Error(
+        `Signature not properly recovered. expected ${signerAddress}, got ${recovered}, signature: ${signature}`,
+      );
     }
 
     let _messagingUrl = messagingUrl ?? config.messagingUrl;
@@ -223,17 +224,32 @@ export default class ConnextManager {
         const hasBalance = chan?.balances.find((balance) => {
           // this checks both alice and bob balance
           if (BigNumber.from(balance.amount[0]).gt(0) || BigNumber.from(balance.amount[1]).gt(0)) {
+            console.warn("Found channel with balance: ", chan);
             return true;
           }
           return false;
         });
-        if (hasBalance) {
+
+        const activeTransfers = await browserNode.getActiveTransfers({ channelAddress });
+        if (activeTransfers.isError) {
+          throw activeTransfers.getError();
+        }
+        const hasTransfers = activeTransfers.getValue().find((transfer) => {
+          if (BigNumber.from(transfer.balance.amount[0]).gt(0) || BigNumber.from(transfer.balance.amount[1]).gt(0)) {
+            console.warn("Found transfer with balance: ", chan);
+            return true;
+          }
+          return false;
+        });
+
+        if (hasBalance || hasTransfers) {
           return chan;
         }
         return undefined;
       }),
     );
     const channelsWithBalanceFiltered = channelsWithBalance.filter((chan) => !!chan);
+
     if (channelsWithBalanceFiltered.length === 0) {
       console.log("No channels with balance found");
       return true;
