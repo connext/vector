@@ -16,7 +16,6 @@ import {
   IVectorChainReader,
   IsAlivePayload,
   NodeParams,
-  NodeError,
 } from "@connext/vector-types";
 import {
   createTestChannelState,
@@ -29,13 +28,16 @@ import {
   encodeTransferResolver,
   ServerNodeServiceError,
   createTestFullHashlockTransferState,
+  TestHashlockTransferOptions,
+  getRandomChannelSigner,
+  mkSig,
 } from "@connext/vector-utils";
 import { AddressZero, HashZero } from "@ethersproject/constants";
 import { BigNumber } from "@ethersproject/bignumber";
 import Sinon from "sinon";
 import { getAddress } from "@ethersproject/address";
 
-import { IRouterStore, PrismaStore, RouterStoredUpdate, RouterUpdateStatus, RouterUpdateType } from "../services/store";
+import { PrismaStore, RouterStoredUpdate, RouterUpdateStatus, RouterUpdateType } from "../services/store";
 import * as forwarding from "../forwarding";
 import * as config from "../config";
 import * as configService from "../services/config";
@@ -43,6 +45,7 @@ import * as swapService from "../services/swap";
 import * as transferService from "../services/transfer";
 import { CheckInError, ForwardTransferCreationError } from "../errors";
 import * as collateralService from "../services/collateral";
+import * as creationQueue from "../services/creationQueue";
 
 const testName = "Forwarding";
 
@@ -1558,11 +1561,11 @@ describe(testName, () => {
   describe("handleRouterDroppedTransfers", () => {
     // constants
     const channelAddress = mkAddress("0xccc");
-    const aliceIdentifier = mkPublicIdentifier("vectorAAA");
+    const aliceIdentifier = mkPublicIdentifier("vectorRRR");
     const bobIdentifier = mkPublicIdentifier("vectorBBB");
     const chainId = 1337;
     const skipCheckIn = undefined;
-    const routerPublicIdentifier = mkPublicIdentifier("vectorRRR");
+    const routerPublicIdentifier = aliceIdentifier;
     const signerAddress = mkAddress("0xrrr");
     const defaultData = {
       channelAddress,
@@ -1571,6 +1574,7 @@ describe(testName, () => {
       chainId,
       skipCheckIn,
     };
+    const withdrawDefinition = mkAddress("0xccceeeeddddd");
 
     // stubs
     let handlePendingUpdates: Sinon.SinonStub;
@@ -1579,8 +1583,98 @@ describe(testName, () => {
     let nodeService: Sinon.SinonStubbedInstance<RestServerNodeService>;
     let store: Sinon.SinonStubbedInstance<PrismaStore>;
     let chainReader: Sinon.SinonStubbedInstance<VectorChainReader>;
+    let forwardTransferCreation: Sinon.SinonStub;
+    let cancelCreatedTransfer: Sinon.SinonStub;
+    let inProgressCreations: Sinon.SinonStub;
 
-    const setupMocks = () => {};
+    const setupMocks = (
+      activeTransferOverrides: Partial<TestHashlockTransferOptions> = [{}],
+      updateOverrides: Partial<NodeParams.ConditionalTransfer & { status: RouterUpdateStatus }>[] = [{}],
+    ) => {
+      // create mocked channel
+      const { channel } = createTestChannelState(UpdateType.deposit, {
+        channelAddress,
+        aliceIdentifier,
+        bobIdentifier,
+        alice: signerAddress,
+        networkContext: { chainId },
+      });
+
+      // create active transfers with channel
+      const activeTransfers = activeTransferOverrides.map((override) => {
+        const { meta, ...defaults } = override;
+        return createTestFullHashlockTransferState({
+          chainId,
+          channelAddress,
+          initiatorIdentifier: bobIdentifier,
+          responder: signerAddress,
+          responderIdentifier: routerPublicIdentifier,
+          transferId: getRandomBytes32(),
+          meta: {
+            routingId: getRandomBytes32(),
+            requireOnline: false,
+            path: [
+              {
+                recipient: getRandomChannelSigner().publicIdentifier,
+                recipientChainId: 1341,
+                recipientAssetId: mkAddress(),
+              },
+            ],
+            ...(meta ?? {}),
+          },
+          ...defaults,
+        });
+      });
+
+      // create stored updates
+      const storedUpdates = updateOverrides.map((override) => {
+        const { status, ...defaults } = override;
+        const val: RouterStoredUpdate<typeof RouterUpdateType.TRANSFER_CREATION> = {
+          id: getRandomBytes32(),
+          type: RouterUpdateType.TRANSFER_CREATION,
+          status: status ?? RouterUpdateStatus.UNVERIFIED,
+          payload: {
+            channelAddress: channel.channelAddress,
+            publicIdentifier: channel.aliceIdentifier,
+            amount: "1000",
+            assetId: mkAddress(),
+            type: TransferNames.HashlockTransfer,
+            details: { lockHash: getRandomBytes32() },
+            meta: { routingId: getRandomBytes32() },
+            ...defaults,
+          },
+        };
+        return val;
+      });
+
+      // set mocks
+      nodeService.getStateChannel.resolves(Result.ok(channel));
+      nodeService.getActiveTransfers.resolves(Result.ok(activeTransfers));
+      chainReader.getRegisteredTransferByName.resolves(
+        Result.ok({
+          stateEncoding: "state",
+          resolverEncoding: "resolver",
+          definition: withdrawDefinition,
+          name: TransferNames.Withdraw,
+          encodedCancel: mkSig(),
+        }),
+      );
+      inProgressCreations.value({});
+      // never has receiver transfer by default
+      activeTransfers.map((t, idx) => {
+        nodeService.getTransfersByRoutingId.onCall(idx).resolves(Result.ok([t]));
+      });
+      nodeService.resolveTransfer.resolves(
+        Result.ok({ transferId: getRandomBytes32(), routingId: getRandomBytes32(), channelAddress }),
+      );
+      cancelCreatedTransfer.resolves(Result.ok("Cancelled"));
+      // receivers channel can be senders channel, doesnt matter
+      nodeService.getStateChannelByParticipants.resolves(Result.ok(channel));
+      store.getQueuedUpdates.resolves(storedUpdates);
+      forwardTransferCreation.resolves(Result.ok("Forwarded"));
+
+      return { channel, activeTransfers, storedUpdates };
+    };
 
     beforeEach(async () => {
       // Generate mocks
@@ -1590,11 +1684,35 @@ describe(testName, () => {
       nodeService = Sinon.createStubInstance(RestServerNodeService);
       store = Sinon.createStubInstance(PrismaStore);
       chainReader = Sinon.createStubInstance(VectorChainReader);
+      forwardTransferCreation = Sinon.stub(forwarding, "forwardTransferCreation");
+      cancelCreatedTransfer = Sinon.stub(transferService, "cancelCreatedTransfer");
+      inProgressCreations = Sinon.stub(creationQueue, "inProgressCreations");
     });
 
     afterEach(() => {
       Sinon.restore();
       Sinon.reset();
     });
+
+    it("should fail if it cannot get the channel", async () => {});
+    it("should fail if the channel is undefined", async () => {});
+    it("should fail if it cannot get active transfers", async () => {});
+    it("should fail if it cannot get the withdraw registered transfer", async () => {});
+    it("should not include transfers where the router is not the responder in relevant transfers", async () => {});
+    it("should not include withdrawal transfers in relevant transfers", async () => {});
+    it("should not include transfers where the meta is not a valid routing meta in relevant transfers", async () => {});
+    it("should not include transfers that are being processed in relevant transfers", async () => {});
+    it("should handle case where it cannot get transfer by routingId", async () => {});
+    it("should handle case where receiver transfers are created but not resolved", async () => {});
+    it("should handle case where needs to resolve sender transfer (resolve successful)", async () => {});
+    it("should handle case where needs to resolve sender transfer (resolve fails)", async () => {});
+    it("should handle case where needs to cancel the sender transfer (requireOnline is true, router was offline. cancel succeeds)", async () => {});
+    it("should handle case where needs to cancel the sender transfer (requireOnline is true, router was offline. cancel fails)", async () => {});
+    it("should handle case where receiver app must be installed && it fails to get receiver channel", async () => {});
+    it("should handle case where receiver app must be installed && there is already a pending update", async () => {});
+    it("should handle case where receiver app is installed (installation successful)", async () => {});
+    it("should handle case where receiver app is installed (installation fails)", async () => {});
+    it("should handle multiple dropped transfers (all successful cases)", async () => {});
+    it("should handle multiple dropped transfers (mix of successful/failed cases)", async () => {});
   });
 });
