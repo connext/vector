@@ -355,7 +355,7 @@ export const withdraw = async (
   if (initiatorSubmits) {
     const { transaction } = withdrawalRes.getValue();
     expect(transaction).to.be.ok;
-    expect({ ...resolvedEvent!.transaction, value: resolvedEvent!.transaction.value.toString() }).to.be.deep.eq(
+    expect({ ...resolvedEvent!.transaction, value: resolvedEvent!.transaction!.value.toString() }).to.be.deep.eq(
       transaction,
     );
     // submit to chain
