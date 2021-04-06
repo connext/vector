@@ -177,7 +177,7 @@ describe(testName, () => {
       const test = createTestChannelState("create", { alice: alice.address, bob: bob.address });
       test.transfer.transferState.fee = "0";
       test.transfer.transferState.nonce = "0";
-      test.transfer.transferState.initiatorSignature = mkSig("0x0");
+      test.transfer.transferState.initiatorSignature = mkSig("0xabc");
       test.transfer.transferResolver = { responderSignature: mkSig("0x0") };
       console.log("test: ", test.transfer);
       Sinon.stub(listeners, "isWithdrawTransfer").resolves(Result.ok(true));
@@ -496,7 +496,7 @@ describe(testName, () => {
           value: 0,
         },
       });
-      expect(emitted.transaction.data).to.be.ok;
+      expect(emitted.transaction!.data).to.be.ok;
 
       // When getting resolve events, withdrawers will always save the
       // double signed commitment to their store. If the withdrawer is
