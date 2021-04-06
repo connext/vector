@@ -72,7 +72,6 @@ const vectorConfig: VectorNodeConfig = {
   logLevel: process.env.VECTOR_LOG_LEVEL || configJson.logLevel || configFile.logLevel || "info",
 };
 
-console.log("vectorConfig: ", vectorConfig);
 if (!vectorConfig.authUrl && !vectorConfig.messagingUrl && !vectorConfig.natsUrl) {
   vectorConfig.messagingUrl = "http://messaging";
 }
@@ -100,7 +99,6 @@ for (const chainId of Object.keys(vectorConfig.chainProviders)) {
     vectorConfig.chainAddresses[chainId].transferRegistryAddress = deployments[chainId].TransferRegistry.address;
   }
 }
-console.log("vectorConfig: ", vectorConfig);
 
 const validate = ajv.compile(VectorNodeConfigSchema);
 const valid = validate(vectorConfig);
