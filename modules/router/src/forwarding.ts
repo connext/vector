@@ -12,7 +12,6 @@ import {
   IsAlivePayload,
   FullTransferState,
   IVectorChainReader,
-  NodeError,
   jsonifyError,
   TransferNames,
   VectorErrorJson,
