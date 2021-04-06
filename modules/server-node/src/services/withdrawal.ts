@@ -8,7 +8,7 @@ import {
   WithdrawCommitmentJson,
   REDUCED_GAS_PRICE,
 } from "@connext/vector-types";
-import { getRandomBytes32 } from "@connext/vector-utils";
+import { getRandomBytes32, mkSig } from "@connext/vector-utils";
 import { HashZero, AddressZero } from "@ethersproject/constants";
 
 import { logger } from "..";
@@ -331,13 +331,17 @@ export const submitMainnetWithdrawalsIfNeeded = async (
     "Got gas price",
   );
 
+  const _toSubmit = unsubmitted
+    .getValue()
+    .filter((u) => u.transfer.transferResolver?.responderSignature !== mkSig("0x0"));
+
   // filter by old transfers, submit all that are older than 7 days
   const elapse = 7 * 24 * 60 * 60 * 1000; // 7 days
   const creationCutoff = Date.now() - elapse; // 7 days old
 
   const toSubmit = submitAll
-    ? [...unsubmitted.getValue()]
-    : unsubmitted.getValue().filter((u) => {
+    ? [..._toSubmit]
+    : _toSubmit.filter((u) => {
         const resolvedTimestamp = u.transfer.meta.resolvedAt;
         if (!resolvedTimestamp) {
           return false;

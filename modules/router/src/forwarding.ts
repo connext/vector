@@ -244,7 +244,8 @@ export async function forwardTransferCreation(
         },
       );
     }
-    if (parseInt(quote.expiry) < Date.now()) {
+    const now = Date.now();
+    if (parseInt(quote.expiry) < now) {
       return cancelSenderTransferAndReturnError(
         routingId,
         senderTransfer,
@@ -253,6 +254,7 @@ export async function forwardTransferCreation(
         {
           quoteError: "Quote expired",
           quote,
+          now,
         },
       );
     }

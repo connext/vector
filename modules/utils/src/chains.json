@@ -68,6 +68,10 @@
       "0x1614f18fc94f47967a3fbe5ffcd46d4e7da3d787": {
         "symbol": "PAID",
         "mainnetEquivalent": "0x1614f18fc94f47967a3fbe5ffcd46d4e7da3d787"
+      },
+      "0x4fabb145d64652a948d72533023f6e7a623c7c53": {
+        "symbol": "BUSD",
+        "mainnetEquivalent": "0x4fabb145d64652a948d72533023f6e7a623c7c53"
       }
     },
     "rpc": [
@@ -172,10 +176,19 @@
         "symbol": "PAID",
         "mainnetEquivalent": "0x1614f18fc94f47967a3fbe5ffcd46d4e7da3d787"
       },
+      "0x4F96Fe3b7A6Cf9725f59d353F723c1bDb64CA6Aa": {
+        "symbol": "DAI",
+        "mainnetEquivalent": "0x6B175474E89094C44Da98b954EedeAC495271d0F"
+      },
+      "0x0736d0c130b2ead47476cc262dbed90d7c4eeabd": {
+        "symbol": "USDT",
+        "mainnetEquivalent": "0xdAC17F958D2ee523a2206206994597C13D831ec7"
+			},
       "0x48987E8B356e0dE474ddE9Bc10541F8106C88A23": {
         "symbol": "PROPS",
         "mainnetEquivalent": "0x6fe56c0bcdd471359019fcbc48863d6c3e9d4f41"
       }
+
     },
     "rpc": [
       "https://kovan.poa.network",
@@ -237,6 +250,10 @@
       "0xB4a04eCF1855FBccf5C770BA6DB1dde7c96b17Be": {
         "symbol": "PAID",
         "mainnetEquivalent": "0x1614f18fc94f47967a3fbe5ffcd46d4e7da3d787"
+      },
+      "0xD92E713d051C37EbB2561803a3b5FBAbc4962431": {
+        "symbol": "USDT",
+        "mainnetEquivalent": "0xdAC17F958D2ee523a2206206994597C13D831ec7"
       }
     },
     "rpc": ["https://rinkeby.infura.io/v3/${INFURA_API_KEY}", "wss://rinkeby.infura.io/ws/v3/${INFURA_API_KEY}"],
@@ -293,6 +310,10 @@
       "0x1AF3F329e8BE154074D8769D1FFa4eE058B1DBc3": {
         "symbol": "DAI",
         "mainnetEquivalent": "0x6B175474E89094C44Da98b954EedeAC495271d0F"
+      },
+      "0xe9e7cea3dedca5984780bafc599bd69add087d56": {
+        "symbol": "BUSD",
+        "mainnetEquivalent": "0x4fabb145d64652a948d72533023f6e7a623c7c53"
       }
     },
     "rpc": [
@@ -372,9 +393,21 @@
         "symbol": "PAID",
         "mainnetEquivalent": "0x1614f18fc94f47967a3fbe5ffcd46d4e7da3d787"
       },
-      "0x1AF3F329e8BE154074D8769D1FFa4eE058B1DBc3": {
+      "0xa5dd524379382a6a756920509109e078c7ba026c": {
         "symbol": "DAI",
         "mainnetEquivalent": "0x6B175474E89094C44Da98b954EedeAC495271d0F"
+      },
+      "0x337610d27c682e347c9cd60bd4b3b107c9d34ddd": {
+        "symbol": "USDT",
+        "mainnetEquivalent": "0xdAC17F958D2ee523a2206206994597C13D831ec7"
+      },
+      "0x9780881bf45b83ee028c4c1de7e0c168df8e9eef": {
+        "symbol": "USDC",
+        "mainnetEquivalent": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
+      },
+      "0xc74cc783ed2dbcd06e06266e72ad9d9680cf3cee": {
+        "symbol": "BUSD",
+        "mainnetEquivalent": "0x4fabb145d64652a948d72533023f6e7a623c7c53"
       }
     },
     "rpc": [
