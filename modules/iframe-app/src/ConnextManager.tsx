@@ -1,20 +1,16 @@
 import { BrowserNode, NonEIP712Message } from "@connext/vector-browser-node";
 import {
   ChainAddresses,
-  ChainProviders,
   ChannelRpcMethod,
   ChannelRpcMethodsResponsesMap,
   EngineParams,
   jsonifyError,
 } from "@connext/vector-types";
 import { ChannelSigner, constructRpcRequest, safeJsonParse } from "@connext/vector-utils";
-import { hexlify } from "@ethersproject/bytes";
 import { entropyToMnemonic } from "@ethersproject/hdnode";
 import { keccak256 } from "@ethersproject/keccak256";
-import { randomBytes } from "@ethersproject/random";
 import { toUtf8Bytes } from "@ethersproject/strings";
 import { Wallet, verifyMessage } from "@ethersproject/wallet";
-import { BigNumber } from "@ethersproject/bignumber";
 import pino from "pino";
 import { config } from "./config";
 
