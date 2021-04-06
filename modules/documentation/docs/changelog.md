@@ -2,6 +2,8 @@
 
 ## Next Release
 
+- \[engine\] Handle cancelled withdrawals
+
 ## 0.2.2-beta.3
 
 - \[protocol\] Don't sync disputes
