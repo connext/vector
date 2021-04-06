@@ -79,24 +79,22 @@ export default class ConnextManager {
     }
 
     let storedEntropy = localStorage.getItem("entropy");
-    if (!storedEntropy) {
-      storedEntropy = signature ?? hexlify(randomBytes(65));
-    } else {
-      if (signature && storedEntropy !== signature) {
-        // need to migrate
-        const ableToMigrate = await this.ableToMigrate(
-          storedEntropy,
-          chainAddresses ?? config.chainAddresses,
-          chainProviders,
-          _messagingUrl,
-          _authUrl,
-          _natsUrl,
-        );
-        if (ableToMigrate) {
-          storedEntropy = signature;
-        } else {
-          storedEntropy = hexlify(randomBytes(65));
-        }
+    storedEntropy = storedEntropy ?? signature;
+
+    // if the entropy stored in localstorage is different than the signature, try to move over to the new
+    // deterministic private key
+    if (storedEntropy !== signature) {
+      // need to migrate
+      const ableToMigrate = await this.ableToMigrate(
+        storedEntropy,
+        chainAddresses ?? config.chainAddresses,
+        chainProviders,
+        _messagingUrl,
+        _authUrl,
+        _natsUrl,
+      );
+      if (ableToMigrate) {
+        storedEntropy = signature;
       }
     }
     localStorage.setItem("entropy", storedEntropy);
@@ -186,6 +184,9 @@ export default class ConnextManager {
     return await this.browserNode.send(request);
   }
 
+  // if the browser has a random key, we should move it to a deterministic key
+  // we need to check if any of the channels in the store have balance in the channel or the transfers
+  // if not, it is safe to migrate. if so, keep using the random key
   private async ableToMigrate(
     storedEntropy: string,
     chainAddresses: ChainAddresses,
