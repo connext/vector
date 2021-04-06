@@ -9,3 +9,15 @@ Content-Type: application/json
   "adminToken": "",
   "transferId": ""
 }
+
+
+##############
+### Speed up tx
+POST {{rogerUrl}}/speed-up
+Content-Type: application/json
+
+{
+  "adminToken": "cxt1234",
+  "transactionHash": "0x9ed0c28027a045c2de9fae61e06eade573e9ddfcbab3a6514c5662781c874104",
+  "publicIdentifier": "vector7tbbTxQp8ppEQUgPsbGiTrVdapLdU5dH7zTbVuXRf1M4CEBU9Q"
+}
