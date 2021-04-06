@@ -78,38 +78,11 @@ export default class ConnextManager {
       _messagingUrl = undefined;
     }
 
-    let storedEntropy = localStorage.getItem("entropy");
-    storedEntropy = storedEntropy ?? signature;
-
-    // if the entropy stored in localstorage is different than the signature, try to move over to the new
-    // deterministic private key
-    if (storedEntropy !== signature) {
-      // need to migrate
-      const ableToMigrate = await this.ableToMigrate(
-        storedEntropy,
-        chainAddresses ?? config.chainAddresses,
-        chainProviders,
-        _messagingUrl,
-        _authUrl,
-        _natsUrl,
-      );
-      if (ableToMigrate) {
-        storedEntropy = signature;
-      }
-    }
-    localStorage.setItem("entropy", storedEntropy);
-
     // use the entropy of the signature to generate a private key for this wallet
     // since the signature depends on the private key stored by Magic/Metamask, this is not forgeable by an adversary
-    const mnemonic = entropyToMnemonic(keccak256(storedEntropy));
+    const mnemonic = entropyToMnemonic(keccak256(signature));
     const privateKey = Wallet.fromMnemonic(mnemonic).privateKey;
     const signer = new ChannelSigner(privateKey);
-
-    // check stored public identifier, and log a warning
-    const storedPublicIdentifier = localStorage.getItem("publicIdentifier");
-    if (storedPublicIdentifier && storedPublicIdentifier !== signer.publicIdentifier) {
-      console.warn("Public identifier does not match what is in storage, new store will be created");
-    }
 
     this.browserNode = await BrowserNode.connect({
       signer,
@@ -182,80 +155,5 @@ export default class ConnextManager {
       return true;
     }
     return await this.browserNode.send(request);
-  }
-
-  // if the browser has a random key, we should move it to a deterministic key
-  // we need to check if any of the channels in the store have balance in the channel or the transfers
-  // if not, it is safe to migrate. if so, keep using the random key
-  private async ableToMigrate(
-    storedEntropy: string,
-    chainAddresses: ChainAddresses,
-    chainProviders: ChainProviders,
-    messagingUrl?: string,
-    authUrl?: string,
-    natsUrl?: string,
-  ): Promise<boolean> {
-    console.warn("Checking if local storage can be migrated to deterministic key");
-    const mnemonic = entropyToMnemonic(keccak256(storedEntropy));
-    const privateKey = Wallet.fromMnemonic(mnemonic).privateKey;
-    const signer = new ChannelSigner(privateKey);
-
-    const browserNode = await BrowserNode.connect({
-      signer,
-      chainAddresses,
-      chainProviders,
-      logger: pino(),
-      messagingUrl,
-      authUrl,
-      natsUrl,
-    });
-
-    const channelAddressesRes = await browserNode.getStateChannels();
-    if (channelAddressesRes.isError) {
-      throw channelAddressesRes.getError();
-    }
-    const channelAddresses = channelAddressesRes.getValue();
-    const channelsWithBalance = await Promise.all(
-      channelAddresses.map(async (channelAddress) => {
-        const channel = await browserNode.getStateChannel({ channelAddress });
-        if (channel.isError) {
-          throw channel.getError();
-        }
-        const chan = channel.getValue();
-        const hasBalance = chan?.balances.find((balance) => {
-          // this checks both alice and bob balance
-          if (BigNumber.from(balance.amount[0]).gt(0) || BigNumber.from(balance.amount[1]).gt(0)) {
-            console.warn("Found channel with balance: ", chan);
-            return true;
-          }
-          return false;
-        });
-
-        const activeTransfers = await browserNode.getActiveTransfers({ channelAddress });
-        if (activeTransfers.isError) {
-          throw activeTransfers.getError();
-        }
-        const hasTransfers = activeTransfers.getValue().find((transfer) => {
-          if (BigNumber.from(transfer.balance.amount[0]).gt(0) || BigNumber.from(transfer.balance.amount[1]).gt(0)) {
-            console.warn("Found transfer with balance: ", chan);
-            return true;
-          }
-          return false;
-        });
-
-        if (hasBalance || hasTransfers) {
-          return chan;
-        }
-        return undefined;
-      }),
-    );
-    const channelsWithBalanceFiltered = channelsWithBalance.filter((chan) => !!chan);
-
-    if (channelsWithBalanceFiltered.length === 0) {
-      console.log("No channels with balance found");
-      return true;
-    }
-    console.warn("Channels with balance exist, cannot migrate right now", channelsWithBalanceFiltered);
-    return false;
   }
 }
