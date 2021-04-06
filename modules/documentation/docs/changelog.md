@@ -2,6 +2,8 @@
 
 ## Next Release
 
+## 0.2.2-beta.3
+
 - \[protocol\] Don't sync disputes
 - \[node\] Expose sync dispute method
 - \[utils\] Add HUSD and Huobi chain to `chains.json`
