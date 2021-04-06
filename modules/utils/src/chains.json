@@ -371,6 +371,10 @@
       "0xc825e75837a3f10e6cc7bda1b85eaac572ac3b8d": {
         "symbol": "PAID",
         "mainnetEquivalent": "0x1614f18fc94f47967a3fbe5ffcd46d4e7da3d787"
+      },
+      "0x1AF3F329e8BE154074D8769D1FFa4eE058B1DBc3": {
+        "symbol": "DAI",
+        "mainnetEquivalent": "0x6B175474E89094C44Da98b954EedeAC495271d0F"
       }
     },
     "rpc": [
@@ -383,5 +387,27 @@
     ],
     "faucets": ["https://testnet.binance.org/faucet-smart"],
     "infoURL": "https://www.binance.org"
+  },
+  {
+    "name": "Huobi ECO Chain Mainnet",
+    "chainId": 128,
+    "shortName": "heco",
+    "chain": "Heco",
+    "network": "mainnet",
+    "networkId": 128,
+    "nativeCurrency": { "name": "Huobi ECO Chain Native Token", "symbol": "HT", "decimals": 18 },
+    "rpc": ["https://http-mainnet.hecochain.com", "wss://ws-mainnet.hecochain.com"],
+    "faucets": [],
+    "infoURL": "https://www.hecochain.com",
+    "assetId": {
+      "0x0000000000000000000000000000000000000000": {
+        "symbol": "HT",
+        "mainnetEquivalent": "0x6f259637dcD74C767781E37Bc6133cd6A68aa161"
+      },
+      "0x0298c2b32eaE4da002a15f36fdf7615BEa3DA047": {
+        "symbol": "HUSD",
+        "mainnetEquivalent": "0xdF574c24545E5FfEcb9a659c229253D4111d87e1"
+      }
+    }
   }
 ]

@@ -110,6 +110,7 @@ export async function forwardTransferCreation(
         routingId,
         receiverChannelAddress: receiverChannel,
         cancellationReason: errorReason,
+        ...context,
       },
       "Cancelling sender transfer",
     );

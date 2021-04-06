@@ -18,7 +18,9 @@ export class ServerNodeError extends NodeError {
     NodeNotFound: "Node not found",
     ProviderNotConfigured: "Provider not configured for chainId",
     RegisterSubscriptionFailed: "Failed to register subscription",
+    StoreMethodFailed: "Failed to execute store method",
     SubscriptionNotFound: "Subscription URL not found",
+    TransactionNotFound: "Transaction not found",
     TransferNotFound: "Transfer not found",
     Unauthorized: "Unauthorized",
   } as const;

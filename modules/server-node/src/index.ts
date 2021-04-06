@@ -17,6 +17,7 @@ import {
   GetTransfersFilterOpts,
   GetTransfersFilterOptsSchema,
   VectorErrorJson,
+  StoredTransaction,
 } from "@connext/vector-types";
 import { constructRpcRequest, getPublicIdentifierFromPublicKey, hydrateProviders } from "@connext/vector-utils";
 import { WithdrawCommitment } from "@connext/vector-contracts";
@@ -615,227 +616,6 @@ server.post<{ Body: NodeParams.SendDepositTx }>(
   },
 );
 
-server.get<{ Params: NodeParams.GetChannelDispute }>(
-  "/:publicIdentifier/channels/channel/:channelAddress/dispute",
-  { schema: { params: NodeParams.GetChannelDisputeSchema, response: NodeResponses.GetChannelDisputeSchema } },
-  async (request, reply) => {
-    const engine = getNode(request.params.publicIdentifier);
-    if (!engine) {
-      return reply
-        .status(400)
-        .send(
-          jsonifyError(
-            new ServerNodeError(ServerNodeError.reasons.NodeNotFound, request.params.publicIdentifier, request.params),
-          ),
-        );
-    }
-    const rpc = constructRpcRequest(ChannelRpcMethods.chan_getDispute, {
-      channelAddress: request.params.channelAddress,
-    });
-
-    try {
-      const res = await engine.request<typeof ChannelRpcMethods.chan_getDispute>(rpc);
-      return reply.status(200).send(res);
-    } catch (e) {
-      logger.error({ error: jsonifyError(e) });
-      return reply.status(500).send(jsonifyError(e));
-    }
-  },
-);
-
-server.post<{ Body: NodeParams.SendDisputeChannelTx }>(
-  "/send-dispute-channel-tx",
-  {
-    schema: {
-      body: NodeParams.SendDisputeChannelTxSchema,
-      response: NodeResponses.SendDisputeChannelTxSchema,
-    },
-  },
-  async (request, reply) => {
-    const engine = getNode(request.body.publicIdentifier);
-    if (!engine) {
-      return reply
-        .status(400)
-        .send(
-          jsonifyError(
-            new ServerNodeError(ServerNodeError.reasons.NodeNotFound, request.body.publicIdentifier, request.body),
-          ),
-        );
-    }
-
-    const rpc = constructRpcRequest(ChannelRpcMethods.chan_dispute, { channelAddress: request.body.channelAddress });
-
-    try {
-      const res = await engine.request<typeof ChannelRpcMethods.chan_dispute>(rpc);
-      return reply.status(200).send(res);
-    } catch (e) {
-      logger.error({ error: jsonifyError(e) });
-      return reply.status(500).send(jsonifyError(e));
-    }
-  },
-);
-
-server.post<{ Body: NodeParams.SendDefundChannelTx }>(
-  "/send-defund-channel-tx",
-  {
-    schema: {
-      body: NodeParams.SendDefundChannelTxSchema,
-      response: NodeResponses.SendDefundChannelTxSchema,
-    },
-  },
-  async (request, reply) => {
-    const engine = getNode(request.body.publicIdentifier);
-    if (!engine) {
-      return reply
-        .status(400)
-        .send(
-          jsonifyError(
-            new ServerNodeError(ServerNodeError.reasons.NodeNotFound, request.body.publicIdentifier, request.body),
-          ),
-        );
-    }
-
-    const rpc = constructRpcRequest(ChannelRpcMethods.chan_defund, { channelAddress: request.body.channelAddress });
-
-    try {
-      const res = await engine.request<typeof ChannelRpcMethods.chan_defund>(rpc);
-      return reply.status(200).send(res);
-    } catch (e) {
-      logger.error({ error: jsonifyError(e) });
-      return reply.status(500).send(jsonifyError(e));
-    }
-  },
-);
-
-server.get<{ Params: NodeParams.GetTransferDispute }>(
-  "/:publicIdentifier/transfers/transfer/:transferId/dispute",
-  { schema: { params: NodeParams.GetTransferDisputeSchema, response: NodeResponses.GetTransferDisputeSchema } },
-  async (request, reply) => {
-    const engine = getNode(request.params.publicIdentifier);
-    if (!engine) {
-      return reply
-        .status(400)
-        .send(
-          jsonifyError(
-            new ServerNodeError(ServerNodeError.reasons.NodeNotFound, request.params.publicIdentifier, request.params),
-          ),
-        );
-    }
-    const rpc = constructRpcRequest(ChannelRpcMethods.chan_getTransferDispute, {
-      transferId: request.params.transferId,
-    });
-
-    try {
-      const res = await engine.request<typeof ChannelRpcMethods.chan_getTransferDispute>(rpc);
-      return reply.status(200).send(res);
-    } catch (e) {
-      logger.error({ error: jsonifyError(e) });
-      return reply.status(500).send(jsonifyError(e));
-    }
-  },
-);
-
-server.post<{ Body: NodeParams.SendDisputeTransferTx }>(
-  "/send-dispute-transfer-tx",
-  {
-    schema: {
-      body: NodeParams.SendDisputeTransferTxSchema,
-      response: NodeResponses.SendDisputeTransferTxSchema,
-    },
-  },
-  async (request, reply) => {
-    const engine = getNode(request.body.publicIdentifier);
-    if (!engine) {
-      return reply
-        .status(400)
-        .send(
-          jsonifyError(
-            new ServerNodeError(ServerNodeError.reasons.NodeNotFound, request.body.publicIdentifier, request.body),
-          ),
-        );
-    }
-
-    const rpc = constructRpcRequest(ChannelRpcMethods.chan_disputeTransfer, { transferId: request.body.transferId });
-
-    try {
-      const res = await engine.request<typeof ChannelRpcMethods.chan_disputeTransfer>(rpc);
-      return reply.status(200).send(res);
-    } catch (e) {
-      logger.error({ error: jsonifyError(e) });
-      return reply.status(500).send(jsonifyError(e));
-    }
-  },
-);
-
-server.post<{ Body: NodeParams.SendDefundTransferTx }>(
-  "/send-defund-transfer-tx",
-  {
-    schema: {
-      body: NodeParams.SendDefundTransferTxSchema,
-      response: NodeResponses.SendDefundTransferTxSchema,
-    },
-  },
-  async (request, reply) => {
-    const engine = getNode(request.body.publicIdentifier);
-    if (!engine) {
-      return reply
-        .status(400)
-        .send(
-          jsonifyError(
-            new ServerNodeError(ServerNodeError.reasons.NodeNotFound, request.body.publicIdentifier, request.body),
-          ),
-        );
-    }
-
-    const rpc = constructRpcRequest(ChannelRpcMethods.chan_defundTransfer, { transferId: request.body.transferId });
-
-    try {
-      const res = await engine.request<typeof ChannelRpcMethods.chan_defundTransfer>(rpc);
-      return reply.status(200).send(res);
-    } catch (e) {
-      logger.error({ error: jsonifyError(e) });
-      return reply.status(500).send(jsonifyError(e));
-    }
-  },
-);
-
-server.post<{ Body: NodeParams.SendExitChannelTx }>(
-  "/send-exit-channel-tx",
-  {
-    schema: {
-      body: NodeParams.SendExitChannelTxSchema,
-      response: NodeResponses.SendExitChannelTxSchema,
-    },
-  },
-  async (request, reply) => {
-    const engine = getNode(request.body.publicIdentifier);
-    if (!engine) {
-      return reply
-        .status(400)
-        .send(
-          jsonifyError(
-            new ServerNodeError(ServerNodeError.reasons.NodeNotFound, request.body.publicIdentifier, request.body),
-          ),
-        );
-    }
-
-    const rpc = constructRpcRequest(ChannelRpcMethods.chan_exit, {
-      channelAddress: request.body.channelAddress,
-      assetIds: request.body.assetIds,
-      recipient: request.body.recipient,
-      owner: request.body.owner,
-    });
-
-    try {
-      const res = await engine.request<typeof ChannelRpcMethods.chan_exit>(rpc);
-      return reply.status(200).send(res);
-    } catch (e) {
-      logger.error({ error: jsonifyError(e) });
-      return reply.status(500).send(jsonifyError(e));
-    }
-  },
-);
-
 server.post<{ Body: NodeParams.Deposit }>(
   "/deposit",
   { schema: { body: NodeParams.DepositSchema, response: NodeResponses.DepositSchema } },
@@ -1336,6 +1116,304 @@ server.post<{ Body: NodeParams.CreateNode }>(
     }
   },
 );
+
+server.get<{ Params: NodeParams.GetChannelDispute }>(
+  "/:publicIdentifier/channels/channel/:channelAddress/dispute",
+  { schema: { params: NodeParams.GetChannelDisputeSchema, response: NodeResponses.GetChannelDisputeSchema } },
+  async (request, reply) => {
+    const engine = getNode(request.params.publicIdentifier);
+    if (!engine) {
+      return reply
+        .status(400)
+        .send(
+          jsonifyError(
+            new ServerNodeError(ServerNodeError.reasons.NodeNotFound, request.params.publicIdentifier, request.params),
+          ),
+        );
+    }
+    const rpc = constructRpcRequest(ChannelRpcMethods.chan_getDispute, {
+      channelAddress: request.params.channelAddress,
+    });
+
+    try {
+      const res = await engine.request<typeof ChannelRpcMethods.chan_getDispute>(rpc);
+      return reply.status(200).send(res);
+    } catch (e) {
+      logger.error({ error: jsonifyError(e) });
+      return reply.status(500).send(jsonifyError(e));
+    }
+  },
+);
+
+server.post<{ Body: NodeParams.SendDisputeChannelTx }>(
+  "/send-dispute-channel-tx",
+  {
+    schema: {
+      body: NodeParams.SendDisputeChannelTxSchema,
+      response: NodeResponses.SendDisputeChannelTxSchema,
+    },
+  },
+  async (request, reply) => {
+    const engine = getNode(request.body.publicIdentifier);
+    if (!engine) {
+      return reply
+        .status(400)
+        .send(
+          jsonifyError(
+            new ServerNodeError(ServerNodeError.reasons.NodeNotFound, request.body.publicIdentifier, request.body),
+          ),
+        );
+    }
+
+    const rpc = constructRpcRequest(ChannelRpcMethods.chan_dispute, { channelAddress: request.body.channelAddress });
+
+    try {
+      const res = await engine.request<typeof ChannelRpcMethods.chan_dispute>(rpc);
+      return reply.status(200).send(res);
+    } catch (e) {
+      logger.error({ error: jsonifyError(e) });
+      return reply.status(500).send(jsonifyError(e));
+    }
+  },
+);
+
+server.post<{ Body: NodeParams.SendDefundChannelTx }>(
+  "/send-defund-channel-tx",
+  {
+    schema: {
+      body: NodeParams.SendDefundChannelTxSchema,
+      response: NodeResponses.SendDefundChannelTxSchema,
+    },
+  },
+  async (request, reply) => {
+    const engine = getNode(request.body.publicIdentifier);
+    if (!engine) {
+      return reply
+        .status(400)
+        .send(
+          jsonifyError(
+            new ServerNodeError(ServerNodeError.reasons.NodeNotFound, request.body.publicIdentifier, request.body),
+          ),
+        );
+    }
+
+    const rpc = constructRpcRequest(ChannelRpcMethods.chan_defund, { channelAddress: request.body.channelAddress });
+
+    try {
+      const res = await engine.request<typeof ChannelRpcMethods.chan_defund>(rpc);
+      return reply.status(200).send(res);
+    } catch (e) {
+      logger.error({ error: jsonifyError(e) });
+      return reply.status(500).send(jsonifyError(e));
+    }
+  },
+);
+
+server.get<{ Params: NodeParams.GetTransferDispute }>(
+  "/:publicIdentifier/transfers/transfer/:transferId/dispute",
+  { schema: { params: NodeParams.GetTransferDisputeSchema, response: NodeResponses.GetTransferDisputeSchema } },
+  async (request, reply) => {
+    const engine = getNode(request.params.publicIdentifier);
+    if (!engine) {
+      return reply
+        .status(400)
+        .send(
+          jsonifyError(
+            new ServerNodeError(ServerNodeError.reasons.NodeNotFound, request.params.publicIdentifier, request.params),
+          ),
+        );
+    }
+    const rpc = constructRpcRequest(ChannelRpcMethods.chan_getTransferDispute, {
+      transferId: request.params.transferId,
+    });
+
+    try {
+      const res = await engine.request<typeof ChannelRpcMethods.chan_getTransferDispute>(rpc);
+      return reply.status(200).send(res);
+    } catch (e) {
+      logger.error({ error: jsonifyError(e) });
+      return reply.status(500).send(jsonifyError(e));
+    }
+  },
+);
+
+server.post<{ Body: NodeParams.SendDisputeTransferTx }>(
+  "/send-dispute-transfer-tx",
+  {
+    schema: {
+      body: NodeParams.SendDisputeTransferTxSchema,
+      response: NodeResponses.SendDisputeTransferTxSchema,
+    },
+  },
+  async (request, reply) => {
+    const engine = getNode(request.body.publicIdentifier);
+    if (!engine) {
+      return reply
+        .status(400)
+        .send(
+          jsonifyError(
+            new ServerNodeError(ServerNodeError.reasons.NodeNotFound, request.body.publicIdentifier, request.body),
+          ),
+        );
+    }
+
+    const rpc = constructRpcRequest(ChannelRpcMethods.chan_disputeTransfer, { transferId: request.body.transferId });
+
+    try {
+      const res = await engine.request<typeof ChannelRpcMethods.chan_disputeTransfer>(rpc);
+      return reply.status(200).send(res);
+    } catch (e) {
+      logger.error({ error: jsonifyError(e) });
+      return reply.status(500).send(jsonifyError(e));
+    }
+  },
+);
+
+server.post<{ Body: NodeParams.SendDefundTransferTx }>(
+  "/send-defund-transfer-tx",
+  {
+    schema: {
+      body: NodeParams.SendDefundTransferTxSchema,
+      response: NodeResponses.SendDefundTransferTxSchema,
+    },
+  },
+  async (request, reply) => {
+    const engine = getNode(request.body.publicIdentifier);
+    if (!engine) {
+      return reply
+        .status(400)
+        .send(
+          jsonifyError(
+            new ServerNodeError(ServerNodeError.reasons.NodeNotFound, request.body.publicIdentifier, request.body),
+          ),
+        );
+    }
+
+    const rpc = constructRpcRequest(ChannelRpcMethods.chan_defundTransfer, { transferId: request.body.transferId });
+
+    try {
+      const res = await engine.request<typeof ChannelRpcMethods.chan_defundTransfer>(rpc);
+      return reply.status(200).send(res);
+    } catch (e) {
+      logger.error({ error: jsonifyError(e) });
+      return reply.status(500).send(jsonifyError(e));
+    }
+  },
+);
+
+server.post<{ Body: NodeParams.SendExitChannelTx }>(
+  "/send-exit-channel-tx",
+  {
+    schema: {
+      body: NodeParams.SendExitChannelTxSchema,
+      response: NodeResponses.SendExitChannelTxSchema,
+    },
+  },
+  async (request, reply) => {
+    const engine = getNode(request.body.publicIdentifier);
+    if (!engine) {
+      return reply
+        .status(400)
+        .send(
+          jsonifyError(
+            new ServerNodeError(ServerNodeError.reasons.NodeNotFound, request.body.publicIdentifier, request.body),
+          ),
+        );
+    }
+
+    const rpc = constructRpcRequest(ChannelRpcMethods.chan_exit, {
+      channelAddress: request.body.channelAddress,
+      assetIds: request.body.assetIds,
+      recipient: request.body.recipient,
+      owner: request.body.owner,
+    });
+
+    try {
+      const res = await engine.request<typeof ChannelRpcMethods.chan_exit>(rpc);
+      return reply.status(200).send(res);
+    } catch (e) {
+      logger.error({ error: jsonifyError(e) });
+      return reply.status(500).send(jsonifyError(e));
+    }
+  },
+);
+
+server.post<{ Body: NodeParams.SpeedUpTx }>("/speed-up", async (request, reply) => {
+  if (request.body.adminToken !== config.adminToken) {
+    return reply.status(401).send({ message: "Unauthorized" });
+  }
+
+  const chainService = getChainService(request.body.publicIdentifier);
+  if (!chainService) {
+    return reply
+      .status(404)
+      .send(
+        new ServerNodeError(
+          ServerNodeError.reasons.ChainServiceNotFound,
+          request.body.publicIdentifier,
+          request.body,
+        ).toJson(),
+      );
+  }
+
+  let record: StoredTransaction | undefined;
+  try {
+    record = await store.getTransactionByHash(request.body.transactionHash);
+  } catch (e) {
+    return reply.status(500).send(
+      new ServerNodeError(ServerNodeError.reasons.StoreMethodFailed, request.body.publicIdentifier, request.body, {
+        storeError: e.message,
+        storeMethod: "getTransactionByHash",
+      }).toJson(),
+    );
+  }
+
+  if (!record) {
+    return reply
+      .status(404)
+      .send(
+        new ServerNodeError(
+          ServerNodeError.reasons.TransactionNotFound,
+          request.body.publicIdentifier,
+          request.body,
+        ).toJson(),
+      );
+  }
+  const result = await chainService.speedUpTx(record.chainId, {
+    to: record.to,
+    data: record.data,
+    value: record.value,
+    nonce: record.nonce,
+    transactionHash: record.transactionHash,
+  });
+  if (result.isError) {
+    return reply.status(500).send(jsonifyError(result.getError()!));
+  }
+  return reply.status(200).send({ transactionHash: result.getValue().hash });
+});
+
+server.post<{ Body: NodeParams.SendExitChannelTx }>("/sync-disputes", async (request, reply) => {
+  const engine = getNode(request.body.publicIdentifier);
+  if (!engine) {
+    return reply
+      .status(400)
+      .send(
+        jsonifyError(
+          new ServerNodeError(ServerNodeError.reasons.NodeNotFound, request.body.publicIdentifier, request.body),
+        ),
+      );
+  }
+
+  const rpc = constructRpcRequest(ChannelRpcMethods.chan_syncDisputes, {});
+
+  try {
+    const res = await engine.request<typeof ChannelRpcMethods.chan_syncDisputes>(rpc);
+    return reply.status(200).send({ message: "synced disputes" });
+  } catch (e) {
+    logger.error({ error: jsonifyError(e) });
+    return reply.status(500).send(jsonifyError(e));
+  }
+});
 
 const JsonRpcRequestSchema = Type.Object({
   method: Type.String(),
