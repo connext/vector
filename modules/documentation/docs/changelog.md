@@ -2,7 +2,11 @@
 
 ## Next Release
 
+## 0.2.2-beta.4
+
 - \[engine\] Handle cancelled withdrawals
+- \[iframe\] Improved signature handling for deterministic keys
+- \[utils\] Add to `chains.json`
 
 ## 0.2.2-beta.3
 
