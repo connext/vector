@@ -26,7 +26,6 @@ import {
   getRandomBytes32,
   hashCoreTransferState,
 } from "@connext/vector-utils";
-import { Interface } from "@ethersproject/abi";
 import { Signer } from "@ethersproject/abstract-signer";
 import { BigNumber } from "@ethersproject/bignumber";
 import { Contract } from "@ethersproject/contracts";
