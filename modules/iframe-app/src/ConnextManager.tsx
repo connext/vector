@@ -32,9 +32,9 @@ export default class ConnextManager {
 
   private async initNode(
     chainProviders: { [chainId: number]: string },
+    signature: string,
     chainAddresses?: ChainAddresses,
     messagingUrl?: string,
-    signature?: string,
     signerAddress?: string,
     natsUrl?: string,
     authUrl?: string,
@@ -51,9 +51,6 @@ export default class ConnextManager {
     // store entropy in local storage
     if (!localStorage) {
       throw new Error("localStorage not available in this window, please enable cross-site cookies and try again.");
-    }
-    if (!signature) {
-      throw new Error("Signature is required");
     }
     const recovered = verifyMessage(NonEIP712Message, signature);
     if (recovered !== signerAddress) {
@@ -113,9 +110,9 @@ export default class ConnextManager {
     if (request.method === "connext_authenticate") {
       const node = await this.initNode(
         request.params.chainProviders,
+        request.params.signature,
         request.params.chainAddresses,
         request.params.messagingUrl,
-        request.params.signature,
         request.params.signer,
         request.params.natsUrl,
         request.params.authUrl,
