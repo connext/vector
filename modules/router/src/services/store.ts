@@ -45,11 +45,11 @@ export type RouterRebalanceRecord = {
   swap: AllowedSwap;
   status: RouterRebalanceStatus;
   approveHash?: string;
-  approveChain?: string;
+  approveChain?: number;
   executeHash?: string;
-  executeChain?: string;
+  executeChain?: number;
   completeHash?: string;
-  completeChain?: string;
+  completeChain?: number;
   // createdAt
   // updatedAt
 };
