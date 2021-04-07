@@ -1577,9 +1577,6 @@ describe(testName, () => {
     const withdrawDefinition = mkAddress("0xccceeeeddddd");
 
     // stubs
-    let handlePendingUpdates: Sinon.SinonStub;
-    let handleUnverifiedUpdates: Sinon.SinonStub;
-    let handleRouterDroppedTransfers: Sinon.SinonStub;
     let nodeService: Sinon.SinonStubbedInstance<RestServerNodeService>;
     let store: Sinon.SinonStubbedInstance<PrismaStore>;
     let chainReader: Sinon.SinonStubbedInstance<VectorChainReader>;
@@ -1588,8 +1585,8 @@ describe(testName, () => {
     let inProgressCreations: Sinon.SinonStub;
 
     const setupMocks = (
-      activeTransferOverrides: Partial<TestHashlockTransferOptions> = [{}],
-      updateOverrides: Partial<NodeParams.ConditionalTransfer & { status: RouterUpdateStatus }>[] = [{}],
+      activeTransferOverrides: Partial<TestHashlockTransferOptions>[] = [{}] as any,
+      updateOverrides: Partial<NodeParams.ConditionalTransfer & { status: RouterUpdateStatus }>[] = [{}] as any,
     ) => {
       // create mocked channel
       const { channel } = createTestChannelState(UpdateType.deposit, {
@@ -1601,7 +1598,7 @@ describe(testName, () => {
       });
 
       // create active transfers with channel
-      const activeTransfers = activeTransferOverrides.map((override) => {
+      const activeTransfers = activeTransferOverrides.map((override: Partial<TestHashlockTransferOptions>) => {
         const { meta, ...defaults } = override;
         return createTestFullHashlockTransferState({
           chainId,
@@ -1661,7 +1658,7 @@ describe(testName, () => {
       );
       inProgressCreations.value({});
       // never has receiver transfer by default
-      activeTransfers.map((t, idx) => {
+      activeTransfers.map((t: FullTransferState, idx: number) => {
         nodeService.getTransfersByRoutingId.onCall(idx).resolves(Result.ok([t]));
       });
       nodeService.resolveTransfer.resolves(
@@ -1678,9 +1675,6 @@ describe(testName, () => {
 
     beforeEach(async () => {
       // Generate mocks
-      handlePendingUpdates = Sinon.stub(forwarding, "handlePendingUpdates");
-      handleUnverifiedUpdates = Sinon.stub(forwarding, "handleUnverifiedUpdates");
-      handleRouterDroppedTransfers = Sinon.stub(forwarding, "handleRouterDroppedTransfers");
       nodeService = Sinon.createStubInstance(RestServerNodeService);
       store = Sinon.createStubInstance(PrismaStore);
       chainReader = Sinon.createStubInstance(VectorChainReader);
