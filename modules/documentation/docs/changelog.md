@@ -2,6 +2,10 @@
 
 ## Next Release
 
+## 0.2.2-beta.5
+
+- \[iframe\] Require iframe signature
+
 ## 0.2.2-beta.4
 
 - \[engine\] Handle cancelled withdrawals
