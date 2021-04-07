@@ -383,6 +383,8 @@ export const requestCollateral = async (
       provider,
       tx.txHash,
       getConfirmationsForChain(channel.networkContext.chainId),
+      // IFF non-mainnet, shouldnt take longer than 5min
+      channel.networkContext.chainId === 1 ? undefined : 600_000,
     );
     if (receipt.isError) {
       return Result.fail(

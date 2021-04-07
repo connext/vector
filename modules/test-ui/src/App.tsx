@@ -60,22 +60,20 @@ function App() {
         messagingUrl: config.messagingUrl,
       });
       let init: { signature?: string; signer?: string } | undefined = undefined;
-      if (loginProvider === "metamask" || loginProvider === "magic") {
-        let _loginProvider: providers.Web3Provider;
-        if (loginProvider === "metamask") {
-          _loginProvider = new providers.Web3Provider((window as any).ethereum);
-          const accts = await _loginProvider.send("eth_requestAccounts", []);
-          console.log("accts: ", accts);
-        } else {
-          throw new Error("MAGIC TODO");
-        }
-        const signer = _loginProvider.getSigner();
-        const signerAddress = await signer.getAddress();
-        console.log("signerAddress: ", signerAddress);
-        const signature = await signer.signMessage(NonEIP712Message);
-        console.log("signature: ", signature);
-        init = { signature, signer: signerAddress };
+      let _loginProvider: providers.Web3Provider;
+      if (loginProvider === "metamask") {
+        _loginProvider = new providers.Web3Provider((window as any).ethereum);
+        const accts = await _loginProvider.send("eth_requestAccounts", []);
+        console.log("accts: ", accts);
+      } else {
+        throw new Error("MAGIC TODO");
       }
+      const signer = _loginProvider.getSigner();
+      const signerAddress = await signer.getAddress();
+      console.log("signerAddress: ", signerAddress);
+      const signature = await signer.signMessage(NonEIP712Message);
+      console.log("signature: ", signature);
+      init = { signature, signer: signerAddress };
 
       let error: any | undefined;
       try {
@@ -422,7 +420,7 @@ function App() {
                 iframeSrc: "http://localhost:3030",
                 routerPublicIdentifier: "vector8Uz1BdpA9hV5uTm6QUv5jj1PsUyCH8m8ciA94voCzsxVmrBRor",
                 supportedChains: "1337,1338",
-                loginProvider: "none",
+                loginProvider: "metamask",
               }}
             >
               <Form.Item label="IFrame Src" name="iframeSrc">
@@ -457,7 +455,6 @@ function App() {
 
               <Form.Item name="loginProvider" label="Login Provider">
                 <Radio.Group>
-                  <Radio value="none">None</Radio>
                   <Radio value="metamask">Metamask</Radio>
                   <Radio value="magic">Magic.Link</Radio>
                 </Radio.Group>
