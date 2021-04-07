@@ -2,6 +2,8 @@
 
 ## Next Release
 
+## 0.2.2-beta.6
+
 - \[router\] Add 5min timeout to non-mainnet chains
 - \[ops\] Remove the `server-node/src/generated` directory in `make clean`
 
