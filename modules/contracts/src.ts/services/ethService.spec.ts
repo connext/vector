@@ -52,9 +52,8 @@ const assertResult = (result: Result<any>, isError: boolean, unwrappedVal?: any)
   }
 };
 
-const txResponse: TransactionResponseWithResult = {
+const _txResponse = {
   chainId: 1337,
-  completed: () => Promise.resolve(Result.ok({} as any)),
   confirmations: 1,
   data: "0x",
   from: AddressZero,
@@ -66,16 +65,26 @@ const txResponse: TransactionResponseWithResult = {
   wait: () => Promise.resolve({} as TransactionReceipt),
 };
 
+const txResponse: TransactionResponseWithResult = {
+  ..._txResponse,
+  completed: () => Promise.resolve(Result.ok({} as any)),
+};
+
 const { log } = getTestLoggers("ethService");
 describe.only("ethService", () => {
   beforeEach(() => {
     // eth service deps
     storeMock = createStubInstance(MemoryStoreService);
+
     signer = createStubInstance(ChannelSigner);
-    provider1337 = createStubInstance(JsonRpcProvider);
-    provider1338 = createStubInstance(JsonRpcProvider);
     signer.connect.returns(signer as any);
     (signer as any)._isSigner = true;
+
+    const _provider = createStubInstance(JsonRpcProvider);
+    _provider.getTransaction.resolves(_txResponse);
+    provider1337 = _provider;
+    provider1338 = _provider;
+    (signer as any).provider = provider1337;
 
     // create eth service class
     ethService = new EthereumChainService(
@@ -88,7 +97,7 @@ describe.only("ethService", () => {
       log,
     );
 
-    // stubs
+    // stubs with default friendly behavior
     getCodeMock = stub(ethService, "getCode").resolves(Result.ok("0x"));
     sendTxWithRetriesMock = stub(ethService, "sendTxWithRetries");
     sendTxWithRetriesMock.resolves(Result.ok(txResponse));
@@ -375,6 +384,47 @@ describe.only("ethService", () => {
       expect(call.args[0]).to.deep.eq(channelState);
       expect(call.args[1]).to.deep.eq("1");
       expect(call.args[2]).to.deep.eq(AddressZero);
+    });
+  });
+
+  describe.only("speedUpTx", () => {
+    const minTx: MinimalTransaction & { transactionHash: string; nonce: number } = {
+      data: mkBytes32("0xabc"),
+      to: mkAddress("0xbca"),
+      value: 0,
+      transactionHash: mkBytes32("0xfff"),
+      nonce: 8,
+    };
+
+    beforeEach(() => {});
+
+    it("errors if cannot get a signer", async () => {
+      const result = await ethService.speedUpTx(1234, minTx);
+      assertResult(result, true, ChainError.reasons.SignerNotFound);
+    });
+
+    it("errors if cannot get transaction", async () => {
+      provider1337.getTransaction.rejects("Boooo");
+      const result = await ethService.speedUpTx(1337, minTx);
+      assertResult(result, true, ChainError.reasons.TxNotFound);
+    });
+
+    it("errors if transaction is confirmed", async () => {
+      provider1337.getTransaction.resolves({ confirmations: 1 } as any);
+      const result = await ethService.speedUpTx(1337, minTx);
+      console.log("result: ", result);
+      assertResult(result, true, ChainError.reasons.TxAlreadyMined);
+    });
+
+    it("happy: speeds up tx", async () => {
+      provider1337.getTransaction.resolves({ confirmations: 0 } as any);
+      const result = await ethService.speedUpTx(1337, minTx);
+      assertResult(result, false, txResponse);
+      expect(sendTxWithRetriesMock.callCount).to.eq(1);
+      const call = sendTxWithRetriesMock.getCall(0);
+      expect(call.args[0]).to.eq(minTx.to);
+      expect(call.args[1]).to.eq(1337);
+      expect(call.args[2]).to.eq(TransactionReason.speedUpTransaction);
     });
   });
 });
