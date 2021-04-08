@@ -941,7 +941,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
         Result.fail(gasPrice.getError()!);
       }
 
-      const deploy = await this.sendDeployChannelTx(channelState, gasPrice.getValue());
+      const deploy = await this.sendDeployChannelTx(channelState);
       if (deploy.isError) {
         return Result.fail(deploy.getError()!);
       }
