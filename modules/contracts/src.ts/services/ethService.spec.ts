@@ -36,6 +36,8 @@ let approveMock: SinonStub;
 let getCodeMock: SinonStub;
 let getOnchainBalanceMock: SinonStub;
 
+let channelState: FullChannelState;
+
 const assertResult = (result: Result<any>, isError: boolean, unwrappedVal?: any) => {
   if (isError) {
     expect(result.isError).to.be.true;
@@ -93,6 +95,12 @@ describe.only("ethService", () => {
     approveMock = stub(ethService, "approveTokens");
     approveMock.resolves(Result.ok(txResponse));
     getOnchainBalanceMock = stub(ethService, "getOnchainBalance").resolves(Result.ok(BigNumber.from("100")));
+
+    // channel state
+    const test = createTestChannelState("create");
+    channelState = test.channel;
+    channelState.networkContext.chainId = 1337;
+    signer.getAddress.resolves(channelState.alice);
   });
 
   afterEach(() => {
@@ -100,15 +108,8 @@ describe.only("ethService", () => {
     reset();
   });
 
-  describe.only("sendDeployChannelTx", () => {
-    let channelState: FullChannelState;
-
-    beforeEach(() => {
-      const test = createTestChannelState("create");
-      channelState = test.channel;
-      channelState.networkContext.chainId = 1337;
-      signer.getAddress.resolves(channelState.alice);
-    });
+  describe("sendDeployChannelTx", () => {
+    beforeEach(() => {});
 
     it("errors if cannot get a signer", async () => {
       channelState.networkContext.chainId = 1234;
@@ -228,7 +229,6 @@ describe.only("ethService", () => {
   });
 
   describe("sendWithdrawTx", () => {
-    let channelState: FullChannelState;
     const minTx: MinimalTransaction = {
       data: mkBytes32("0xabc"),
       to: AddressZero,
@@ -237,13 +237,8 @@ describe.only("ethService", () => {
     let sendDeployChannelTxMock: SinonStub;
 
     beforeEach(() => {
-      const test = createTestChannelState("create");
-      channelState = test.channel;
-      channelState.networkContext.chainId = 1337;
-      signer.getAddress.resolves(channelState.alice);
       sendDeployChannelTxMock = stub(ethService, "sendDeployChannelTx");
       sendDeployChannelTxMock.resolves(Result.ok(txResponse));
-      ethService;
     });
 
     it("errors if cannot get a signer", async () => {
@@ -288,6 +283,98 @@ describe.only("ethService", () => {
       expect(sendDeployChannelTxMock.callCount).to.eq(1);
       expect(sendDeployChannelTxMock.getCall(0).firstArg).to.deep.eq(channelState);
       assertResult(result, false, txResponse);
+    });
+  });
+
+  describe("sendDepositTx", () => {
+    let sendDeployChannelTxMock: SinonStub;
+    let sendDepositATxMock: SinonStub;
+    let sendDepositBTxMock: SinonStub;
+
+    beforeEach(() => {
+      sendDeployChannelTxMock = stub(ethService, "sendDeployChannelTx");
+      sendDeployChannelTxMock.resolves(Result.ok(txResponse));
+      sendDepositATxMock = stub(ethService, "sendDepositATx");
+      sendDepositATxMock.resolves(Result.ok(txResponse));
+      sendDepositBTxMock = stub(ethService, "sendDepositBTx");
+      sendDepositBTxMock.resolves(Result.ok(txResponse));
+    });
+
+    it("errors if cannot get a signer", async () => {
+      channelState.networkContext.chainId = 1234;
+      const result = await ethService.sendDepositTx(channelState, channelState.alice, "1", AddressZero);
+      assertResult(result, true, ChainError.reasons.SignerNotFound);
+    });
+
+    it("errors if sender is not in channel", async () => {
+      const result = await ethService.sendDepositTx(channelState, mkAddress("0xababab"), "1", AddressZero);
+      assertResult(result, true, ChainError.reasons.SenderNotInChannel);
+    });
+
+    it("errors if deposit amount is negative", async () => {
+      const result = await ethService.sendDepositTx(channelState, channelState.alice, "-1", AddressZero);
+      assertResult(result, true, ChainError.reasons.NegativeDepositAmount);
+    });
+
+    it("errors if multisig code cannot be retrieved", async () => {
+      getCodeMock.resolves(Result.fail(new ChainError("getCode error")));
+      const result = await ethService.sendDepositTx(channelState, channelState.alice, "1", AddressZero);
+      assertResult(result, true, "getCode error");
+    });
+
+    it("errors if onchain balance returns an error", async () => {
+      getCodeMock.resolves(Result.ok(mkHash("0xabc")));
+      getOnchainBalanceMock.resolves(Result.fail(new Error("getOnchainBalance error")));
+      const result = await ethService.sendDepositTx(channelState, channelState.alice, "1", AddressZero);
+      assertResult(result, true, "getOnchainBalance error");
+    });
+
+    it("errors if channel is deployed and onchain balance is < send amount", async () => {
+      getCodeMock.resolves(Result.ok(mkHash("0xabc")));
+      getOnchainBalanceMock.resolves(Result.ok(BigNumber.from(5)));
+      const result = await ethService.sendDepositTx(channelState, channelState.alice, "6", AddressZero);
+      assertResult(result, true, ChainError.reasons.NotEnoughFunds);
+    });
+
+    it("happy: alice deploys channel with deposit if not deployed", async () => {
+      const result = await ethService.sendDepositTx(channelState, channelState.alice, "1", AddressZero);
+      assertResult(result, false, txResponse);
+      expect(sendDeployChannelTxMock.callCount).to.eq(1);
+      const call = sendDeployChannelTxMock.getCall(0);
+      expect(call.args[0]).to.deep.eq(channelState);
+      expect(call.args[1]).to.deep.eq({ amount: "1", assetId: AddressZero });
+    });
+
+    it("happy: alice calls sendDepositATx if multisig is deployed", async () => {
+      getCodeMock.resolves(Result.ok(mkHash("0xabc")));
+      const result = await ethService.sendDepositTx(channelState, channelState.alice, "1", AddressZero);
+      assertResult(result, false, txResponse);
+      expect(sendDepositATxMock.callCount).to.eq(1);
+      const call = sendDepositATxMock.getCall(0);
+      expect(call.args[0]).to.deep.eq(channelState);
+      expect(call.args[1]).to.deep.eq("1");
+      expect(call.args[2]).to.deep.eq(AddressZero);
+    });
+
+    it("happy: bob calls sendDepositBTx if multisig is deployed", async () => {
+      getCodeMock.resolves(Result.ok(mkHash("0xabc")));
+      const result = await ethService.sendDepositTx(channelState, channelState.bob, "1", AddressZero);
+      assertResult(result, false, txResponse);
+      expect(sendDepositBTxMock.callCount).to.eq(1);
+      const call = sendDepositBTxMock.getCall(0);
+      expect(call.args[0]).to.deep.eq(channelState);
+      expect(call.args[1]).to.deep.eq("1");
+      expect(call.args[2]).to.deep.eq(AddressZero);
+    });
+
+    it("happy: bob calls sendDepositBTx if multisig is not deployed", async () => {
+      const result = await ethService.sendDepositTx(channelState, channelState.bob, "1", AddressZero);
+      assertResult(result, false, txResponse);
+      expect(sendDepositBTxMock.callCount).to.eq(1);
+      const call = sendDepositBTxMock.getCall(0);
+      expect(call.args[0]).to.deep.eq(channelState);
+      expect(call.args[1]).to.deep.eq("1");
+      expect(call.args[2]).to.deep.eq(AddressZero);
     });
   });
 });

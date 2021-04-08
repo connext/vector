@@ -26,7 +26,6 @@ import {
   getRandomBytes32,
   hashCoreTransferState,
 } from "@connext/vector-utils";
-import { Interface } from "@ethersproject/abi";
 import { Signer } from "@ethersproject/abstract-signer";
 import { BigNumber } from "@ethersproject/bignumber";
 import { Contract } from "@ethersproject/contracts";
@@ -789,7 +788,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
     return approveRes;
   }
 
-  private async sendDepositATx(
+  public async sendDepositATx(
     channelState: FullChannelState,
     amount: string,
     assetId: string,
@@ -862,7 +861,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
     ) as Promise<Result<TransactionResponseWithResult, ChainError>>;
   }
 
-  private async sendDepositBTx(
+  public async sendDepositBTx(
     channelState: FullChannelState,
     amount: string,
     assetId: string,
