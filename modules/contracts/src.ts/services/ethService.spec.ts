@@ -283,7 +283,7 @@ describe.only("ethService", () => {
       assertResult(result, false, txResponse);
     });
 
-    it("happy: if channel is not, deploy channel then send withdrawal tx", async () => {
+    it("happy: if channel is not deployed, deploy channel then send withdrawal tx", async () => {
       const result = await ethService.sendWithdrawTx(channelState, minTx);
       expect(sendDeployChannelTxMock.callCount).to.eq(1);
       expect(sendDeployChannelTxMock.getCall(0).firstArg).to.deep.eq(channelState);
