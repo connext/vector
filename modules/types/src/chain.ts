@@ -249,7 +249,6 @@ export interface IVectorChainService extends IVectorChainReader {
   ): Promise<Result<TransactionResponseWithResult, ChainError>>;
   sendDeployChannelTx(
     channelState: FullChannelState,
-    gasPrice: BigNumber,
     deposit?: { amount: string; assetId: string }, // Included IFF createChannelAndDepositAlice
   ): Promise<Result<TransactionResponseWithResult, ChainError>>;
 
@@ -267,6 +266,12 @@ export interface IVectorChainService extends IVectorChainReader {
     assetId: string,
     owner: string,
     recipient: string,
+  ): Promise<Result<TransactionResponseWithResult, ChainError>>;
+
+  // Resend tx at the same nonce
+  speedUpTx(
+    chainId: number,
+    tx: MinimalTransaction & { transactionHash: string; nonce: number },
   ): Promise<Result<TransactionResponseWithResult, ChainError>>;
 
   // Event methods

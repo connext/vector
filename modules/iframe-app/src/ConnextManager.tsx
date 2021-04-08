@@ -1,20 +1,16 @@
 import { BrowserNode, NonEIP712Message } from "@connext/vector-browser-node";
 import {
   ChainAddresses,
-  ChainProviders,
   ChannelRpcMethod,
   ChannelRpcMethodsResponsesMap,
   EngineParams,
   jsonifyError,
 } from "@connext/vector-types";
 import { ChannelSigner, constructRpcRequest, safeJsonParse } from "@connext/vector-utils";
-import { hexlify } from "@ethersproject/bytes";
 import { entropyToMnemonic } from "@ethersproject/hdnode";
 import { keccak256 } from "@ethersproject/keccak256";
-import { randomBytes } from "@ethersproject/random";
 import { toUtf8Bytes } from "@ethersproject/strings";
 import { Wallet, verifyMessage } from "@ethersproject/wallet";
-import { BigNumber } from "@ethersproject/bignumber";
 import pino from "pino";
 import { config } from "./config";
 
@@ -36,9 +32,9 @@ export default class ConnextManager {
 
   private async initNode(
     chainProviders: { [chainId: number]: string },
+    signature: string,
     chainAddresses?: ChainAddresses,
     messagingUrl?: string,
-    signature?: string,
     signerAddress?: string,
     natsUrl?: string,
     authUrl?: string,
@@ -56,13 +52,11 @@ export default class ConnextManager {
     if (!localStorage) {
       throw new Error("localStorage not available in this window, please enable cross-site cookies and try again.");
     }
-    if (signature) {
-      const recovered = verifyMessage(NonEIP712Message, signature);
-      if (recovered !== signerAddress) {
-        throw new Error(
-          `Signature not properly recovered. expected ${signerAddress}, got ${recovered}, signature: ${signature}`,
-        );
-      }
+    const recovered = verifyMessage(NonEIP712Message, signature);
+    if (recovered !== signerAddress) {
+      throw new Error(
+        `Signature not properly recovered. expected ${signerAddress}, got ${recovered}, signature: ${signature}`,
+      );
     }
 
     let _messagingUrl = messagingUrl ?? config.messagingUrl;
@@ -77,40 +71,11 @@ export default class ConnextManager {
       _messagingUrl = undefined;
     }
 
-    let storedEntropy = localStorage.getItem("entropy");
-    if (!storedEntropy) {
-      storedEntropy = signature ?? hexlify(randomBytes(65));
-    } else {
-      if (signature && storedEntropy !== signature) {
-        // need to migrate
-        const ableToMigrate = await this.ableToMigrate(
-          storedEntropy,
-          chainAddresses ?? config.chainAddresses,
-          chainProviders,
-          _messagingUrl,
-          _authUrl,
-          _natsUrl,
-        );
-        if (ableToMigrate) {
-          storedEntropy = signature;
-        } else {
-          storedEntropy = hexlify(randomBytes(65));
-        }
-      }
-    }
-    localStorage.setItem("entropy", storedEntropy);
-
     // use the entropy of the signature to generate a private key for this wallet
     // since the signature depends on the private key stored by Magic/Metamask, this is not forgeable by an adversary
-    const mnemonic = entropyToMnemonic(keccak256(storedEntropy));
+    const mnemonic = entropyToMnemonic(keccak256(signature));
     const privateKey = Wallet.fromMnemonic(mnemonic).privateKey;
     const signer = new ChannelSigner(privateKey);
-
-    // check stored public identifier, and log a warning
-    const storedPublicIdentifier = localStorage.getItem("publicIdentifier");
-    if (storedPublicIdentifier && storedPublicIdentifier !== signer.publicIdentifier) {
-      console.warn("Public identifier does not match what is in storage, new store will be created");
-    }
 
     this.browserNode = await BrowserNode.connect({
       signer,
@@ -145,9 +110,9 @@ export default class ConnextManager {
     if (request.method === "connext_authenticate") {
       const node = await this.initNode(
         request.params.chainProviders,
+        request.params.signature,
         request.params.chainAddresses,
         request.params.messagingUrl,
-        request.params.signature,
         request.params.signer,
         request.params.natsUrl,
         request.params.authUrl,
@@ -183,62 +148,5 @@ export default class ConnextManager {
       return true;
     }
     return await this.browserNode.send(request);
-  }
-
-  private async ableToMigrate(
-    storedEntropy: string,
-    chainAddresses: ChainAddresses,
-    chainProviders: ChainProviders,
-    messagingUrl?: string,
-    authUrl?: string,
-    natsUrl?: string,
-  ): Promise<boolean> {
-    console.warn("Checking if local storage can be migrated to deterministic key");
-    const mnemonic = entropyToMnemonic(keccak256(storedEntropy));
-    const privateKey = Wallet.fromMnemonic(mnemonic).privateKey;
-    const signer = new ChannelSigner(privateKey);
-
-    const browserNode = await BrowserNode.connect({
-      signer,
-      chainAddresses,
-      chainProviders,
-      logger: pino(),
-      messagingUrl,
-      authUrl,
-      natsUrl,
-    });
-
-    const channelAddressesRes = await browserNode.getStateChannels();
-    if (channelAddressesRes.isError) {
-      throw channelAddressesRes.getError();
-    }
-    const channelAddresses = channelAddressesRes.getValue();
-    const channelsWithBalance = await Promise.all(
-      channelAddresses.map(async (channelAddress) => {
-        const channel = await browserNode.getStateChannel({ channelAddress });
-        if (channel.isError) {
-          throw channel.getError();
-        }
-        const chan = channel.getValue();
-        const hasBalance = chan?.balances.find((balance) => {
-          // this checks both alice and bob balance
-          if (BigNumber.from(balance.amount[0]).gt(0) || BigNumber.from(balance.amount[1]).gt(0)) {
-            return true;
-          }
-          return false;
-        });
-        if (hasBalance) {
-          return chan;
-        }
-        return undefined;
-      }),
-    );
-    const channelsWithBalanceFiltered = channelsWithBalance.filter((chan) => !!chan);
-    if (channelsWithBalanceFiltered.length === 0) {
-      console.log("No channels with balance found");
-      return true;
-    }
-    console.warn("Channels with balance exist, cannot migrate right now", channelsWithBalanceFiltered);
-    return false;
   }
 }
