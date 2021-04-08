@@ -62,6 +62,7 @@ export class ChainError extends VectorError {
     NotInitialState: "Transfer must be disputed with initial state",
     MultisigDeployed: "Multisig already deployed",
     TransferNotFound: "Transfer is not included in active transfers",
+    TxAlreadyMined: "Tranasction already mined",
     TxNotFound: "Transaction not found",
     TxReverted: "Transaction reverted on chain",
   };

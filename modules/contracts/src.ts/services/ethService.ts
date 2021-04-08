@@ -105,12 +105,12 @@ export class EthereumChainService extends EthereumChainReader implements IVector
       receipt = await signer.provider!.getTransaction(tx.transactionHash);
     } catch (e) {
       return Result.fail(
-        new ChainError("Could not get transaction", { error: e.message, transactionHash: tx.transactionHash }),
+        new ChainError(ChainError.reasons.TxNotFound, { error: e.message, transactionHash: tx.transactionHash }),
       );
     }
     if (receipt && receipt.confirmations > 0) {
       return Result.fail(
-        new ChainError("Transaction mined", {
+        new ChainError(ChainError.reasons.TxAlreadyMined, {
           transactionHash: tx.transactionHash,
           confirmations: receipt.confirmations,
           blockNumber: receipt.blockNumber,
