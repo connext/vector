@@ -100,10 +100,6 @@
         "symbol": "MATIC",
         "mainnetEquivalent": "0x7D1AfA7B718fb893dB30A3aBc0Cfc608AaCfeBB0"
       },
-      "0x0000000000000000000000000000000000000000": {
-        "symbol": "MATIC",
-        "mainnetEquivalent": "0x7D1AfA7B718fb893dB30A3aBc0Cfc608AaCfeBB0"
-      },
       "0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174": {
         "symbol": "USDC",
         "mainnetEquivalent": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
@@ -183,12 +179,11 @@
       "0x0736d0c130b2ead47476cc262dbed90d7c4eeabd": {
         "symbol": "USDT",
         "mainnetEquivalent": "0xdAC17F958D2ee523a2206206994597C13D831ec7"
-			},
+      },
       "0x48987E8B356e0dE474ddE9Bc10541F8106C88A23": {
         "symbol": "PROPS",
         "mainnetEquivalent": "0x6fe56c0bcdd471359019fcbc48863d6c3e9d4f41"
       }
-
     },
     "rpc": [
       "https://kovan.poa.network",
