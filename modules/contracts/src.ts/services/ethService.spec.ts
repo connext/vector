@@ -99,10 +99,8 @@ describe.only("ethService", () => {
 
     // stubs with default friendly behavior
     getCodeMock = stub(ethService, "getCode").resolves(Result.ok("0x"));
-    sendTxWithRetriesMock = stub(ethService, "sendTxWithRetries");
-    sendTxWithRetriesMock.resolves(Result.ok(txResponse));
-    approveMock = stub(ethService, "approveTokens");
-    approveMock.resolves(Result.ok(txResponse));
+    sendTxWithRetriesMock = stub(ethService, "sendTxWithRetries").resolves(Result.ok(txResponse));
+    approveMock = stub(ethService, "approveTokens").resolves(Result.ok(txResponse));
     getOnchainBalanceMock = stub(ethService, "getOnchainBalance").resolves(Result.ok(BigNumber.from("100")));
 
     // channel state
@@ -246,8 +244,7 @@ describe.only("ethService", () => {
     let sendDeployChannelTxMock: SinonStub;
 
     beforeEach(() => {
-      sendDeployChannelTxMock = stub(ethService, "sendDeployChannelTx");
-      sendDeployChannelTxMock.resolves(Result.ok(txResponse));
+      sendDeployChannelTxMock = stub(ethService, "sendDeployChannelTx").resolves(Result.ok(txResponse));
     });
 
     it("errors if cannot get a signer", async () => {
@@ -301,12 +298,9 @@ describe.only("ethService", () => {
     let sendDepositBTxMock: SinonStub;
 
     beforeEach(() => {
-      sendDeployChannelTxMock = stub(ethService, "sendDeployChannelTx");
-      sendDeployChannelTxMock.resolves(Result.ok(txResponse));
-      sendDepositATxMock = stub(ethService, "sendDepositATx");
-      sendDepositATxMock.resolves(Result.ok(txResponse));
-      sendDepositBTxMock = stub(ethService, "sendDepositBTx");
-      sendDepositBTxMock.resolves(Result.ok(txResponse));
+      sendDeployChannelTxMock = stub(ethService, "sendDeployChannelTx").resolves(Result.ok(txResponse));
+      sendDepositATxMock = stub(ethService, "sendDepositATx").resolves(Result.ok(txResponse));
+      sendDepositBTxMock = stub(ethService, "sendDepositBTx").resolves(Result.ok(txResponse));
     });
 
     it("errors if cannot get a signer", async () => {
@@ -387,7 +381,7 @@ describe.only("ethService", () => {
     });
   });
 
-  describe.only("speedUpTx", () => {
+  describe("speedUpTx", () => {
     const minTx: MinimalTransaction & { transactionHash: string; nonce: number } = {
       data: mkBytes32("0xabc"),
       to: mkAddress("0xbca"),
