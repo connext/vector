@@ -78,9 +78,11 @@ export class ChainError extends VectorError {
 
   readonly canRetry: boolean;
 
-  constructor(public readonly message: Values<typeof ChainError.reasons>, public readonly context: any = {}) {
+  constructor(public readonly message: Values<typeof ChainError.reasons> | string, public readonly context: any = {}) {
     super(message, context, ChainError.type);
-    this.canRetry = Object.values(ChainError.retryableTxErrors).includes(this.message);
+    this.canRetry = !!Object.values(ChainError.retryableTxErrors).find(
+      (msg) => msg.includes(this.message) || this.message.includes(msg),
+    );
   }
 }
 

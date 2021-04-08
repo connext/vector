@@ -555,6 +555,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
         "Attempting to send tx",
       );
       const response = await this.sendTxAndParseResponse(channelAddress, chainId, reason, txFn);
+      console.log("response: ", response);
       if (!response.isError) {
         return response;
       }
@@ -585,7 +586,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
     );
   }
 
-  private async sendTxAndParseResponse(
+  public async sendTxAndParseResponse(
     channelAddress: string,
     chainId: number,
     reason: TransactionReason,

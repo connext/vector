@@ -421,4 +421,26 @@ describe.only("ethService", () => {
       expect(call.args[2]).to.eq(TransactionReason.speedUpTransaction);
     });
   });
+
+  describe.only("sendTxWithRetries", () => {
+    let sendTxAndParseResponseMock: SinonStub;
+
+    beforeEach(() => {
+      sendTxAndParseResponseMock = stub(ethService, "sendTxAndParseResponse").resolves(Result.ok(txResponse));
+    });
+
+    it("should error if sendTxAndParseResponse returns a non-retryable error", async () => {
+      sendTxAndParseResponseMock.resolves(Result.fail(new ChainError(ChainError.reasons.NotEnoughFunds)));
+      const result = await ethService.sendTxWithRetries(
+        channelState.channelAddress,
+        channelState.networkContext.chainId,
+        "allowance",
+        () => {
+          return Promise.resolve(_txResponse);
+        },
+      );
+      console.log("result: ", result);
+      assertResult(result, true, ChainError.reasons.NotEnoughFunds);
+    });
+  });
 });
