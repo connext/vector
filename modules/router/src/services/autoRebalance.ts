@@ -10,7 +10,6 @@ import {
   MinimalTransaction,
   CheckStatusParams,
   getConfirmationsForChain,
-  ChainError,
 } from "@connext/vector-types";
 import { getRandomBytes32 } from "@connext/vector-utils";
 import { TransactionReceipt } from "@ethersproject/abstract-provider";
@@ -24,7 +23,7 @@ import { v4 as uuidv4 } from "uuid";
 
 import { getConfig } from "../config";
 import { AutoRebalanceServiceError } from "../errors";
-import { parseBalanceToNumber, rebalancedTokens, transactionSuccess } from "../metrics";
+import { parseBalanceToNumber, rebalancedTokens } from "../metrics";
 import { queueRebalance } from "./rebalanceQueue";
 import { IRouterStore, RouterRebalanceRecord, RouterRebalanceStatus } from "./store";
 
@@ -733,6 +732,7 @@ const getConfirmation = async (
         AutoRebalanceServiceError.reasons.CouldNotCompleteRebalance,
         chainId,
         swap.fromAssetId,
+        // Result's error would be of type ChainError, hence the need for wrapping here.
         { methodId, method, error: jsonifyError(result.getError()!) },
       ),
     );
