@@ -160,11 +160,11 @@ export class PrismaStore implements IRouterStore {
           swap: swap,
           status: result.status as RouterRebalanceStatus,
           approveHash: result.approveHash ? result.approveHash : undefined,
-          approveChain: result.approveChain ? result.approveChain : undefined,
+          approveChain: result.approveChain ? parseInt(result.approveChain) : undefined,
           executeHash: result.executeHash ? result.executeHash : undefined,
-          executeChain: result.executeChain ? result.executeChain : undefined,
+          executeChain: result.executeChain ? parseInt(result.executeChain) : undefined,
           completeHash: result.completeHash ? result.completeHash : undefined,
-          completeChain: result.completeChain ? result.completeChain : undefined,
+          completeChain: result.completeChain ? parseInt(result.completeChain) : undefined,
         }
       : undefined;
   }
@@ -187,8 +187,11 @@ export class PrismaStore implements IRouterStore {
         id: record.id,
         status: record.status,
         approveHash: record.approveHash,
+        approveChain: record.approveChain?.toString(),
         executeHash: record.executeHash,
+        executeChain: record.executeChain?.toString(),
         completeHash: record.completeHash,
+        completeChain: record.completeChain?.toString(),
         fromChainId: record.swap.fromChainId.toString(),
         toChainId: record.swap.toChainId.toString(),
         fromAssetId: record.swap.fromAssetId.toString(),
