@@ -804,7 +804,7 @@ export const handleRouterDroppedTransfers = async (
         u.type === RouterUpdateType.TRANSFER_CREATION,
     );
     if (receiverUpdate) {
-      // recipient update is already queued or being, do nothing
+      // recipient update is already queued or being processed, do nothing
       continue;
     }
     // proceed to create or queue receiver transfer

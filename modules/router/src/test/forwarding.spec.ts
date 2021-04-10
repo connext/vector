@@ -31,6 +31,7 @@ import {
   TestHashlockTransferOptions,
   getRandomChannelSigner,
   mkSig,
+  getSignerAddressFromPublicIdentifier,
 } from "@connext/vector-utils";
 import { AddressZero, HashZero } from "@ethersproject/constants";
 import { BigNumber } from "@ethersproject/bignumber";
@@ -46,6 +47,7 @@ import * as transferService from "../services/transfer";
 import { CheckInError, ForwardTransferCreationError } from "../errors";
 import * as collateralService from "../services/collateral";
 import * as creationQueue from "../services/creationQueue";
+import { Server } from "node:http";
 
 const testName = "Forwarding";
 
@@ -1558,15 +1560,15 @@ describe(testName, () => {
     });
   });
 
-  describe("handleRouterDroppedTransfers", () => {
+  describe.only("handleRouterDroppedTransfers", () => {
     // constants
     const channelAddress = mkAddress("0xccc");
-    const aliceIdentifier = mkPublicIdentifier("vectorRRR");
+    const aliceIdentifier = getRandomChannelSigner().publicIdentifier;
     const bobIdentifier = mkPublicIdentifier("vectorBBB");
     const chainId = 1337;
     const skipCheckIn = undefined;
     const routerPublicIdentifier = aliceIdentifier;
-    const signerAddress = mkAddress("0xrrr");
+    const signerAddress = mkAddress("0xaaaaaaa");
     const defaultData = {
       channelAddress,
       aliceIdentifier,
@@ -1580,8 +1582,9 @@ describe(testName, () => {
     let nodeService: Sinon.SinonStubbedInstance<RestServerNodeService>;
     let store: Sinon.SinonStubbedInstance<PrismaStore>;
     let chainReader: Sinon.SinonStubbedInstance<VectorChainReader>;
-    let forwardTransferCreation: Sinon.SinonStub;
+    // let forwardTransferCreation: Sinon.SinonStub;
     let cancelCreatedTransfer: Sinon.SinonStub;
+    let attemptTransferWithCollateralization: Sinon.SinonStub;
     let inProgressCreations: Sinon.SinonStub;
 
     const setupMocks = (
@@ -1607,13 +1610,14 @@ describe(testName, () => {
           responder: signerAddress,
           responderIdentifier: routerPublicIdentifier,
           transferId: getRandomBytes32(),
+          transferResolver: undefined,
           meta: {
             routingId: getRandomBytes32(),
-            requireOnline: false,
+            requireOnline: true,
             path: [
               {
                 recipient: getRandomChannelSigner().publicIdentifier,
-                recipientChainId: 1341,
+                recipientChainId: chainId,
                 recipientAssetId: mkAddress(),
               },
             ],
@@ -1644,6 +1648,16 @@ describe(testName, () => {
         return val;
       });
 
+      // is alive payload
+      const payload = {
+        ...defaultData,
+        channelAddress: channel.channelAddress,
+        aliceIdentifier: channel.aliceIdentifier,
+        bobIdentifier: channel.bobIdentifier,
+        chainId: channel.networkContext.chainId,
+        skipCheckIn: false,
+      };
+
       // set mocks
       nodeService.getStateChannel.resolves(Result.ok(channel));
       nodeService.getActiveTransfers.resolves(Result.ok(activeTransfers));
@@ -1668,9 +1682,9 @@ describe(testName, () => {
       // receivers channel can be senders channel, doesnt matter
       nodeService.getStateChannelByParticipants.resolves(Result.ok(channel));
       store.getQueuedUpdates.resolves(storedUpdates);
-      forwardTransferCreation.resolves(Result.ok("Forwarded"));
+      attemptTransferWithCollateralization.resolves(Result.ok("transferred"));
 
-      return { channel, activeTransfers, storedUpdates };
+      return { channel, activeTransfers, storedUpdates, payload };
     };
 
     beforeEach(async () => {
@@ -1678,9 +1692,11 @@ describe(testName, () => {
       nodeService = Sinon.createStubInstance(RestServerNodeService);
       store = Sinon.createStubInstance(PrismaStore);
       chainReader = Sinon.createStubInstance(VectorChainReader);
-      forwardTransferCreation = Sinon.stub(forwarding, "forwardTransferCreation");
+      // forwardTransferCreation = Sinon.stub(forwarding, "forwardTransferCreation");
+
       cancelCreatedTransfer = Sinon.stub(transferService, "cancelCreatedTransfer");
       inProgressCreations = Sinon.stub(creationQueue, "inProgressCreations");
+      attemptTransferWithCollateralization = Sinon.stub(transferService, "attemptTransferWithCollateralization");
     });
 
     afterEach(() => {
@@ -1688,25 +1704,370 @@ describe(testName, () => {
       Sinon.reset();
     });
 
-    it("should fail if it cannot get the channel", async () => {});
-    it("should fail if the channel is undefined", async () => {});
-    it("should fail if it cannot get active transfers", async () => {});
-    it("should fail if it cannot get the withdraw registered transfer", async () => {});
-    it("should not include transfers where the router is not the responder in relevant transfers", async () => {});
-    it("should not include withdrawal transfers in relevant transfers", async () => {});
-    it("should not include transfers where the meta is not a valid routing meta in relevant transfers", async () => {});
-    it("should not include transfers that are being processed in relevant transfers", async () => {});
-    it("should handle case where it cannot get transfer by routingId", async () => {});
-    it("should handle case where receiver transfers are created but not resolved", async () => {});
-    it("should handle case where needs to resolve sender transfer (resolve successful)", async () => {});
-    it("should handle case where needs to resolve sender transfer (resolve fails)", async () => {});
-    it("should handle case where needs to cancel the sender transfer (requireOnline is true, router was offline. cancel succeeds)", async () => {});
-    it("should handle case where needs to cancel the sender transfer (requireOnline is true, router was offline. cancel fails)", async () => {});
-    it("should handle case where receiver app must be installed && it fails to get receiver channel", async () => {});
-    it("should handle case where receiver app must be installed && there is already a pending update", async () => {});
-    it("should handle case where receiver app is installed (installation successful)", async () => {});
-    it("should handle case where receiver app is installed (installation fails)", async () => {});
+    it("should fail if it cannot get the channel", async () => {
+      const { payload } = setupMocks();
+      nodeService.getStateChannel.rejects(new Error("fail"));
+
+      await expect(
+        forwarding.handleRouterDroppedTransfers(
+          payload,
+          routerPublicIdentifier,
+          nodeService as INodeService,
+          store,
+          chainReader as IVectorChainReader,
+          logger,
+        ),
+      ).to.be.rejectedWith("fail");
+    });
+
+    it("should fail if the channel is undefined", async () => {
+      const { payload } = setupMocks();
+      nodeService.getStateChannel.resolves(Result.ok(undefined));
+      const res = await forwarding.handleRouterDroppedTransfers(
+        payload,
+        routerPublicIdentifier,
+        nodeService as INodeService,
+        store,
+        chainReader as IVectorChainReader,
+        logger,
+      );
+      expect(res.isError).to.be.true;
+      expect(res.getError()?.message).to.be.eq(CheckInError.reasons.CouldNotGetChannel);
+    });
+
+    it("should fail if it cannot get active transfers", async () => {
+      const { payload } = setupMocks();
+      nodeService.getActiveTransfers.resolves(
+        Result.fail(new ServerNodeServiceError(ServerNodeServiceError.reasons.InternalServerError, "", "", {})),
+      );
+      const res = await forwarding.handleRouterDroppedTransfers(
+        payload,
+        routerPublicIdentifier,
+        nodeService as INodeService,
+        store,
+        chainReader as IVectorChainReader,
+        logger,
+      );
+      expect(res.isError).to.be.true;
+      expect(res.getError()?.message).to.be.eq(CheckInError.reasons.CouldNotGetActiveTransfers);
+    });
+
+    it("should fail if it cannot get the withdraw registered transfer", async () => {
+      const { payload } = setupMocks();
+      chainReader.getRegisteredTransferByName.resolves(Result.fail(new ChainError("fail")));
+      const res = await forwarding.handleRouterDroppedTransfers(
+        payload,
+        routerPublicIdentifier,
+        nodeService as INodeService,
+        store,
+        chainReader as IVectorChainReader,
+        logger,
+      );
+      expect(res.isError).to.be.true;
+      expect(res.getError()?.message).to.be.eq(CheckInError.reasons.CouldNotGetRegistryInfo);
+    });
+
+    it("should not include transfers where the router is not the responder in relevant transfers", async () => {
+      const { payload } = setupMocks([
+        { initiatorIdentifier: routerPublicIdentifier, responderIdentifier: bobIdentifier },
+      ]);
+      const res = await forwarding.handleRouterDroppedTransfers(
+        payload,
+        routerPublicIdentifier,
+        nodeService as INodeService,
+        store,
+        chainReader as IVectorChainReader,
+        logger,
+      );
+      expect(res.isError).to.be.false;
+      expect(res.getValue()).to.be.undefined;
+      expect(nodeService.getTransfersByRoutingId.callCount).to.be.eq(0);
+    });
+
+    it("should not include withdrawal transfers in relevant transfers", async () => {
+      const { payload } = setupMocks([
+        {
+          transferDefinition: withdrawDefinition,
+        },
+      ]);
+      const res = await forwarding.handleRouterDroppedTransfers(
+        payload,
+        routerPublicIdentifier,
+        nodeService as INodeService,
+        store,
+        chainReader as IVectorChainReader,
+        logger,
+      );
+      expect(res.isError).to.be.false;
+      expect(res.getValue()).to.be.undefined;
+      expect(nodeService.getTransfersByRoutingId.callCount).to.be.eq(0);
+    });
+
+    it("should not include transfers where the meta is not a valid routing meta in relevant transfers", async () => {
+      const { payload } = setupMocks([
+        {
+          meta: { path: undefined },
+        },
+      ]);
+      const res = await forwarding.handleRouterDroppedTransfers(
+        payload,
+        routerPublicIdentifier,
+        nodeService as INodeService,
+        store,
+        chainReader as IVectorChainReader,
+        logger,
+      );
+      expect(res.isError).to.be.false;
+      expect(res.getValue()).to.be.undefined;
+      expect(nodeService.getTransfersByRoutingId.callCount).to.be.eq(0);
+    });
+
+    it("should not include transfers that are being processed in relevant transfers", async () => {
+      const { payload, activeTransfers } = setupMocks();
+      inProgressCreations.value({ [channelAddress]: [activeTransfers[0].transferId] });
+      const res = await forwarding.handleRouterDroppedTransfers(
+        payload,
+        routerPublicIdentifier,
+        nodeService as INodeService,
+        store,
+        chainReader as IVectorChainReader,
+        logger,
+      );
+      expect(res.isError).to.be.false;
+      expect(res.getValue()).to.be.undefined;
+      expect(nodeService.getTransfersByRoutingId.callCount).to.be.eq(0);
+    });
+
+    it("should handle case where it cannot get transfer by routingId", async () => {
+      const { payload } = setupMocks();
+      nodeService.getTransfersByRoutingId
+        .onCall(0)
+        .resolves(
+          Result.fail(new ServerNodeServiceError(ServerNodeServiceError.reasons.InternalServerError, "", "", {})),
+        );
+      const res = await forwarding.handleRouterDroppedTransfers(
+        payload,
+        routerPublicIdentifier,
+        nodeService as INodeService,
+        store,
+        chainReader as IVectorChainReader,
+        logger,
+      );
+      expect(res.isError).to.be.true;
+      expect(res.getError()?.message).to.be.eq(CheckInError.reasons.RouterCleanupFailed);
+      expect(res.getError()?.context.errors.length).to.be.eq(1);
+      expect(res.getError()?.context.errors[0].message).to.be.eq(ServerNodeServiceError.reasons.InternalServerError);
+    });
+
+    it("should handle case where receiver transfers are created but not resolved", async () => {
+      const { payload, activeTransfers } = setupMocks();
+      nodeService.getTransfersByRoutingId
+        .onCall(0)
+        .resolves(
+          Result.ok([
+            activeTransfers[0],
+            { ...activeTransfers[0], initiatorIdentifier: routerPublicIdentifier, transferResolver: undefined },
+          ]),
+        );
+      const res = await forwarding.handleRouterDroppedTransfers(
+        payload,
+        routerPublicIdentifier,
+        nodeService as INodeService,
+        store,
+        chainReader as IVectorChainReader,
+        logger,
+      );
+      expect(res.isError).to.be.false;
+      expect(res.getValue()).to.be.undefined;
+      expect(nodeService.resolveTransfer.callCount).to.be.eq(0);
+      expect(nodeService.getStateChannelByParticipants.callCount).to.be.eq(0);
+    });
+
+    it("should handle case where needs to resolve sender transfer (resolve successful)", async () => {
+      const { payload, activeTransfers } = setupMocks();
+      console.log("activeTransfers[0].transferResolver", activeTransfers[0].transferResolver);
+      const transferResolver = { preImage: getRandomBytes32() };
+      nodeService.getTransfersByRoutingId.onCall(0).resolves(
+        Result.ok([
+          activeTransfers[0],
+          {
+            ...activeTransfers[0],
+            initiatorIdentifier: routerPublicIdentifier,
+            transferId: getRandomBytes32(),
+            transferResolver,
+          },
+        ]),
+      );
+      const res = await forwarding.handleRouterDroppedTransfers(
+        payload,
+        routerPublicIdentifier,
+        nodeService as INodeService,
+        store,
+        chainReader as IVectorChainReader,
+        logger,
+      );
+      expect(res.isError).to.be.false;
+      expect(res.getValue()).to.be.undefined;
+      expect(nodeService.resolveTransfer.callCount).to.be.eq(1);
+      expect(nodeService.resolveTransfer.getCall(0).args).to.be.deep.eq([
+        {
+          transferId: activeTransfers[0].transferId,
+          channelAddress,
+          transferResolver,
+        },
+      ]);
+    });
+
+    it("should handle case where needs to resolve sender transfer (resolve fails)", async () => {
+      const { payload, activeTransfers } = setupMocks();
+      const transferResolver = { preImage: getRandomBytes32() };
+      nodeService.getTransfersByRoutingId.onCall(0).resolves(
+        Result.ok([
+          activeTransfers[0],
+          {
+            ...activeTransfers[0],
+            initiatorIdentifier: routerPublicIdentifier,
+            transferId: getRandomBytes32(),
+            transferResolver,
+          },
+        ]),
+      );
+      nodeService.resolveTransfer.resolves(
+        Result.fail(new ServerNodeServiceError(ServerNodeServiceError.reasons.InvalidParams, "", "", {})),
+      );
+      const res = await forwarding.handleRouterDroppedTransfers(
+        payload,
+        routerPublicIdentifier,
+        nodeService as INodeService,
+        store,
+        chainReader as IVectorChainReader,
+        logger,
+      );
+      expect(res.isError).to.be.true;
+      expect(res.getError()?.message).to.be.eq(CheckInError.reasons.RouterCleanupFailed);
+      expect(nodeService.resolveTransfer.callCount).to.be.eq(1);
+      expect(nodeService.resolveTransfer.getCall(0).args).to.be.deep.eq([
+        {
+          transferId: activeTransfers[0].transferId,
+          channelAddress,
+          transferResolver,
+        },
+      ]);
+
+      expect(res.getError()?.context.errors.length).to.be.eq(1);
+      expect(res.getError()?.context.errors[0].message).to.be.eq(ServerNodeServiceError.reasons.InvalidParams);
+    });
+
+    it("should handle case where needs to cancel the sender transfer (requireOnline is true, router was offline. cancel succeeds)", async () => {
+      const { payload, activeTransfers } = setupMocks();
+      const res = await forwarding.handleRouterDroppedTransfers(
+        payload,
+        routerPublicIdentifier,
+        nodeService as INodeService,
+        store,
+        chainReader as IVectorChainReader,
+        logger,
+      );
+      expect(res.isError).to.be.false;
+      expect(res.getValue()).to.be.undefined;
+      expect(cancelCreatedTransfer.callCount).to.be.eq(1);
+      expect(cancelCreatedTransfer.getCall(0).args[0]).to.be.eq("Router not online");
+      expect(cancelCreatedTransfer.getCall(0).args[1]).to.be.deep.eq(activeTransfers[0]);
+      expect(cancelCreatedTransfer.getCall(0).args[2]).to.be.eq(routerPublicIdentifier);
+    });
+
+    it("should handle case where needs to cancel the sender transfer (requireOnline is true, router was offline. cancel fails)", async () => {
+      const { payload, activeTransfers } = setupMocks();
+      cancelCreatedTransfer.resolves(Result.fail(new Error("fail")));
+      const res = await forwarding.handleRouterDroppedTransfers(
+        payload,
+        routerPublicIdentifier,
+        nodeService as INodeService,
+        store,
+        chainReader as IVectorChainReader,
+        logger,
+      );
+      expect(res.isError).to.be.true;
+      expect(res.getError()?.context.errors.length).to.be.eq(1);
+      expect(res.getError()?.context.errors[0].message).to.be.eq("fail");
+      expect(cancelCreatedTransfer.callCount).to.be.eq(1);
+      expect(cancelCreatedTransfer.getCall(0).args[0]).to.be.eq("Router not online");
+      expect(cancelCreatedTransfer.getCall(0).args[1]).to.be.deep.eq(activeTransfers[0]);
+      expect(cancelCreatedTransfer.getCall(0).args[2]).to.be.eq(routerPublicIdentifier);
+    });
+
+    it("should handle case where receiver app must be installed && it fails to get receiver channel", async () => {
+      const { payload } = setupMocks([{ meta: { requireOnline: false } }]);
+      nodeService.getStateChannelByParticipants.resolves(
+        Result.fail(new ServerNodeServiceError(ServerNodeServiceError.reasons.NoPublicIdentifier, "", "", {})),
+      );
+      const res = await forwarding.handleRouterDroppedTransfers(
+        payload,
+        routerPublicIdentifier,
+        nodeService as INodeService,
+        store,
+        chainReader as IVectorChainReader,
+        logger,
+      );
+      expect(res.isError).to.be.true;
+      expect(res.getError()?.context.errors.length).to.be.eq(1);
+      expect(res.getError()?.context.errors[0].message).to.be.eq(ServerNodeServiceError.reasons.NoPublicIdentifier);
+    });
+
+    it("should handle case where receiver app must be installed && there is already a pending update", async () => {
+      const { payload, storedUpdates, activeTransfers } = setupMocks([{ meta: { requireOnline: false } }]);
+      const updates = [
+        {
+          ...storedUpdates[0],
+          type: RouterUpdateType.TRANSFER_CREATION,
+          payload: { meta: { routingId: activeTransfers[0].meta.routingId } },
+        },
+      ];
+      store.getQueuedUpdates.resolves(updates as any);
+      const res = await forwarding.handleRouterDroppedTransfers(
+        payload,
+        routerPublicIdentifier,
+        nodeService as INodeService,
+        store,
+        chainReader as IVectorChainReader,
+        logger,
+      );
+      expect(res.isError).to.be.false;
+      expect(res.getValue()).to.be.undefined;
+    });
+
+    it("should handle case where receiver app is installed (installation fails)", async () => {
+      const { payload } = setupMocks([{ meta: { requireOnline: false } }]);
+      attemptTransferWithCollateralization.resolves(Result.fail(new ChainError("fail", { shouldCancelSender: true })));
+      const res = await forwarding.handleRouterDroppedTransfers(
+        payload,
+        routerPublicIdentifier,
+        nodeService as INodeService,
+        store,
+        chainReader as IVectorChainReader,
+        logger,
+      );
+      expect(res.isError).to.be.true;
+      expect(res.getError()?.context.errors.length).to.be.eq(1);
+      expect(res.getError()?.context.errors[0].message).to.be.eq("fail");
+    });
+
+    it("should handle case where receiver app is installed (installation successful)", async () => {
+      const { payload } = setupMocks([{ meta: { requireOnline: false } }]);
+      const res = await forwarding.handleRouterDroppedTransfers(
+        payload,
+        routerPublicIdentifier,
+        nodeService as INodeService,
+        store,
+        chainReader as IVectorChainReader,
+        logger,
+      );
+      expect(res.isError).to.be.false;
+      expect(res.getValue()).to.be.undefined;
+    });
+
     it("should handle multiple dropped transfers (all successful cases)", async () => {});
+
     it("should handle multiple dropped transfers (mix of successful/failed cases)", async () => {});
   });
 });
