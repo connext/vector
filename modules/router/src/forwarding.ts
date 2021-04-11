@@ -12,7 +12,6 @@ import {
   IsAlivePayload,
   FullTransferState,
   IVectorChainReader,
-  NodeError,
   jsonifyError,
   TransferNames,
   VectorErrorJson,
@@ -25,6 +24,7 @@ import {
   getSignerAddressFromPublicIdentifier,
   hashTransferQuote,
   recoverAddressFromChannelMessage,
+  ServerNodeServiceError,
 } from "@connext/vector-utils";
 import { AddressZero } from "@ethersproject/constants";
 import { getAddress } from "@ethersproject/address";
@@ -110,6 +110,7 @@ export async function forwardTransferCreation(
         routingId,
         receiverChannelAddress: receiverChannel,
         cancellationReason: errorReason,
+        ...context,
       },
       "Cancelling sender transfer",
     );
@@ -243,7 +244,8 @@ export async function forwardTransferCreation(
         },
       );
     }
-    if (parseInt(quote.expiry) < Date.now()) {
+    const now = Date.now();
+    if (parseInt(quote.expiry) < now) {
       return cancelSenderTransferAndReturnError(
         routingId,
         senderTransfer,
@@ -252,6 +254,7 @@ export async function forwardTransferCreation(
         {
           quoteError: "Quote expired",
           quote,
+          now,
         },
       );
     }
@@ -635,7 +638,7 @@ export async function handleIsAlive(
 // eg. router is restarted to change config or to update software
 // and transfers that were being processed were not properly
 // checkpointed
-const handleRouterDroppedTransfers = async (
+export const handleRouterDroppedTransfers = async (
   data: IsAlivePayload,
   routerPublicIdentifier: string,
   nodeService: INodeService,
@@ -801,7 +804,7 @@ const handleRouterDroppedTransfers = async (
         u.type === RouterUpdateType.TRANSFER_CREATION,
     );
     if (receiverUpdate) {
-      // recipient update is already queued or being, do nothing
+      // recipient update is already queued or being processed, do nothing
       continue;
     }
     // proceed to create or queue receiver transfer
@@ -845,7 +848,7 @@ const handleRouterDroppedTransfers = async (
 // the transfer with a recipient was generated, but the router does
 // not know whether or not the transfer was installed or should be
 // cancelled with the sender
-const handleUnverifiedUpdates = async (
+export const handleUnverifiedUpdates = async (
   data: IsAlivePayload,
   routerPublicIdentifier: string,
   nodeService: INodeService,
@@ -955,12 +958,19 @@ const handleUnverifiedUpdates = async (
         logger,
       );
       if (createRes.isError) {
-        await handleUpdateErr(update, "Failed to create with receiver", {
-          createError: jsonifyError(createRes.getError()!),
-        });
+        const error = createRes.getError()?.context?.transferError;
+        logger.error({ method, methodId, update: update.id, error }, "Failed to create with receiver");
+        // If it is just a timeout, it did not fail but must be marked
+        // as pending
+        error === ServerNodeServiceError.reasons.Timeout
+          ? await store.setUpdateStatus(update.id, RouterUpdateStatus.PENDING, error)
+          : await handleUpdateErr(update, "Failed to create with receiver", {
+              createError: jsonifyError(createRes.getError()!),
+            });
         continue;
       }
       logger.info({ method, methodId, update: update.id }, "Update verified: receiver transfer created");
+      await store.setUpdateStatus(update.id, RouterUpdateStatus.COMPLETE, "Update verified: receiver transfer created");
       continue;
     }
 
@@ -993,6 +1003,11 @@ const handleUnverifiedUpdates = async (
         { cancelError: jsonifyError(cancelRes.getError()!) },
         "Update verified: could not cancel sender transfer, cancellation enqueued",
       );
+      // Status is updated in `cancelCreatedTransfer` to pending
+      // TODO: remove the PROCESSING status from the db
+      // then dont have to worry about bringing it back into UNVERIFIED
+      // if it didnt make it all the way to cancellation
+      continue;
     }
     await store.setUpdateStatus(
       update.id,
@@ -1017,7 +1032,7 @@ const handleUnverifiedUpdates = async (
   return Result.ok(undefined);
 };
 
-const handlePendingUpdates = async (
+export const handlePendingUpdates = async (
   data: IsAlivePayload,
   routerPublicIdentifier: string,
   nodeService: INodeService,
@@ -1081,7 +1096,7 @@ const handlePendingUpdates = async (
         const error = createRes.getError()?.context?.transferError;
         await store.setUpdateStatus(
           routerUpdate.id,
-          error === NodeError.reasons.Timeout ? RouterUpdateStatus.PENDING : RouterUpdateStatus.FAILED,
+          error === ServerNodeServiceError.reasons.Timeout ? RouterUpdateStatus.PENDING : RouterUpdateStatus.FAILED,
           error,
         );
         erroredUpdates.push(routerUpdate);
@@ -1100,6 +1115,7 @@ const handlePendingUpdates = async (
     if (type !== RouterUpdateType.TRANSFER_RESOLUTION) {
       logger.error({ update: routerUpdate }, "Unknown update type");
       await store.setUpdateStatus(routerUpdate.id, RouterUpdateStatus.FAILED, "Unknown update type");
+      erroredUpdates.push(routerUpdate);
       continue;
     }
     const resolveRes = await nodeService.resolveTransfer(payload as NodeParams.ResolveTransfer);
@@ -1112,7 +1128,7 @@ const handlePendingUpdates = async (
       const error = resolveRes.getError()?.message;
       await store.setUpdateStatus(
         routerUpdate.id,
-        error === NodeError.reasons.Timeout ? RouterUpdateStatus.PENDING : RouterUpdateStatus.FAILED,
+        error === ServerNodeServiceError.reasons.Timeout ? RouterUpdateStatus.PENDING : RouterUpdateStatus.FAILED,
         error,
       );
       erroredUpdates.push(routerUpdate);

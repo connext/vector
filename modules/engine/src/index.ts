@@ -655,16 +655,7 @@ export class VectorEngine implements IVectorEngine {
       "Deploying channel multisig",
     );
 
-    const gasPriceRes = await this.chainService.getGasPrice(channel.networkContext.chainId);
-    if (gasPriceRes.isError) {
-      Result.fail(gasPriceRes.getError()!);
-    }
-    const gasPrice = gasPriceRes.getValue();
-    this.logger.info(
-      { method, chainId: channel.networkContext.chainId, channel: channel.channelAddress },
-      "Got gas price",
-    );
-    const deployRes = await this.chainService.sendDeployChannelTx(channel, gasPrice);
+    const deployRes = await this.chainService.sendDeployChannelTx(channel);
     if (deployRes.isError) {
       const err = deployRes.getError();
       this.logger.error(

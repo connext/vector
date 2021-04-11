@@ -228,6 +228,8 @@ export function createTestChannelState<T extends UpdateType = typeof UpdateType.
     transfer = createTestFullHashlockTransferState();
     transfer.balance = latestUpdate.balance ?? transfer.balance;
     transfer.meta = type === "create" ? (latestUpdate.details as any).meta : undefined;
+    transfer.transferDefinition =
+      type === "create" ? (latestUpdate.details as CreateUpdateDetails).transferDefinition : undefined;
     (latestUpdate.details as CreateUpdateDetails).meta =
       type === "create" ? (latestUpdate.details as any).meta : undefined;
     transfer.channelFactoryAddress = networkContext.channelFactoryAddress ?? transfer.channelFactoryAddress;

@@ -80,6 +80,7 @@ export const TransactionReason = {
   deploy: "deploy",
   deployWithDepositAlice: "deployWithDepositAlice",
   exitChannel: "exitChannel",
+  speedUpTransaction: "speedUpTransaction",
   transferTokens: "transferTokens",
   withdraw: "withdraw",
 } as const;
