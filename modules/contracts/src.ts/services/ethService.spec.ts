@@ -99,7 +99,6 @@ describe.only("ethService", () => {
 
     // stubs with default friendly behavior
     getCodeMock = stub(ethService, "getCode").resolves(Result.ok("0x"));
-    sendTxWithRetriesMock = stub(ethService, "sendTxWithRetries").resolves(Result.ok(txResponse));
     approveMock = stub(ethService, "approveTokens").resolves(Result.ok(txResponse));
     getOnchainBalanceMock = stub(ethService, "getOnchainBalance").resolves(Result.ok(BigNumber.from("100")));
 
@@ -116,7 +115,9 @@ describe.only("ethService", () => {
   });
 
   describe("sendDeployChannelTx", () => {
-    beforeEach(() => {});
+    beforeEach(() => {
+      sendTxWithRetriesMock = stub(ethService, "sendTxWithRetries").resolves(Result.ok(txResponse));
+    });
 
     it("errors if cannot get a signer", async () => {
       channelState.networkContext.chainId = 1234;
@@ -245,6 +246,7 @@ describe.only("ethService", () => {
 
     beforeEach(() => {
       sendDeployChannelTxMock = stub(ethService, "sendDeployChannelTx").resolves(Result.ok(txResponse));
+      sendTxWithRetriesMock = stub(ethService, "sendTxWithRetries").resolves(Result.ok(txResponse));
     });
 
     it("errors if cannot get a signer", async () => {
@@ -301,6 +303,7 @@ describe.only("ethService", () => {
       sendDeployChannelTxMock = stub(ethService, "sendDeployChannelTx").resolves(Result.ok(txResponse));
       sendDepositATxMock = stub(ethService, "sendDepositATx").resolves(Result.ok(txResponse));
       sendDepositBTxMock = stub(ethService, "sendDepositBTx").resolves(Result.ok(txResponse));
+      sendTxWithRetriesMock = stub(ethService, "sendTxWithRetries").resolves(Result.ok(txResponse));
     });
 
     it("errors if cannot get a signer", async () => {
@@ -390,7 +393,9 @@ describe.only("ethService", () => {
       nonce: 8,
     };
 
-    beforeEach(() => {});
+    beforeEach(() => {
+      sendTxWithRetriesMock = stub(ethService, "sendTxWithRetries").resolves(Result.ok(txResponse));
+    });
 
     it("errors if cannot get a signer", async () => {
       const result = await ethService.speedUpTx(1234, minTx);
@@ -406,7 +411,6 @@ describe.only("ethService", () => {
     it("errors if transaction is confirmed", async () => {
       provider1337.getTransaction.resolves({ confirmations: 1 } as any);
       const result = await ethService.speedUpTx(1337, minTx);
-      console.log("result: ", result);
       assertResult(result, true, ChainError.reasons.TxAlreadyMined);
     });
 
@@ -422,14 +426,14 @@ describe.only("ethService", () => {
     });
   });
 
-  describe.only("sendTxWithRetries", () => {
+  describe("sendTxWithRetries", () => {
     let sendTxAndParseResponseMock: SinonStub;
 
     beforeEach(() => {
       sendTxAndParseResponseMock = stub(ethService, "sendTxAndParseResponse").resolves(Result.ok(txResponse));
     });
 
-    it("should error if sendTxAndParseResponse returns a non-retryable error", async () => {
+    it("errors if sendTxAndParseResponse errors", async () => {
       sendTxAndParseResponseMock.resolves(Result.fail(new ChainError(ChainError.reasons.NotEnoughFunds)));
       const result = await ethService.sendTxWithRetries(
         channelState.channelAddress,
@@ -439,8 +443,21 @@ describe.only("ethService", () => {
           return Promise.resolve(_txResponse);
         },
       );
-      console.log("result: ", result);
       assertResult(result, true, ChainError.reasons.NotEnoughFunds);
+    });
+
+    it("happy: should work when sendTxAndParseResponse works on the first try", async () => {
+      console.log("HELLOOOO");
+      console.log("ethService.sendTxWithRetries: ", ethService.sendTxWithRetries);
+      const result = await ethService.sendTxWithRetries(
+        channelState.channelAddress,
+        channelState.networkContext.chainId,
+        "allowance",
+        () => {
+          return Promise.resolve(_txResponse);
+        },
+      );
+      assertResult(result, false, txResponse);
     });
   });
 });
