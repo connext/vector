@@ -634,6 +634,12 @@ export async function handleIsAlive(
   return dropped;
 }
 
+// This function holds updates in memory that are currently
+// being processed. This allows the users to spam the `isAlive`
+// update without the router needing to worry about accidentally
+// double-handling the same checkpointed update
+let inProgressIsAliveUpdates: string[] = [];
+
 // This function handles transfers that are dropped by the router
 // eg. router is restarted to change config or to update software
 // and transfers that were being processed were not properly
@@ -670,9 +676,19 @@ export const handleRouterDroppedTransfers = async (
   }
   const channel = channelRes.getValue() as FullChannelState;
 
+  // NOTE: there are no updates being handled in this function, but the
+  // isAlive spamming still needs to be considered. instead by convention
+  // use the data.channelAddress for refresh protection
+  if (inProgressIsAliveUpdates.includes(data.channelAddress)) {
+    logger.debug({ method, methodId }, "Channel being processed for dropped transfers");
+    return Result.ok(undefined);
+  }
+  inProgressIsAliveUpdates.push(data.channelAddress);
+
   // Get all active transfers for the channel
   const active = await nodeService.getActiveTransfers({ channelAddress: data.channelAddress });
   if (active.isError) {
+    inProgressIsAliveUpdates = inProgressIsAliveUpdates.filter((x) => x !== data.channelAddress);
     // Do not proceed with processing updates
     return Result.fail(
       new CheckInError(CheckInError.reasons.CouldNotGetActiveTransfers, data.channelAddress, {
@@ -690,6 +706,7 @@ export const handleRouterDroppedTransfers = async (
     channel.networkContext.chainId,
   );
   if (withdrawInfo.isError) {
+    inProgressIsAliveUpdates = inProgressIsAliveUpdates.filter((x) => x !== data.channelAddress);
     return Result.fail(
       new CheckInError(CheckInError.reasons.CouldNotGetRegistryInfo, data.channelAddress, {
         registryError: jsonifyError(withdrawInfo.getError()!),
@@ -794,7 +811,6 @@ export const handleRouterDroppedTransfers = async (
       RouterUpdateStatus.FAILED,
       RouterUpdateStatus.COMPLETE,
       RouterUpdateStatus.PENDING,
-      RouterUpdateStatus.PROCESSING,
       RouterUpdateStatus.UNVERIFIED,
     ]);
     const receiverUpdate = updates.find(
@@ -838,6 +854,7 @@ export const handleRouterDroppedTransfers = async (
       errors.push(forwardRes.getError()!);
     }
   }
+  inProgressIsAliveUpdates = inProgressIsAliveUpdates.filter((x) => x !== data.channelAddress);
   if (errors.length === 0) {
     return Result.ok(undefined);
   }
@@ -868,9 +885,6 @@ export const handleUnverifiedUpdates = async (
     "Method started",
   );
 
-  // Get all unverified updates
-  const updates = await store.getQueuedUpdates(data.channelAddress, [RouterUpdateStatus.UNVERIFIED]);
-
   // Get the channel (if needed, should only query 1x for it)
   const channelRes = await nodeService.getStateChannel({ channelAddress: data.channelAddress });
   if (channelRes.isError || !channelRes.getValue()) {
@@ -883,19 +897,29 @@ export const handleUnverifiedUpdates = async (
   }
   const channel = channelRes.getValue() as FullChannelState;
 
+  // Get all unverified updates
+  const updates = await store.getQueuedUpdates(data.channelAddress, [RouterUpdateStatus.UNVERIFIED]);
+
   const erroredUpdates: RouterStoredUpdate<any>[] = [];
   const handleUpdateErr = async (update: RouterStoredUpdate<any>, msg: string, context: any = {}) => {
     logger.error({ update, ...context }, msg);
     await store.setUpdateStatus(update.id, RouterUpdateStatus.FAILED, msg);
     erroredUpdates.push(update);
+    inProgressIsAliveUpdates = inProgressIsAliveUpdates.filter((x) => x !== update.id);
   };
   for (const update of updates) {
+    // Make sure it isn't already being processed
+    if (inProgressIsAliveUpdates.includes(update.id)) {
+      logger.info({ method, methodId, updateId: update.id }, "Update being processed");
+      continue;
+    }
+    // Add to in progress list
+    inProgressIsAliveUpdates.push(update.id);
     if (update.type !== RouterUpdateType.TRANSFER_CREATION) {
       await handleUpdateErr(update, "Can't verify non-create updates");
       continue;
     }
 
-    await store.setUpdateStatus(update.id, RouterUpdateStatus.PROCESSING);
     logger.info({ method, methodId, updateType: update.type, updateId: update.id }, "Processing unverified update");
 
     // First, reconcile deposit on the channel to come to consensus on the
@@ -941,6 +965,7 @@ export const handleUnverifiedUpdates = async (
         "Update verified: receiver installed transfer",
       );
       logger.info({ method, methodId, update: update.id }, "Update verified: receiver installed transfer");
+      inProgressIsAliveUpdates = inProgressIsAliveUpdates.filter((x) => x !== update.id);
       continue;
     }
 
@@ -967,10 +992,12 @@ export const handleUnverifiedUpdates = async (
           : await handleUpdateErr(update, "Failed to create with receiver", {
               createError: jsonifyError(createRes.getError()!),
             });
+        inProgressIsAliveUpdates = inProgressIsAliveUpdates.filter((x) => x !== update.id);
         continue;
       }
       logger.info({ method, methodId, update: update.id }, "Update verified: receiver transfer created");
       await store.setUpdateStatus(update.id, RouterUpdateStatus.COMPLETE, "Update verified: receiver transfer created");
+      inProgressIsAliveUpdates = inProgressIsAliveUpdates.filter((x) => x !== update.id);
       continue;
     }
 
@@ -1003,10 +1030,7 @@ export const handleUnverifiedUpdates = async (
         { cancelError: jsonifyError(cancelRes.getError()!) },
         "Update verified: could not cancel sender transfer, cancellation enqueued",
       );
-      // Status is updated in `cancelCreatedTransfer` to pending
-      // TODO: remove the PROCESSING status from the db
-      // then dont have to worry about bringing it back into UNVERIFIED
-      // if it didnt make it all the way to cancellation
+      inProgressIsAliveUpdates = inProgressIsAliveUpdates.filter((x) => x !== update.id);
       continue;
     }
     await store.setUpdateStatus(
@@ -1018,8 +1042,9 @@ export const handleUnverifiedUpdates = async (
       { method, methodId, update: update.id },
       "Update verified: receiver transfer not installed, sender cancelled",
     );
-    continue;
+    inProgressIsAliveUpdates = inProgressIsAliveUpdates.filter((x) => x !== update.id);
   }
+
   if (erroredUpdates.length > 0) {
     logger.error({ method, methodId, erroredUpdates }, "Failed to handle updates");
     return Result.fail(
@@ -1051,10 +1076,6 @@ export const handlePendingUpdates = async (
     },
     "Method started",
   );
-  // This means the user is online and has checked in. Get all updates that are
-  // queued and then execute them.
-  const updates = await store.getQueuedUpdates(data.channelAddress, [RouterUpdateStatus.PENDING]);
-
   // Get the channel (if needed, should only query 1x for it)
   const channelRes = await nodeService.getStateChannel({ channelAddress: data.channelAddress });
   if (channelRes.isError || !channelRes.getValue()) {
@@ -1067,10 +1088,20 @@ export const handlePendingUpdates = async (
   }
   const channel = channelRes.getValue() as FullChannelState;
 
+  // This means the user is online and has checked in. Get all updates that are
+  // queued and then execute them.
+  const updates = await store.getQueuedUpdates(data.channelAddress, [RouterUpdateStatus.PENDING]);
+
   const erroredUpdates = [];
   for (const routerUpdate of updates) {
-    // set status to processing to avoid race conditions
-    await store.setUpdateStatus(routerUpdate.id, RouterUpdateStatus.PROCESSING);
+    // Make sure it isn't already being processed
+    if (inProgressIsAliveUpdates.includes(routerUpdate.id)) {
+      logger.info({ method, methodId, updateId: routerUpdate.id }, "Update being processed");
+      continue;
+    }
+    // Add to in progress list
+    inProgressIsAliveUpdates.push(routerUpdate.id);
+
     logger.info({ method, methodId, updateType: routerUpdate.type, updateId: routerUpdate.id }, "Processing update");
     logger.debug({ method, methodId, update: routerUpdate }, "Update details");
     const { type, payload } = routerUpdate;
@@ -1108,6 +1139,7 @@ export const handlePendingUpdates = async (
         );
         logger.info({ method, methodId, updateId: routerUpdate.id }, "Successfully handled checkIn update");
       }
+      inProgressIsAliveUpdates = inProgressIsAliveUpdates.filter((x) => x !== routerUpdate.id);
       continue;
     }
 
@@ -1116,6 +1148,7 @@ export const handlePendingUpdates = async (
       logger.error({ update: routerUpdate }, "Unknown update type");
       await store.setUpdateStatus(routerUpdate.id, RouterUpdateStatus.FAILED, "Unknown update type");
       erroredUpdates.push(routerUpdate);
+      inProgressIsAliveUpdates = inProgressIsAliveUpdates.filter((x) => x !== routerUpdate.id);
       continue;
     }
     const resolveRes = await nodeService.resolveTransfer(payload as NodeParams.ResolveTransfer);
@@ -1140,6 +1173,7 @@ export const handlePendingUpdates = async (
       );
       logger.info({ method, methodId, updateId: routerUpdate.id }, "Successfully handled update");
     }
+    inProgressIsAliveUpdates = inProgressIsAliveUpdates.filter((x) => x !== routerUpdate.id);
   }
   if (erroredUpdates.length > 0) {
     logger.error({ method, methodId, erroredUpdates }, "Failed to handle updates");
