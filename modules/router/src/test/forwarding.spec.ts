@@ -48,6 +48,7 @@ import { CheckInError, ForwardTransferCreationError } from "../errors";
 import * as collateralService from "../services/collateral";
 import * as creationQueue from "../services/creationQueue";
 import { Server } from "node:http";
+import { delay } from "moxios";
 
 const testName = "Forwarding";
 
@@ -894,16 +895,16 @@ describe(testName, () => {
     it("should fail if it fails to get unverified updates", async () => {
       const { payload } = setupMocks();
       store.getQueuedUpdates.rejects(new Error("fail"));
-      await expect(
-        forwarding.handleUnverifiedUpdates(
-          payload,
-          routerPublicIdentifier,
-          nodeService as INodeService,
-          store,
-          chainReader as IVectorChainReader,
-          logger,
-        ),
-      ).rejectedWith("fail");
+      const res = await forwarding.handleUnverifiedUpdates(
+        payload,
+        routerPublicIdentifier,
+        nodeService as INodeService,
+        store,
+        chainReader as IVectorChainReader,
+        logger,
+      );
+      expect(res.isError).to.be.true;
+      expect(res.getError()?.message).to.be.eq(CheckInError.reasons.StoreFailed);
     });
 
     it("should fail if it fails to get channel", async () => {
@@ -1091,6 +1092,7 @@ describe(testName, () => {
 
     it("should handle updates where requireOnline == false and attempt to transfer fails w/timeout error (update now pending)", async () => {
       const { payload, storedUpdates } = setupMocks();
+      store.setUpdateStatus.returns(new Promise((res) => res(undefined)));
       transferWithCollateralization.resolves(
         Result.fail(
           new ServerNodeServiceError(
@@ -1371,16 +1373,17 @@ describe(testName, () => {
     it("should fail if store.getQueuedUpdates fails", async () => {
       const { payload } = setupMocks();
       store.getQueuedUpdates.rejects(new Error("fail"));
-      await expect(
-        forwarding.handlePendingUpdates(
-          payload,
-          routerPublicIdentifier,
-          nodeService as INodeService,
-          store,
-          chainReader as IVectorChainReader,
-          logger,
-        ),
-      ).rejectedWith("fail");
+      const res = await forwarding.handlePendingUpdates(
+        payload,
+        routerPublicIdentifier,
+        nodeService as INodeService,
+        store,
+        chainReader as IVectorChainReader,
+        logger,
+      );
+
+      expect(res.isError).to.be.true;
+      expect(res.getError()?.message).to.be.eq(CheckInError.reasons.StoreFailed);
     });
 
     it("should fail if nodeService.getStateChannel fails", async () => {
@@ -1413,21 +1416,6 @@ describe(testName, () => {
       );
       expect(result.isError).to.be.true;
       expect(result.getError()?.message).to.be.eq(CheckInError.reasons.CouldNotGetChannel);
-    });
-
-    it("should fail if store.setUpdateStatus fails", async () => {
-      const { payload } = setupMocks([{ type: RouterUpdateType.TRANSFER_RESOLUTION }]);
-      store.setUpdateStatus.rejects(new Error("fail"));
-      await expect(
-        forwarding.handlePendingUpdates(
-          payload,
-          routerPublicIdentifier,
-          nodeService as INodeService,
-          store,
-          chainReader as IVectorChainReader,
-          logger,
-        ),
-      ).rejectedWith("fail");
     });
 
     it("should handle a failed transfer creation", async () => {
