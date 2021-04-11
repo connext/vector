@@ -1560,7 +1560,7 @@ describe(testName, () => {
     });
   });
 
-  describe.only("handleRouterDroppedTransfers", () => {
+  describe("handleRouterDroppedTransfers", () => {
     // constants
     const channelAddress = mkAddress("0xccc");
     const aliceIdentifier = getRandomChannelSigner().publicIdentifier;
