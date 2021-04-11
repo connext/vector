@@ -2,6 +2,10 @@
 
 ## Next Release
 
+## 0.2.2-beta.6
+
+- \[router\] Add `isAlive` tests
+
 ## 0.2.2-beta.5
 
 - \[iframe\] Require iframe signature
