@@ -903,7 +903,6 @@ export const handleUnverifiedUpdates = async (
     erroredUpdates.push(update);
   };
   for (const update of updates) {
-    // Add to in progress list
     if (update.type !== RouterUpdateType.TRANSFER_CREATION) {
       await handleUpdateErr(update, "Can't verify non-create updates");
       continue;
