@@ -49,7 +49,7 @@ export const createCoreTransferState = (overrides: Partial<CoreTransferState> = 
   };
 };
 
-type TestHashlockTransferOptions = {
+export type TestHashlockTransferOptions = {
   assetId: string;
   preImage: string;
   expiry: string;
