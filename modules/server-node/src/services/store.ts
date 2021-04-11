@@ -16,10 +16,8 @@ import {
   ChannelDispute,
   TransferDispute,
   GetTransfersFilterOpts,
-  CoreChannelState,
-  CoreTransferState,
 } from "@connext/vector-types";
-import { getRandomBytes32, getSignerAddressFromPublicIdentifier } from "@connext/vector-utils";
+import { getRandomBytes32, getSignerAddressFromPublicIdentifier, mkSig } from "@connext/vector-utils";
 import { BigNumber } from "@ethersproject/bignumber";
 import { TransactionResponse, TransactionReceipt } from "@ethersproject/providers";
 
@@ -255,7 +253,9 @@ const convertEntitiesToWithdrawalCommitment = (
     bob: channel.participantB,
     recipient: createEntity.transferToA!, // balance = [toA, toB]
     assetId: createEntity.assetId,
-    amount: BigNumber.from(createEntity.transferAmountA).sub(initialState.fee).toString(),
+    amount: BigNumber.from(createEntity.transferAmountA)
+      .sub(initialState.fee ?? 0)
+      .toString(),
     nonce: initialState.nonce,
     callData: initialState.callData,
     callTo: initialState.callTo,
@@ -485,11 +485,9 @@ export class PrismaStore implements IServerNodeStore {
     const entities = await this.prisma.transfer.findMany({
       where: {
         channelAddressId: channelAddress,
-        AND: {
-          onchainTransactionId: null,
-          resolveUpdateChannelAddressId: channelAddress,
-          createUpdate: { transferDefinition: withdrawalDefinition },
-        },
+        onchainTransactionId: null,
+        resolveUpdateChannelAddressId: channelAddress,
+        createUpdate: { transferDefinition: withdrawalDefinition },
       },
       include: { channel: true, createUpdate: true, resolveUpdate: true, dispute: true },
     });
@@ -501,12 +499,17 @@ export class PrismaStore implements IServerNodeStore {
       }
     }
 
-    return entities.map((e) => {
-      return {
-        commitment: convertEntitiesToWithdrawalCommitment(e.resolveUpdate, e.createUpdate!, e.channel!),
-        transfer: convertTransferEntityToFullTransferState(e),
-      };
-    });
+    return (
+      entities
+        .map((e) => {
+          return {
+            commitment: convertEntitiesToWithdrawalCommitment(e.resolveUpdate, e.createUpdate!, e.channel!),
+            transfer: convertTransferEntityToFullTransferState(e),
+          };
+        })
+        // filter canceled, need to do it here because it's a string in the db
+        .filter((withdraw) => withdraw.transfer.transferResolver.responderSignature !== mkSig("0x0"))
+    );
   }
 
   async registerSubscription<T extends EngineEvent>(publicIdentifier: string, event: T, url: string): Promise<void> {
@@ -1227,6 +1230,7 @@ export class PrismaStore implements IServerNodeStore {
     await this.prisma.balance.deleteMany({});
     await this.prisma.onchainTransaction.deleteMany({});
     await this.prisma.transfer.deleteMany({});
+    await this.prisma.channelDispute.deleteMany({});
     await this.prisma.channel.deleteMany({});
     await this.prisma.update.deleteMany({});
     await this.prisma.configuration.deleteMany({});
