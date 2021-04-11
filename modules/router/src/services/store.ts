@@ -9,7 +9,6 @@ export const RouterUpdateStatus = {
   COMPLETE: "COMPLETE",
   FAILED: "FAILED",
   PENDING: "PENDING",
-  PROCESSING: "PROCESSING",
   UNVERIFIED: "UNVERIFIED",
 } as const;
 export type RouterUpdateStatus = keyof typeof RouterUpdateStatus;
