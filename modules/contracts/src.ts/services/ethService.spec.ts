@@ -447,8 +447,6 @@ describe.only("ethService", () => {
     });
 
     it("happy: should work when sendTxAndParseResponse works on the first try", async () => {
-      console.log("HELLOOOO");
-      console.log("ethService.sendTxWithRetries: ", ethService.sendTxWithRetries);
       const result = await ethService.sendTxWithRetries(
         channelState.channelAddress,
         channelState.networkContext.chainId,
