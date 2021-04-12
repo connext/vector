@@ -3,7 +3,7 @@ import "hardhat-deploy";
 import "hardhat-deploy-ethers";
 import "@nomiclabs/hardhat-etherscan";
 import "hardhat-gas-reporter";
-import "@tenderly/hardhat-tenderly"
+import "@tenderly/hardhat-tenderly";
 
 import { HardhatUserConfig } from "hardhat/types";
 
@@ -138,7 +138,6 @@ const config: HardhatUserConfig = {
       chainId: 128,
       url: urlOverride || "https://http-mainnet.hecochain.com",
     },
-    
     avalanchefuji: {
       accounts: { mnemonic },
       chainId: 43113,
@@ -163,6 +162,11 @@ const config: HardhatUserConfig = {
       accounts: { mnemonic },
       chainId: 1287,
       url: urlOverride || "https://rpc.testnet.moonbeam.network",
+    },
+    arbitrumtest4: {
+      accounts: { mnemonic },
+      chainId: 212984383488152,
+      url: urlOverride || "https://kovan4.arbitrum.io/rpc",
     },
   },
 };
