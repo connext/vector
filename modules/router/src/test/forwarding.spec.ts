@@ -48,6 +48,7 @@ import { CheckInError, ForwardTransferCreationError } from "../errors";
 import * as collateralService from "../services/collateral";
 import * as creationQueue from "../services/creationQueue";
 import { Server } from "node:http";
+import { delay } from "moxios";
 
 const testName = "Forwarding";
 
@@ -894,16 +895,16 @@ describe(testName, () => {
     it("should fail if it fails to get unverified updates", async () => {
       const { payload } = setupMocks();
       store.getQueuedUpdates.rejects(new Error("fail"));
-      await expect(
-        forwarding.handleUnverifiedUpdates(
-          payload,
-          routerPublicIdentifier,
-          nodeService as INodeService,
-          store,
-          chainReader as IVectorChainReader,
-          logger,
-        ),
-      ).rejectedWith("fail");
+      const res = await forwarding.handleUnverifiedUpdates(
+        payload,
+        routerPublicIdentifier,
+        nodeService as INodeService,
+        store,
+        chainReader as IVectorChainReader,
+        logger,
+      );
+      expect(res.isError).to.be.true;
+      expect(res.getError()?.message).to.be.eq(CheckInError.reasons.StoreFailed);
     });
 
     it("should fail if it fails to get channel", async () => {
@@ -974,8 +975,8 @@ describe(testName, () => {
       );
       expect(result.isError).to.be.true;
       expect(result.getError()?.message).to.be.eq(CheckInError.reasons.UpdatesFailed);
-      expect(store.setUpdateStatus.callCount).to.be.eq(2);
-      expect(store.setUpdateStatus.getCall(1).args).to.be.deep.eq([
+      expect(store.setUpdateStatus.callCount).to.be.eq(1);
+      expect(store.setUpdateStatus.getCall(0).args).to.be.deep.eq([
         storedUpdates[0].id,
         RouterUpdateStatus.FAILED,
         "Could not reconcile deposit",
@@ -995,8 +996,8 @@ describe(testName, () => {
       );
       expect(result.isError).to.be.true;
       expect(result.getError()?.message).to.be.eq(CheckInError.reasons.UpdatesFailed);
-      expect(store.setUpdateStatus.callCount).to.be.eq(2);
-      expect(store.setUpdateStatus.getCall(1).args).to.be.deep.eq([
+      expect(store.setUpdateStatus.callCount).to.be.eq(1);
+      expect(store.setUpdateStatus.getCall(0).args).to.be.deep.eq([
         storedUpdates[0].id,
         RouterUpdateStatus.FAILED,
         "No routingId in update.payload.meta",
@@ -1018,8 +1019,8 @@ describe(testName, () => {
       );
       expect(result.isError).to.be.true;
       expect(result.getError()?.message).to.be.eq(CheckInError.reasons.UpdatesFailed);
-      expect(store.setUpdateStatus.callCount).to.be.eq(2);
-      expect(store.setUpdateStatus.getCall(1).args).to.be.deep.eq([
+      expect(store.setUpdateStatus.callCount).to.be.eq(1);
+      expect(store.setUpdateStatus.getCall(0).args).to.be.deep.eq([
         storedUpdates[0].id,
         RouterUpdateStatus.FAILED,
         "Could not get transfers by routingId",
@@ -1038,8 +1039,8 @@ describe(testName, () => {
       );
       expect(result.isError).to.be.false;
       expect(result.getValue()).to.be.undefined;
-      expect(store.setUpdateStatus.callCount).to.be.eq(2);
-      expect(store.setUpdateStatus.getCall(1).args).to.be.deep.eq([
+      expect(store.setUpdateStatus.callCount).to.be.eq(1);
+      expect(store.setUpdateStatus.getCall(0).args).to.be.deep.eq([
         storedUpdates[0].id,
         RouterUpdateStatus.COMPLETE,
         "Update verified: receiver installed transfer",
@@ -1058,8 +1059,8 @@ describe(testName, () => {
       );
       expect(result.isError).to.be.false;
       expect(result.getValue()).to.be.undefined;
-      expect(store.setUpdateStatus.callCount).to.be.eq(2);
-      expect(store.setUpdateStatus.getCall(1).args).to.be.deep.eq([
+      expect(store.setUpdateStatus.callCount).to.be.eq(1);
+      expect(store.setUpdateStatus.getCall(0).args).to.be.deep.eq([
         storedUpdates[0].id,
         RouterUpdateStatus.COMPLETE,
         "Update verified: receiver transfer created",
@@ -1081,8 +1082,8 @@ describe(testName, () => {
       );
       expect(result.isError).to.be.true;
       expect(result.getError()?.message).to.be.eq(CheckInError.reasons.UpdatesFailed);
-      expect(store.setUpdateStatus.callCount).to.be.eq(2);
-      expect(store.setUpdateStatus.getCall(1).args).to.be.deep.eq([
+      expect(store.setUpdateStatus.callCount).to.be.eq(1);
+      expect(store.setUpdateStatus.getCall(0).args).to.be.deep.eq([
         storedUpdates[0].id,
         RouterUpdateStatus.FAILED,
         "Failed to create with receiver",
@@ -1091,6 +1092,7 @@ describe(testName, () => {
 
     it("should handle updates where requireOnline == false and attempt to transfer fails w/timeout error (update now pending)", async () => {
       const { payload, storedUpdates } = setupMocks();
+      store.setUpdateStatus.returns(new Promise((res) => res(undefined)));
       transferWithCollateralization.resolves(
         Result.fail(
           new ServerNodeServiceError(
@@ -1112,8 +1114,8 @@ describe(testName, () => {
       );
       expect(result.isError).to.be.false;
       expect(result.getValue()).to.be.undefined;
-      expect(store.setUpdateStatus.callCount).to.be.eq(2);
-      expect(store.setUpdateStatus.getCall(1).args).to.be.deep.eq([
+      expect(store.setUpdateStatus.callCount).to.be.eq(1);
+      expect(store.setUpdateStatus.getCall(0).args).to.be.deep.eq([
         storedUpdates[0].id,
         RouterUpdateStatus.PENDING,
         ServerNodeServiceError.reasons.Timeout,
@@ -1135,8 +1137,8 @@ describe(testName, () => {
       );
       expect(result.isError).to.be.true;
       expect(result.getError()?.message).to.be.eq(CheckInError.reasons.UpdatesFailed);
-      expect(store.setUpdateStatus.callCount).to.be.eq(2);
-      expect(store.setUpdateStatus.getCall(1).args).to.be.deep.eq([
+      expect(store.setUpdateStatus.callCount).to.be.eq(1);
+      expect(store.setUpdateStatus.getCall(0).args).to.be.deep.eq([
         storedUpdates[0].id,
         RouterUpdateStatus.FAILED,
         "No sender transfer to cancel",
@@ -1160,7 +1162,7 @@ describe(testName, () => {
       );
       expect(result.isError).to.be.false;
       expect(result.getValue()).to.be.undefined;
-      expect(store.setUpdateStatus.callCount).to.be.eq(1);
+      expect(store.setUpdateStatus.callCount).to.be.eq(0);
       // set to pending handled in `cancelCreatedTransfer`
     });
 
@@ -1178,8 +1180,8 @@ describe(testName, () => {
       );
       expect(result.isError).to.be.false;
       expect(result.getValue()).to.be.undefined;
-      expect(store.setUpdateStatus.callCount).to.be.eq(2);
-      expect(store.setUpdateStatus.getCall(1).args).to.be.deep.eq([
+      expect(store.setUpdateStatus.callCount).to.be.eq(1);
+      expect(store.setUpdateStatus.getCall(0).args).to.be.deep.eq([
         storedUpdates[0].id,
         RouterUpdateStatus.COMPLETE,
         "Update verified: receiver transfer not installed, sender cancelled",
@@ -1200,18 +1202,18 @@ describe(testName, () => {
       );
       expect(result.isError).to.be.false;
       expect(result.getValue()).to.be.undefined;
-      expect(store.setUpdateStatus.callCount).to.be.eq(6);
-      expect(store.setUpdateStatus.getCall(1).args).to.be.deep.eq([
+      expect(store.setUpdateStatus.callCount).to.be.eq(3);
+      expect(store.setUpdateStatus.getCall(0).args).to.be.deep.eq([
         storedUpdates[0].id,
         RouterUpdateStatus.COMPLETE,
         "Update verified: receiver transfer created",
       ]);
-      expect(store.setUpdateStatus.getCall(3).args).to.be.deep.eq([
+      expect(store.setUpdateStatus.getCall(1).args).to.be.deep.eq([
         storedUpdates[1].id,
         RouterUpdateStatus.COMPLETE,
         "Update verified: receiver transfer not installed, sender cancelled",
       ]);
-      expect(store.setUpdateStatus.getCall(5).args).to.be.deep.eq([
+      expect(store.setUpdateStatus.getCall(2).args).to.be.deep.eq([
         storedUpdates[2].id,
         RouterUpdateStatus.COMPLETE,
         "Update verified: receiver transfer created",
@@ -1245,18 +1247,18 @@ describe(testName, () => {
       );
       expect(result.isError).to.be.true;
       expect(result.getError()?.message).to.be.eq(CheckInError.reasons.UpdatesFailed);
-      expect(store.setUpdateStatus.callCount).to.be.eq(6);
-      expect(store.setUpdateStatus.getCall(1).args).to.be.deep.eq([
+      expect(store.setUpdateStatus.callCount).to.be.eq(3);
+      expect(store.setUpdateStatus.getCall(0).args).to.be.deep.eq([
         storedUpdates[0].id,
         RouterUpdateStatus.COMPLETE,
         "Update verified: receiver transfer created",
       ]);
-      expect(store.setUpdateStatus.getCall(3).args).to.be.deep.eq([
+      expect(store.setUpdateStatus.getCall(1).args).to.be.deep.eq([
         storedUpdates[1].id,
         RouterUpdateStatus.COMPLETE,
         "Update verified: receiver transfer not installed, sender cancelled",
       ]);
-      expect(store.setUpdateStatus.getCall(5).args).to.be.deep.eq([
+      expect(store.setUpdateStatus.getCall(2).args).to.be.deep.eq([
         storedUpdates[2].id,
         RouterUpdateStatus.FAILED,
         "Failed to create with receiver",
@@ -1371,16 +1373,17 @@ describe(testName, () => {
     it("should fail if store.getQueuedUpdates fails", async () => {
       const { payload } = setupMocks();
       store.getQueuedUpdates.rejects(new Error("fail"));
-      await expect(
-        forwarding.handlePendingUpdates(
-          payload,
-          routerPublicIdentifier,
-          nodeService as INodeService,
-          store,
-          chainReader as IVectorChainReader,
-          logger,
-        ),
-      ).rejectedWith("fail");
+      const res = await forwarding.handlePendingUpdates(
+        payload,
+        routerPublicIdentifier,
+        nodeService as INodeService,
+        store,
+        chainReader as IVectorChainReader,
+        logger,
+      );
+
+      expect(res.isError).to.be.true;
+      expect(res.getError()?.message).to.be.eq(CheckInError.reasons.StoreFailed);
     });
 
     it("should fail if nodeService.getStateChannel fails", async () => {
@@ -1415,21 +1418,6 @@ describe(testName, () => {
       expect(result.getError()?.message).to.be.eq(CheckInError.reasons.CouldNotGetChannel);
     });
 
-    it("should fail if store.setUpdateStatus fails", async () => {
-      const { payload } = setupMocks([{ type: RouterUpdateType.TRANSFER_RESOLUTION }]);
-      store.setUpdateStatus.rejects(new Error("fail"));
-      await expect(
-        forwarding.handlePendingUpdates(
-          payload,
-          routerPublicIdentifier,
-          nodeService as INodeService,
-          store,
-          chainReader as IVectorChainReader,
-          logger,
-        ),
-      ).rejectedWith("fail");
-    });
-
     it("should handle a failed transfer creation", async () => {
       const { payload, storedUpdates } = setupMocks([{ type: RouterUpdateType.TRANSFER_CREATION }]);
       transferWithCollateralization.resolves(Result.fail(new ChainError("fail", { transferError: "fail" })));
@@ -1443,8 +1431,8 @@ describe(testName, () => {
       );
       expect(result.isError).to.be.true;
       expect(result.getError()?.message).to.be.eq(CheckInError.reasons.UpdatesFailed);
-      expect(store.setUpdateStatus.callCount).to.be.eq(2);
-      expect(store.setUpdateStatus.getCall(1).args).to.containSubset([storedUpdates[0].id, RouterUpdateStatus.FAILED]);
+      expect(store.setUpdateStatus.callCount).to.be.eq(1);
+      expect(store.setUpdateStatus.getCall(0).args).to.containSubset([storedUpdates[0].id, RouterUpdateStatus.FAILED]);
     });
 
     it("should handle a failed transfer resolution", async () => {
@@ -1461,8 +1449,8 @@ describe(testName, () => {
       expect(result.isError).to.be.true;
       expect(result.getError()?.message).to.be.eq(CheckInError.reasons.UpdatesFailed);
       expect(nodeService.resolveTransfer.calledOnceWithExactly(storedUpdates[0].payload as any)).to.be.true;
-      expect(store.setUpdateStatus.callCount).to.be.eq(2);
-      expect(store.setUpdateStatus.getCall(1).args).to.containSubset([storedUpdates[0].id, RouterUpdateStatus.FAILED]);
+      expect(store.setUpdateStatus.callCount).to.be.eq(1);
+      expect(store.setUpdateStatus.getCall(0).args).to.containSubset([storedUpdates[0].id, RouterUpdateStatus.FAILED]);
     });
 
     it("should handle an unknown update type", async () => {
@@ -1478,8 +1466,8 @@ describe(testName, () => {
       );
       expect(result.isError).to.be.true;
       expect(result.getError()?.message).to.be.eq(CheckInError.reasons.UpdatesFailed);
-      expect(store.setUpdateStatus.callCount).to.be.eq(2);
-      expect(store.setUpdateStatus.getCall(1).args).to.containSubset([storedUpdates[0].id, RouterUpdateStatus.FAILED]);
+      expect(store.setUpdateStatus.callCount).to.be.eq(1);
+      expect(store.setUpdateStatus.getCall(0).args).to.containSubset([storedUpdates[0].id, RouterUpdateStatus.FAILED]);
     });
 
     it("should handle timeout errors and keep as pending for creation + resolution updates", async () => {
@@ -1495,8 +1483,8 @@ describe(testName, () => {
       );
       expect(result.isError).to.be.true;
       expect(result.getError()?.message).to.be.eq(CheckInError.reasons.UpdatesFailed);
-      expect(store.setUpdateStatus.callCount).to.be.eq(2);
-      expect(store.setUpdateStatus.getCall(1).args).to.containSubset([storedUpdates[0].id, RouterUpdateStatus.PENDING]);
+      expect(store.setUpdateStatus.callCount).to.be.eq(1);
+      expect(store.setUpdateStatus.getCall(0).args).to.containSubset([storedUpdates[0].id, RouterUpdateStatus.PENDING]);
     });
 
     it("should handle an array of pending updates, marking as succeeded and failed", async () => {
@@ -1516,13 +1504,13 @@ describe(testName, () => {
       );
       expect(result.isError).to.be.true;
       expect(result.getError()?.message).to.be.eq(CheckInError.reasons.UpdatesFailed);
-      expect(store.setUpdateStatus.callCount).to.be.eq(6);
-      expect(store.setUpdateStatus.getCall(1).args).to.containSubset([
+      expect(store.setUpdateStatus.callCount).to.be.eq(3);
+      expect(store.setUpdateStatus.getCall(0).args).to.containSubset([
         storedUpdates[0].id,
         RouterUpdateStatus.COMPLETE,
       ]);
-      expect(store.setUpdateStatus.getCall(3).args).to.containSubset([storedUpdates[1].id, RouterUpdateStatus.FAILED]);
-      expect(store.setUpdateStatus.getCall(5).args).to.containSubset([
+      expect(store.setUpdateStatus.getCall(1).args).to.containSubset([storedUpdates[1].id, RouterUpdateStatus.FAILED]);
+      expect(store.setUpdateStatus.getCall(2).args).to.containSubset([
         storedUpdates[2].id,
         RouterUpdateStatus.COMPLETE,
       ]);
@@ -1544,16 +1532,16 @@ describe(testName, () => {
       );
       expect(result.isError).to.be.false;
       expect(result.getValue()).to.be.undefined;
-      expect(store.setUpdateStatus.callCount).to.be.eq(6);
-      expect(store.setUpdateStatus.getCall(1).args).to.containSubset([
+      expect(store.setUpdateStatus.callCount).to.be.eq(3);
+      expect(store.setUpdateStatus.getCall(0).args).to.containSubset([
         storedUpdates[0].id,
         RouterUpdateStatus.COMPLETE,
       ]);
-      expect(store.setUpdateStatus.getCall(3).args).to.containSubset([
+      expect(store.setUpdateStatus.getCall(1).args).to.containSubset([
         storedUpdates[1].id,
         RouterUpdateStatus.COMPLETE,
       ]);
-      expect(store.setUpdateStatus.getCall(5).args).to.containSubset([
+      expect(store.setUpdateStatus.getCall(2).args).to.containSubset([
         storedUpdates[2].id,
         RouterUpdateStatus.COMPLETE,
       ]);

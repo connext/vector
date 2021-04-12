@@ -573,6 +573,12 @@ export async function forwardTransferResolution(
   });
 }
 
+// This function holds updates in memory that are currently
+// being processed. This allows the users to spam the `isAlive`
+// update without the router needing to worry about accidentally
+// double-handling the same checkpointed update
+let inProgressIsAliveChannels: string[] = [];
+
 export async function handleIsAlive(
   data: IsAlivePayload,
   routerPublicIdentifier: string,
@@ -601,6 +607,12 @@ export async function handleIsAlive(
     return Result.ok(undefined);
   }
 
+  if (inProgressIsAliveChannels.includes(data.channelAddress)) {
+    logger.info({ method, methodId, channelAddress: data.channelAddress }, "Channel processing isAlive");
+    return Result.ok(undefined);
+  }
+  inProgressIsAliveChannels.push(data.channelAddress);
+
   const pending = await handlePendingUpdates(data, routerPublicIdentifier, nodeService, store, chainReader, logger);
 
   const unverified = await handleUnverifiedUpdates(
@@ -614,6 +626,7 @@ export async function handleIsAlive(
 
   const errors = [pending.getError(), unverified.getError()].filter((x) => !!x);
   if (errors.length !== 0) {
+    inProgressIsAliveChannels = inProgressIsAliveChannels.filter((c) => c !== data.channelAddress);
     return Result.fail(
       new CheckInError(CheckInError.reasons.TasksFailed, data.channelAddress, {
         pending: pending.isError ? jsonifyError(pending.getError()!) : undefined,
@@ -631,6 +644,7 @@ export async function handleIsAlive(
     chainReader,
     logger,
   );
+  inProgressIsAliveChannels = inProgressIsAliveChannels.filter((c) => c !== data.channelAddress);
   return dropped;
 }
 
@@ -790,13 +804,23 @@ export const handleRouterDroppedTransfers = async (
       continue;
     }
     // Do not process if *any* updates exist for this routing id
-    const updates = await store.getQueuedUpdates(receiverChannel.getValue()!.channelAddress, [
-      RouterUpdateStatus.FAILED,
-      RouterUpdateStatus.COMPLETE,
-      RouterUpdateStatus.PENDING,
-      RouterUpdateStatus.PROCESSING,
-      RouterUpdateStatus.UNVERIFIED,
-    ]);
+    let updates;
+    try {
+      updates = await store.getQueuedUpdates(receiverChannel.getValue()!.channelAddress, [
+        RouterUpdateStatus.FAILED,
+        RouterUpdateStatus.COMPLETE,
+        RouterUpdateStatus.PENDING,
+        RouterUpdateStatus.UNVERIFIED,
+      ]);
+    } catch (e) {
+      return Result.fail(
+        new CheckInError(CheckInError.reasons.StoreFailed, data.channelAddress, {
+          storeMethod: "getQueuedUpdates",
+          error: e.message,
+        }),
+      );
+    }
+
     const receiverUpdate = updates.find(
       (u) =>
         u.payload.meta &&
@@ -868,9 +892,6 @@ export const handleUnverifiedUpdates = async (
     "Method started",
   );
 
-  // Get all unverified updates
-  const updates = await store.getQueuedUpdates(data.channelAddress, [RouterUpdateStatus.UNVERIFIED]);
-
   // Get the channel (if needed, should only query 1x for it)
   const channelRes = await nodeService.getStateChannel({ channelAddress: data.channelAddress });
   if (channelRes.isError || !channelRes.getValue()) {
@@ -883,10 +904,27 @@ export const handleUnverifiedUpdates = async (
   }
   const channel = channelRes.getValue() as FullChannelState;
 
+  // Get all unverified updates
+  let updates;
+  try {
+    updates = await store.getQueuedUpdates(data.channelAddress, [RouterUpdateStatus.UNVERIFIED]);
+  } catch (e) {
+    return Result.fail(
+      new CheckInError(CheckInError.reasons.StoreFailed, data.channelAddress, {
+        storeMethod: "getQueuedUpdates",
+        error: e.message,
+      }),
+    );
+  }
+
   const erroredUpdates: RouterStoredUpdate<any>[] = [];
   const handleUpdateErr = async (update: RouterStoredUpdate<any>, msg: string, context: any = {}) => {
     logger.error({ update, ...context }, msg);
-    await store.setUpdateStatus(update.id, RouterUpdateStatus.FAILED, msg);
+    try {
+      await store.setUpdateStatus(update.id, RouterUpdateStatus.FAILED, msg);
+    } catch (e) {
+      logger.error({ ...jsonifyError(e), method, methodId, update }, "Failed to set update status to failed");
+    }
     erroredUpdates.push(update);
   };
   for (const update of updates) {
@@ -895,7 +933,6 @@ export const handleUnverifiedUpdates = async (
       continue;
     }
 
-    await store.setUpdateStatus(update.id, RouterUpdateStatus.PROCESSING);
     logger.info({ method, methodId, updateType: update.type, updateId: update.id }, "Processing unverified update");
 
     // First, reconcile deposit on the channel to come to consensus on the
@@ -935,12 +972,17 @@ export const handleUnverifiedUpdates = async (
       return t.initiatorIdentifier === routerPublicIdentifier;
     });
     if (receiverTransfer) {
-      await store.setUpdateStatus(
-        update.id,
-        RouterUpdateStatus.COMPLETE,
-        "Update verified: receiver installed transfer",
-      );
-      logger.info({ method, methodId, update: update.id }, "Update verified: receiver installed transfer");
+      try {
+        await store.setUpdateStatus(
+          update.id,
+          RouterUpdateStatus.COMPLETE,
+          "Update verified: receiver installed transfer",
+        );
+        logger.info({ method, methodId, update: update.id }, "Update verified: receiver installed transfer");
+      } catch (e) {
+        logger.error({ ...jsonifyError(e), method, methodId, update }, "Failed to set update status to completed");
+      }
+
       continue;
     }
 
@@ -963,14 +1005,24 @@ export const handleUnverifiedUpdates = async (
         // If it is just a timeout, it did not fail but must be marked
         // as pending
         error === ServerNodeServiceError.reasons.Timeout
-          ? await store.setUpdateStatus(update.id, RouterUpdateStatus.PENDING, error)
+          ? store
+              .setUpdateStatus(update.id, RouterUpdateStatus.PENDING, error)
+              .catch((e) => logger.error({ ...jsonifyError(e) }, "Setting update to pending failed"))
           : await handleUpdateErr(update, "Failed to create with receiver", {
               createError: jsonifyError(createRes.getError()!),
             });
         continue;
       }
       logger.info({ method, methodId, update: update.id }, "Update verified: receiver transfer created");
-      await store.setUpdateStatus(update.id, RouterUpdateStatus.COMPLETE, "Update verified: receiver transfer created");
+      try {
+        await store.setUpdateStatus(
+          update.id,
+          RouterUpdateStatus.COMPLETE,
+          "Update verified: receiver transfer created",
+        );
+      } catch (e) {
+        logger.error({ ...jsonifyError(e), method, methodId, update }, "Failed to set update status to completed");
+      }
       continue;
     }
 
@@ -1003,23 +1055,23 @@ export const handleUnverifiedUpdates = async (
         { cancelError: jsonifyError(cancelRes.getError()!) },
         "Update verified: could not cancel sender transfer, cancellation enqueued",
       );
-      // Status is updated in `cancelCreatedTransfer` to pending
-      // TODO: remove the PROCESSING status from the db
-      // then dont have to worry about bringing it back into UNVERIFIED
-      // if it didnt make it all the way to cancellation
       continue;
     }
-    await store.setUpdateStatus(
-      update.id,
-      RouterUpdateStatus.COMPLETE,
-      "Update verified: receiver transfer not installed, sender cancelled",
-    );
-    logger.info(
-      { method, methodId, update: update.id },
-      "Update verified: receiver transfer not installed, sender cancelled",
-    );
-    continue;
+    try {
+      await store.setUpdateStatus(
+        update.id,
+        RouterUpdateStatus.COMPLETE,
+        "Update verified: receiver transfer not installed, sender cancelled",
+      );
+      logger.info(
+        { method, methodId, update: update.id },
+        "Update verified: receiver transfer not installed, sender cancelled",
+      );
+    } catch (e) {
+      logger.error({ ...jsonifyError(e), method, methodId, update }, "Failed to set update status to completed");
+    }
   }
+
   if (erroredUpdates.length > 0) {
     logger.error({ method, methodId, erroredUpdates }, "Failed to handle updates");
     return Result.fail(
@@ -1051,10 +1103,6 @@ export const handlePendingUpdates = async (
     },
     "Method started",
   );
-  // This means the user is online and has checked in. Get all updates that are
-  // queued and then execute them.
-  const updates = await store.getQueuedUpdates(data.channelAddress, [RouterUpdateStatus.PENDING]);
-
   // Get the channel (if needed, should only query 1x for it)
   const channelRes = await nodeService.getStateChannel({ channelAddress: data.channelAddress });
   if (channelRes.isError || !channelRes.getValue()) {
@@ -1067,10 +1115,22 @@ export const handlePendingUpdates = async (
   }
   const channel = channelRes.getValue() as FullChannelState;
 
+  // This means the user is online and has checked in. Get all updates that are
+  // queued and then execute them.
+  let updates;
+  try {
+    updates = await store.getQueuedUpdates(data.channelAddress, [RouterUpdateStatus.PENDING]);
+  } catch (e) {
+    return Result.fail(
+      new CheckInError(CheckInError.reasons.StoreFailed, data.channelAddress, {
+        storeMethod: "getQueuedUpdates",
+        error: e.message,
+      }),
+    );
+  }
+
   const erroredUpdates = [];
   for (const routerUpdate of updates) {
-    // set status to processing to avoid race conditions
-    await store.setUpdateStatus(routerUpdate.id, RouterUpdateStatus.PROCESSING);
     logger.info({ method, methodId, updateType: routerUpdate.type, updateId: routerUpdate.id }, "Processing update");
     logger.debug({ method, methodId, update: routerUpdate }, "Update details");
     const { type, payload } = routerUpdate;
@@ -1094,19 +1154,33 @@ export const handlePendingUpdates = async (
           "Handling update failed",
         );
         const error = createRes.getError()?.context?.transferError;
-        await store.setUpdateStatus(
-          routerUpdate.id,
-          error === ServerNodeServiceError.reasons.Timeout ? RouterUpdateStatus.PENDING : RouterUpdateStatus.FAILED,
-          error,
-        );
-        erroredUpdates.push(routerUpdate);
+        try {
+          await store.setUpdateStatus(
+            routerUpdate.id,
+            error === ServerNodeServiceError.reasons.Timeout ? RouterUpdateStatus.PENDING : RouterUpdateStatus.FAILED,
+            error,
+          );
+          erroredUpdates.push(routerUpdate);
+        } catch (e) {
+          logger.error(
+            { ...jsonifyError(e), method, methodId, update: routerUpdate },
+            "Failed to set update status to failed",
+          );
+        }
       } else {
-        await store.setUpdateStatus(
-          routerUpdate.id,
-          RouterUpdateStatus.COMPLETE,
-          "Update complete: forwarded transfer creation",
-        );
-        logger.info({ method, methodId, updateId: routerUpdate.id }, "Successfully handled checkIn update");
+        try {
+          await store.setUpdateStatus(
+            routerUpdate.id,
+            RouterUpdateStatus.COMPLETE,
+            "Update complete: forwarded transfer creation",
+          );
+          logger.info({ method, methodId, updateId: routerUpdate.id }, "Successfully handled checkIn update");
+        } catch (e) {
+          logger.error(
+            { ...jsonifyError(e), method, methodId, update: routerUpdate },
+            "Failed to set update status to failed",
+          );
+        }
       }
       continue;
     }
@@ -1114,7 +1188,14 @@ export const handlePendingUpdates = async (
     // Handle transfer resolution updates
     if (type !== RouterUpdateType.TRANSFER_RESOLUTION) {
       logger.error({ update: routerUpdate }, "Unknown update type");
-      await store.setUpdateStatus(routerUpdate.id, RouterUpdateStatus.FAILED, "Unknown update type");
+      try {
+        await store.setUpdateStatus(routerUpdate.id, RouterUpdateStatus.FAILED, "Unknown update type");
+      } catch (e) {
+        logger.error(
+          { ...jsonifyError(e), method, methodId, update: routerUpdate },
+          "Failed to set update status to failed",
+        );
+      }
       erroredUpdates.push(routerUpdate);
       continue;
     }
@@ -1126,18 +1207,33 @@ export const handlePendingUpdates = async (
         "Handling update failed",
       );
       const error = resolveRes.getError()?.message;
-      await store.setUpdateStatus(
-        routerUpdate.id,
-        error === ServerNodeServiceError.reasons.Timeout ? RouterUpdateStatus.PENDING : RouterUpdateStatus.FAILED,
-        error,
-      );
+      try {
+        await store.setUpdateStatus(
+          routerUpdate.id,
+          error === ServerNodeServiceError.reasons.Timeout ? RouterUpdateStatus.PENDING : RouterUpdateStatus.FAILED,
+          error,
+        );
+      } catch (e) {
+        logger.error(
+          { ...jsonifyError(e), method, methodId, update: routerUpdate },
+          "Failed to set update status to failed",
+        );
+      }
       erroredUpdates.push(routerUpdate);
     } else {
-      await store.setUpdateStatus(
-        routerUpdate.id,
-        RouterUpdateStatus.COMPLETE,
-        "Update complete: forwarded transfer resolution",
-      );
+      try {
+        await store.setUpdateStatus(
+          routerUpdate.id,
+          RouterUpdateStatus.COMPLETE,
+          "Update complete: forwarded transfer resolution",
+        );
+      } catch (e) {
+        logger.error(
+          { ...jsonifyError(e), method, methodId, update: routerUpdate },
+          "Failed to set update status to failed",
+        );
+      }
+
       logger.info({ method, methodId, updateId: routerUpdate.id }, "Successfully handled update");
     }
   }
