@@ -122,7 +122,7 @@ export default class ConnextManager {
       let signerAddress = request.params.signer;
       const provider = (await detectEthereumProvider()) as any;
       if (provider) {
-        if (provider !== window.ethereum) {
+        if (provider !== (window as any).ethereum) {
           throw new Error("Detected multiple wallets");
         }
         const accts = await provider.request({ method: "eth_requestAccounts" });
