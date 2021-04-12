@@ -24,6 +24,7 @@
     "@ethersproject/address": "5.1.0",
     "@ethersproject/bignumber": "5.1.0",
     "@ethersproject/constants": "5.1.0",
+    "@ethersproject/providers": "5.1.0",
     "@ethersproject/solidity": "5.1.0",
     "@ethersproject/wallet": "5.1.0",
     "@sinclair/typebox": "0.12.7",
