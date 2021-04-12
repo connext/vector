@@ -539,7 +539,6 @@ export class EthereumChainService extends EthereumChainReader implements IVector
     // fn
     txFn: () => Promise<undefined | TransactionResponse>,
   ): Promise<Result<TransactionResponseWithResult | undefined, ChainError>> {
-    console.log("ABSJHJAHDJHAJN");
     const method = "sendTxWithRetries";
     const methodId = getRandomBytes32();
     const errors = [];
