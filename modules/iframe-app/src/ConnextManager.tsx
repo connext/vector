@@ -128,7 +128,7 @@ export default class ConnextManager {
         const accts = await provider.request({ method: "eth_requestAccounts" });
         const web3provider = new Web3Provider(provider as ExternalProvider);
         const signer = web3provider.getSigner();
-        signerAddress = getAddress(accts[0]);
+        signerAddress = accts[0];
         if (!signerAddress) {
           throw new Error("No account available");
         }
