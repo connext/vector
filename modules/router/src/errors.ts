@@ -155,6 +155,7 @@ export class CheckInError extends RouterError {
     CouldNotGetChannel: "Could not get channel, or not found",
     CouldNotGetRegistryInfo: "Could not get transfer registry information",
     RouterCleanupFailed: "Could not handle all dropped transfers",
+    StoreFailed: "Store method failed",
     TasksFailed: "Router couldn't complete all check-in tasks",
     UpdatesFailed: "Could not forward all updates",
   } as const;
