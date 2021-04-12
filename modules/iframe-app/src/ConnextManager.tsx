@@ -12,6 +12,10 @@ import { keccak256 } from "@ethersproject/keccak256";
 import { toUtf8Bytes } from "@ethersproject/strings";
 import { Wallet, verifyMessage } from "@ethersproject/wallet";
 import pino from "pino";
+import detectEthereumProvider from "@metamask/detect-provider";
+import { ExternalProvider, Web3Provider } from "@ethersproject/providers";
+import { getAddress } from "@ethersproject/address";
+
 import { config } from "./config";
 
 export default class ConnextManager {
@@ -33,9 +37,9 @@ export default class ConnextManager {
   private async initNode(
     chainProviders: { [chainId: number]: string },
     signature: string,
+    signerAddress: string,
     chainAddresses?: ChainAddresses,
     messagingUrl?: string,
-    signerAddress?: string,
     natsUrl?: string,
     authUrl?: string,
   ): Promise<BrowserNode> {
@@ -52,8 +56,9 @@ export default class ConnextManager {
     if (!localStorage) {
       throw new Error("localStorage not available in this window, please enable cross-site cookies and try again.");
     }
+
     const recovered = verifyMessage(NonEIP712Message, signature);
-    if (recovered !== signerAddress) {
+    if (getAddress(recovered) !== getAddress(signerAddress)) {
       throw new Error(
         `Signature not properly recovered. expected ${signerAddress}, got ${recovered}, signature: ${signature}`,
       );
@@ -65,11 +70,15 @@ export default class ConnextManager {
 
     // convert to use messaging cluster
     if (_messagingUrl === "https://messaging.connext.network") {
-      console.warn("Using deprecated messaging URL, converting to new URL");
+      console.warn("Converting messaging URL into new URL");
       _authUrl = "https://messaging.connext.network";
       _natsUrl = "wss://websocket.connext.provide.network";
       _messagingUrl = undefined;
     }
+    console.log(`Messaging config: `, {
+      _authUrl,
+      _natsUrl,
+    });
 
     // use the entropy of the signature to generate a private key for this wallet
     // since the signature depends on the private key stored by Magic/Metamask, this is not forgeable by an adversary
@@ -108,12 +117,32 @@ export default class ConnextManager {
     request: EngineParams.RpcRequest,
   ): Promise<ChannelRpcMethodsResponsesMap[T]> {
     if (request.method === "connext_authenticate") {
+      // if eth provider injected, default to using it. passed in signature is a last resort and not safe
+      let signature = request.params.signature;
+      let signerAddress = request.params.signer;
+      const provider = (await detectEthereumProvider()) as any;
+      if (provider) {
+        if (provider !== window.ethereum) {
+          throw new Error("Detected multiple wallets");
+        }
+        const accts = await provider.request({ method: "eth_requestAccounts" });
+        const web3provider = new Web3Provider(provider as ExternalProvider);
+        const signer = web3provider.getSigner();
+        signerAddress = accts[0];
+        if (!signerAddress) {
+          throw new Error("No account available");
+        }
+        signature = await signer.signMessage(NonEIP712Message);
+      } else {
+        console.warn("No Ethereum provider available, falling back to unsafe provided sigs");
+      }
+
       const node = await this.initNode(
         request.params.chainProviders,
-        request.params.signature,
+        signature,
+        signerAddress,
         request.params.chainAddresses,
         request.params.messagingUrl,
-        request.params.signer,
         request.params.natsUrl,
         request.params.authUrl,
       );
