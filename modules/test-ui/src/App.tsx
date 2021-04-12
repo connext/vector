@@ -60,20 +60,10 @@ function App() {
         messagingUrl: config.messagingUrl,
       });
       let init: { signature?: string; signer?: string } | undefined = undefined;
-      let _loginProvider: providers.Web3Provider;
-      if (loginProvider === "metamask") {
-        _loginProvider = new providers.Web3Provider((window as any).ethereum);
-        const accts = await _loginProvider.send("eth_requestAccounts", []);
-        console.log("accts: ", accts);
-      } else {
+      if (loginProvider === "magic") {
+        // add unsafe sig
         throw new Error("MAGIC TODO");
       }
-      const signer = _loginProvider.getSigner();
-      const signerAddress = await signer.getAddress();
-      console.log("signerAddress: ", signerAddress);
-      const signature = await signer.signMessage(NonEIP712Message);
-      console.log("signature: ", signature);
-      init = { signature, signer: signerAddress };
 
       let error: any | undefined;
       try {
