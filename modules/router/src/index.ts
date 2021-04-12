@@ -128,7 +128,7 @@ const evts: EventCallbackConfig = {
   },
 };
 
-const signer = new ChannelSigner(Wallet.fromMnemonic(config.mnemonic).privateKey);
+export const signer = new ChannelSigner(Wallet.fromMnemonic(config.mnemonic).privateKey);
 
 const logger = pino({ name: signer.publicIdentifier, level: config.logLevel });
 logger.info("Loaded config from environment");

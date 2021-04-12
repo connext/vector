@@ -1,14 +1,15 @@
-import { HydratedProviders } from "@connext/vector-types";
-import { BaseLogger } from "pino";
+import { register } from "prom-client";
 
-export const startMetricsBroadcastTask = (
-  interval: number,
-  logger: BaseLogger,
-  hydratedProviders: HydratedProviders,
-): void => {
+import { signer } from "..";
+import { IRouterMessagingService } from "./messaging";
+
+export const startMetricsBroadcastTask = (interval: number, messaging: IRouterMessagingService): void => {
   setInterval(() => {
-    metricsBroadcastTasks(logger, hydratedProviders);
+    metricsBroadcastTasks(messaging);
   }, interval);
 };
 
-export const metricsBroadcastTasks = async (logger: BaseLogger, hydratedProviders: HydratedProviders) => {};
+export const metricsBroadcastTasks = async (messaging: IRouterMessagingService) => {
+  const metrics = await register.metrics();
+  await messaging.broadcastMetrics(signer.publicIdentifier, metrics);
+};
