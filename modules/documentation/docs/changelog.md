@@ -2,6 +2,15 @@
 
 ## Next Release
 
+## 0.2.2-beta.7
+
+- \[router\] Convert `PROCESSING` status to in memory flag
+
+## 0.2.2-beta.6
+
+- \[router\] Add `isAlive` tests
+- \[router\] Properly handle cancelled withdrawals
+
 ## 0.2.2-beta.5
 
 - \[iframe\] Require iframe signature

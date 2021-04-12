@@ -453,7 +453,7 @@ export const completeRebalance = async (
         statusUrl,
         postBody,
       },
-      "Sending rebalance execute request",
+      "Sending rebalance complete request",
     );
     // check status
     const statusRes = await axios.post(statusUrl, postBody);
@@ -475,7 +475,7 @@ export const completeRebalance = async (
       logger.info({ intervalId: methodId }, "No completion tx required");
       return Result.ok({ complete: true });
     }
-    logger.info({ status, method, intervalId: methodId }, "Sending execute tx");
+    logger.info({ status, method, intervalId: methodId }, "Sending complete tx");
     // need to send tx to complete rebalance
     const transactionHash = await sendTransaction(
       status.transaction.chainId,

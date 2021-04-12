@@ -396,6 +396,7 @@ export const requestCollateral = async (
           requestedAmount,
           {
             error: jsonifyError(receipt.getError()!),
+            transactionHash: tx.txHash,
           },
         ),
       );
