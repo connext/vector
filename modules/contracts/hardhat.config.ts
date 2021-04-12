@@ -168,6 +168,11 @@ const config: HardhatUserConfig = {
       chainId: 212984383488152,
       url: urlOverride || "https://kovan4.arbitrum.io/rpc",
     },
+    optimismkovan1: {
+      accounts: { mnemonic },
+      chainId: 69,
+      url: urlOverride || "https://kovan.optimism.io",
+    },
   },
 };
 
