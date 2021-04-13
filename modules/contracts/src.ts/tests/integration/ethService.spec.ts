@@ -11,6 +11,7 @@ import {
   hashCoreTransferState,
   hashTransferState,
   MemoryStoreService,
+  generateMerkleTreeData,
 } from "@connext/vector-utils";
 import { AddressZero } from "@ethersproject/constants";
 import { Contract } from "@ethersproject/contracts";
