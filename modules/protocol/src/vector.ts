@@ -1,4 +1,3 @@
-import { ChannelMastercopy } from "@connext/vector-contracts";
 import {
   ChannelUpdate,
   ChannelUpdateEvent,
@@ -6,7 +5,6 @@ import {
   FullTransferState,
   IChannelSigner,
   IExternalValidation,
-  ILockService,
   IMessagingService,
   IVectorChainReader,
   IVectorProtocol,
@@ -20,7 +18,6 @@ import {
   TChannelUpdate,
   ProtocolError,
   jsonifyError,
-  ChainReaderEvents,
 } from "@connext/vector-types";
 import { getCreate2MultisigAddress, getRandomBytes32 } from "@connext/vector-utils";
 import { Evt } from "evt";
@@ -40,7 +37,6 @@ export class Vector implements IVectorProtocol {
   // make it private so the only way to create the class is to use `connect`
   private constructor(
     private readonly messagingService: IMessagingService,
-    private readonly lockService: ILockService,
     private readonly storeService: IVectorStore,
     private readonly signer: IChannelSigner,
     private readonly chainReader: IVectorChainReader,
@@ -51,7 +47,6 @@ export class Vector implements IVectorProtocol {
 
   static async connect(
     messagingService: IMessagingService,
-    lockService: ILockService,
     storeService: IVectorStore,
     signer: IChannelSigner,
     chainReader: IVectorChainReader,
@@ -75,7 +70,6 @@ export class Vector implements IVectorProtocol {
     // channel is `setup` plus is not in dispute
     const node = await new Vector(
       messagingService,
-      lockService,
       storeService,
       signer,
       chainReader,
@@ -158,27 +152,8 @@ export class Vector implements IVectorProtocol {
     }
     const isAlice = this.publicIdentifier === aliceIdentifier;
     const counterpartyIdentifier = isAlice ? bobIdentifier : aliceIdentifier;
-    let key: string;
-    try {
-      key = await this.lockService.acquireLock(params.channelAddress, isAlice, counterpartyIdentifier);
-    } catch (e) {
-      return Result.fail(
-        new OutboundChannelUpdateError(OutboundChannelUpdateError.reasons.AcquireLockFailed, params, channel, {
-          lockError: e.message,
-        }),
-      );
-    }
+    throw new Error("must implement internal queueing");
     const outboundRes = await this.lockedOperation(params);
-    try {
-      await this.lockService.releaseLock(params.channelAddress, key, isAlice, counterpartyIdentifier);
-    } catch (e) {
-      return Result.fail(
-        new OutboundChannelUpdateError(OutboundChannelUpdateError.reasons.ReleaseLockFailed, params, channel, {
-          outboundResult: outboundRes.toJson(),
-          lockError: jsonifyError(e),
-        }),
-      );
-    }
 
     return outboundRes;
   }

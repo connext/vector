@@ -24,7 +24,6 @@ import { constructRpcRequest, hydrateProviders, NatsMessagingService } from "@co
 import pino, { BaseLogger } from "pino";
 
 import { BrowserStore } from "./services/store";
-import { BrowserLockService } from "./services/lock";
 import { DirectProvider, IframeChannelProvider, IRpcChannelProvider } from "./channelProvider";
 import { BrowserNodeError } from "./errors";
 export * from "./constants";
@@ -108,11 +107,6 @@ export class BrowserNode implements INodeService {
       config.signer.publicIdentifier,
       config.logger.child({ module: "BrowserStore" }),
     );
-    const lock = new BrowserLockService(
-      config.signer.publicIdentifier,
-      messaging,
-      config.logger.child({ module: "BrowserLockService" }),
-    );
     const chainService = new VectorChainService(
       store,
       chainJsonProviders,
@@ -146,7 +140,6 @@ export class BrowserNode implements INodeService {
 
     const engine = await VectorEngine.connect(
       messaging,
-      lock,
       store,
       config.signer,
       chainService,

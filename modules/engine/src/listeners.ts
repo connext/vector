@@ -60,8 +60,6 @@ export async function setupEngineListeners(
   setup: (
     params: EngineParams.Setup,
   ) => Promise<Result<ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_setup], EngineError>>,
-  acquireRestoreLocks: (channel: FullChannelState) => Promise<Result<void, EngineError>>,
-  releaseRestoreLocks: (channel: FullChannelState) => Promise<Result<void, EngineError>>,
   gasSubsidyPercentage: number,
 ): Promise<void> {
   // Set up listener for channel setup
@@ -175,107 +173,7 @@ export async function setupEngineListeners(
       const method = "onReceiveRestoreStateMessage";
       logger.debug({ method }, "Handling message");
 
-      // releases the lock, and acks to senders confirmation message
-      const releaseLockAndAck = async (channelAddress: string, postToEvt = false) => {
-        const channel = await store.getChannelState(channelAddress);
-        if (!channel) {
-          logger.error({ channelAddress }, "Failed to find channel to release lock");
-          return;
-        }
-        await releaseRestoreLocks(channel);
-        await messaging.respondToRestoreStateMessage(inbox, Result.ok(undefined));
-        if (postToEvt) {
-          // Post to evt
-          evts[EngineEvents.RESTORE_STATE_EVENT].post({
-            channelAddress: channel.channelAddress,
-            aliceIdentifier: channel.aliceIdentifier,
-            bobIdentifier: channel.bobIdentifier,
-            chainId: channel.networkContext.chainId,
-          });
-        }
-        return;
-      };
-
-      // Received error from counterparty
-      if (restoreData.isError) {
-        // releasing the lock should be done regardless of error
-        logger.error({ message: restoreData.getError()!.message, method }, "Error received from counterparty restore");
-        await releaseLockAndAck(restoreData.getError()!.context.channelAddress);
-        return;
-      }
-
-      const data = restoreData.getValue();
-      const [key] = Object.keys(data ?? []);
-      if (key !== "chainId" && key !== "channelAddress") {
-        logger.error({ data }, "Message malformed");
-        return;
-      }
-
-      if (key === "channelAddress") {
-        const { channelAddress } = data as { channelAddress: string };
-        await releaseLockAndAck(channelAddress, true);
-        return;
-      }
-
-      // Otherwise, they are looking to initiate a sync
-      let channel: FullChannelState | undefined;
-      const sendCannotRestoreFromError = (error: Values<typeof RestoreError.reasons>, context: any = {}) => {
-        return messaging.respondToRestoreStateMessage(
-          inbox,
-          Result.fail(
-            new RestoreError(error, channel?.channelAddress ?? "", signer.publicIdentifier, { ...context, method }),
-          ),
-        );
-      };
-
-      // Get info from store to send to counterparty
-      const { chainId } = data as any;
-      try {
-        channel = await store.getChannelStateByParticipants(signer.publicIdentifier, from, chainId);
-      } catch (e) {
-        return sendCannotRestoreFromError(RestoreError.reasons.CouldNotGetChannel, {
-          storeMethod: "getChannelStateByParticipants",
-          chainId,
-          identifiers: [signer.publicIdentifier, from],
-        });
-      }
-      if (!channel) {
-        return sendCannotRestoreFromError(RestoreError.reasons.ChannelNotFound, { chainId });
-      }
-      let activeTransfers: FullTransferState[];
-      try {
-        activeTransfers = await store.getActiveTransfers(channel.channelAddress);
-      } catch (e) {
-        return sendCannotRestoreFromError(RestoreError.reasons.CouldNotGetActiveTransfers, {
-          storeMethod: "getActiveTransfers",
-          chainId,
-          channelAddress: channel.channelAddress,
-        });
-      }
-
-      // Acquire lock
-      const res = await acquireRestoreLocks(channel);
-      if (res.isError) {
-        return sendCannotRestoreFromError(RestoreError.reasons.AcquireLockError, {
-          acquireLockError: jsonifyError(res.getError()!),
-        });
-      }
-
-      // Send info to counterparty
-      logger.debug(
-        {
-          channel: channel.channelAddress,
-          nonce: channel.nonce,
-          activeTransfers: activeTransfers.map((a) => a.transferId),
-        },
-        "Sending counterparty state to sync",
-      );
-      await messaging.respondToRestoreStateMessage(inbox, Result.ok({ channel, activeTransfers }));
-
-      // Release lock on timeout regardless
-      setTimeout(() => {
-        releaseRestoreLocks(channel!);
-      }, 15_000);
+      throw new Error("call to protocol to add to internal queue");
     },
   );
 

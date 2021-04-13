@@ -9,7 +9,6 @@ export * from "./engine";
 export * from "./error";
 export * from "./event";
 export * from "./externalValidation";
-export * from "./lock";
 export * from "./messaging";
 export * from "./network";
 export * from "./node";

@@ -1,19 +1,14 @@
 import { VectorChainService } from "@connext/vector-contracts";
 import { VectorEngine } from "@connext/vector-engine";
-import { EngineEvents, ILockService, IVectorChainService, IVectorEngine, IServerNodeStore } from "@connext/vector-types";
+import { EngineEvents, IVectorChainService, IVectorEngine, IServerNodeStore } from "@connext/vector-types";
 import { ChannelSigner, NatsMessagingService, logAxiosError } from "@connext/vector-utils";
 import Axios from "axios";
 import { Wallet } from "@ethersproject/wallet";
 
 import { logger, _providers } from "../index";
 import { config } from "../config";
-import { LockService } from "../services/lock";
 
 const ETH_STANDARD_PATH = "m/44'/60'/0'/0";
-
-export function getLockService(publicIdentifier: string): ILockService | undefined {
-  return nodes[publicIdentifier]?.lockService;
-}
 
 export function getPath(index = 0): string {
   return `${ETH_STANDARD_PATH}/${(String(index).match(/.{1,9}/gi) || [index]).join("/")}`;
@@ -27,7 +22,6 @@ export let nodes: {
   [publicIdentifier: string]: {
     node: IVectorEngine;
     chainService: IVectorChainService;
-    lockService: ILockService;
     index: number;
   };
 } = {};
@@ -66,16 +60,8 @@ export const createNode = async (
   await messaging.connect();
   logger.info({ method, messagingUrl: config.messagingUrl }, "Connected NatsMessagingService");
 
-  const lockService = await LockService.connect(
-    signer.publicIdentifier,
-    messaging,
-    logger.child({ module: "LockService" }),
-  );
-  logger.info({ method }, "Connected LockService");
-
   const vectorEngine = await VectorEngine.connect(
     messaging,
-    lockService,
     store,
     signer,
     vectorTx,
@@ -102,7 +88,7 @@ export const createNode = async (
     logger.info({ event, method, publicIdentifier: signer.publicIdentifier, index }, "Set up subscription for event");
   }
 
-  nodes[signer.publicIdentifier] = { node: vectorEngine, chainService: vectorTx, index, lockService };
+  nodes[signer.publicIdentifier] = { node: vectorEngine, chainService: vectorTx, index };
   store.setNodeIndex(index, signer.publicIdentifier);
   return vectorEngine;
 };

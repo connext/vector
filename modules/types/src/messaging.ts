@@ -1,6 +1,5 @@
 import { ChannelUpdate, FullChannelState, FullTransferState } from "./channel";
 import { EngineError, NodeError, MessagingError, ProtocolError, Result, RouterError, VectorError } from "./error";
-import { LockInformation } from "./lock";
 import { EngineParams, NodeResponses } from "./schemas";
 
 export type CheckInInfo = { channelAddress: string };
@@ -24,19 +23,6 @@ export interface IBasicMessaging {
 
 type TransferQuoteRequest = Omit<EngineParams.GetTransferQuote, "routerIdentifier">;
 export interface IMessagingService extends IBasicMessaging {
-  onReceiveLockMessage(
-    myPublicIdentifier: string,
-    callback: (lockInfo: Result<LockInformation, NodeError>, from: string, inbox: string) => void,
-  ): Promise<void>;
-  sendLockMessage(
-    lockInfo: Result<LockInformation, NodeError>,
-    to: string,
-    from: string,
-    timeout?: number,
-    numRetries?: number,
-  ): Promise<Result<LockInformation, NodeError | MessagingError>>;
-  respondToLockMessage(inbox: string, lockInformation: Result<LockInformation, NodeError>): Promise<void>;
-
   onReceiveProtocolMessage(
     myPublicIdentifier: string,
     callback: (

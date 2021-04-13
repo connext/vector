@@ -345,8 +345,6 @@ describe(testName, () => {
         chainAddresses,
         log,
         () => Promise.resolve(Result.ok({} as any)),
-        acquireRestoreLockStub,
-        releaseRestoreLockStub,
         gasSubsidyPercentage,
       );
 
@@ -464,8 +462,6 @@ describe(testName, () => {
         chainAddresses,
         log,
         () => Promise.resolve(Result.ok({} as any)),
-        acquireRestoreLockStub,
-        releaseRestoreLockStub,
         50,
       );
 

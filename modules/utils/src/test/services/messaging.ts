@@ -2,7 +2,6 @@ import {
   ChannelUpdate,
   IMessagingService,
   NodeError,
-  LockInformation,
   MessagingError,
   Result,
   FullChannelState,
@@ -181,25 +180,6 @@ export class MemoryMessagingService implements IMessagingService {
     inbox: string,
     restoreData: Result<{ channel: FullChannelState; activeTransfers: FullTransferState[] } | void, EngineError>,
   ): Promise<void> {
-    throw new Error("Method not implemented.");
-  }
-
-  respondToLockMessage(inbox: string, lockInformation: Result<LockInformation, NodeError>): Promise<void> {
-    throw new Error("Method not implemented.");
-  }
-  onReceiveLockMessage(
-    myPublicIdentifier: string,
-    callback: (lockInfo: Result<LockInformation, NodeError>, from: string, inbox: string) => void,
-  ): Promise<void> {
-    throw new Error("Method not implemented.");
-  }
-  sendLockMessage(
-    lockInfo: Result<LockInformation, NodeError>,
-    to: string,
-    from: string,
-    timeout?: number,
-    numRetries?: number,
-  ): Promise<Result<LockInformation, NodeError>> {
     throw new Error("Method not implemented.");
   }
 

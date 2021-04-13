@@ -2,7 +2,6 @@ import { Vector } from "@connext/vector-protocol";
 import {
   ChainAddresses,
   IChannelSigner,
-  ILockService,
   IMessagingService,
   IVectorProtocol,
   Result,
@@ -19,7 +18,6 @@ import {
   ChannelRpcMethods,
   IExternalValidation,
   AUTODEPLOY_CHAIN_IDS,
-  FullChannelState,
   EngineError,
   UpdateType,
   Values,
@@ -74,13 +72,11 @@ export class VectorEngine implements IVectorEngine {
     private readonly vector: IVectorProtocol,
     private readonly chainService: IVectorChainService,
     private readonly chainAddresses: ChainAddresses,
-    private readonly lockService: ILockService,
     private readonly logger: pino.BaseLogger,
   ) {}
 
   static async connect(
     messaging: IMessagingService,
-    lock: ILockService,
     store: IEngineStore,
     signer: IChannelSigner,
     chainService: IVectorChainService,
@@ -92,7 +88,6 @@ export class VectorEngine implements IVectorEngine {
   ): Promise<VectorEngine> {
     const vector = await Vector.connect(
       messaging,
-      lock,
       store,
       signer,
       chainService,
@@ -107,7 +102,6 @@ export class VectorEngine implements IVectorEngine {
       vector,
       chainService,
       chainAddresses,
-      lock,
       logger.child({ module: "VectorEngine" }),
     );
     await engine.setupListener(gasSubsidyPercentage);
@@ -140,57 +134,8 @@ export class VectorEngine implements IVectorEngine {
       this.chainAddresses,
       this.logger,
       this.setup.bind(this),
-      this.acquireRestoreLocks.bind(this),
-      this.releaseRestoreLocks.bind(this),
       gasSubsidyPercentage,
     );
-  }
-
-  private async acquireRestoreLocks(channel: FullChannelState): Promise<Result<void, EngineError>> {
-    if (this.restoreLocks[channel.channelAddress]) {
-      // Has already been released, return undefined
-      return Result.ok(this.restoreLocks[channel.channelAddress]);
-    }
-    try {
-      const isAlice = channel.alice === this.signer.address;
-      const lockVal = await this.lockService.acquireLock(
-        channel.channelAddress,
-        isAlice,
-        isAlice ? channel.bobIdentifier : channel.aliceIdentifier,
-      );
-      this.restoreLocks[channel.channelAddress] = lockVal;
-      return Result.ok(undefined);
-    } catch (e) {
-      return Result.fail(
-        new RestoreError(RestoreError.reasons.AcquireLockError, channel.channelAddress, this.signer.publicIdentifier, {
-          acquireRestoreLockError: e.message,
-        }),
-      );
-    }
-  }
-
-  private async releaseRestoreLocks(channel: FullChannelState): Promise<Result<void, EngineError>> {
-    if (!this.restoreLocks[channel.channelAddress]) {
-      // Has already been released, return undefined
-      return Result.ok(undefined);
-    }
-    try {
-      const isAlice = channel.alice === this.signer.address;
-      await this.lockService.releaseLock(
-        channel.channelAddress,
-        this.restoreLocks[channel.channelAddress],
-        isAlice,
-        isAlice ? channel.bobIdentifier : channel.aliceIdentifier,
-      );
-      delete this.restoreLocks[channel.channelAddress];
-      return Result.ok(undefined);
-    } catch (e) {
-      return Result.fail(
-        new RestoreError(RestoreError.reasons.ReleaseLockError, channel.channelAddress, this.signer.publicIdentifier, {
-          releaseRestoreLockError: e.message,
-        }),
-      );
-    }
   }
 
   private async getConfig(): Promise<
