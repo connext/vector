@@ -36,6 +36,7 @@ import { NatsRouterMessagingService } from "./services/messaging";
 import { autoRebalanceTask, startAutoRebalanceTask } from "./services/autoRebalance";
 import { wallet } from "./metrics";
 import { ServerError } from "./errors";
+import { startMetricsBroadcastTask } from "./services/globalMetrics";
 
 const config = getConfig();
 
@@ -188,6 +189,8 @@ server.addHook("onReady", async () => {
   if (config.autoRebalanceInterval) {
     startAutoRebalanceTask(config.autoRebalanceInterval, logger, wallet, chainService, hydratedProviders, store);
   }
+
+  startMetricsBroadcastTask(1800_000, messagingService);
 });
 
 server.get("/ping", async () => {
