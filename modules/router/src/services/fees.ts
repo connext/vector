@@ -7,7 +7,13 @@ import {
   SIMPLE_WITHDRAWAL_GAS_ESTIMATE,
   GAS_ESTIMATES,
 } from "@connext/vector-types";
-import { getBalanceForAssetId, getParticipant, getRandomBytes32, TESTNETS_WITH_FEES } from "@connext/vector-utils";
+import {
+  getBalanceForAssetId,
+  getParticipant,
+  getRandomBytes32,
+  TESTNETS_WITH_FEES,
+  toWad,
+} from "@connext/vector-utils";
 import { BigNumber } from "@ethersproject/bignumber";
 import { AddressZero, Zero } from "@ethersproject/constants";
 import { BaseLogger } from "pino";
@@ -91,8 +97,10 @@ export const calculateFeeAmount = async (
   // ie. fee = 20%, receivedAmt = 8, amt = (100 * 8) / (100 - 20) = 10
 
   // Calculate fees only on starting amount and update
-  const amtToTransfer = receiveExactAmount ? transferAmount.mul(100).div(100 - percentageFee) : transferAmount;
-  const feeFromPercent = amtToTransfer.mul(percentageFee).div(100);
+  const amtToTransfer = receiveExactAmount
+    ? transferAmount.mul(toWad("100")).div(toWad("100").sub(toWad(percentageFee.toString())))
+    : transferAmount;
+  const feeFromPercent = amtToTransfer.mul(toWad(percentageFee.toString())).div(toWad("100"));
   const staticFees = feeFromPercent.add(flatFee);
   if (gasSubsidyPercentage === 100) {
     // gas is fully subsidized
