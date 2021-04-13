@@ -2,6 +2,8 @@
 
 ## Next Release
 
+- \[router\] Broadcast global metrics
+
 ## 0.2.2-beta.8
 
 - \[iframe\] Isolate signing to iframe
