@@ -71,7 +71,7 @@ const txResponse: TransactionResponseWithResult = {
 };
 
 const { log } = getTestLoggers("ethService");
-describe.only("ethService", () => {
+describe("ethService", () => {
   beforeEach(() => {
     // eth service deps
     storeMock = createStubInstance(MemoryStoreService);
