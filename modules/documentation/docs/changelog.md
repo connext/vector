@@ -3,6 +3,9 @@
 ## Next Release
 
 - \[router\] Broadcast global metrics
+## 0.2.2
+
+- \[utils\] Improve merkle root generation
 
 ## 0.2.2-beta.8
 
