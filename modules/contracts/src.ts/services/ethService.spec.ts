@@ -8,17 +8,15 @@ import {
   expect,
   getRandomAddress,
   getRandomBytes32,
-  hashCoreTransferState,
+  generateMerkleTreeData,
   hashTransferState,
   MemoryStoreService,
 } from "@connext/vector-utils";
 import { AddressZero } from "@ethersproject/constants";
 import { Contract } from "@ethersproject/contracts";
-import { keccak256 } from "@ethersproject/keccak256";
 import { parseEther } from "@ethersproject/units";
 import { BigNumber } from "@ethersproject/bignumber";
 import { deployments } from "hardhat";
-import { MerkleTree } from "merkletreejs";
 
 import { alice, bob, chainIdReq, logger, provider, rando } from "../constants";
 import { advanceBlocktime, getContract, createChannel } from "../utils";
@@ -73,6 +71,7 @@ describe("EthereumChainService", function () {
       initialStateHash: hashTransferState(state, HashlockTransferStateEncoding),
     });
 
+    const { root } = generateMerkleTreeData([transferState]);
     channelState = createTestChannelStateWithSigners([aliceSigner, bobSigner], "create", {
       channelAddress: channel.address,
       assetIds: [AddressZero],
@@ -81,7 +80,7 @@ describe("EthereumChainService", function () {
       processedDepositsB: ["62"],
       timeout: "20",
       nonce: 3,
-      merkleRoot: new MerkleTree([hashCoreTransferState(transferState)], keccak256).getHexRoot(),
+      merkleRoot: root,
     });
     const channelHash = hashChannelCommitment(channelState);
     channelState.latestUpdate.aliceSignature = await aliceSigner.signMessage(channelHash);
