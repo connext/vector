@@ -449,7 +449,13 @@ describe.only("ethService", () => {
     it("retries if it's a retryable error", async () => {
       sendTxAndParseResponseMock
         .onFirstCall()
-        .resolves(Result.fail(new ChainError(ChainError.retryableTxErrors.UnderpricedReplacement)));
+        .resolves(
+          Result.fail(
+            new ChainError(
+              'processing response error (body="{"jsonrpc":"2.0","error":{"code":-32000,"message":"Block information is incomplete while ancient block sync is still in progress, before it\'s finished we can\'t determine the existence of requested item."},"id":14890}\n", error={"code":-32000}, requestBody="{"method":"eth_getTransactionReceipt","params":["0x8731c46fafd569bb65c6c26cd3960ad418d88310a41a03c5c4f4a0dcce15cd8a"],"id":14890,"jsonrpc":"2.0"}", requestMethod="POST", url="https://rpc.xdaichain.com/", code=SERVER_ERROR, version=web/5.1.0)',
+            ),
+          ),
+        );
 
       sendTxAndParseResponseMock.resolves(Result.ok(txResponse));
       const result = await ethService.sendTxWithRetries(
@@ -473,6 +479,15 @@ describe.only("ethService", () => {
         },
       );
       assertResult(result, false, txResponse);
+    });
+  });
+
+  describe("sendTxAndParseResponse", () => {
+    it("if txFn returns undefined, returns undefined", async () => {
+      const result = await ethService.sendTxAndParseResponse(AddressZero, 111, "allowance", async () => {
+        return undefined;
+      });
+      assertResult(result, false, undefined);
     });
   });
 });

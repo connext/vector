@@ -75,6 +75,7 @@ export class ChainError extends VectorError {
     MissingHash: "no transaction hash found in tx response",
     UnderpricedReplacement: "replacement transaction underpriced",
     AncientBlockSync: "Block information is incomplete while ancient",
+    UnableToRent: "Unable to rent an instance of IEthModule",
   };
 
   readonly canRetry: boolean;
