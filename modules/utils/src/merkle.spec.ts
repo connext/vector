@@ -2,12 +2,8 @@ import { createCoreTransferState, expect } from "./test";
 import { getRandomBytes32 } from "./hexStrings";
 import { generateMerkleTreeData } from "./merkle";
 import { HashZero } from "@ethersproject/constants";
-import { bufferify } from "./crypto";
 
-import { keccak256 } from "ethereumjs-util";
-import MerkleTree from "merkletreejs";
-
-describe.only("generateMerkleTreeData", () => {
+describe("generateMerkleTreeData", () => {
   const generateTransfers = (noTransfers = 1) => {
     return Array(noTransfers)
       .fill(0)
