@@ -398,10 +398,10 @@ export const mergeAssetIds = (channel: FullChannelState): FullChannelState => {
 //   (0, true) => 1
 //   (0, false) => 2
 //   (1, true) => 4
-export function getNextNonceForUpdate(highestSeenNonce: number, isAlice: boolean): number {
-  let rotation = highestSeenNonce % 4;
+export function getNextNonceForUpdate(currentNonce: number, isAlice: boolean): number {
+  let rotation = currentNonce % 4;
   let currentlyMe = rotation < 2 === isAlice;
-  let top = highestSeenNonce % 2 === 1;
+  let top = currentNonce % 2 === 1;
   let offset = currentlyMe ? (top ? 3 : 1) : (top ? 1 : 2);
-  return highestSeenNonce + offset;
+  return currentNonce + offset;
 }
