@@ -1025,9 +1025,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
     }
 
     // Generate merkle root
-    const hashes = activeTransfers.map((t) => bufferify(hashCoreTransferState(t)));
-    const hash = bufferify(hashCoreTransferState(transferState));
-    const merkle = new MerkleTree(hashes, keccak256);
+    const { proof } = generateMerkleTreeData(activeTransfers, transferState);
 
     return this.sendTxWithRetries(
       transferState.channelAddress,
@@ -1035,7 +1033,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
       TransactionReason.disputeTransfer,
       () => {
         const channel = new Contract(transferState.channelAddress, VectorChannel.abi, signer);
-        return channel.disputeTransfer(transferState, merkle.getHexProof(hash));
+        return channel.disputeTransfer(transferState, proof);
       },
     ) as Promise<Result<TransactionResponseWithResult, ChainError>>;
   }
