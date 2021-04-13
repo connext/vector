@@ -75,7 +75,7 @@ describe("applyUpdate", () => {
     transferRegistryAddress: mkAddress("0xddddeeeeefffff44444"),
   };
 
-  // Sample transfer (alice creating, bob recieving)
+  // Sample transfer (alice creating, bob receiving)
   const transferAmount = "7";
   const sampleResolvedTransfer = createTestFullHashlockTransferState({
     initiatorIdentifier: publicIdentifiers[0],
@@ -395,10 +395,10 @@ describe("applyUpdate", () => {
         updateType === UpdateType.setup || error === ApplyUpdateError.reasons.ChannelNotFound
           ? undefined
           : createTestChannelStateWithSigners(signers, stateOverrides?.latestUpdate?.type ?? UpdateType.deposit, {
-              channelAddress,
-              networkContext: { ...networkContext },
-              ...stateOverrides,
-            });
+            channelAddress,
+            networkContext: { ...networkContext },
+            ...stateOverrides,
+          });
 
       // Generate the active transfer ids
       const activeTransfers = (activeTransfersOverrides ?? []).map((overrides) =>
@@ -414,9 +414,9 @@ describe("applyUpdate", () => {
       const finalTransferBalance =
         updateType === UpdateType.resolve && finalBalanceOverrides
           ? {
-              ...sampleResolvedTransfer.transferState.balance,
-              ...finalBalanceOverrides,
-            }
+            ...sampleResolvedTransfer.transferState.balance,
+            ...finalBalanceOverrides,
+          }
           : undefined;
 
       // Run the function

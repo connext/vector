@@ -131,6 +131,41 @@ describe(testName, () => {
     log.info(concurrentResult);
   });
 
+  it("should interleave updates for many concurrent transfers in each direction", async () => {
+    // Create two transfers from alice to bob
+    const preTransfer = (await aliceStore.getChannelState(abChannelAddress))!;
+    const preNonce = preTransfer.latestUpdate.nonce;
+    const assetIdx = preTransfer.assetIds.findIndex((a) => a === assetId);
+    const [initAlice, initBob] = preTransfer.balances[assetIdx].amount;
+    const promises = [];
+    // First adds 20 alice -> bob
+    // Then adds 20 bob -> alice
+    for (let i = 0; i < 40; i++) {
+      let [initiator, receiver] = i < 20 ? [alice, bob] : [bob, alice];
+      createTransfer(abChannelAddress, initiator, receiver, assetId, transferAmount, undefined, undefined, true);
+    }
+    const concurrentResult = await Promise.all(promises);
+    const postTransfer = (await aliceStore.getChannelState(abChannelAddress))!;
+    const postNonce = postTransfer.latestUpdate.nonce;
+    const [finalAlice, finalBob] = postTransfer!.balances[assetIdx].amount;
+    const transferredAlice = BigNumber.from(transferAmount).mul(20);
+    expect(finalAlice).to.be.eq(BigNumber.from(initAlice).sub(transferredAlice));
+    const transferredBob = BigNumber.from(transferAmount).mul(20);
+    expect(finalBob).to.be.eq(BigNumber.from(initBob).sub(transferredBob));
+
+    // If updates are not interleaved we would expect the nonce to increase by 2 on most transfers.
+    // There are 40 transfers, so the upper bound would be roughly preNonce + 80.
+    // If the updates are perfectly interleaved we would expect the nonce to increase by 1 on most transfers.
+    // There are 40 transfers, so the lower bound would be roughly preNonce + 40.
+    // In reality this depends on who's turn it was when the interaction started and may be off for
+    // race conditions.
+    // So this will just verify the result is within 50% of ideal.
+    expect(postNonce).to.be.greaterThan(preNonce + 39);
+    expect(postNonce).to.be.lessThan(preNonce + 61);
+
+    log.info(concurrentResult);
+  });
+
   it("should work for concurrent transfers from alice -> [bob, carol]", async () => {
     // Create an alice <-> carol channel
     const setup = await getFundedChannel(
