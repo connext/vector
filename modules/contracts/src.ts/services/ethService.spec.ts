@@ -489,5 +489,19 @@ describe.only("ethService", () => {
       });
       assertResult(result, false, undefined);
     });
+
+    it("if txFn errors, returns error", async () => {
+      const result = await ethService.sendTxAndParseResponse(AddressZero, 111, "allowance", async () => {
+        throw new Error("Boooo");
+      });
+      assertResult(result, true, "Boooo");
+    });
+
+    it("if txFn errors, with not enough funds, return special error", async () => {
+      const result = await ethService.sendTxAndParseResponse(AddressZero, 111, "allowance", async () => {
+        throw new Error("sender doesn't have enough funds");
+      });
+      assertResult(result, true, ChainError.reasons.NotEnoughFunds);
+    });
   });
 });

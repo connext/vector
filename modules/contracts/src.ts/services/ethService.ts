@@ -592,7 +592,6 @@ export class EthereumChainService extends EthereumChainReader implements IVector
     reason: TransactionReason,
     txFn: () => Promise<undefined | TransactionResponse>,
   ): Promise<Result<TransactionResponseWithResult | undefined, ChainError>> {
-    // TODO: add retries on specific errors #347
     try {
       const response = await this.queue.add(async () => {
         const response = await txFn();
