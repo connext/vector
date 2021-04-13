@@ -2,6 +2,14 @@
 
 ## Next Release
 
+## 0.2.2
+
+- \[utils\] Improve merkle root generation
+
+## 0.2.2-beta.8
+
+- \[iframe\] Isolate signing to iframe
+
 ## 0.2.2-beta.7
 
 - \[router\] Convert `PROCESSING` status to in memory flag
