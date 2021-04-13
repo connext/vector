@@ -2,7 +2,6 @@ import { ChannelFactory, TestToken, VectorChannel, VectorChainReader } from "@co
 import {
   FullChannelState,
   IChannelSigner,
-  ILockService,
   IMessagingService,
   IVectorProtocol,
   IVectorStore,
@@ -16,7 +15,6 @@ import {
   getTestLoggers,
   expect,
   MemoryStoreService,
-  MemoryLockService,
   MemoryMessagingService,
   getSignerAddressFromPublicIdentifier,
 } from "@connext/vector-utils";
@@ -33,7 +31,6 @@ import { fundAddress } from "./funding";
 
 type VectorTestOverrides = {
   messagingService: IMessagingService;
-  lockService: ILockService;
   storeService: IVectorStore;
   signer: IChannelSigner;
   chainReader: IVectorChainReader;
@@ -43,7 +40,6 @@ type VectorTestOverrides = {
 // NOTE: when operating with three counterparties, they must
 // all share a messaging service
 const sharedMessaging = new MemoryMessagingService();
-const sharedLock = new MemoryLockService();
 const sharedChain = new VectorChainReader({ [chainId]: provider }, Pino());
 
 export const createVectorInstances = async (
@@ -57,7 +53,6 @@ export const createVectorInstances = async (
       .map(async (_, idx) => {
         const instanceOverrides = overrides[idx] || {};
         const messagingService = shareServices ? sharedMessaging : new MemoryMessagingService();
-        const lockService = shareServices ? sharedLock : new MemoryLockService();
         const logger = instanceOverrides.logger ?? Pino();
         const chainReader = shareServices
           ? sharedChain
@@ -65,7 +60,6 @@ export const createVectorInstances = async (
 
         const opts = {
           messagingService,
-          lockService,
           storeService: new MemoryStoreService(),
           signer: getRandomChannelSigner(provider),
           chainReader,

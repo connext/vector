@@ -14,7 +14,7 @@ import {
   MessagingError,
   jsonifyError,
 } from "@connext/vector-types";
-import { getRandomBytes32, LOCK_TTL } from "@connext/vector-utils";
+import { getRandomBytes32 } from "@connext/vector-utils";
 import pino from "pino";
 
 import { InboundChannelUpdateError, OutboundChannelUpdateError } from "./errors";

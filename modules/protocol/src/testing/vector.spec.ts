@@ -10,12 +10,10 @@ import {
   MemoryStoreService,
   expect,
   MemoryMessagingService,
-  MemoryLockService,
 } from "@connext/vector-utils";
 import pino from "pino";
 import {
   IVectorChainReader,
-  ILockService,
   IMessagingService,
   IVectorStore,
   UpdateType,
@@ -33,7 +31,6 @@ import { env } from "./env";
 
 describe("Vector", () => {
   let chainReader: Sinon.SinonStubbedInstance<IVectorChainReader>;
-  let lockService: Sinon.SinonStubbedInstance<ILockService>;
   let messagingService: Sinon.SinonStubbedInstance<IMessagingService>;
   let storeService: Sinon.SinonStubbedInstance<IVectorStore>;
 
@@ -42,7 +39,6 @@ describe("Vector", () => {
     chainReader.getChannelFactoryBytecode.resolves(Result.ok(mkHash()));
     chainReader.getChannelMastercopyAddress.resolves(Result.ok(mkAddress()));
     chainReader.getChainProviders.returns(Result.ok(env.chainProviders));
-    lockService = Sinon.createStubInstance(MemoryLockService);
     messagingService = Sinon.createStubInstance(MemoryMessagingService);
     storeService = Sinon.createStubInstance(MemoryStoreService);
     storeService.getChannelStates.resolves([]);
@@ -61,7 +57,6 @@ describe("Vector", () => {
       const signer = getRandomChannelSigner();
       const node = await Vector.connect(
         messagingService,
-        lockService,
         storeService,
         signer,
         chainReader as IVectorChainReader,
@@ -97,7 +92,6 @@ describe("Vector", () => {
       chainReader.registerChannel.resolves(Result.ok(undefined));
       vector = await Vector.connect(
         messagingService,
-        lockService,
         storeService,
         signer,
         chainReader as IVectorChainReader,
@@ -112,8 +106,6 @@ describe("Vector", () => {
       });
       const result = await vector.setup(details);
       expect(result.getError()).to.be.undefined;
-      expect(lockService.acquireLock.callCount).to.be.eq(1);
-      expect(lockService.releaseLock.callCount).to.be.eq(1);
     });
 
     it("should fail if it fails to generate the create2 address", async () => {
@@ -224,7 +216,6 @@ describe("Vector", () => {
 
       vector = await Vector.connect(
         messagingService,
-        lockService,
         storeService,
         signer,
         chainReader as IVectorChainReader,
@@ -237,8 +228,6 @@ describe("Vector", () => {
       const { details } = createTestUpdateParams(UpdateType.deposit, { channelAddress });
       const result = await vector.deposit({ ...details, channelAddress });
       expect(result.getError()).to.be.undefined;
-      expect(lockService.acquireLock.callCount).to.be.eq(1);
-      expect(lockService.releaseLock.callCount).to.be.eq(1);
     });
 
     describe("should validate parameters", () => {
@@ -294,7 +283,6 @@ describe("Vector", () => {
 
       vector = await Vector.connect(
         messagingService,
-        lockService,
         storeService,
         signer,
         chainReader as IVectorChainReader,
@@ -307,8 +295,6 @@ describe("Vector", () => {
       const { details } = createTestUpdateParams(UpdateType.create, { channelAddress });
       const result = await vector.create({ ...details, channelAddress });
       expect(result.getError()).to.be.undefined;
-      expect(lockService.acquireLock.callCount).to.be.eq(1);
-      expect(lockService.releaseLock.callCount).to.be.eq(1);
     });
 
     describe("should validate parameters", () => {
@@ -402,7 +388,6 @@ describe("Vector", () => {
 
       vector = await Vector.connect(
         messagingService,
-        lockService,
         storeService,
         signer,
         chainReader as IVectorChainReader,
@@ -415,8 +400,6 @@ describe("Vector", () => {
       const { details } = createTestUpdateParams(UpdateType.resolve, { channelAddress });
       const result = await vector.resolve({ ...details, channelAddress });
       expect(result.getError()).to.be.undefined;
-      expect(lockService.acquireLock.callCount).to.be.eq(1);
-      expect(lockService.releaseLock.callCount).to.be.eq(1);
     });
 
     describe("should validate parameters", () => {

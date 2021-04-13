@@ -3,7 +3,6 @@ import {
   ChannelUpdate,
   IMessagingService,
   NodeError,
-  LockInformation,
   Result,
   EngineParams,
   FullChannelState,
@@ -481,29 +480,6 @@ export class NatsMessagingService extends NatsBasicMessagingService implements I
     params: Result<{ message?: string }, VectorError>,
   ): Promise<void> {
     return this.respondToMessage(inbox, params, "respondToRequestCollateralMessage");
-  }
-  ////////////
-
-  // LOCK METHODS
-  async sendLockMessage(
-    lockInfo: Result<LockInformation, NodeError>,
-    to: string,
-    from: string,
-    timeout = 30_000, // TODO this timeout is copied from memolock
-    numRetries = 0,
-  ): Promise<Result<LockInformation, NodeError>> {
-    return this.sendMessageWithRetries(lockInfo, "lock", to, from, timeout, numRetries, "sendLockMessage");
-  }
-
-  async onReceiveLockMessage(
-    publicIdentifier: string,
-    callback: (lockInfo: Result<LockInformation, NodeError>, from: string, inbox: string) => void,
-  ): Promise<void> {
-    return this.registerCallback(`${publicIdentifier}.*.lock`, callback, "onReceiveLockMessage");
-  }
-
-  async respondToLockMessage(inbox: string, lockInformation: Result<LockInformation, NodeError>): Promise<void> {
-    return this.respondToMessage(inbox, lockInformation, "respondToLockMessage");
   }
   ////////////
 
