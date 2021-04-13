@@ -503,5 +503,72 @@ describe.only("ethService", () => {
       });
       assertResult(result, true, ChainError.reasons.NotEnoughFunds);
     });
+
+    it("if receipt status = 0, saves response with error", async () => {
+      const t = {
+        ..._txResponse,
+        wait: async () => {
+          return { status: 0 };
+        },
+      } as any;
+      const result = await ethService.sendTxAndParseResponse(AddressZero, 111, "allowance", async () => {
+        return t;
+      });
+      expect(storeMock.saveTransactionResponse.callCount).eq(1);
+      const saveTransactionResponseCall = storeMock.saveTransactionResponse.getCall(0);
+      expect(saveTransactionResponseCall.args[0]).eq(AddressZero);
+      expect(saveTransactionResponseCall.args[1]).eq("allowance");
+      expect(saveTransactionResponseCall.args[2]).deep.eq(t);
+
+      expect(storeMock.saveTransactionFailure.callCount).eq(1);
+      const saveTransactionFailureCall = storeMock.saveTransactionFailure.getCall(0);
+      expect(saveTransactionFailureCall.args[0]).eq(AddressZero);
+      expect(saveTransactionFailureCall.args[1]).eq(t.hash);
+      expect(saveTransactionFailureCall.args[2]).eq("Tx reverted");
+      assertResult(result, false);
+    });
+
+    it("if receipt wait fn errors, saves response with error", async () => {
+      const t = {
+        ..._txResponse,
+        wait: async () => {
+          throw new Error("Booooo");
+        },
+      } as any;
+      const result = await ethService.sendTxAndParseResponse(AddressZero, 111, "allowance", async () => {
+        return t;
+      });
+      expect(storeMock.saveTransactionResponse.callCount).eq(1);
+      const saveTransactionResponseCall = storeMock.saveTransactionResponse.getCall(0);
+      expect(saveTransactionResponseCall.args[0]).eq(AddressZero);
+      expect(saveTransactionResponseCall.args[1]).eq("allowance");
+      expect(saveTransactionResponseCall.args[2]).deep.eq(t);
+      assertResult(result, false);
+
+      expect(storeMock.saveTransactionFailure.callCount).eq(1);
+      const saveTransactionFailureCall = storeMock.saveTransactionFailure.getCall(0);
+      expect(saveTransactionFailureCall.args[0]).eq(AddressZero);
+      expect(saveTransactionFailureCall.args[1]).eq(t.hash);
+      expect(saveTransactionFailureCall.args[2]).eq("Booooo");
+      assertResult(result, false);
+    });
+
+    it("happy: saves responses", async () => {
+      const result = await ethService.sendTxAndParseResponse(AddressZero, 111, "allowance", async () => {
+        return _txResponse;
+      });
+      expect(storeMock.saveTransactionResponse.callCount).eq(1);
+      const saveTransactionResponseCall = storeMock.saveTransactionResponse.getCall(0);
+      expect(saveTransactionResponseCall.args[0]).eq(AddressZero);
+      expect(saveTransactionResponseCall.args[1]).eq("allowance");
+      expect(saveTransactionResponseCall.args[2]).deep.eq(_txResponse);
+      assertResult(result, false);
+
+      expect(storeMock.saveTransactionReceipt.callCount).eq(1);
+      const saveTransactionReceiptCall = storeMock.saveTransactionReceipt.getCall(0);
+      expect(saveTransactionReceiptCall.args[0]).eq(AddressZero);
+
+      assertResult(result, false);
+    });
   });
 });
