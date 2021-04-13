@@ -18,6 +18,7 @@ import { FeeError } from "../../errors";
 import * as feesService from "../../services/fees";
 import * as metrics from "../../metrics";
 import * as utils from "../../services/utils";
+import { fromWad, toWad } from "@connext/vector-utils";
 
 const config = getConfig();
 
@@ -55,7 +56,7 @@ describe(testName, () => {
     Sinon.restore();
   });
 
-  describe("calculateFeeAmount", () => {
+  describe.only("calculateFeeAmount", () => {
     let transferAmount: BigNumber;
     let routerIdentifier: string;
     let fromAssetId: string;
@@ -168,6 +169,29 @@ describe(testName, () => {
       expect(result.isError).to.be.false;
       const { fee, amount } = result.getValue();
       const expectedFees = BigNumber.from(fees.flatFee).add(transferAmount.mul(11).div(100));
+      expect(fee).to.be.eq(expectedFees);
+      expect(amount).to.be.eq(transferAmount.add(expectedFees));
+    });
+
+    it.only("should work with static percentage + flat fees where the received amount is exact (fees are a percent)", async () => {
+      fees.gasSubsidyPercentage = 100;
+      fees.percentageFee = 0.03;
+      getFeesStub.returns(Result.ok(fees));
+      const result = await feesService.calculateFeeAmount(
+        transferAmount,
+        true,
+        fromAssetId,
+        fromChannel,
+        toAssetId,
+        toChannel,
+        ethReader as IVectorChainReader,
+        routerIdentifier,
+        log,
+      );
+      expect(result.isError).to.be.false;
+      const { fee, amount } = result.getValue();
+      const percent = toWad(transferAmount.toString()).mul(11).div(100);
+      const expectedFees = BigNumber.from(fees.flatFee).add(fromWad(percent));
       expect(fee).to.be.eq(expectedFees);
       expect(amount).to.be.eq(transferAmount.add(expectedFees));
     });
