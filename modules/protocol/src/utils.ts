@@ -381,3 +381,27 @@ export const mergeAssetIds = (channel: FullChannelState): FullChannelState => {
     defundNonces,
   };
 };
+
+
+// Returns the first unused nonce for the given participant.
+// Nonces alternate back and forth like so:
+//   0: Alice
+//   1: Alice
+//   2: Bob
+//   3: Bob
+//   4: Alice
+//   5: Alice
+//   6: Bob
+//   7: Bob
+//
+// Examples:
+//   (0, true) => 1
+//   (0, false) => 2
+//   (1, true) => 4
+export function getNextNonceForUpdate(highestSeenNonce: number, isAlice: boolean): number {
+  let rotation = highestSeenNonce % 4;
+  let currentlyMe = rotation < 2 === isAlice;
+  let top = highestSeenNonce % 2 === 1;
+  let offset = currentlyMe ? (top ? 3 : 1) : (top ? 1 : 2);
+  return highestSeenNonce + offset;
+}
