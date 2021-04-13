@@ -73,15 +73,21 @@ export class ChainError extends VectorError {
     BadNonce: "the tx doesn't have the correct nonce",
     InvalidNonce: "Invalid nonce",
     MissingHash: "no transaction hash found in tx response",
-    UnderpricedReplancement: "replacement transaction underpriced",
+    UnderpricedReplacement: "replacement transaction underpriced",
+    AncientBlockSync: "Block information is incomplete while ancient",
   };
 
   readonly canRetry: boolean;
 
-  constructor(public readonly message: Values<typeof ChainError.reasons> | string, public readonly context: any = {}) {
+  constructor(
+    public readonly message: Values<typeof ChainError.reasons | typeof ChainError.retryableTxErrors> | string,
+    public readonly context: any = {},
+  ) {
     super(message, context, ChainError.type);
     this.canRetry = !!Object.values(ChainError.retryableTxErrors).find(
-      (msg) => msg.includes(this.message) || this.message.includes(msg),
+      (msg) =>
+        msg.toLowerCase().includes(this.message.toLowerCase()) ||
+        this.message.toLowerCase().includes(msg.toLowerCase()),
     );
   }
 }

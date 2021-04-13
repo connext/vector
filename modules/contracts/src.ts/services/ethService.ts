@@ -76,7 +76,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
     chainProviders: { [chainId: string]: JsonRpcProvider },
     signer: string | Signer,
     log: BaseLogger,
-    private readonly defaultRetries = 1,
+    private readonly defaultRetries = 3,
   ) {
     super(chainProviders, log.child({ module: "EthereumChainService" }));
     Object.entries(chainProviders).forEach(([chainId, provider]) => {

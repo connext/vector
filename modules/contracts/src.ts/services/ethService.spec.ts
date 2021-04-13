@@ -446,6 +446,23 @@ describe.only("ethService", () => {
       assertResult(result, true, ChainError.reasons.NotEnoughFunds);
     });
 
+    it("retries if it's a retryable error", async () => {
+      sendTxAndParseResponseMock
+        .onFirstCall()
+        .resolves(Result.fail(new ChainError(ChainError.retryableTxErrors.UnderpricedReplacement)));
+
+      sendTxAndParseResponseMock.resolves(Result.ok(txResponse));
+      const result = await ethService.sendTxWithRetries(
+        channelState.channelAddress,
+        channelState.networkContext.chainId,
+        "allowance",
+        () => {
+          return Promise.resolve(_txResponse);
+        },
+      );
+      assertResult(result, false, txResponse);
+    });
+
     it("happy: should work when sendTxAndParseResponse works on the first try", async () => {
       const result = await ethService.sendTxWithRetries(
         channelState.channelAddress,
