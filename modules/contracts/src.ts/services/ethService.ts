@@ -19,23 +19,20 @@ import {
   getConfirmationsForChain,
 } from "@connext/vector-types";
 import {
-  bufferify,
   delay,
   encodeTransferResolver,
   encodeTransferState,
   getRandomBytes32,
-  hashCoreTransferState,
+  generateMerkleTreeData,
 } from "@connext/vector-utils";
 import { Signer } from "@ethersproject/abstract-signer";
 import { BigNumber } from "@ethersproject/bignumber";
 import { Contract } from "@ethersproject/contracts";
 import { JsonRpcProvider, TransactionReceipt, TransactionResponse } from "@ethersproject/providers";
-import { keccak256 } from "@ethersproject/keccak256";
 import { Wallet } from "@ethersproject/wallet";
 import { BaseLogger } from "pino";
 import PriorityQueue from "p-queue";
 import { AddressZero, HashZero } from "@ethersproject/constants";
-import { MerkleTree } from "merkletreejs";
 import { Evt } from "evt";
 
 import { ChannelFactory, VectorChannel } from "../artifacts";

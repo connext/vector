@@ -73,6 +73,7 @@ describe("EthereumChainService", function () {
       initialStateHash: hashTransferState(state, HashlockTransferStateEncoding),
     });
 
+    const { root } = generateMerkleTreeData([transferState]);
     channelState = createTestChannelStateWithSigners([aliceSigner, bobSigner], "create", {
       channelAddress: channel.address,
       assetIds: [AddressZero],
@@ -81,7 +82,7 @@ describe("EthereumChainService", function () {
       processedDepositsB: ["62"],
       timeout: "20",
       nonce: 3,
-      merkleRoot: new MerkleTree([hashCoreTransferState(transferState)], keccak256).getHexRoot(),
+      merkleRoot: root,
     });
     const channelHash = hashChannelCommitment(channelState);
     channelState.latestUpdate.aliceSignature = await aliceSigner.signMessage(channelHash);

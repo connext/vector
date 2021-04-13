@@ -19,10 +19,8 @@ import {
 import { BigNumber, BigNumberish } from "@ethersproject/bignumber";
 import { AddressZero, HashZero, Zero } from "@ethersproject/constants";
 import { Contract } from "@ethersproject/contracts";
-import { keccak256 } from "@ethersproject/keccak256";
 import { parseEther } from "@ethersproject/units";
 import { deployments } from "hardhat";
-import { MerkleTree } from "merkletreejs";
 
 import { bob, alice, defaultLogLevel, networkName, provider, rando } from "../../constants";
 import { advanceBlocktime, createChannel, getContract } from "../../utils";
@@ -117,14 +115,17 @@ describe("CMCAdjudicator.sol", async function () {
   };
 
   // Get merkle proof of transfer
-  const getMerkleProof = (cts: FullTransferState = transferState) => {
-    const { proof } = generateMerkleTreeData([cts], cts);
+  const getMerkleProof = (cts: FullTransferState[] = [transferState], toProve: string = transferState.transferId) => {
+    const { proof } = generateMerkleTreeData(
+      cts,
+      cts.find((t) => t.transferId === toProve),
+    );
     return proof;
   };
 
   // Helper to dispute transfers + bring to defund phase
   const disputeTransfer = async (cts: FullTransferState = transferState) => {
-    await (await channel.disputeTransfer(cts, getMerkleProof(cts))).wait();
+    await (await channel.disputeTransfer(cts, getMerkleProof([cts], cts.transferId))).wait();
   };
 
   // Helper to defund channels and verify transfers
@@ -222,6 +223,7 @@ describe("CMCAdjudicator.sol", async function () {
       transferTimeout: "3",
       initialStateHash: hashTransferState(state, HashlockTransferStateEncoding),
     });
+    const { root } = generateMerkleTreeData([transferState]);
     channelState = createTestChannelStateWithSigners([aliceSigner, bobSigner], "create", {
       channelAddress: channel.address,
       assetIds: [AddressZero],
@@ -230,7 +232,7 @@ describe("CMCAdjudicator.sol", async function () {
       processedDepositsB: ["62"],
       timeout: "20",
       nonce: 3,
-      merkleRoot: new MerkleTree([hashCoreTransferState(transferState)], keccak256).getHexRoot(),
+      merkleRoot: root,
     });
     const channelHash = hashChannelCommitment(channelState);
     aliceSignature = await aliceSigner.signMessage(channelHash);
@@ -585,6 +587,22 @@ describe("CMCAdjudicator.sol", async function () {
       const tx = await channel.disputeTransfer(transferState, getMerkleProof());
       const { blockNumber } = await tx.wait();
       await verifyTransferDispute(transferState, blockNumber);
+    });
+
+    it("should work for multiple transfers", async function () {
+      if (nonAutomining) {
+        this.skip();
+      }
+      const transfer2 = { ...transferState, transferId: getRandomBytes32() };
+      const transfers = [transferState, transfer2];
+      const { root } = generateMerkleTreeData(transfers);
+      channelState = { ...channelState, merkleRoot: root };
+      await disputeChannel();
+      const tx1 = await channel.disputeTransfer(transfers[0], getMerkleProof(transfers, transfers[0].transferId));
+      const tx2 = await channel.disputeTransfer(transfers[1], getMerkleProof(transfers, transfers[1].transferId));
+      const [receipt1, receipt2] = await Promise.all([tx1.wait(), tx2.wait()]);
+      await verifyTransferDispute(transfers[0], receipt1.blockNumber);
+      await verifyTransferDispute(transfers[1], receipt2.blockNumber);
     });
   });
 
