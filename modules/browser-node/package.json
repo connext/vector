@@ -31,7 +31,6 @@
     "ajv": "6.12.6",
     "axios": "0.21.1",
     "dexie": "3.0.3",
-    "merkletreejs": "0.2.13",
     "pino": "6.11.1"
   },
   "devDependencies": {
