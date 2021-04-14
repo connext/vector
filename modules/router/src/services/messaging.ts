@@ -24,6 +24,8 @@ export interface IRouterMessagingService extends IBasicMessaging {
     inbox: string,
     response: Result<NodeResponses.TransferQuote, RouterError | MessagingError>,
   ): Promise<void>;
+
+  broadcastMetrics(publicIdentifier: string, metrics: string): Promise<void>;
 }
 
 export class NatsRouterMessagingService extends NatsBasicMessagingService implements IRouterMessagingService {
@@ -66,5 +68,9 @@ export class NatsRouterMessagingService extends NatsBasicMessagingService implem
     ) => void,
   ): Promise<void> {
     await this.registerCallback(`${publicIdentifier}.*.transfer-quote`, callback, "onReceiveTransferQuoteMessage");
+  }
+
+  async broadcastMetrics(publicIdentifier: string, metrics: string): Promise<void> {
+    await this.publish(`${publicIdentifier}.${publicIdentifier}.metrics`, metrics);
   }
 }
