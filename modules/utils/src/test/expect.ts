@@ -1,10 +1,10 @@
-import { use } from "chai";
+import chai from "chai";
 import promised from "chai-as-promised";
 import subset from "chai-subset";
 import { waffleChai } from "@ethereum-waffle/chai";
 
-use(subset);
-use(promised);
-use(waffleChai);
+let chaiPlugin = chai.use(subset);
+chaiPlugin = chaiPlugin.use(promised);
+chaiPlugin = chaiPlugin.use(waffleChai);
 
-export { expect } from "chai";
+export const expect = chaiPlugin.expect;

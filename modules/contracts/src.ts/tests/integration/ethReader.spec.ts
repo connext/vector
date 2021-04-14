@@ -5,10 +5,10 @@ import { Contract } from "@ethersproject/contracts";
 import { deployments } from "hardhat";
 import pino from "pino";
 
-import { alice, bob, chainIdReq, provider } from "../constants";
-import { getContract, createChannel } from "../utils";
+import { alice, bob, chainIdReq, provider } from "../../constants";
+import { getContract, createChannel } from "../../utils";
 
-import { EthereumChainReader } from "./ethReader";
+import { EthereumChainReader } from "../../services/ethReader";
 
 // TODO: check whether result is valid, not just whether it exists #432
 describe("EthereumChainReader", function () {

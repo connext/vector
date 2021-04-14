@@ -2,6 +2,11 @@
 
 ## Next Release
 
+## 0.2.3-beta.1
+
+- \[router\] Broadcast global metrics
+- \[contracts\] Add `ethService` tests
+
 ## 0.2.2
 
 - \[utils\] Improve merkle root generation

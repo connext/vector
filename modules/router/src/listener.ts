@@ -14,9 +14,7 @@ import {
   DEFAULT_FEE_EXPIRY,
 } from "@connext/vector-types";
 import {
-  calculateExchangeWad,
   getBalanceForAssetId,
-  getExchangeRateInEth,
   getParticipant,
   getRandomBytes32,
   getSignerAddressFromPublicIdentifier,

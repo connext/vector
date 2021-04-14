@@ -62,6 +62,7 @@ export class ChainError extends VectorError {
     NotInitialState: "Transfer must be disputed with initial state",
     MultisigDeployed: "Multisig already deployed",
     TransferNotFound: "Transfer is not included in active transfers",
+    TxAlreadyMined: "Tranasction already mined",
     TxNotFound: "Transaction not found",
     TxReverted: "Transaction reverted on chain",
   };
@@ -72,14 +73,23 @@ export class ChainError extends VectorError {
     BadNonce: "the tx doesn't have the correct nonce",
     InvalidNonce: "Invalid nonce",
     MissingHash: "no transaction hash found in tx response",
-    UnderpricedReplancement: "replacement transaction underpriced",
+    UnderpricedReplacement: "replacement transaction underpriced",
+    AncientBlockSync: "Block information is incomplete while ancient",
+    UnableToRent: "Unable to rent an instance of IEthModule",
   };
 
   readonly canRetry: boolean;
 
-  constructor(public readonly message: Values<typeof ChainError.reasons>, public readonly context: any = {}) {
+  constructor(
+    public readonly message: Values<typeof ChainError.reasons | typeof ChainError.retryableTxErrors> | string,
+    public readonly context: any = {},
+  ) {
     super(message, context, ChainError.type);
-    this.canRetry = Object.values(ChainError.retryableTxErrors).includes(this.message);
+    this.canRetry = !!Object.values(ChainError.retryableTxErrors).find(
+      (msg) =>
+        msg.toLowerCase().includes(this.message.toLowerCase()) ||
+        this.message.toLowerCase().includes(msg.toLowerCase()),
+    );
   }
 }
 
