@@ -170,3 +170,18 @@ export class ApplyUpdateError extends ProtocolError {
     super(message, state, update, undefined, context, ApplyUpdateError.type);
   }
 }
+
+// Thrown by protocol when update added to the queue has failed
+// TODO: fix the context/protocol error
+// stuff
+export class QueuedUpdateError extends ProtocolError {
+  static readonly type = "QueuedUpdateError";
+
+  static readonly reasons = {
+    MissingTransferForUpdateInclusion: "Cannot evaluate update inclusion, missing proposed transfer",
+  } as const;
+
+  constructor(public readonly message: Values<typeof QueuedUpdateError.reasons>, context: any = {}) {
+    super(message, undefined, undefined, undefined, context, ApplyUpdateError.type);
+  }
+}
