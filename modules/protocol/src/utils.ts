@@ -19,12 +19,20 @@ import {
   UpdateParamsMap,
   UpdateType,
   ChainError,
+  jsonifyError,
 } from "@connext/vector-types";
 import { getAddress } from "@ethersproject/address";
 import { BigNumber } from "@ethersproject/bignumber";
-import { hashChannelCommitment, validateChannelUpdateSignatures } from "@connext/vector-utils";
+import {
+  getSignerAddressFromPublicIdentifier,
+  getTransferId,
+  hashChannelCommitment,
+  hashTransferState,
+  validateChannelUpdateSignatures,
+} from "@connext/vector-utils";
 import Ajv from "ajv";
 import { BaseLogger, Level } from "pino";
+import { CreateUpdateError } from "./errors";
 
 const ajv = new Ajv();
 
@@ -160,6 +168,101 @@ export function getParamsFromUpdate<T extends UpdateType = any>(
     type,
     details: paramDetails as UpdateParamsMap[T],
   });
+}
+
+export function getTransferFromUpdate(
+  update: ChannelUpdate<typeof UpdateType.create>,
+  channel: FullChannelState,
+): FullTransferState {
+  return {
+    balance: update.details.balance,
+    assetId: update.assetId,
+    transferId: update.details.transferId,
+    channelAddress: update.channelAddress,
+    transferDefinition: update.details.transferDefinition,
+    transferEncodings: update.details.transferEncodings,
+    transferTimeout: update.details.transferTimeout,
+    initialStateHash: hashTransferState(update.details.transferInitialState, update.details.transferEncodings[0]),
+    transferState: update.details.transferInitialState,
+    channelFactoryAddress: channel.networkContext.channelFactoryAddress,
+    chainId: channel.networkContext.chainId,
+    transferResolver: undefined,
+    initiator: getSignerAddressFromPublicIdentifier(update.fromIdentifier),
+    responder: getSignerAddressFromPublicIdentifier(update.toIdentifier),
+    meta: { ...(update.details.meta ?? {}), createdAt: Date.now() },
+    inDispute: false,
+    channelNonce: update.nonce,
+    initiatorIdentifier: update.fromIdentifier,
+    responderIdentifier: update.toIdentifier,
+  };
+}
+
+export async function getTransferFromParams(
+  state: FullChannelState,
+  params: UpdateParams<"create">,
+  signer: IChannelSigner,
+  initiatorIdentifier: string,
+  chainReader: IVectorChainReader,
+): Promise<Result<FullTransferState, CreateUpdateError>> {
+  const {
+    details: { assetId, transferDefinition, timeout, transferInitialState, meta, balance },
+  } = params;
+
+  // Creating a transfer is able to effect the following fields
+  // on the channel state:
+  // - balances
+  // - nonce (all)
+  // - merkle root
+
+  // FIXME: This will fail if the transfer registry address changes during
+  // the lifetime of the channel. We can fix this by either including the
+  // chain addresses in the protocol, putting those within the chain-
+  // reader itself, or including them in the create update params
+  // FIXME: this limitation also means we can never pass in the bytecode
+  // (which is used to execute pure-evm calls) since that exists within
+  // the chain addresses.
+  const registryRes = await chainReader.getRegisteredTransferByDefinition(
+    transferDefinition,
+    state.networkContext.transferRegistryAddress,
+    state.networkContext.chainId,
+  );
+  if (registryRes.isError) {
+    return Result.fail(
+      new CreateUpdateError(CreateUpdateError.reasons.TransferNotRegistered, params, state, {
+        registryError: jsonifyError(registryRes.getError()!),
+      }),
+    );
+  }
+
+  const { stateEncoding, resolverEncoding } = registryRes.getValue();
+
+  // First, we must generate the merkle proof for the update
+  // which means we must gather the list of open transfers for the channel
+  const initialStateHash = hashTransferState(transferInitialState, stateEncoding);
+  const counterpartyId = signer.address === state.alice ? state.bobIdentifier : state.aliceIdentifier;
+  const counterpartyAddr = signer.address === state.alice ? state.bob : state.alice;
+  const transferState: FullTransferState = {
+    balance,
+    assetId,
+    transferId: getTransferId(state.channelAddress, state.nonce.toString(), transferDefinition, timeout),
+    channelAddress: state.channelAddress,
+    transferDefinition,
+    transferEncodings: [stateEncoding, resolverEncoding],
+    transferTimeout: timeout,
+    initialStateHash,
+    transferState: transferInitialState,
+    channelFactoryAddress: state.networkContext.channelFactoryAddress,
+    chainId: state.networkContext.chainId,
+    transferResolver: undefined,
+    initiator: getSignerAddressFromPublicIdentifier(initiatorIdentifier),
+    responder: signer.publicIdentifier === initiatorIdentifier ? counterpartyAddr : signer.address,
+    meta: { ...(meta ?? {}), createdAt: Date.now() },
+    inDispute: false,
+    channelNonce: state.nonce,
+    initiatorIdentifier,
+    responderIdentifier: signer.publicIdentifier === initiatorIdentifier ? counterpartyId : signer.address,
+  };
+  return Result.ok(transferState);
 }
 
 // This function signs the state after the update is applied,
@@ -382,7 +485,6 @@ export const mergeAssetIds = (channel: FullChannelState): FullChannelState => {
   };
 };
 
-
 // Returns the first unused nonce for the given participant.
 // Nonces alternate back and forth like so:
 //   0: Alice
@@ -402,6 +504,6 @@ export function getNextNonceForUpdate(currentNonce: number, isAlice: boolean): n
   let rotation = currentNonce % 4;
   let currentlyMe = rotation < 2 === isAlice;
   let top = currentNonce % 2 === 1;
-  let offset = currentlyMe ? (top ? 3 : 1) : (top ? 1 : 2);
+  let offset = currentlyMe ? (top ? 3 : 1) : top ? 1 : 2;
   return currentNonce + offset;
 }
