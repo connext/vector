@@ -9,7 +9,7 @@ import { hashCoreTransferState } from "./transfers";
 export const generateMerkleTreeData = (
   transfers: CoreTransferState[],
   toProve?: CoreTransferState,
-): { proof?: string[]; root: string } => {
+): { proof?: string[]; root: string; tree: MerkleTree } => {
   // Sort transfers alphabetically by id
   const sorted = transfers.sort((a, b) => a.transferId.localeCompare(b.transferId));
 
@@ -29,5 +29,6 @@ export const generateMerkleTreeData = (
   return {
     root: calculated === "0x" ? HashZero : calculated,
     proof,
+    tree,
   };
 };
