@@ -18,7 +18,8 @@ import { FeeError } from "../../errors";
 import * as feesService from "../../services/fees";
 import * as metrics from "../../metrics";
 import * as utils from "../../services/utils";
-import { fromWad, toWad } from "@connext/vector-utils";
+import { calculateExchangeAmount, fromWad, toWad } from "@connext/vector-utils";
+import { parseEther } from "ethers/lib/utils";
 
 const config = getConfig();
 
@@ -173,7 +174,33 @@ describe(testName, () => {
       expect(amount).to.be.eq(transferAmount.add(expectedFees));
     });
 
-    it.only("should work with static percentage + flat fees where the received amount is exact (fees are a percent)", async () => {
+    it("should calc fee with non-exact amt and <1% fee", async () => {
+      fees.gasSubsidyPercentage = 100;
+      fees.percentageFee = 0.1;
+      getFeesStub.returns(Result.ok(fees));
+      const _transferAmount = BigNumber.from(1000);
+      const result = await feesService.calculateFeeAmount(
+        _transferAmount,
+        false,
+        fromAssetId,
+        fromChannel,
+        toAssetId,
+        toChannel,
+        ethReader as IVectorChainReader,
+        routerIdentifier,
+        log,
+      );
+      expect(result.isError).to.be.false;
+      const { fee, amount } = result.getValue();
+      console.log("amount: ", amount.toString());
+      console.log("fee: ", fee.toString());
+      const expectedFees = BigNumber.from(1).add(fees.flatFee);
+      expect(fee).to.be.eq(expectedFees);
+      expect(amount).to.be.eq(_transferAmount);
+    });
+
+    it("should work with static percentage + flat fees where the received amount is exact (fees are a percent)", async () => {
+      transferAmount = parseEther("1");
       fees.gasSubsidyPercentage = 100;
       fees.percentageFee = 0.03;
       getFeesStub.returns(Result.ok(fees));
@@ -190,10 +217,12 @@ describe(testName, () => {
       );
       expect(result.isError).to.be.false;
       const { fee, amount } = result.getValue();
-      const percent = toWad(transferAmount.toString()).mul(11).div(100);
-      const expectedFees = BigNumber.from(fees.flatFee).add(fromWad(percent));
-      expect(fee).to.be.eq(expectedFees);
-      expect(amount).to.be.eq(transferAmount.add(expectedFees));
+      console.log("amount: ", amount.toString());
+      console.log("fee: ", fee.toString());
+      const highEnd = transferAmount.add(1000);
+      const lowEnd = transferAmount.sub(1000);
+      expect(amount.sub(fee).gt(lowEnd)).to.be.true;
+      expect(amount.sub(fee).lt(highEnd)).to.be.true;
     });
 
     it("should not apply gas fees if neither from or to chain have chain id = 1", async () => {
