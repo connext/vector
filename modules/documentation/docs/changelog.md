@@ -2,6 +2,11 @@
 
 ## Next Release
 
+## 0.2.3
+
+- \[utils\] Improve merkle tree
+- \[router\] Add support for basis fees
+
 ## 0.2.3-beta.1
 
 - \[router\] Broadcast global metrics
