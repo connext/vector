@@ -16,7 +16,7 @@ COPY ./prisma-binaries-armv8/ /prisma-arm64/
 COPY package.json package.json
 
 RUN chmod +x /prisma-arm64/* &&\
-    curl https://raw.githubusercontent.com/vishnubob/wait-for-it/$(git ls-remote https://github.com/vishnubob/wait-for-it.git refs/heads/master | cut -f1)/wait-for-it.sh > /bin/wait-for &&\
+    until curl https://raw.githubusercontent.com/vishnubob/wait-for-it/$(git ls-remote https://github.com/vishnubob/wait-for-it.git refs/heads/master | cut -f1)/wait-for-it.sh > /bin/wait-for; do sleep 5; done &&\
     chmod +x /bin/wait-for
 
 RUN npm install --production

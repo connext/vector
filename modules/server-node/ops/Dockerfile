@@ -10,7 +10,7 @@ WORKDIR /app
 
 RUN apk add --no-cache bash curl g++ gcc git jq make python2 &&\
     npm config set unsafe-perm true &&\
-    curl https://raw.githubusercontent.com/vishnubob/wait-for-it/$(git ls-remote https://github.com/vishnubob/wait-for-it.git refs/heads/master | cut -f1)/wait-for-it.sh > /bin/wait-for &&\
+    until curl https://raw.githubusercontent.com/vishnubob/wait-for-it/$(git ls-remote https://github.com/vishnubob/wait-for-it.git refs/heads/master | cut -f1)/wait-for-it.sh > /bin/wait-for; do sleep 5; done &&\
     chmod +x /bin/wait-for &&\
     rm -rf /var/cache/apk/* /tmp/*
 
