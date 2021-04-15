@@ -43,41 +43,45 @@ describe("generateMerkleTreeData", () => {
     expect(tree.verify(proof!, leaf, root)).to.be.true;
   });
 
-  it.only("library should work in general", () => {
-    const numLeaves = 10;
-    const leaves = Array(numLeaves)
-      .fill(0)
-      .map((i) => getRandomBytes32());
+  for (const _ of Array(100).fill(0)) {
+    it.only("library should work in general", () => {
+      const numLeaves = 10;
+      const leaves = Array(numLeaves)
+        .fill(0)
+        .map((i) => getRandomBytes32());
 
-    const randomIdx = Math.floor(Math.random() * numLeaves);
+      const randomIdx = Math.floor(Math.random() * numLeaves);
 
-    // test with ethereumjs
-    const hashedKeccak = leaves.map((l) => keccak256(bufferify(l)));
+      // test with ethereumjs
+      const hashedKeccak = leaves.map((l) => keccak256(bufferify(l)));
 
-    // test with solidity
-    const hashedSolidity = leaves.map((l) => solidityKeccak256(["bytes32"], [l]));
+      // test with solidity
+      const hashedSolidity = leaves.map((l) => solidityKeccak256(["bytes32"], [l]));
 
-    expect(hashedKeccak.map((l) => "0x" + l.toString("hex"))).to.be.deep.eq(hashedSolidity);
+      expect(hashedKeccak.map((l) => "0x" + l.toString("hex"))).to.be.deep.eq(hashedSolidity);
 
-    // Generate tree with ethereumjs
-    const treeKeccak = new MerkleTree(hashedKeccak, keccak256);
-    expect(
-      treeKeccak.verify(
-        treeKeccak.getHexProof(hashedKeccak[randomIdx], randomIdx),
-        hashedKeccak[randomIdx],
-        treeKeccak.getHexRoot(),
-      ),
-    ).to.be.true;
+      // Generate tree with ethereumjs
+      console.log("verifying ethereumjs");
+      const treeKeccak = new MerkleTree(hashedKeccak, keccak256);
+      expect(
+        treeKeccak.verify(
+          treeKeccak.getPositionalHexProof(hashedKeccak[randomIdx], randomIdx),
+          hashedKeccak[randomIdx],
+          treeKeccak.getHexRoot(),
+        ),
+      ).to.be.true;
 
-    // Generate tree with solidity
-    const solLeaves = hashedSolidity.map((l) => bufferify(l.substring(1)));
-    const treeSolidity = new MerkleTree(solLeaves, keccak256);
-    expect(
-      treeSolidity.verify(
-        treeSolidity.getHexProof(solLeaves[randomIdx], randomIdx),
-        solLeaves[randomIdx],
-        treeSolidity.getHexRoot(),
-      ),
-    ).to.be.true;
-  });
+      // Generate tree with solidity
+      console.log("verifying solidity");
+      const solLeaves = hashedSolidity.map((l) => bufferify(l.substring(1)));
+      const treeSolidity = new MerkleTree(solLeaves, keccak256);
+      expect(
+        treeSolidity.verify(
+          treeSolidity.getPositionalHexProof(solLeaves[randomIdx], randomIdx),
+          solLeaves[randomIdx],
+          treeSolidity.getHexRoot(),
+        ),
+      ).to.be.true;
+    });
+  }
 });
