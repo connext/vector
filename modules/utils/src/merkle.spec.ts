@@ -26,7 +26,7 @@ describe.only("generateMerkleTreeData", () => {
     expect(root).to.not.be.eq(HashZero);
     expect(isValidBytes32(root)).to.be.true;
 
-    const leaf = bufferify(hashCoreTransferState(transfer).substring(2));
+    const leaf = hashCoreTransferState(transfer);
     expect(tree.verify(proof!, leaf, root)).to.be.true;
   });
 
