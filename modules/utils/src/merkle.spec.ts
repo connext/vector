@@ -8,6 +8,7 @@ import { MerkleTree } from "merkletreejs";
 import { keccak256 } from "ethereumjs-util";
 import { keccak256 as solidityKeccak256 } from "@ethersproject/solidity";
 import { bufferify } from "./crypto";
+import { BigNumber } from "@ethersproject/bignumber";
 
 describe.only("generateMerkleTreeData", () => {
   const generateTransfers = (noTransfers = 1) => {
@@ -24,28 +25,31 @@ describe.only("generateMerkleTreeData", () => {
     const { root, tree, proof } = generateMerkleTreeData([transfer], transfer);
     expect(root).to.not.be.eq(HashZero);
     expect(isValidBytes32(root)).to.be.true;
-    console.log();
 
     const leaf = bufferify(hashCoreTransferState(transfer).substring(2));
     expect(tree.verify(proof!, leaf, root)).to.be.true;
   });
 
   it.only("should work for multiple transfers", () => {
-    const transfers = generateTransfers(1_000);
+    const transfers = generateTransfers(1);
 
-    const randomIdx = Math.floor(Math.random() * 1_000);
+    const randomIdx = Math.floor(Math.random() * 1);
     const toProve = transfers[randomIdx];
 
     const { root, tree, proof } = generateMerkleTreeData(transfers, toProve);
+    console.log("tree: ", tree);
+    console.log("root: ", root);
+    console.log("proof: ", proof);
     expect(root).to.not.be.eq(HashZero);
     expect(isValidBytes32(root)).to.be.true;
 
-    const leaf = bufferify(hashCoreTransferState(toProve).substring(2));
+    const leaf = hashCoreTransferState(toProve);
+    console.log("leaf: ", leaf);
     expect(tree.verify(proof!, leaf, root)).to.be.true;
   });
 
   it("library should work in general", () => {
-    const numLeaves = 10;
+    const numLeaves = 2;
     const leaves = Array(numLeaves)
       .fill(0)
       .map(() => getRandomBytes32());

@@ -18,7 +18,7 @@ export const generateMerkleTreeData = (
 
   // Create leaves
   const leaves = sorted.map((transfer) => {
-    return bufferify(hashCoreTransferState(transfer).substring(2));
+    return hashCoreTransferState(transfer);
   });
 
   // Generate tree
