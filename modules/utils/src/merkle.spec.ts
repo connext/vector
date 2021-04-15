@@ -18,18 +18,19 @@ describe("generateMerkleTreeData", () => {
       });
   };
 
-  it("should work for a single transfer", () => {
+  it.only("should work for a single transfer", () => {
     const [transfer] = generateTransfers();
+    console.log("***** hash", hashCoreTransferState(transfer));
     const { root, tree, proof } = generateMerkleTreeData([transfer], transfer);
     expect(root).to.not.be.eq(HashZero);
     expect(isValidBytes32(root)).to.be.true;
     console.log();
 
-    const leaf = bufferify(hashCoreTransferState(transfer).substring(1));
+    const leaf = bufferify(hashCoreTransferState(transfer).substring(2));
     expect(tree.verify(proof!, leaf, root)).to.be.true;
   });
 
-  it("should work for multiple transfers", () => {
+  it.only("should work for multiple transfers", () => {
     const transfers = generateTransfers(1_000);
 
     const randomIdx = Math.floor(Math.random() * 1_000);
@@ -39,7 +40,7 @@ describe("generateMerkleTreeData", () => {
     expect(root).to.not.be.eq(HashZero);
     expect(isValidBytes32(root)).to.be.true;
 
-    const leaf = bufferify(hashCoreTransferState(toProve).substring(1));
+    const leaf = bufferify(hashCoreTransferState(toProve).substring(2));
     expect(tree.verify(proof!, leaf, root)).to.be.true;
   });
 
@@ -50,7 +51,10 @@ describe("generateMerkleTreeData", () => {
         .fill(0)
         .map((i) => getRandomBytes32());
 
-      const randomIdx = Math.floor(Math.random() * numLeaves);
+      // const randomIdx = Math.floor(Math.random() * numLeaves);
+      const randomIdx = 0;
+      console.log("leaves", leaves);
+      console.log("randomIdx", randomIdx);
 
       // test with ethereumjs
       const hashedKeccak = leaves.map((l) => keccak256(bufferify(l)));
@@ -61,8 +65,9 @@ describe("generateMerkleTreeData", () => {
       expect(hashedKeccak.map((l) => "0x" + l.toString("hex"))).to.be.deep.eq(hashedSolidity);
 
       // Generate tree with ethereumjs
-      console.log("verifying ethereumjs");
+      console.log("verifying ethereumjs -- positional");
       const treeKeccak = new MerkleTree(hashedKeccak, keccak256);
+      console.log("p-hex proof", treeKeccak.getPositionalHexProof(hashedKeccak[randomIdx], randomIdx));
       expect(
         treeKeccak.verify(
           treeKeccak.getPositionalHexProof(hashedKeccak[randomIdx], randomIdx),
@@ -71,13 +76,32 @@ describe("generateMerkleTreeData", () => {
         ),
       ).to.be.true;
 
+      console.log("verifying ethereumjs -- reg");
+      expect(
+        treeKeccak.verify(
+          treeKeccak.getProof(hashedKeccak[randomIdx], randomIdx),
+          hashedKeccak[randomIdx],
+          treeKeccak.getHexRoot(),
+        ),
+      ).to.be.true;
+
+      console.log("verifying ethereumjs -- hex");
+      console.log("hex proof", treeKeccak.getHexProof(hashedKeccak[randomIdx], randomIdx));
+      expect(
+        treeKeccak.verify(
+          treeKeccak.getHexProof(hashedKeccak[randomIdx], randomIdx),
+          hashedKeccak[randomIdx],
+          treeKeccak.getHexRoot(),
+        ),
+      ).to.be.true;
+
       // Generate tree with solidity
       console.log("verifying solidity");
-      const solLeaves = hashedSolidity.map((l) => bufferify(l.substring(1)));
+      const solLeaves = hashedSolidity.map((l) => bufferify(l.substring(2)));
       const treeSolidity = new MerkleTree(solLeaves, keccak256);
       expect(
         treeSolidity.verify(
-          treeSolidity.getPositionalHexProof(solLeaves[randomIdx], randomIdx),
+          treeSolidity.getHexProof(solLeaves[randomIdx], randomIdx),
           solLeaves[randomIdx],
           treeSolidity.getHexRoot(),
         ),
