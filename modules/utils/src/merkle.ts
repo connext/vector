@@ -22,7 +22,7 @@ export const generateMerkleTreeData = (
   });
 
   // Generate tree
-  const tree = new MerkleTree(leaves, keccak256);
+  const tree = new MerkleTree(leaves, keccak256, { sortPairs: true });
 
   // Get proof if needed
   let proof = [];
