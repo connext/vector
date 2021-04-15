@@ -190,7 +190,7 @@ server.addHook("onReady", async () => {
     startAutoRebalanceTask(config.autoRebalanceInterval, logger, wallet, chainService, hydratedProviders, store);
   }
 
-  startMetricsBroadcastTask(1800_000, messagingService);
+  startMetricsBroadcastTask(300_000, messagingService);
 });
 
 server.get("/ping", async () => {
