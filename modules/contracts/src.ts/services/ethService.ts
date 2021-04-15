@@ -24,6 +24,7 @@ import {
   encodeTransferState,
   getRandomBytes32,
   generateMerkleTreeData,
+  hashCoreTransferState,
 } from "@connext/vector-utils";
 import { Signer } from "@ethersproject/abstract-signer";
 import { BigNumber } from "@ethersproject/bignumber";
@@ -1025,7 +1026,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
     }
 
     // Generate merkle root
-    const { proof } = generateMerkleTreeData(activeTransfers, transferState);
+    const { tree } = generateMerkleTreeData(activeTransfers);
 
     return this.sendTxWithRetries(
       transferState.channelAddress,
@@ -1033,7 +1034,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
       TransactionReason.disputeTransfer,
       () => {
         const channel = new Contract(transferState.channelAddress, VectorChannel.abi, signer);
-        return channel.disputeTransfer(transferState, proof);
+        return channel.disputeTransfer(transferState, tree.getHexProof(hashCoreTransferState(transferState)));
       },
     ) as Promise<Result<TransactionResponseWithResult, ChainError>>;
   }
