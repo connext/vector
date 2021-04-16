@@ -117,11 +117,16 @@ export default class ConnextManager {
     request: EngineParams.RpcRequest,
   ): Promise<ChannelRpcMethodsResponsesMap[T]> {
     if (request.method === "connext_authenticate") {
-      // if eth provider injected, default to using it. passed in signature is a last resort and not safe
+      // allow user to pass in signature for cases like magic.link
+      // this also allows bypassing metamask if it is there
       let signature = request.params.signature;
       let signerAddress = request.params.signer;
-      const provider = (await detectEthereumProvider()) as any;
-      if (provider) {
+
+      if (!signature) {
+        const provider = (await detectEthereumProvider()) as any;
+        if (!provider) {
+          throw new Error("Provider not available");
+        }
         if (provider !== (window as any).ethereum) {
           throw new Error("Detected multiple wallets");
         }
@@ -133,8 +138,10 @@ export default class ConnextManager {
           throw new Error("No account available");
         }
         signature = await signer.signMessage(NonEIP712Message);
-      } else {
-        console.warn("No Ethereum provider available, falling back to unsafe provided sigs");
+      }
+
+      if (!signature) {
+        throw new Error("No signature provided or received from provider");
       }
 
       const node = await this.initNode(
