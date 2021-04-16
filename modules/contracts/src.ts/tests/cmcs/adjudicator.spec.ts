@@ -69,7 +69,7 @@ describe("CMCAdjudicator.sol", async function () {
   const verifyTransferDispute = async (cts: FullTransferState, disputeBlockNumber: number) => {
     const { timestamp } = await provider.getBlock(disputeBlockNumber);
     const transferDispute = await channel.getTransferDispute(cts.transferId);
-    expect(transferDispute.transferStateHash).to.be.eq(hashCoreTransferState(cts));
+    expect(transferDispute.transferStateHash).to.be.eq(`0x` + hashCoreTransferState(cts).toString("hex"));
     expect(transferDispute.isDefunded).to.be.false;
     expect(transferDispute.transferDisputeExpiry).to.be.eq(BigNumber.from(timestamp).add(cts.transferTimeout));
   };
@@ -116,11 +116,8 @@ describe("CMCAdjudicator.sol", async function () {
 
   // Get merkle proof of transfer
   const getMerkleProof = (cts: FullTransferState[] = [transferState], toProve: string = transferState.transferId) => {
-    const { proof } = generateMerkleTreeData(
-      cts,
-      cts.find((t) => t.transferId === toProve),
-    );
-    return proof;
+    const { tree } = generateMerkleTreeData(cts);
+    return tree.getHexProof(hashCoreTransferState(cts.find((t) => t.transferId === toProve)!));
   };
 
   // Helper to dispute transfers + bring to defund phase
@@ -593,16 +590,25 @@ describe("CMCAdjudicator.sol", async function () {
       if (nonAutomining) {
         this.skip();
       }
-      const transfer2 = { ...transferState, transferId: getRandomBytes32() };
-      const transfers = [transferState, transfer2];
-      const { root } = generateMerkleTreeData(transfers);
-      channelState = { ...channelState, merkleRoot: root };
-      await disputeChannel();
-      const tx1 = await channel.disputeTransfer(transfers[0], getMerkleProof(transfers, transfers[0].transferId));
-      const tx2 = await channel.disputeTransfer(transfers[1], getMerkleProof(transfers, transfers[1].transferId));
-      const [receipt1, receipt2] = await Promise.all([tx1.wait(), tx2.wait()]);
-      await verifyTransferDispute(transfers[0], receipt1.blockNumber);
-      await verifyTransferDispute(transfers[1], receipt2.blockNumber);
+      const transfers = [
+        transferState,
+        { ...transferState, transferId: getRandomBytes32() },
+        { ...transferState, transferId: getRandomBytes32() },
+        { ...transferState, transferId: getRandomBytes32() },
+        { ...transferState, transferId: getRandomBytes32() },
+      ];
+      const { root, tree } = generateMerkleTreeData(transfers);
+
+      const newState = { ...channelState, merkleRoot: root };
+      await disputeChannel(newState);
+
+      const txs = [];
+      for (const t of transfers) {
+        const tx = await channel.disputeTransfer(t, tree.getHexProof(hashCoreTransferState(t)));
+        txs.push(tx);
+      }
+      const receipts = await Promise.all(txs.map((tx) => tx.wait()));
+      await Promise.all(transfers.map((t, i) => verifyTransferDispute(t, receipts[i].blockNumber)));
     });
   });
 
