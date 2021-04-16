@@ -106,16 +106,17 @@ export class EthereumChainReader implements IVectorChainReader {
     channelAddress: string,
     chainId: number,
   ): Promise<Result<ChannelDispute | undefined, ChainError>> {
+    const code = await this.getCode(channelAddress, chainId);
+    if (code.isError) {
+      return Result.fail(code.getError()!);
+    }
+
+    if (code.getValue() === "0x") {
+      // channel is not deployed
+      return Result.ok(undefined);
+    }
     return await this.retryWrapper<ChannelDispute | undefined>(chainId, async (provider: JsonRpcProvider) => {
       try {
-        const code = await this.getCode(channelAddress, chainId);
-        if (code.isError) {
-          return Result.fail(code.getError()!);
-        }
-        if (code.getValue() === "0x") {
-          // channel is not deployed
-          return Result.ok(undefined);
-        }
         const dispute = await new Contract(channelAddress, VectorChannel.abi, provider).getChannelDispute();
         if (dispute.channelStateHash === HashZero) {
           return Result.ok(undefined);
