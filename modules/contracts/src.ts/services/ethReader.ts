@@ -803,39 +803,37 @@ export class EthereumChainReader implements IVectorChainReader {
     if (!provider) {
       return Result.fail(new ChainError(ChainError.reasons.ProviderNotFound));
     }
-    return await this.retryWrapper<RegisteredTransfer[]>(chainId, async () => {
-      // Registry for chain not loaded, load into memory
-      const registry = new Contract(transferRegistry, TransferRegistry.abi, provider);
-      let registered;
-      if (bytecode) {
-        // Try with evm first
-        const evm = this.tryEvm(registry.interface.encodeFunctionData("getTransferDefinitions"), bytecode);
+    // Registry for chain not loaded, load into memory
+    const registry = new Contract(transferRegistry, TransferRegistry.abi, provider);
+    let registered;
+    if (bytecode) {
+      // Try with evm first
+      const evm = this.tryEvm(registry.interface.encodeFunctionData("getTransferDefinitions"), bytecode);
 
-        if (!evm.isError) {
-          try {
-            registered = registry.interface.decodeFunctionResult("getTransferDefinitions", evm.getValue()!)[0];
-          } catch (e) {}
-        }
-      }
-      if (!registered) {
+      if (!evm.isError) {
         try {
-          registered = await registry.getTransferDefinitions();
-        } catch (e) {
-          return Result.fail(new ChainError(e.message, { chainId, transferRegistry }));
-        }
+          registered = registry.interface.decodeFunctionResult("getTransferDefinitions", evm.getValue()!)[0];
+        } catch (e) {}
       }
-      const cleaned = registered.map((r: RegisteredTransfer) => {
-        return {
-          name: r.name,
-          definition: r.definition,
-          stateEncoding: tidy(r.stateEncoding),
-          resolverEncoding: tidy(r.resolverEncoding),
-          encodedCancel: r.encodedCancel,
-        };
-      });
-      this.transferRegistries.set(chainId.toString(), cleaned);
-      return Result.ok(cleaned);
+    }
+    if (!registered) {
+      try {
+        registered = await registry.getTransferDefinitions();
+      } catch (e) {
+        return Result.fail(new ChainError(e.message, { chainId, transferRegistry }));
+      }
+    }
+    const cleaned = registered.map((r: RegisteredTransfer) => {
+      return {
+        name: r.name,
+        definition: r.definition,
+        stateEncoding: tidy(r.stateEncoding),
+        resolverEncoding: tidy(r.resolverEncoding),
+        encodedCancel: r.encodedCancel,
+      };
     });
+    this.transferRegistries.set(chainId.toString(), cleaned);
+    return Result.ok(cleaned);
   }
 
   private async retryWrapper<T>(
