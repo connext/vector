@@ -111,7 +111,7 @@ export class EthereumChainReader implements IVectorChainReader {
       return Result.fail(code.getError()!);
     }
 
-    if (code.getValue() === "0x") {
+    if (code.getValue() === "0x" || code.getValue() === undefined) {
       // channel is not deployed
       return Result.ok(undefined);
     }
