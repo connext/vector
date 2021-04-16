@@ -20,8 +20,9 @@ import {
 } from "@connext/vector-utils";
 import { AddressZero, One, Zero } from "@ethersproject/constants";
 import { JsonRpcProvider, TransactionReceipt } from "@ethersproject/providers";
-import { BigNumber } from "ethers";
+import { BigNumber, Contract } from "ethers";
 import { restore, reset, createStubInstance, SinonStubbedInstance, stub, SinonStub } from "sinon";
+import { ChannelFactory, ChannelMastercopy, TransferDefinition, TransferRegistry, VectorChannel } from "../artifacts";
 
 import { EthereumChainReader } from "./ethReader";
 
@@ -221,7 +222,36 @@ describe.only("ethReader", () => {
 
       assertResult(res, true, ChainError.reasons.ProviderNotFound);
     });
+
+    it("errors if getCode errors", async () => {
+      provider1337.getCode.rejects(new Error("fail"));
+      const res = await ethReader.getChannelDispute(channelState.channelAddress, chain1337);
+
+      assertResult(res, true, "Could not execute rpc method");
+
+      expect(res.getError()!.msg).to.be.eq("Could not execute rpc method");
+      expect(res.getError()!.context.chainId).to.be.eq(chain1337);
+      expect(res.getError()!.context.errors[0]).to.be.eq("fail");
+      expect(res.getError()!.context.errors[4]).to.be.eq("fail");
+    });
+
+    it("get undefined if channel is not deployed", async () => {
+      provider1337.getCode.resolves("0x");
+      const res = await ethReader.getChannelDispute(channelState.channelAddress, chain1337);
+
+      assertResult(res, false);
+      expect(res.getValue()).to.be.undefined;
+    });
+
+    it("error: getChannelDispute", async () => {
+      provider1337.getCode.resolves("0xA");
+      const res = await ethReader.getChannelDispute(channelState.channelAddress, chain1337);
+
+      assertResult(res, true, "Could not execute rpc method");
+      expect(res.getError()!.context.chainId).to.be.eq(chain1337);
+    });
   });
+
   describe("getRegisteredTransferByDefinition", () => {});
   describe("getRegisteredTransferByName", () => {});
   describe("getRegisteredTransfers", () => {});
