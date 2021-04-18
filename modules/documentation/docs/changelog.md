@@ -2,6 +2,10 @@
 
 ## Next Release
 
+## 0.2.4-beta.1
+
+- \[iframe\] Catch sig undefined error and propogate
+
 ## 0.2.3
 
 - \[utils\] Improve merkle tree
