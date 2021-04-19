@@ -71,6 +71,6 @@ export class NatsRouterMessagingService extends NatsBasicMessagingService implem
   }
 
   async broadcastMetrics(publicIdentifier: string, metrics: string): Promise<void> {
-    await this.publish(`${publicIdentifier}.${publicIdentifier}.metrics`, metrics);
+    await this.publish(`${publicIdentifier}.${publicIdentifier}.metrics`, { metrics });
   }
 }
