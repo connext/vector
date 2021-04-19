@@ -1,6 +1,7 @@
 
 type TODO = any;
 type Nonce = number;
+import { UpdateParams, UpdateType } from "@connext/vector-types";
 
 
 // A node for FifoQueue<T>
@@ -75,11 +76,11 @@ class Resolver {
 
 // TODO: Slot in the real thing.
 export type SelfUpdate = {
-    params: TODO,
+    params: UpdateParams<UpdateType>,
 };
 
 export type OtherUpdate = {
-    params: TODO,
+    params: UpdateParams<UpdateType>,
     nonce: Nonce,
 }
 
@@ -110,8 +111,8 @@ class WakingQueue<T> {
     private readonly fifo: FifoQueue<[T, Resolver]> = new FifoQueue();
     private readonly waker: Waker = new Waker();
 
-    peek(): [T, Resolver] | undefined {
-        return this.fifo.peek()
+    peek(): T | undefined {
+        return this.fifo.peek()?.[0];
     }
 
     // Pushes an item on the queue, returning a promise
@@ -130,7 +131,7 @@ class WakingQueue<T> {
         while (true) {
             let peek = this.peek();
             if (peek !== undefined) {
-                return peek[0]
+                return peek
             }
             await this.waker.waitAsync()
         }
@@ -147,6 +148,16 @@ class WakingQueue<T> {
         let item = this.fifo.pop()!;
         item[1].reject(undefined);
     }
+}
+
+const NeverCancel: Promise<void> = new Promise((_resolve, _reject) => { });
+
+function runSelfUpdateAsync(update: SelfUpdate, cancel: Promise<unknown>) {
+    throw new Error("TODO runSelfUpdateAsync")
+}
+
+function runOtherUpdateAsync(update: OtherUpdate, cancel: Promise<unknown>) {
+    throw new Error("TODO runOtherUpdateAsync")
 }
 
 export class Queue {
@@ -168,23 +179,42 @@ export class Queue {
     private async processUpdatesAsync(): Promise<never> {
         while (true) {
             // Wait until there is at least one unit of work.
-            await Promise.race([this.incomingSelf.peekAsync(), this.incomingOther.peekAsync()]);
+            let selfPromise = this.incomingSelf.peekAsync();
+            let otherPromise = this.incomingOther.peekAsync();
+            await Promise.race([selfPromise, otherPromise]);
 
             // Find out which completed (if both, we want to know, which is why we can't use the result of Promise.race)
             const self = this.incomingSelf.peek();
             const other = this.incomingOther.peek();
 
-            // TODO:
+            // TODO: Get these from the incoming update and the current state.
+            const selfPredictedNonce = 0; /* TODO: Calculate from current channel state */
+            const otherPredictedNonce = 0; /* TODO: Calculate from current channel state */
+
             // Find out which case we are in, and execute that case.
-            // The cases are:
-            // Self, uninterruptible
-            // Self, interruptible
-            // Other, uninterruptible
-            // Other, interruptible
-            // This can be determined by figuring out what the next
-            // nonce for our update would be (if there is one)
-            // and seeing who the leader should be.
-            // If the case is interruptible, use a promise for this.
+            if (selfPredictedNonce > otherPredictedNonce) {
+                // Our update has priority. If we have an update,
+                // execute it without inturruption. Otherwise,
+                // execute their update with inturruption
+                if (self !== undefined) {
+                    runSelfUpdateAsync(self, NeverCancel);
+                } else {
+                    runOtherUpdateAsync(other!, selfPromise);
+                }
+            } else {
+                // Their update has priority. Vice-versa from above
+                if (other !== undefined) {
+                    // Out of order update received?
+                    // TODO: Robust handling
+                    if (otherPredictedNonce !== other.nonce) {
+                        this.incomingOther.resolve()
+                    }
+
+                    runOtherUpdateAsync(other, NeverCancel)
+                } else {
+                    runSelfUpdateAsync(self!, otherPromise)
+                }
+            }
         }
     }
 }
