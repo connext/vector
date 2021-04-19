@@ -446,7 +446,7 @@ export const approveRebalance = async (
       },
       "Approval request complete",
     );
-    const isRequired = !approveRes.data.transaction;
+    const isRequired = !!approveRes.data.transaction;
     if (!isRequired) {
       logger.info(
         {
@@ -722,9 +722,9 @@ const getConfirmation = async (
     {
       method,
       intervalId: methodId,
-      hash: txHash,
+      result
     },
-    "Tx mined",
+    "Result",
   );
   if (result.isError) {
     return Result.fail(
@@ -737,6 +737,14 @@ const getConfirmation = async (
       ),
     );
   } else {
+    logger.info(
+      {
+        method,
+        intervalId: methodId,
+        hash: txHash,
+      },
+      "Tx mined",
+    );
     return Result.ok(result.getValue());
   }
 }
