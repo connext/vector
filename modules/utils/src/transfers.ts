@@ -14,6 +14,8 @@ import {
 } from "@connext/vector-types";
 import { defaultAbiCoder } from "@ethersproject/abi";
 import { keccak256 as solidityKeccak256, sha256 as soliditySha256 } from "@ethersproject/solidity";
+import { keccak256 } from "ethereumjs-util";
+import { bufferify } from "./crypto";
 
 export const getTransferId = (
   channelAddress: Address,
@@ -46,8 +48,8 @@ export const encodeCoreTransferState = (state: CoreTransferState): string =>
 export const hashTransferState = (state: TransferState, encoding: string): string =>
   solidityKeccak256(["bytes"], [encodeTransferState(state, encoding)]);
 
-export const hashCoreTransferState = (state: CoreTransferState): string =>
-  solidityKeccak256(["bytes"], [encodeCoreTransferState(state)]);
+export const hashCoreTransferState = (state: CoreTransferState): Buffer =>
+  keccak256(bufferify(encodeCoreTransferState(state)));
 
 export const createlockHash = (preImage: string): string => soliditySha256(["bytes32"], [preImage]);
 

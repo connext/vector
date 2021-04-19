@@ -7,7 +7,14 @@ import {
   SIMPLE_WITHDRAWAL_GAS_ESTIMATE,
   GAS_ESTIMATES,
 } from "@connext/vector-types";
-import { getBalanceForAssetId, getParticipant, getRandomBytes32, TESTNETS_WITH_FEES } from "@connext/vector-utils";
+import {
+  calculateExchangeAmount,
+  getBalanceForAssetId,
+  getParticipant,
+  getRandomBytes32,
+  TESTNETS_WITH_FEES,
+  toWad,
+} from "@connext/vector-utils";
 import { BigNumber } from "@ethersproject/bignumber";
 import { AddressZero, Zero } from "@ethersproject/constants";
 import { BaseLogger } from "pino";
@@ -89,11 +96,21 @@ export const calculateFeeAmount = async (
   // If we want to set received as constant, you have
   // (received * 100) / (100 - fee) = amt
   // ie. fee = 20%, receivedAmt = 8, amt = (100 * 8) / (100 - 20) = 10
+  //
+  // fee = 0.1%, transferAmt = 1000, exact = false, receivedAmt = (1000 * 0.01) / 100 + 1000
 
   // Calculate fees only on starting amount and update
-  const amtToTransfer = receiveExactAmount ? transferAmount.mul(100).div(100 - percentageFee) : transferAmount;
-  const feeFromPercent = amtToTransfer.mul(percentageFee).div(100);
-  const staticFees = feeFromPercent.add(flatFee);
+  let amtToTransfer = transferAmount;
+  if (receiveExactAmount) {
+    // use calculateExchangeAmount to do the following calc
+    // received = (100 * toTransfer) / (100 - pctFee)
+    let exchanged = calculateExchangeAmount(transferAmount.mul(100).toString(), (1 / (100 - percentageFee)).toString());
+    exchanged = exchanged.split(".")[0];
+    amtToTransfer = BigNumber.from(exchanged);
+  }
+  let feeFromPercent = calculateExchangeAmount(amtToTransfer.toString(), (percentageFee / 100).toString());
+  feeFromPercent = feeFromPercent.split(".")[0];
+  const staticFees = BigNumber.from(feeFromPercent).add(flatFee);
   if (gasSubsidyPercentage === 100) {
     // gas is fully subsidized
     logger.info(
