@@ -108,7 +108,7 @@ const setupForRebalance = (
   return { transaction, hash };
 }
 
-describe.only(testName, () => {
+describe(testName, () => {
   describe("rebalanceIfNeeded", () => {
     let wallet: Sinon.SinonStubbedInstance<Wallet>;
     let chainService: Sinon.SinonStubbedInstance<VectorChainReader>;
