@@ -200,8 +200,6 @@ export class SerializedQueue {
         return this.incomingOther.push(update)
     }
 
-
-
     private async processUpdatesAsync(): Promise<never> {
         while (true) {
             // Wait until there is at least one unit of work.
@@ -217,7 +215,6 @@ export class SerializedQueue {
             const currentNonce = await this.getCurrentNonce();
             const selfPredictedNonce = getNextNonceForUpdate(currentNonce, this.selfIsAlice);
             const otherPredictedNonce = getNextNonceForUpdate(currentNonce, !this.selfIsAlice);
-
 
             if (selfPredictedNonce > otherPredictedNonce) {
                 // Our update has priority. If we have an update,
