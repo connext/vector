@@ -18,14 +18,22 @@ export async function queueRebalance<T = any>(
   swap: AllowedSwap,
   rebalanceFn: () => Promise<T>,
 ): Promise<any> {
-  const swapHash = getAllowedSwapKey(swap);
+  const swapKey = getAllowedSwapKey(swap);
   // Check to see if resources are already being used for rebalancing for this
   // particular swap.
-  if (!rebalanceQueues[swapHash]) {
-    rebalanceQueues[swapHash] = new PriorityQueue({ concurrency: 1 });
+  if (!rebalanceQueues[swapKey]) {
+    _createQueueForSwap(swap);
   }
-  return rebalanceQueues[swapHash].add(async () => {
+  return await rebalanceQueues[swapKey].add(async () => {
     const res = await rebalanceFn();
     return res;
   });
+}
+
+// NOTE: Exported for use in unit testing.
+export function _createQueueForSwap(swap: AllowedSwap): PriorityQueue {
+  const swapKey = getAllowedSwapKey(swap);
+  const priorityQueue = new PriorityQueue({ concurrency: 1 })
+  rebalanceQueues[swapKey] = priorityQueue;
+  return priorityQueue;
 }

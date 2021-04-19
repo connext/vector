@@ -355,25 +355,9 @@ const _rebalanceIfNeeded = async (
         methodId,
       );
       if (completedResult.isError) {
-        logger.error(
-          {
-            method,
-            intervalId: methodId,
-            error: completedResult.getError()!
-          },
-          "completed result was error",
-        );
         return Result.fail(completedResult.getError()!);
       }
       const value = completedResult.getValue();
-      logger.info(
-        {
-          method,
-          intervalId: methodId,
-          value,
-        },
-        "completed tx",
-      );
       if (value.isRequired) {
         if (!completedResult.getValue().didComplete) {
           // Rebalance hasn't completed yet, so we'll return here
@@ -383,29 +367,12 @@ const _rebalanceIfNeeded = async (
         const value = completedResult.getValue();
         completeHash = value.transactionHash;
         completeChain = value.transactionChainId;
-        logger.info(
-          {
-            method,
-            intervalId: methodId,
-            completeHash,
-            completeChain
-          },
-          "complete hash/chain",
-        );
         latestRebalance = {
           ...latestRebalance,
           completeHash,
           completeChain,
         } as RouterRebalanceRecord;
         await store.saveRebalance(latestRebalance);
-        logger.info(
-          {
-            method,
-            intervalId: methodId,
-            latestRebalance,
-          },
-          "saved rebalance",
-        );
       }
     }
 
@@ -422,14 +389,6 @@ const _rebalanceIfNeeded = async (
         methodId,
       );
       if (confirmationResult.isError) {
-        logger.error(
-          {
-            method,
-            intervalId: methodId,
-            error: confirmationResult.getError()!,
-          },
-          "confirmation error",
-        );
         return Result.fail(confirmationResult.getError()!);
       }
     }
@@ -440,14 +399,6 @@ const _rebalanceIfNeeded = async (
       status: RouterRebalanceStatus.COMPLETE
     };
     await store.saveRebalance(latestRebalance);
-    logger.info(
-      {
-        method,
-        intervalId: methodId,
-        latestRebalance,
-      },
-      "saved rebalance",
-    );
   }
 
   return Result.ok(undefined);
