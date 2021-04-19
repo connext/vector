@@ -1,8 +1,8 @@
 
-type TODO = any;
-type Nonce = number;
-import { UpdateParams, UpdateType } from "@connext/vector-types";
+import { UpdateParams, UpdateType, Result } from "@connext/vector-types";
+import { getNextNonceForUpdate } from "./utils";
 
+type Nonce = number;
 
 // A node for FifoQueue<T>
 class FifoNode<T> {
@@ -53,21 +53,21 @@ class FifoQueue<T> {
 
 // A manually resolvable promise.
 // When using this, be aware of "throw-safety".
-class Resolver {
+class Resolver<O> {
     // @ts-ignore: This is assigned in the constructor 
-    readonly resolve: (value: unknown) => void;
+    readonly resolve: (value: O) => void;
 
     isResolved: boolean = false;
 
     // @ts-ignore: This is assigned in the constructor
     readonly reject: (reason?: any) => void;
 
-    readonly promise: Promise<void>;
+    readonly promise: Promise<O>;
 
     constructor() {
         this.promise = new Promise((resolve, reject) => {
             // @ts-ignore Assigning to readonly in constructor
-            this.resolve = () => { this.isResolved = true; resolve() };
+            this.resolve = (output: O) => { this.isResolved = true; resolve(output) };
             // @ts-ignore Assigning to readonly in constructor
             this.reject = reject;
         });
@@ -86,7 +86,7 @@ export type OtherUpdate = {
 
 // Repeated wake-up promises.
 class Waker {
-    private current: Resolver | undefined;
+    private current: Resolver<void> | undefined;
 
     // Wakes up all promises from previous
     // calls to waitAsync()
@@ -107,19 +107,19 @@ class Waker {
     }
 }
 
-class WakingQueue<T> {
-    private readonly fifo: FifoQueue<[T, Resolver]> = new FifoQueue();
+class WakingQueue<I, O> {
+    private readonly fifo: FifoQueue<[I, Resolver<O>]> = new FifoQueue();
     private readonly waker: Waker = new Waker();
 
-    peek(): T | undefined {
+    peek(): I | undefined {
         return this.fifo.peek()?.[0];
     }
 
     // Pushes an item on the queue, returning a promise
     // that resolved when the item has been popped from the
     // queue (meaning it has been handled completely)
-    push(value: T): Promise<void> {
-        let resolver = new Resolver();
+    push(value: I): Promise<O> {
+        let resolver = new Resolver<O>();
         this.fifo.push([value, resolver]);
         this.waker.wake();
         return resolver.promise;
@@ -127,7 +127,7 @@ class WakingQueue<T> {
 
     // Returns a promise which resolves when there is
     // an item at the top of the queue.
-    async peekAsync(): Promise<T> {
+    async peekAsync(): Promise<I> {
         while (true) {
             let peek = this.peek();
             if (peek !== undefined) {
@@ -139,42 +139,68 @@ class WakingQueue<T> {
 
     // Resolves the top item from the queue (removing it
     // and resolving the promise)
-    resolve() {
+    resolve(output: O) {
         let item = this.fifo.pop()!;
-        item[1].resolve(undefined);
+        item[1].resolve(output);
     }
 
-    reject() {
+    reject(error: any) {
         let item = this.fifo.pop()!;
-        item[1].reject(undefined);
+        item[1].reject(error);
     }
 }
 
-const NeverCancel: Promise<void> = new Promise((_resolve, _reject) => { });
+const NeverCancel: Promise<never> = new Promise((_resolve, _reject) => { });
 
-function runSelfUpdateAsync(update: SelfUpdate, cancel: Promise<unknown>) {
-    throw new Error("TODO runSelfUpdateAsync")
+// If the Promise resolves to undefined it has been cancelled.
+type Cancellable<I, O> = (value: I, cancel: Promise<unknown>) => Promise<Result<O> | undefined>
+
+// Infallibly process an update.
+// If the function fails, this rejects the queue.
+// If the function cancels, this ignores the queue.
+// If the function succeeds, this resolves the queue.
+async function processOneUpdate<I, O>(f: Cancellable<I, O>, value: I, cancel: Promise<unknown>, queue: WakingQueue<I, Result<O>>): Promise<Result<O> | undefined> {
+    let result;
+    try {
+        result = await f(value, cancel);
+    } catch (e) {
+        queue.reject(e)
+    }
+
+    // If not cancelled, resolve.
+    if (result !== undefined) {
+        queue.resolve(result)
+    }
+
+    return result
 }
 
-function runOtherUpdateAsync(update: OtherUpdate, cancel: Promise<unknown>) {
-    throw new Error("TODO runOtherUpdateAsync")
-}
+export class SerializedQueue {
+    private readonly incomingSelf: WakingQueue<SelfUpdate, Result<void>> = new WakingQueue();
+    private readonly incomingOther: WakingQueue<OtherUpdate, Result<void>> = new WakingQueue();
+    private readonly selfIsAlice: boolean;
 
-export class Queue {
-    private readonly incomingSelf: WakingQueue<SelfUpdate> = new WakingQueue();
-    private readonly incomingOther: WakingQueue<OtherUpdate> = new WakingQueue();
+    private readonly selfUpdateAsync: Cancellable<SelfUpdate, void>;
+    private readonly otherUpdateAsync: Cancellable<OtherUpdate, void>;
+    private readonly getCurrentNonce: () => Promise<Nonce>;
 
-    constructor() {
+    constructor(selfIsAlice: boolean, selfUpdateAsync: Cancellable<SelfUpdate, void>, otherUpdateAsync: Cancellable<OtherUpdate, void>, getCurrentNonce: () => Promise<Nonce>) {
+        this.selfIsAlice = selfIsAlice;
+        this.selfUpdateAsync = selfUpdateAsync;
+        this.otherUpdateAsync = otherUpdateAsync;
+        this.getCurrentNonce = getCurrentNonce;
         this.processUpdatesAsync();
     }
 
-    executeSelfAsync(update: SelfUpdate): Promise<void> {
+    executeSelfAsync(update: SelfUpdate): Promise<Result<void>> {
         return this.incomingSelf.push(update);
     }
 
-    executeOtherAsync(update: OtherUpdate): Promise<void> {
+    executeOtherAsync(update: OtherUpdate): Promise<Result<void>> {
         return this.incomingOther.push(update)
     }
+
+
 
     private async processUpdatesAsync(): Promise<never> {
         while (true) {
@@ -183,36 +209,39 @@ export class Queue {
             let otherPromise = this.incomingOther.peekAsync();
             await Promise.race([selfPromise, otherPromise]);
 
-            // Find out which completed (if both, we want to know, which is why we can't use the result of Promise.race)
+            // Find out which completed. If both, we want to know that, too.
+            // For this reason we can't use the result of Promise.race from above.
             const self = this.incomingSelf.peek();
             const other = this.incomingOther.peek();
 
-            // TODO: Get these from the incoming update and the current state.
-            const selfPredictedNonce = 0; /* TODO: Calculate from current channel state */
-            const otherPredictedNonce = 0; /* TODO: Calculate from current channel state */
+            const currentNonce = await this.getCurrentNonce();
+            const selfPredictedNonce = getNextNonceForUpdate(currentNonce, this.selfIsAlice);
+            const otherPredictedNonce = getNextNonceForUpdate(currentNonce, !this.selfIsAlice);
 
-            // Find out which case we are in, and execute that case.
+
             if (selfPredictedNonce > otherPredictedNonce) {
                 // Our update has priority. If we have an update,
                 // execute it without inturruption. Otherwise,
                 // execute their update with inturruption
                 if (self !== undefined) {
-                    runSelfUpdateAsync(self, NeverCancel);
+                    await processOneUpdate(this.selfUpdateAsync, self, NeverCancel, this.incomingSelf);
                 } else {
-                    runOtherUpdateAsync(other!, selfPromise);
+                    await processOneUpdate(this.otherUpdateAsync, other!, selfPromise, this.incomingOther);
                 }
             } else {
                 // Their update has priority. Vice-versa from above
                 if (other !== undefined) {
                     // Out of order update received?
-                    // TODO: Robust handling
                     if (otherPredictedNonce !== other.nonce) {
-                        this.incomingOther.resolve()
+                        // TODO: Should resolve with Result::Error?
+                        // What is Connext convention here?
+                        this.incomingOther.reject("Out of order update")
+                        continue;
                     }
 
-                    runOtherUpdateAsync(other, NeverCancel)
+                    await processOneUpdate(this.otherUpdateAsync, other, NeverCancel, this.incomingOther);
                 } else {
-                    runSelfUpdateAsync(self!, otherPromise)
+                    await processOneUpdate(this.selfUpdateAsync, self!, otherPromise, this.incomingSelf);
                 }
             }
         }
