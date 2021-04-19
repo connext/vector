@@ -714,14 +714,25 @@ const getConfirmation = async (
   method: string = "getConfirmation",
   methodId: string = getRandomBytes32()
 ): Promise<Result<TransactionReceipt, AutoRebalanceServiceError>> => {
+  logger.info(
+    {
+      method,
+      intervalId: methodId,
+      chainId,
+      provider: providers[chainId],
+      txHash,
+      confirmations: getConfirmationsForChain(chainId)
+    },
+    "Waiting for tx confirmation..."
+  )
   const result = await waitForTransaction(providers[chainId], txHash, getConfirmationsForChain(chainId));
   logger.info(
     {
       method,
       intervalId: methodId,
-      hash: txHash,
+      result,
     },
-    "Tx mined",
+    "Result",
   );
   const error = result.getError()
   if (error) {
@@ -735,5 +746,13 @@ const getConfirmation = async (
       ),
     );
   }
+  logger.info(
+    {
+      method,
+      intervalId: methodId,
+      hash: txHash,
+    },
+    "Tx mined",
+  );
   return Result.ok(result.getValue());
 }
