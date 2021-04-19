@@ -11,18 +11,19 @@ import axios from "axios";
 import { rebalanceIfNeeded } from "../services/autoRebalance";
 import { getConfig } from "../config";
 import * as metrics from "../metrics";
-import { PrismaStore } from "../services/store";
+import { PrismaStore, RouterRebalanceStatus } from "../services/store";
 
 const config = getConfig();
 
 const testName = "Auto Rebalance";
 const { log } = getTestLoggers(testName, config.logLevel as any);
-describe(testName, () => {
+describe.only(testName, () => {
   describe("rebalanceIfNeeded", () => {
     let wallet: Sinon.SinonStubbedInstance<Wallet>;
     let chainService: Sinon.SinonStubbedInstance<VectorChainReader>;
     let hydratedProviders: { [chainId: number]: Sinon.SinonStubbedInstance<JsonRpcProvider> };
     let mockAxios: Sinon.SinonStubbedInstance<any>;
+    let mockConfirmation: Sinon.SinonStubbedInstance<any>;
     let store: Sinon.SinonStubbedInstance<PrismaStore>;
 
     beforeEach(async () => {
@@ -118,6 +119,28 @@ describe(testName, () => {
         },
       });
 
+      // All 3 calls need to resolve: approve, execute, complete.
+      // First two should be on 1337, complete will be on 1338.
+      ([1337, 1338]).forEach((id) => {
+        hydratedProviders[id].waitForTransaction.resolves({
+          to: mkAddress("0xa"),
+          from: mkAddress("0xa"),
+          contractAddress: "",
+          transactionIndex: 0,
+          // root?: string,
+          gasUsed: BigNumber.from(0),
+          logsBloom: "",
+          blockHash: "",
+          transactionHash: "",
+          logs: [],
+          blockNumber: 0,
+          confirmations: 10,
+          cumulativeGasUsed: BigNumber.from(0),
+          byzantium: false,
+          status: 1
+        });
+      })
+
       const hash = mkBytes32("0xa");
       // Based on the numbers hard coded below, the auto rebalancer should get 37.5 (half the difference).
       chainService.getOnchainBalance.onFirstCall().resolves(Result.ok(BigNumber.from(parseEther("175"))));
@@ -142,6 +165,14 @@ describe(testName, () => {
       };
       const result = await rebalanceIfNeeded(swap, log, wallet, chainService as any, hydratedProviders, store);
 
+      // console.log(hydratedProviders[1337].waitForTransaction.getCall(0));
+      log.info(
+        {
+          waitForTransactionCall: hydratedProviders[1337].waitForTransaction.getCall(0)
+        },
+        "waitForTransaction"
+      )
+
       expect(result.getError()).to.not.be.ok;
       expect(result.getValue()).to.eq(undefined);
       const { chainId, ...tx } = transaction;
@@ -156,6 +187,7 @@ describe(testName, () => {
       // Three phases of rebalance swap: approval, execution, completion.
       // By the third phase we should have all three txHashes.
       expect(store.saveRebalance.getCall(-1).firstArg).to.deep.include({
+        status: RouterRebalanceStatus.COMPLETE,
         approveHash: hash,
         executeHash: hash,
         completeHash: hash

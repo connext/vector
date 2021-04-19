@@ -355,9 +355,25 @@ const _rebalanceIfNeeded = async (
         methodId,
       );
       if (completedResult.isError) {
+        logger.error(
+          {
+            method,
+            intervalId: methodId,
+            error: completedResult.getError()!
+          },
+          "completed result was error",
+        );
         return Result.fail(completedResult.getError()!);
       }
       const value = completedResult.getValue();
+      logger.info(
+        {
+          method,
+          intervalId: methodId,
+          value,
+        },
+        "completed tx",
+      );
       if (value.isRequired) {
         if (!completedResult.getValue().didComplete) {
           // Rebalance hasn't completed yet, so we'll return here
@@ -367,12 +383,29 @@ const _rebalanceIfNeeded = async (
         const value = completedResult.getValue();
         completeHash = value.transactionHash;
         completeChain = value.transactionChainId;
+        logger.info(
+          {
+            method,
+            intervalId: methodId,
+            completeHash,
+            completeChain
+          },
+          "complete hash/chain",
+        );
         latestRebalance = {
           ...latestRebalance,
           completeHash,
           completeChain,
         } as RouterRebalanceRecord;
         await store.saveRebalance(latestRebalance);
+        logger.info(
+          {
+            method,
+            intervalId: methodId,
+            latestRebalance,
+          },
+          "saved rebalance",
+        );
       }
     }
 
@@ -389,6 +422,14 @@ const _rebalanceIfNeeded = async (
         methodId,
       );
       if (confirmationResult.isError) {
+        logger.error(
+          {
+            method,
+            intervalId: methodId,
+            error: confirmationResult.getError()!,
+          },
+          "confirmation error",
+        );
         return Result.fail(confirmationResult.getError()!);
       }
     }
@@ -399,6 +440,14 @@ const _rebalanceIfNeeded = async (
       status: RouterRebalanceStatus.COMPLETE
     };
     await store.saveRebalance(latestRebalance);
+    logger.info(
+      {
+        method,
+        intervalId: methodId,
+        latestRebalance,
+      },
+      "saved rebalance",
+    );
   }
 
   return Result.ok(undefined);
@@ -618,16 +667,14 @@ export const completeRebalance = async (
       "Status request sent",
     );
     const { status } = statusRes.data;
-    const didComplete = status.completed;
-    if (!status || !didComplete) {
+    if (!status || !status.completed) {
       logger.info({ status, method, intervalId: methodId }, "Rebalance not completed");
-      return Result.ok({ isRequired: true, didComplete });
+      return Result.ok({ isRequired: true, didComplete: status.completed });
     }
     // is completed, check if tx is needed
-    const isRequired = !status.transaction;
-    if (isRequired) {
+    if (!status.transaction) {
       logger.info({ intervalId: methodId }, "No completion tx required");
-      return Result.ok({ isRequired, didComplete });
+      return Result.ok({ isRequired: false, didComplete: status.completed });
     }
     logger.info({ status, method, intervalId: methodId }, "Sending complete tx");
     // need to send tx to complete rebalance
@@ -646,8 +693,8 @@ export const completeRebalance = async (
       "Sent execute tx, completed",
     );
     return Result.ok({
-      isRequired,
-      didComplete,
+      isRequired: true,
+      didComplete: true,
       transactionHash,
       transactionChainId,
     });
@@ -707,7 +754,6 @@ const sendTransaction = async (
   return response.hash;
 };
 
-
 const getConfirmation = async (
   txHash: string,
   chainId: number,
@@ -722,29 +768,21 @@ const getConfirmation = async (
     {
       method,
       intervalId: methodId,
-      result
+      hash: txHash,
     },
-    "Result",
+    "Tx mined",
   );
-  if (result.isError) {
+  const error = result.getError()
+  if (error) {
+    // Result's error would be of type ChainError, hence the need for wrapping here.
     return Result.fail(
       new AutoRebalanceServiceError(
         AutoRebalanceServiceError.reasons.CouldNotCompleteRebalance,
         chainId,
         swap.fromAssetId,
-        // Result's error would be of type ChainError, hence the need for wrapping here.
-        { methodId, method, error: jsonifyError(result.getError()!) },
+        { methodId, method, error: jsonifyError(error) },
       ),
     );
-  } else {
-    logger.info(
-      {
-        method,
-        intervalId: methodId,
-        hash: txHash,
-      },
-      "Tx mined",
-    );
-    return Result.ok(result.getValue());
   }
+  return Result.ok(result.getValue());
 }
