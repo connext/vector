@@ -474,8 +474,12 @@ export class Vector implements IVectorProtocol {
           }),
         );
       }
-      const { tree, root, proof } = generateMerkleTreeData(updatedActiveTransfers, proposedTransfer);
-      const included = tree.verify(proof!, bufferify(hashCoreTransferState(proposedTransfer)), root);
+      const { tree, root } = generateMerkleTreeData(updatedActiveTransfers);
+      const included = tree.verify(
+        tree.getHexProof(hashCoreTransferState(proposedTransfer)),
+        hashCoreTransferState(proposedTransfer),
+        root,
+      );
       return Result.ok(included);
     }
 
