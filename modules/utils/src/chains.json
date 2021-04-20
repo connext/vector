@@ -145,6 +145,10 @@
       "0x0000000000000000000000000000000000001010": {
         "symbol": "MATIC",
         "mainnetEquivalent": "0x7D1AfA7B718fb893dB30A3aBc0Cfc608AaCfeBB0"
+      },
+      "0x48987E8B356e0dE474ddE9Bc10541F8106C88A23": {
+        "symbol": "PROPS",
+        "mainnetEquivalent": "0x6fe56c0bcdd471359019fcbc48863d6c3e9d4f41"
       }
     },
     "rpc": ["https://rpc-mumbai.matic.today", "wss://ws-mumbai.matic.today"],
