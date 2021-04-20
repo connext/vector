@@ -1,4 +1,5 @@
 // Wrapper StableMath
+pragma solidity ^0.7.0;
 
 import "./lib/math/FixedPoint.sol";
 
@@ -25,12 +26,12 @@ contact StableSwap is StableMath {
 
     // Swap
 
-    function _onSwapGivenIn(
+    function onSwapGivenIn(
         SwapRequest memory swapRequest,
         uint256[] memory balances,
         uint256 indexIn,
         uint256 indexOut
-    ) internal view virtual override whenNotPaused returns (uint256) {
+    ) external view virtual whenNotPaused returns (uint256) {
         uint256 amountOut = StableMath._calcOutGivenIn(
             _amplificationParameter,
             balances,
@@ -42,12 +43,12 @@ contact StableSwap is StableMath {
         return amountOut;
     }
 
-    function _onSwapGivenOut(
+    function onSwapGivenOut(
         SwapRequest memory swapRequest,
         uint256[] memory balances,
         uint256 indexIn,
         uint256 indexOut
-    ) internal view virtual override whenNotPaused returns (uint256) {
+    ) external view virtual whenNotPaused returns (uint256) {
         uint256 amountIn = StableMath._calcInGivenOut(
             _amplificationParameter,
             balances,
