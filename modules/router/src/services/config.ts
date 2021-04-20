@@ -92,10 +92,11 @@ export const onSwapGivenIn = async (
   routerSignerAddress: string,
 ): Promise<void> => {
   // get balancer contract abi
+  // const balancerAbi = 
   // get stableSwap address ( we only need to calculate stuff so it doesn't have to be on every other chain)
   // provider based on which chain we deploy stableSwap contract.
 
-  // const StableSwap = new Contract()
+  // const StableSwap = new Contract(routerSignerAddress)
 
   // get router balance for each chain for balances array to get the trade size.
   // we will getOnChainBalance for routerSignerAddress
