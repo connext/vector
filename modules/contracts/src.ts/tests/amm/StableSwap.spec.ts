@@ -9,7 +9,7 @@ import { getContract } from "../../utils";
 import { alice } from "../../constants";
 import { expect } from "@connext/vector-utils";
 
-describe.only("StableSwap.sol", function () {
+describe("StableSwap.sol", function () {
   this.timeout(120_000);
   let stableSwap: Contract;
   let amount30 = parseEther("30");
