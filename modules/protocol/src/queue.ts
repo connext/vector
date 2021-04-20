@@ -223,6 +223,11 @@ export class SerializedQueue {
                 if (self !== undefined) {
                     await processOneUpdate(this.selfUpdateAsync, self, NeverCancel, this.incomingSelf);
                 } else {
+                    // TODO: In the case that our update cancels theirs, we already know their
+                    // update will fail because it doesn't include ours (unless they reject our update)
+                    // So, this may end up falling back to the sync protocol unnecessarily when we
+                    // try to execute their update after ours. For robustness sake, it's probably
+                    // best to leave this as-is and optimize that case later.
                     await processOneUpdate(this.otherUpdateAsync, other!, selfPromise, this.incomingOther);
                 }
             } else {
