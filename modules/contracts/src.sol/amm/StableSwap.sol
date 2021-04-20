@@ -6,7 +6,7 @@ import "./lib/math/FixedPoint.sol";
 import "./pools/stable/StablePoolUserDataHelpers.sol";
 import "./pools/stable/StableMath.sol";
 
-contact StableSwap is StableMath {
+contract StableSwap is StableMath {
 
     using FixedPoint for uint256;
     using StablePoolUserDataHelpers for bytes;
@@ -27,34 +27,34 @@ contact StableSwap is StableMath {
     // Swap
 
     function onSwapGivenIn(
-        SwapRequest memory swapRequest,
+        uint256 amount,
         uint256[] memory balances,
         uint256 indexIn,
         uint256 indexOut
-    ) external view virtual whenNotPaused returns (uint256) {
+    ) external view virtual returns (uint256) {
         uint256 amountOut = StableMath._calcOutGivenIn(
             _amplificationParameter,
             balances,
             indexIn,
             indexOut,
-            swapRequest.amount
+            amount
         );
 
         return amountOut;
     }
 
     function onSwapGivenOut(
-        SwapRequest memory swapRequest,
+        uint256 amount,
         uint256[] memory balances,
         uint256 indexIn,
         uint256 indexOut
-    ) external view virtual whenNotPaused returns (uint256) {
+    ) external view virtual returns (uint256) {
         uint256 amountIn = StableMath._calcInGivenOut(
             _amplificationParameter,
             balances,
             indexIn,
             indexOut,
-            swapRequest.amount
+            amount
         );
 
         return amountIn;
