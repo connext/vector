@@ -107,7 +107,7 @@ const func: DeployFunction = async () => {
     log.info(`Detected AMM deployment chain ${network.config.chainId}`);
     await deployments.deploy("StableSwap", {
       from: deployer,
-      args: [parseEther("2.5")],
+      args: [parseEther("2500")],
     });
   }
 
