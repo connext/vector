@@ -103,6 +103,14 @@ const func: DeployFunction = async () => {
     await registerTransfer("HashlockTransfer", deployer);
   }
 
+  if ([1337, 5].includes(network.config.chainId ?? 0)) {
+    log.info(`Detected AMM deployment chain ${network.config.chainId}`);
+    await deployments.deploy("StableMath", {
+      from: deployer,
+      args: [],
+    });
+  }
+
   ////////////////////////////////////////
   // Print summary
   log.info("All done!");
