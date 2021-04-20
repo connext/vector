@@ -38,7 +38,7 @@ class DelayedUpdater {
 
     currentNonce(): Nonce {
         if (this.state.length == 0) {
-            return -1;
+            return this.initialNonce;
         }
         return this.state[this.state.length - 1][1];
     }
@@ -75,7 +75,7 @@ class DelayedUpdater {
     }
 }
 
-function setup(isAlice: boolean, initialNonce: number = -1): [DelayedUpdater, SerializedQueue] {
+function setup(initialNonce: number = 0, isAlice: boolean = true,): [DelayedUpdater, SerializedQueue] {
     let updater = new DelayedUpdater(isAlice, initialNonce);
     let queue = new SerializedQueue(
         isAlice,
@@ -101,17 +101,31 @@ function otherUpdate(delay: number, nonce: number): DelayedOtherUpdate {
     return delayed as unknown as DelayedOtherUpdate;
 }
 
-describe('Simple Updates', () => {
-    it('Can update own when not interrupted and is leader', async () => {
-        let [updater, queue] = setup(true);
+describe.only('Simple Updates', () => {
+    it('Can update self when not interrupted and is the leader', async () => {
+        let [updater, queue] = setup();
         let result = await queue.executeSelfAsync(selfUpdate(10));
         expect(result?.isError).to.be.false;
-        expect(updater.state).to.be.deep.equal([['self', 0]]);
+        expect(updater.state).to.be.deep.equal([['self', 1]]);
     })
-    it('Can update other when not interrupted and is not leader', async () => {
-        let [updater, queue] = setup(true);
-        let result = await queue.executeOtherAsync(otherUpdate(10, 1));
+    it('Can update self when not interrupted and is not the leader', async () => {
+        let [updater, queue] = setup(1);
+        let result = await queue.executeSelfAsync(selfUpdate(10));
         expect(result?.isError).to.be.false;
-        expect(updater.state).to.be.deep.equal([['other', 1]]);
+        expect(updater.state).to.be.deep.equal([['self', 4]]);
+    })
+    it('Can update other when not interrupted and is not the leader', async () => {
+        let [updater, queue] = setup();
+        let result = await queue.executeOtherAsync(otherUpdate(10, 2));
+        expect(result?.isError).to.be.false;
+        expect(updater.state).to.be.deep.equal([['other', 2]]);
+    })
+    it('Can update other when not interrupted and is the leader', async () => {
+        let [updater, queue] = setup(1);
+        let result = await queue.executeOtherAsync(otherUpdate(10, 2));
+        expect(result?.isError).to.be.false;
+        expect(updater.state).to.be.deep.equal([['other', 2]]);
     })
 })
+
+// TODO: Supply wrong nonce and verify that update is dropped.

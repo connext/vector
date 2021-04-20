@@ -218,8 +218,8 @@ export class SerializedQueue {
 
             if (selfPredictedNonce > otherPredictedNonce) {
                 // Our update has priority. If we have an update,
-                // execute it without inturruption. Otherwise,
-                // execute their update with inturruption
+                // execute it without interruption. Otherwise,
+                // execute their update with interruption
                 if (self !== undefined) {
                     await processOneUpdate(this.selfUpdateAsync, self, NeverCancel, this.incomingSelf);
                 } else {
@@ -228,14 +228,6 @@ export class SerializedQueue {
             } else {
                 // Their update has priority. Vice-versa from above
                 if (other !== undefined) {
-                    // Out of order update received?
-                    if (otherPredictedNonce !== other.nonce) {
-                        // TODO: Should resolve with Result::Error?
-                        // What is Connext convention here?
-                        this.incomingOther.reject("Out of order update")
-                        continue;
-                    }
-
                     await processOneUpdate(this.otherUpdateAsync, other, NeverCancel, this.incomingOther);
                 } else {
                     await processOneUpdate(this.selfUpdateAsync, self!, otherPromise, this.incomingSelf);
