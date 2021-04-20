@@ -1,5 +1,7 @@
 import { AllowedSwap, Result } from "@connext/vector-types";
 import { getAddress } from "@ethersproject/address";
+import { BigNumber } from "@ethersproject/bignumber";
+import { Contract } from "@ethersproject/contracts";
 
 import { getConfig, RebalanceProfile } from "../config";
 import { ConfigServiceError } from "../errors";
@@ -79,6 +81,42 @@ export const getSwapFees = (
     percentageFee,
     gasSubsidyPercentage,
   });
+};
+
+export const onSwapGivenIn = async (
+  transferAmount: string,
+  fromAssetId: string,
+  fromChainId: number,
+  toAssetId: string,
+  toChainId: number,
+  routerSignerAddress: string,
+): Promise<void> => {
+  // get balancer contract abi
+  // get stableSwap address ( we only need to calculate stuff so it doesn't have to be on every other chain)
+  // provider based on which chain we deploy stableSwap contract.
+
+  // const StableSwap = new Contract()
+
+  // get router balance for each chain for balances array to get the trade size.
+  // we will getOnChainBalance for routerSignerAddress
+  // get balance of token for fromChainId for router
+  // const fromChainRouterBalance = getOnchainBalance(fromAssetId, routerSignerAddress, fromChainId);
+
+  // const ToChainRouterBalance = getOnchainBalance(toAssetId, routerSignerAddress, toChainId);
+
+  // Assumption we are only considering the balance on fromChain and toChain
+  // const balances = [fromChainRouterBalance, ToChainRouterBalance ];
+
+  const fromAmountBn = BigNumber.from(transferAmount);
+  // Computes how many tokens can be taken out of a pool if `tokenAmountIn` are sent, given the current balances.
+  // const amountOut = await stableSwap.onSwapGivenIn(fromAmountBn, balances, 0, 1);
+
+  // After we get the amountOut here
+  // we need to calculate the Price Impact: the difference between the market price and estimated price due to trade size
+  // Here, Market Price could be transferAmount only as stable token & 1:1
+  // PriceImpact is going to be ((marketPrice(i.e transferAmount) - amountOut) * 100)/marketPrice
+
+  // return {priceImpact, amountOut}
 };
 
 export const shouldChargeFees = (
