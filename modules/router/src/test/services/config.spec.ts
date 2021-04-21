@@ -23,4 +23,20 @@ describe("config.ts", () => {
       expect(res.getValue()).to.be.deep.eq(config.rebalanceProfiles[0]);
     });
   });
+
+  describe("getMatchingSwap", () => {
+
+  });
+
+  describe("getSwapFees", () => {
+
+  });
+
+  describe("onSwapGivenIn", () => {
+    
+  });
+
+  describe("shouldChargeFees", () => {
+
+  });
 });
