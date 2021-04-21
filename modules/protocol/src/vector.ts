@@ -19,13 +19,19 @@ import {
   ProtocolError,
   jsonifyError,
 } from "@connext/vector-types";
-import { getCreate2MultisigAddress, getRandomBytes32 } from "@connext/vector-utils";
+import {
+  bufferify,
+  generateMerkleTreeData,
+  getCreate2MultisigAddress,
+  getRandomBytes32,
+  hashCoreTransferState,
+} from "@connext/vector-utils";
 import { Evt } from "evt";
 import pino from "pino";
 
-import { OutboundChannelUpdateError } from "./errors";
+import { OutboundChannelUpdateError, QueuedUpdateError } from "./errors";
 import * as sync from "./sync";
-import { validateSchema } from "./utils";
+import { getParamsFromUpdate, getTransferFromUpdate, validateSchema } from "./utils";
 
 type EvtContainer = { [K in keyof ProtocolEventPayloadsMap]: Evt<ProtocolEventPayloadsMap[K]> };
 
@@ -33,6 +39,17 @@ export class Vector implements IVectorProtocol {
   private evts: EvtContainer = {
     [ProtocolEventName.CHANNEL_UPDATE_EVENT]: Evt.create<ChannelUpdateEvent>(),
   };
+
+  // This holds the highest seen nonce (proposed or received) for each channel.
+  // Will be used to determine the priority ordering of the queue currently
+  // being executed
+  private highestNonce: { [channelAddr: string]: number } = {};
+
+  // This holds the current outbound update for each channel. Once the update
+  // has been double signed, it is removed from the object. This will be used
+  // to determine whether or not the update should be retried if you receive
+  // an update while one is out for signature.
+  private inProgressUpdate: { [channelAddr: string]: ChannelUpdate | undefined } = {};
 
   // make it private so the only way to create the class is to use `connect`
   private constructor(
@@ -90,38 +107,6 @@ export class Vector implements IVectorProtocol {
     return this.signer.publicIdentifier;
   }
 
-  // separate out this function so that we can atomically return and release the lock
-  private async lockedOperation(
-    params: UpdateParams<any>,
-  ): Promise<Result<FullChannelState, OutboundChannelUpdateError>> {
-    // Send the update to counterparty
-    const outboundRes = await sync.outbound(
-      params,
-      this.storeService,
-      this.chainReader,
-      this.messagingService,
-      this.externalValidationService,
-      this.signer,
-      this.logger,
-    );
-    if (outboundRes.isError) {
-      this.logger.error({
-        method: "lockedOperation",
-        variable: "outboundRes",
-        error: jsonifyError(outboundRes.getError()!),
-      });
-      return outboundRes as Result<any, OutboundChannelUpdateError>;
-    }
-    // Post to channel update evt
-    const { updatedChannel, updatedTransfers, updatedTransfer } = outboundRes.getValue();
-    this.evts[ProtocolEventName.CHANNEL_UPDATE_EVENT].post({
-      updatedChannelState: updatedChannel,
-      updatedTransfers,
-      updatedTransfer,
-    });
-    return Result.ok(outboundRes.getValue().updatedChannel);
-  }
-
   // Primary protocol execution from the leader side
   private async executeUpdate(
     params: UpdateParams<any>,
@@ -136,26 +121,35 @@ export class Vector implements IVectorProtocol {
       channelAddress: params.channelAddress,
       updateSender: this.publicIdentifier,
     });
-    let aliceIdentifier: string;
-    let bobIdentifier: string;
-    let channel: FullChannelState | undefined;
-    if (params.type === UpdateType.setup) {
-      aliceIdentifier = this.publicIdentifier;
-      bobIdentifier = (params as UpdateParams<"setup">).details.counterpartyIdentifier;
-    } else {
-      channel = await this.storeService.getChannelState(params.channelAddress);
-      if (!channel) {
-        return Result.fail(new OutboundChannelUpdateError(OutboundChannelUpdateError.reasons.ChannelNotFound, params));
-      }
-      aliceIdentifier = channel.aliceIdentifier;
-      bobIdentifier = channel.bobIdentifier;
-    }
-    const isAlice = this.publicIdentifier === aliceIdentifier;
-    const counterpartyIdentifier = isAlice ? bobIdentifier : aliceIdentifier;
-    throw new Error("must implement internal queueing");
-    const outboundRes = await this.lockedOperation(params);
 
-    return outboundRes;
+    // Pull channel from store
+
+    // Update highest seen nonce to next nonce
+
+    // propose update using sync.outbound
+    // should:
+    // - add params to queue
+    // - generate update from params
+    // - update proposed class attr
+    // - send proposal to counterparty
+
+    // let aliceIdentifier: string;
+    // let bobIdentifier: string;
+    // let channel: FullChannelState | undefined;
+    // if (params.type === UpdateType.setup) {
+    //   aliceIdentifier = this.publicIdentifier;
+    //   bobIdentifier = (params as UpdateParams<"setup">).details.counterpartyIdentifier;
+    // } else {
+    //   channel = await this.storeService.getChannelState(params.channelAddress);
+    //   if (!channel) {
+    //     return Result.fail(new OutboundChannelUpdateError(OutboundChannelUpdateError.reasons.ChannelNotFound, params));
+    //   }
+    //   aliceIdentifier = channel.aliceIdentifier;
+    //   bobIdentifier = channel.bobIdentifier;
+    // }
+    // const isAlice = this.publicIdentifier === aliceIdentifier;
+    // const counterpartyIdentifier = isAlice ? bobIdentifier : aliceIdentifier;
+    throw new Error("must implement internal queueing");
   }
 
   /**
@@ -263,50 +257,117 @@ export class Vector implements IVectorProtocol {
           return;
         }
 
-        // validate and save
-        const inboundRes = await sync.inbound(
-          received.update,
-          received.previousUpdate,
-          inbox,
-          this.chainReader,
-          this.storeService,
-          this.messagingService,
-          this.externalValidationService,
-          this.signer,
-          this.logger,
-        );
-        if (inboundRes.isError) {
-          this.logger.warn(
-            { method, methodId, error: jsonifyError(inboundRes.getError()!) },
-            "Failed to apply inbound update",
+        // Update has been received and is properly formatted. Before
+        // applying the update, make sure it is the highest seen nonce
+        const highestChannelNonce = this.highestNonce[received.update.channelAddress] ?? 0;
+        if (highestChannelNonce > received.update.nonce) {
+          this.logger.debug(
+            { method, methodId, highestChannelNonce, updateNonce: received.update.nonce },
+            "Not processing update below highest nonce",
           );
           return;
         }
 
-        const { updatedChannel, updatedActiveTransfers, updatedTransfer } = inboundRes.getValue();
+        if (highestChannelNonce === received.update.nonce) {
+          // In this case, you should be expecting to receive a double
+          // signed state for what youve proposed. This should be handled
+          // by the return value of `messaging.sendProtocolMessage` so
+          // it is safe to return out of the handler here.
+          return;
+        }
 
-        // TODO: more efficient dispute events
-        // // If it is setup, watch for dispute events in channel
-        // if (received.update.type === UpdateType.setup) {
-        //   this.logger.info({ channelAddress: updatedChannel.channelAddress }, "Registering channel for dispute events");
-        //   const registrationRes = await this.chainReader.registerChannel(
-        //     updatedChannel.channelAddress,
-        //     updatedChannel.networkContext.chainId,
-        //   );
-        //   if (registrationRes.isError) {
-        //     this.logger.warn(
-        //       { ...jsonifyError(registrationRes.getError()!) },
-        //       "Failed to register channel for dispute watching",
-        //     );
-        //   }
-        // }
+        // Now you are only receiving an update that is *greater* than
+        // one you have seen. This means you have a couple options:
+        // (1) you are not processing any update currently, apply the
+        //     proposed update to your state and respond
+        // (2) you are currently processing an update at a lower nonce:
+        //     (a) received update includes the update you proposed,
+        //         validate the received update and return double signed
+        //         while discarding your proposed update
+        //     (b) received update doesnt include update you proposed,
+        //         validate the received update, and repropose your
+        //         update at the top of the queue
+
+        // First, update the highest seen nonce
+        this.highestNonce[received.update.channelAddress] = received.update.nonce;
+
+        // Apply the update at the higher nonce
+        const params = getParamsFromUpdate(received.update);
+        if (params.isError) {
+          // TODO: respond here so initiator doesnt just time out
+          this.logger.warn(
+            { method, methodId, error: jsonifyError(params.getError()!) },
+            "Could not get params from update",
+          );
+          return;
+        }
+        const result = await this.addToQueue(params.getValue(), received.previousUpdate);
+        if (result.isError) {
+          this.logger.warn({ method, methodId, error: jsonifyError(result.getError()!) }, "Failed to apply update");
+          // reset to previous nonce here while nonces cant be burned
+          // TODO: implement burned nonces
+          this.highestNonce[received.update.channelAddress] = highestChannelNonce;
+          return;
+        }
+
+        const { updatedChannel, updatedActiveTransfers, updatedTransfer } = result.getValue();
 
         this.evts[ProtocolEventName.CHANNEL_UPDATE_EVENT].post({
           updatedChannelState: updatedChannel,
           updatedTransfers: updatedActiveTransfers,
           updatedTransfer,
         });
-        this.logger.debug({ method, methodId }, "Method complete");
+        this.logger.debug({ method, methodId, channelNonce: updatedChannel.nonce }, "Applied received update");
+
+        // Check if you are currently proposing an update
+        const proposed = this.inProgressUpdate[received.update.channelAddress];
+
+        // If no, return
+        if (!proposed) {
+          return;
+        }
+
+        // If so, check if the update includes our proposed update
+        const proposedTransfer =
+          proposed.type === UpdateType.create ? getTransferFromUpdate(proposed, updatedChannel) : undefined;
+        const included = this.includesOurProposedUpdate(
+          received.update,
+          proposed,
+          // TODO: make it *always* return updatedActiveTransfers
+          updatedActiveTransfers!,
+          proposedTransfer,
+        );
+
+        // If it does include our proposed update, add inbound to the
+        // queue and remove currently processing update
+        if (!included.isError && included.getValue()) {
+          // Remove the proposed update from our tracker
+          this.inProgressUpdate[received.update.channelAddress] = undefined;
+          this.logger.debug(
+            { method, methodId, channelNonce: updatedChannel.nonce },
+            "Proposed update included, not regenerating",
+          );
+          // TODO: resume queue without inserting update
+          this.logger.debug({ method, methodId }, "Method complete");
+          return;
+        }
+
+        // There is a case here where included is an error, in which
+        // case you should retry the proposed update anyway (errors
+        // should fall through to validation)
+
+        // If it does not, insert previously in progress update
+        // at the front of queue
+        const regenerated = getParamsFromUpdate(proposed);
+        if (regenerated.isError) {
+          return;
+        }
+        const processedResult = await this.addToFrontOfQueue(regenerated.getValue(), received.update);
+        if (processedResult.isError) {
+          this.logger.error({ ...jsonifyError(processedResult.getError()!) }, "Failed to apply proposed update");
+        }
+        this.logger.debug({ methodId, method }, "Method complete");
+        return;
       },
     );
 
@@ -330,6 +391,101 @@ export class Vector implements IVectorProtocol {
       });
     }
     return undefined;
+  }
+
+  // Adds a given task to the internal queue
+  // TODO: implement
+  private addToQueue(
+    params: UpdateParams<any>,
+    previous?: ChannelUpdate,
+  ): Promise<
+    Result<
+      {
+        updatedChannel: FullChannelState;
+        updatedActiveTransfers?: FullTransferState[];
+        updatedTransfer?: FullTransferState;
+      },
+      QueuedUpdateError
+    >
+  > {
+    throw new Error("addToQueue method not implemented");
+  }
+
+  // Adds a given task to the front of the internal queue
+  // TODO: implement
+  private addToFrontOfQueue(
+    params: UpdateParams<any>,
+    previous?: ChannelUpdate,
+  ): Promise<
+    Result<
+      {
+        updatedChannel: FullChannelState;
+        updatedActiveTransfers?: FullTransferState[];
+        updatedTransfer?: FullTransferState;
+      },
+      QueuedUpdateError
+    >
+  > {
+    throw new Error("addToQueue method not implemented");
+  }
+
+  /**
+   * Returns true if the received upddate includes our proposed update. If true,
+   * this means you don't have to re-send your proposed update. If false, this
+   * means you should resend your proposed upddate
+   * @param receivedUpdate The update you have gotten from your counterparty
+   * @param proposedUpdate The update you have sent out to counterparty
+   */
+  private includesOurProposedUpdate(
+    receivedUpdate: ChannelUpdate,
+    proposedUpdate: ChannelUpdate,
+    // TODO: should probably just use the generated merkle tree here instead
+    // of regenerating it from the transfers and channel
+    updatedActiveTransfers: FullTransferState[],
+    proposedTransfer?: FullTransferState,
+  ): Result<boolean, QueuedUpdateError> {
+    // If both are a setup update, your update would fail and the ultimate
+    // result (a channel is set up) is achieved
+    if (receivedUpdate.type === UpdateType.setup && proposedUpdate.type === UpdateType.setup) {
+      return Result.ok(true);
+    }
+
+    // If both are a deposit update, your deposit is implicitly included
+    if (receivedUpdate.type === UpdateType.deposit && proposedUpdate.type === UpdateType.deposit) {
+      return Result.ok(true);
+    }
+
+    // If both are a resolve, it would *not* include your proposed update since
+    // only the responder to a transfer can call resolve. Updates by definition
+    // are different
+    if (receivedUpdate.type === UpdateType.resolve && proposedUpdate.type === UpdateType.resolve) {
+      return Result.ok(false);
+    }
+
+    // If both are a create, it would include your proposed update IFF the
+    // merkle root *after* the update was applied includes the transfer you
+    // attempted to create
+    if (receivedUpdate.type === UpdateType.create && proposedUpdate.type === UpdateType.create) {
+      if (!proposedTransfer) {
+        return Result.fail(
+          new QueuedUpdateError(QueuedUpdateError.reasons.MissingTransferForUpdateInclusion, {
+            proposedUpdate,
+            receivedUpdate,
+          }),
+        );
+      }
+      const { tree, root } = generateMerkleTreeData(updatedActiveTransfers);
+      const included = tree.verify(
+        tree.getHexProof(hashCoreTransferState(proposedTransfer)),
+        hashCoreTransferState(proposedTransfer),
+        root,
+      );
+      return Result.ok(included);
+    }
+
+    // Otherwise, updates are different types so it does not include your
+    // proposed update
+    return Result.ok(false);
   }
 
   /*

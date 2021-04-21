@@ -19,12 +19,20 @@ import {
   UpdateParamsMap,
   UpdateType,
   ChainError,
+  jsonifyError,
 } from "@connext/vector-types";
 import { getAddress } from "@ethersproject/address";
 import { BigNumber } from "@ethersproject/bignumber";
-import { hashChannelCommitment, validateChannelUpdateSignatures } from "@connext/vector-utils";
+import {
+  getSignerAddressFromPublicIdentifier,
+  getTransferId,
+  hashChannelCommitment,
+  hashTransferState,
+  validateChannelUpdateSignatures,
+} from "@connext/vector-utils";
 import Ajv from "ajv";
 import { BaseLogger, Level } from "pino";
+import { CreateUpdateError } from "./errors";
 
 const ajv = new Ajv();
 
@@ -160,6 +168,33 @@ export function getParamsFromUpdate<T extends UpdateType = any>(
     type,
     details: paramDetails as UpdateParamsMap[T],
   });
+}
+
+export function getTransferFromUpdate(
+  update: ChannelUpdate<typeof UpdateType.create>,
+  channel: FullChannelState,
+): FullTransferState {
+  return {
+    balance: update.details.balance,
+    assetId: update.assetId,
+    transferId: update.details.transferId,
+    channelAddress: update.channelAddress,
+    transferDefinition: update.details.transferDefinition,
+    transferEncodings: update.details.transferEncodings,
+    transferTimeout: update.details.transferTimeout,
+    initialStateHash: hashTransferState(update.details.transferInitialState, update.details.transferEncodings[0]),
+    transferState: update.details.transferInitialState,
+    channelFactoryAddress: channel.networkContext.channelFactoryAddress,
+    chainId: channel.networkContext.chainId,
+    transferResolver: undefined,
+    initiator: getSignerAddressFromPublicIdentifier(update.fromIdentifier),
+    responder: getSignerAddressFromPublicIdentifier(update.toIdentifier),
+    meta: { ...(update.details.meta ?? {}), createdAt: Date.now() },
+    inDispute: false,
+    channelNonce: update.nonce,
+    initiatorIdentifier: update.fromIdentifier,
+    responderIdentifier: update.toIdentifier,
+  };
 }
 
 // This function signs the state after the update is applied,
@@ -382,7 +417,6 @@ export const mergeAssetIds = (channel: FullChannelState): FullChannelState => {
   };
 };
 
-
 // Returns the first unused nonce for the given participant.
 // Nonces alternate back and forth like so:
 //   0: Alice
@@ -402,6 +436,6 @@ export function getNextNonceForUpdate(currentNonce: number, isAlice: boolean): n
   let rotation = currentNonce % 4;
   let currentlyMe = rotation < 2 === isAlice;
   let top = currentNonce % 2 === 1;
-  let offset = currentlyMe ? (top ? 3 : 1) : (top ? 1 : 2);
+  let offset = currentlyMe ? (top ? 3 : 1) : top ? 1 : 2;
   return currentNonce + offset;
 }
