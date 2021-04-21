@@ -19,19 +19,14 @@ import {
   ProtocolError,
   jsonifyError,
 } from "@connext/vector-types";
-import {
-  bufferify,
-  generateMerkleTreeData,
-  getCreate2MultisigAddress,
-  getRandomBytes32,
-  hashCoreTransferState,
-} from "@connext/vector-utils";
+import { getCreate2MultisigAddress, getRandomBytes32 } from "@connext/vector-utils";
 import { Evt } from "evt";
 import pino from "pino";
 
-import { OutboundChannelUpdateError, QueuedUpdateError } from "./errors";
-import * as sync from "./sync";
-import { getParamsFromUpdate, getTransferFromUpdate, validateSchema } from "./utils";
+import { QueuedUpdateError } from "./errors";
+import { Cancellable, OtherUpdate, SelfUpdate, SerializedQueue } from "./queue";
+import { outbound, inbound, OtherUpdateResult, SelfUpdateResult } from "./sync";
+import { persistChannel, validateSchema } from "./utils";
 
 type EvtContainer = { [K in keyof ProtocolEventPayloadsMap]: Evt<ProtocolEventPayloadsMap[K]> };
 
@@ -40,16 +35,8 @@ export class Vector implements IVectorProtocol {
     [ProtocolEventName.CHANNEL_UPDATE_EVENT]: Evt.create<ChannelUpdateEvent>(),
   };
 
-  // This holds the highest seen nonce (proposed or received) for each channel.
-  // Will be used to determine the priority ordering of the queue currently
-  // being executed
-  private highestNonce: { [channelAddr: string]: number } = {};
-
-  // This holds the current outbound update for each channel. Once the update
-  // has been double signed, it is removed from the object. This will be used
-  // to determine whether or not the update should be retried if you receive
-  // an update while one is out for signature.
-  private inProgressUpdate: { [channelAddr: string]: ChannelUpdate | undefined } = {};
+  // Hold the serialized queue for each channel
+  private queues: Map<string, SerializedQueue> = new Map();
 
   // make it private so the only way to create the class is to use `connect`
   private constructor(
@@ -108,48 +95,199 @@ export class Vector implements IVectorProtocol {
   }
 
   // Primary protocol execution from the leader side
-  private async executeUpdate(
-    params: UpdateParams<any>,
-  ): Promise<Result<FullChannelState, OutboundChannelUpdateError>> {
+  private async executeUpdate(params: UpdateParams<any>): Promise<Result<FullChannelState, QueuedUpdateError>> {
     const method = "executeUpdate";
     const methodId = getRandomBytes32();
     this.logger.debug({
       method,
       methodId,
-      step: "start",
       params,
       channelAddress: params.channelAddress,
-      updateSender: this.publicIdentifier,
+      initiator: this.publicIdentifier,
     });
 
-    // Pull channel from store
+    // If queue does not exist, create it
+    if (!this.queues.has(params.channelAddress)) {
+      // Determine if this is alice
+      let aliceIdentifier: string;
+      if (params.type === UpdateType.setup) {
+        aliceIdentifier = this.publicIdentifier;
+      } else {
+        const channel = await this.storeService.getChannelState(params.channelAddress);
+        if (!channel) {
+          return Result.fail(new QueuedUpdateError(QueuedUpdateError.reasons.ChannelNotFound, params));
+        }
+        aliceIdentifier = channel.aliceIdentifier;
+      }
+      this.createChannelQueue(params.channelAddress, aliceIdentifier);
+    }
 
-    // Update highest seen nonce to next nonce
+    // Add operation to queue
+    const queue = this.queues.get(params.channelAddress)!;
+    const result = await queue.executeSelfAsync({ params });
 
-    // propose update using sync.outbound
-    // should:
-    // - add params to queue
-    // - generate update from params
-    // - update proposed class attr
-    // - send proposal to counterparty
+    // TODO: will this properly resolve to the right update ret?
+    // how can we tell if this was cancelled so we can retry?
+    return result as any;
+  }
 
-    // let aliceIdentifier: string;
-    // let bobIdentifier: string;
-    // let channel: FullChannelState | undefined;
-    // if (params.type === UpdateType.setup) {
-    //   aliceIdentifier = this.publicIdentifier;
-    //   bobIdentifier = (params as UpdateParams<"setup">).details.counterpartyIdentifier;
-    // } else {
-    //   channel = await this.storeService.getChannelState(params.channelAddress);
-    //   if (!channel) {
-    //     return Result.fail(new OutboundChannelUpdateError(OutboundChannelUpdateError.reasons.ChannelNotFound, params));
-    //   }
-    //   aliceIdentifier = channel.aliceIdentifier;
-    //   bobIdentifier = channel.bobIdentifier;
-    // }
-    // const isAlice = this.publicIdentifier === aliceIdentifier;
-    // const counterpartyIdentifier = isAlice ? bobIdentifier : aliceIdentifier;
-    throw new Error("must implement internal queueing");
+  private createChannelQueue(channelAddress: string, aliceIdentifier: string): void {
+    // Create a cancellable outbound function to be used when initiating updates
+    const cancellableOutbound: Cancellable<SelfUpdate, SelfUpdateResult> = async (
+      initiated: SelfUpdate,
+      cancel: Promise<unknown>,
+    ) => {
+      const cancelPromise = new Promise(async (resolve) => {
+        let ret;
+        try {
+          ret = await cancel;
+        } catch (e) {
+          // TODO: cancel promise fails?
+          ret = e;
+        }
+        return resolve({ cancelled: true, value: ret });
+      });
+      const outboundPromise = new Promise(async (resolve) => {
+        try {
+          const ret = await outbound(
+            initiated.params,
+            this.storeService,
+            this.chainReader,
+            this.messagingService,
+            this.externalValidationService,
+            this.signer,
+            this.logger,
+          );
+          return resolve({ cancelled: false, value: ret });
+        } catch (e) {
+          return resolve({
+            cancelled: false,
+            value: Result.fail(
+              new QueuedUpdateError(QueuedUpdateError.reasons.UnhandledPromise, initiated.params, undefined, {
+                ...jsonifyError(e),
+                method: "outboundPromise",
+              }),
+            ),
+          });
+        }
+      });
+      const res = (await Promise.race([outboundPromise, cancelPromise])) as {
+        cancelled: boolean;
+        value: unknown | Result<SelfUpdateResult>;
+      };
+      if (res.cancelled) {
+        return undefined;
+      }
+      const value = res.value as Result<SelfUpdateResult>;
+      if (value.isError) {
+        return res.value as Result<SelfUpdateResult>;
+      }
+      // Save all information returned from the sync result
+      // Save the newly signed update to your channel
+      const { updatedChannel, updatedTransfer, successfullyApplied } = value.getValue();
+      const saveRes = await persistChannel(this.storeService, updatedChannel, updatedTransfer);
+      if (saveRes.isError) {
+        return Result.fail(
+          new QueuedUpdateError(QueuedUpdateError.reasons.StoreFailure, initiated.params, updatedChannel, {
+            method: "saveChannelState",
+            error: saveRes.getError()!.message,
+          }),
+        );
+      }
+      // If the update was not applied, but the channel was synced, return
+      // undefined so that the proposed update may be re-queued
+      if (!successfullyApplied) {
+        return undefined;
+      }
+      // All is well, return value from outbound
+      return res.value as Result<SelfUpdateResult>;
+    };
+
+    // Create a cancellable inbound function to be used when receiving updates
+    const cancellableInbound: Cancellable<OtherUpdate, OtherUpdateResult> = async (
+      received: OtherUpdate,
+      cancel: Promise<unknown>,
+    ) => {
+      const cancelPromise = new Promise(async (resolve) => {
+        let ret;
+        try {
+          ret = await cancel;
+        } catch (e) {
+          // TODO: cancel promise fails?
+          ret = e;
+        }
+        return resolve({ cancelled: true, value: ret });
+      });
+      const inboundPromise = new Promise(async (resolve) => {
+        try {
+          const ret = await inbound(
+            received.update,
+            received.previous,
+            received.inbox,
+            this.chainReader,
+            this.storeService,
+            this.messagingService,
+            this.externalValidationService,
+            this.signer,
+            this.logger,
+          );
+          return resolve({ cancelled: false, value: ret });
+        } catch (e) {
+          return resolve({
+            cancelled: false,
+            value: Result.fail(
+              new QueuedUpdateError(QueuedUpdateError.reasons.UnhandledPromise, received.update, undefined, {
+                ...jsonifyError(e),
+                method: "inboundPromise",
+              }),
+            ),
+          });
+        }
+      });
+
+      const res = (await Promise.race([inboundPromise, cancelPromise])) as {
+        cancelled: boolean;
+        value: unknown | Result<OtherUpdateResult>;
+      };
+
+      if (res.cancelled) {
+        // TODO: Send message to counterparty that it has been cancelled
+        return undefined;
+      }
+      const value = res.value as Result<OtherUpdateResult>;
+      if (value.isError) {
+        // TODO: Send message to counterparty that it has errored
+        return res.value as Result<OtherUpdateResult>;
+      }
+      // Save the newly signed update to your channel
+      const { updatedChannel, updatedTransfer } = value.getValue();
+      const saveRes = await persistChannel(this.storeService, updatedChannel, updatedTransfer);
+      if (saveRes.isError) {
+        return Result.fail(
+          new QueuedUpdateError(QueuedUpdateError.reasons.StoreFailure, received.update, updatedChannel, {
+            method: "saveChannelState",
+            error: saveRes.getError()!.message,
+          }),
+        );
+      }
+      // TODO: Send message to counterparty that it has succeeded
+      throw new Error("Send message with success");
+    };
+    const queue = new SerializedQueue(
+      this.publicIdentifier === aliceIdentifier,
+      cancellableOutbound,
+      cancellableInbound,
+      // TODO: grab nonce without making store call? annoying to store in
+      // memory, but doable
+      async () => {
+        const channel = await this.storeService.getChannelState(channelAddress);
+        return channel?.nonce ?? 0;
+      },
+    );
+
+    // TODO: remove messaging from sync methods
+
+    this.queues.set(channelAddress, queue);
   }
 
   /**
@@ -259,115 +397,7 @@ export class Vector implements IVectorProtocol {
 
         // Update has been received and is properly formatted. Before
         // applying the update, make sure it is the highest seen nonce
-        const highestChannelNonce = this.highestNonce[received.update.channelAddress] ?? 0;
-        if (highestChannelNonce > received.update.nonce) {
-          this.logger.debug(
-            { method, methodId, highestChannelNonce, updateNonce: received.update.nonce },
-            "Not processing update below highest nonce",
-          );
-          return;
-        }
-
-        if (highestChannelNonce === received.update.nonce) {
-          // In this case, you should be expecting to receive a double
-          // signed state for what youve proposed. This should be handled
-          // by the return value of `messaging.sendProtocolMessage` so
-          // it is safe to return out of the handler here.
-          return;
-        }
-
-        // Now you are only receiving an update that is *greater* than
-        // one you have seen. This means you have a couple options:
-        // (1) you are not processing any update currently, apply the
-        //     proposed update to your state and respond
-        // (2) you are currently processing an update at a lower nonce:
-        //     (a) received update includes the update you proposed,
-        //         validate the received update and return double signed
-        //         while discarding your proposed update
-        //     (b) received update doesnt include update you proposed,
-        //         validate the received update, and repropose your
-        //         update at the top of the queue
-
-        // First, update the highest seen nonce
-        this.highestNonce[received.update.channelAddress] = received.update.nonce;
-
-        // Apply the update at the higher nonce
-        const params = getParamsFromUpdate(received.update);
-        if (params.isError) {
-          // TODO: respond here so initiator doesnt just time out
-          this.logger.warn(
-            { method, methodId, error: jsonifyError(params.getError()!) },
-            "Could not get params from update",
-          );
-          return;
-        }
-        const result = await this.addToQueue(params.getValue(), received.previousUpdate);
-        if (result.isError) {
-          this.logger.warn({ method, methodId, error: jsonifyError(result.getError()!) }, "Failed to apply update");
-          // reset to previous nonce here while nonces cant be burned
-          // TODO: implement burned nonces
-          this.highestNonce[received.update.channelAddress] = highestChannelNonce;
-          return;
-        }
-
-        const { updatedChannel, updatedActiveTransfers, updatedTransfer } = result.getValue();
-
-        this.evts[ProtocolEventName.CHANNEL_UPDATE_EVENT].post({
-          updatedChannelState: updatedChannel,
-          updatedTransfers: updatedActiveTransfers,
-          updatedTransfer,
-        });
-        this.logger.debug({ method, methodId, channelNonce: updatedChannel.nonce }, "Applied received update");
-
-        // Check if you are currently proposing an update
-        const proposed = this.inProgressUpdate[received.update.channelAddress];
-
-        // If no, return
-        if (!proposed) {
-          return;
-        }
-
-        // If so, check if the update includes our proposed update
-        const proposedTransfer =
-          proposed.type === UpdateType.create ? getTransferFromUpdate(proposed, updatedChannel) : undefined;
-        const included = this.includesOurProposedUpdate(
-          received.update,
-          proposed,
-          // TODO: make it *always* return updatedActiveTransfers
-          updatedActiveTransfers!,
-          proposedTransfer,
-        );
-
-        // If it does include our proposed update, add inbound to the
-        // queue and remove currently processing update
-        if (!included.isError && included.getValue()) {
-          // Remove the proposed update from our tracker
-          this.inProgressUpdate[received.update.channelAddress] = undefined;
-          this.logger.debug(
-            { method, methodId, channelNonce: updatedChannel.nonce },
-            "Proposed update included, not regenerating",
-          );
-          // TODO: resume queue without inserting update
-          this.logger.debug({ method, methodId }, "Method complete");
-          return;
-        }
-
-        // There is a case here where included is an error, in which
-        // case you should retry the proposed update anyway (errors
-        // should fall through to validation)
-
-        // If it does not, insert previously in progress update
-        // at the front of queue
-        const regenerated = getParamsFromUpdate(proposed);
-        if (regenerated.isError) {
-          return;
-        }
-        const processedResult = await this.addToFrontOfQueue(regenerated.getValue(), received.update);
-        if (processedResult.isError) {
-          this.logger.error({ ...jsonifyError(processedResult.getError()!) }, "Failed to apply proposed update");
-        }
-        this.logger.debug({ methodId, method }, "Method complete");
-        return;
+        throw new Error("fix apply other update");
       },
     );
 
@@ -383,10 +413,10 @@ export class Vector implements IVectorProtocol {
     return this;
   }
 
-  private validateParamSchema(params: any, schema: any): undefined | OutboundChannelUpdateError {
+  private validateParamSchema(params: any, schema: any): undefined | QueuedUpdateError {
     const error = validateSchema(params, schema);
     if (error) {
-      return new OutboundChannelUpdateError(OutboundChannelUpdateError.reasons.InvalidParams, params, undefined, {
+      return new QueuedUpdateError(QueuedUpdateError.reasons.InvalidParams, params, undefined, {
         paramsError: error,
       });
     }
@@ -429,65 +459,6 @@ export class Vector implements IVectorProtocol {
     throw new Error("addToQueue method not implemented");
   }
 
-  /**
-   * Returns true if the received upddate includes our proposed update. If true,
-   * this means you don't have to re-send your proposed update. If false, this
-   * means you should resend your proposed upddate
-   * @param receivedUpdate The update you have gotten from your counterparty
-   * @param proposedUpdate The update you have sent out to counterparty
-   */
-  private includesOurProposedUpdate(
-    receivedUpdate: ChannelUpdate,
-    proposedUpdate: ChannelUpdate,
-    // TODO: should probably just use the generated merkle tree here instead
-    // of regenerating it from the transfers and channel
-    updatedActiveTransfers: FullTransferState[],
-    proposedTransfer?: FullTransferState,
-  ): Result<boolean, QueuedUpdateError> {
-    // If both are a setup update, your update would fail and the ultimate
-    // result (a channel is set up) is achieved
-    if (receivedUpdate.type === UpdateType.setup && proposedUpdate.type === UpdateType.setup) {
-      return Result.ok(true);
-    }
-
-    // If both are a deposit update, your deposit is implicitly included
-    if (receivedUpdate.type === UpdateType.deposit && proposedUpdate.type === UpdateType.deposit) {
-      return Result.ok(true);
-    }
-
-    // If both are a resolve, it would *not* include your proposed update since
-    // only the responder to a transfer can call resolve. Updates by definition
-    // are different
-    if (receivedUpdate.type === UpdateType.resolve && proposedUpdate.type === UpdateType.resolve) {
-      return Result.ok(false);
-    }
-
-    // If both are a create, it would include your proposed update IFF the
-    // merkle root *after* the update was applied includes the transfer you
-    // attempted to create
-    if (receivedUpdate.type === UpdateType.create && proposedUpdate.type === UpdateType.create) {
-      if (!proposedTransfer) {
-        return Result.fail(
-          new QueuedUpdateError(QueuedUpdateError.reasons.MissingTransferForUpdateInclusion, {
-            proposedUpdate,
-            receivedUpdate,
-          }),
-        );
-      }
-      const { tree, root } = generateMerkleTreeData(updatedActiveTransfers);
-      const included = tree.verify(
-        tree.getHexProof(hashCoreTransferState(proposedTransfer)),
-        hashCoreTransferState(proposedTransfer),
-        root,
-      );
-      return Result.ok(included);
-    }
-
-    // Otherwise, updates are different types so it does not include your
-    // proposed update
-    return Result.ok(false);
-  }
-
   /*
    * ***************************
    * *** CORE PUBLIC METHODS ***
@@ -501,7 +472,7 @@ export class Vector implements IVectorProtocol {
   // as well as contextual validation (i.e. do I have sufficient funds to
   // create this transfer, is the channel in dispute, etc.)
 
-  public async setup(params: ProtocolParams.Setup): Promise<Result<FullChannelState, OutboundChannelUpdateError>> {
+  public async setup(params: ProtocolParams.Setup): Promise<Result<FullChannelState, QueuedUpdateError>> {
     const method = "setup";
     const methodId = getRandomBytes32();
     this.logger.debug({ method, methodId }, "Method start");
@@ -521,8 +492,8 @@ export class Vector implements IVectorProtocol {
     );
     if (create2Res.isError) {
       return Result.fail(
-        new OutboundChannelUpdateError(
-          OutboundChannelUpdateError.reasons.Create2Failed,
+        new QueuedUpdateError(
+          QueuedUpdateError.reasons.Create2Failed,
           { details: params, channelAddress: "", type: UpdateType.setup },
           undefined,
           {
@@ -568,7 +539,7 @@ export class Vector implements IVectorProtocol {
   }
 
   // Adds a deposit that has *already occurred* onchain into the multisig
-  public async deposit(params: ProtocolParams.Deposit): Promise<Result<FullChannelState, OutboundChannelUpdateError>> {
+  public async deposit(params: ProtocolParams.Deposit): Promise<Result<FullChannelState, QueuedUpdateError>> {
     const method = "deposit";
     const methodId = getRandomBytes32();
     this.logger.debug({ method, methodId }, "Method start");
@@ -597,7 +568,7 @@ export class Vector implements IVectorProtocol {
     return returnVal;
   }
 
-  public async create(params: ProtocolParams.Create): Promise<Result<FullChannelState, OutboundChannelUpdateError>> {
+  public async create(params: ProtocolParams.Create): Promise<Result<FullChannelState, QueuedUpdateError>> {
     const method = "create";
     const methodId = getRandomBytes32();
     this.logger.debug({ method, methodId }, "Method start");
@@ -626,7 +597,7 @@ export class Vector implements IVectorProtocol {
     return returnVal;
   }
 
-  public async resolve(params: ProtocolParams.Resolve): Promise<Result<FullChannelState, OutboundChannelUpdateError>> {
+  public async resolve(params: ProtocolParams.Resolve): Promise<Result<FullChannelState, QueuedUpdateError>> {
     const method = "resolve";
     const methodId = getRandomBytes32();
     this.logger.debug({ method, methodId }, "Method start");
