@@ -175,6 +175,7 @@ export class ConfigServiceError extends RouterError {
   static readonly type = "ConfigServiceError";
 
   static readonly reasons = {
+    CouldNotGetAssetBalance: "Could not get asset balance",
     UnableToGetRebalanceProfile: "Could not get rebalance profile",
     UnableToFindSwap: "Could not get matching swap",
   } as const;

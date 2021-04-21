@@ -1,4 +1,6 @@
-import { AllowedSwap, Result } from "@connext/vector-types";
+import { AllowedSwap, Result, jsonifyError } from "@connext/vector-types";
+import { JsonRpcProvider } from "@ethersproject/providers";
+import { VectorChainReader, StableSwap } from "@connext/vector-contracts";
 import { getAddress } from "@ethersproject/address";
 import { BigNumber } from "@ethersproject/bignumber";
 import { Contract } from "@ethersproject/contracts";
@@ -90,34 +92,70 @@ export const onSwapGivenIn = async (
   toAssetId: string,
   toChainId: number,
   routerSignerAddress: string,
-): Promise<void> => {
-  // get balancer contract abi
-  // const balancerAbi = 
-  // get stableSwap address ( we only need to calculate stuff so it doesn't have to be on every other chain)
-  // provider based on which chain we deploy stableSwap contract.
-
-  // const StableSwap = new Contract(routerSignerAddress)
-
+  chainService: VectorChainReader,
+): Promise<Result<{ priceImpact: string; amountOut: string }, ConfigServiceError>> => {
   // get router balance for each chain for balances array to get the trade size.
   // we will getOnChainBalance for routerSignerAddress
   // get balance of token for fromChainId for router
-  // const fromChainRouterBalance = getOnchainBalance(fromAssetId, routerSignerAddress, fromChainId);
+  const fromChainRouterBalance = await chainService.getOnchainBalance(fromAssetId, routerSignerAddress, fromChainId);
+  if (fromChainRouterBalance.isError) {
+    return Result.fail(
+      new ConfigServiceError(ConfigServiceError.reasons.CouldNotGetAssetBalance, {
+        transferAmount,
+        fromAssetId,
+        fromChainId,
+        routerSignerAddress,
+      }),
+    );
+  }
 
-  // const ToChainRouterBalance = getOnchainBalance(toAssetId, routerSignerAddress, toChainId);
+  const toChainRouterBalance = await chainService.getOnchainBalance(toAssetId, routerSignerAddress, toChainId);
+  if (toChainRouterBalance.isError) {
+    return Result.fail(
+      new ConfigServiceError(ConfigServiceError.reasons.CouldNotGetAssetBalance, {
+        transferAmount,
+        toAssetId,
+        toChainId,
+        routerSignerAddress,
+      }),
+    );
+  }
 
   // Assumption we are only considering the balance on fromChain and toChain
-  // const balances = [fromChainRouterBalance, ToChainRouterBalance ];
+  const balances = [fromChainRouterBalance, toChainRouterBalance];
 
-  const fromAmountBn = BigNumber.from(transferAmount);
-  // Computes how many tokens can be taken out of a pool if `tokenAmountIn` are sent, given the current balances.
-  // const amountOut = await stableSwap.onSwapGivenIn(fromAmountBn, balances, 0, 1);
+  const transferAmountBn = BigNumber.from(transferAmount);
+  // get stableSwap address ( we only need to calculate stuff so it doesn't have to be on every other chain)
+  // provider based on which chain we deploy stableSwap contract.
 
-  // After we get the amountOut here
-  // we need to calculate the Price Impact: the difference between the market price and estimated price due to trade size
-  // Here, Market Price could be transferAmount only as stable token & 1:1
-  // PriceImpact is going to be ((marketPrice(i.e transferAmount) - amountOut) * 100)/marketPrice
+  const StableSwapGoerliAddress = "";
+  const goerliProvider: JsonRpcProvider = "";
 
-  // return {priceImpact, amountOut}
+  try {
+    const stableSwap = new Contract(StableSwapGoerliAddress, StableSwap, goerliProvider);
+    // Computes how many tokens can be taken out of a pool if `tokenAmountIn` are sent, given the current balances.
+    const amountOut = await stableSwap.onSwapGivenIn(transferAmountBn, balances, 0, 1);
+    // After we get the amountOut here
+    // we need to calculate the Price Impact: the difference between the market price and estimated price due to trade size
+    // Here, Market Price could be transferAmount only as stable token & 1:1
+    // PriceImpact is going to be ((marketPrice(i.e transferAmount) - amountOut) * 100)/marketPrice
+
+    const marketPrice = transferAmountBn;
+    const priceImpact = marketPrice.sub(amountOut).mul(100).div(marketPrice);
+    console.log(priceImpact);
+
+    return Result.ok({ priceImpact: priceImpact.toString(), amountOut: amountOut.toString() });
+  } catch (e) {
+    return Result.fail(
+      new ConfigServiceError(ConfigServiceError.reasons.CouldNotGetAssetBalance, {
+        error: jsonifyError(e),
+        transferAmount,
+        toAssetId,
+        toChainId,
+        routerSignerAddress,
+      }),
+    );
+  }
 };
 
 export const shouldChargeFees = (
