@@ -1,4 +1,4 @@
-import { VectorChainReader } from "@connext/vector-contracts";
+import { VectorChainReader, waitForTransaction } from "@connext/vector-contracts";
 import {
   AllowedSwap,
   HydratedProviders,
@@ -12,6 +12,7 @@ import {
   getConfirmationsForChain,
 } from "@connext/vector-types";
 import { getRandomBytes32 } from "@connext/vector-utils";
+import { TransactionReceipt } from "@ethersproject/abstract-provider";
 import { BigNumber } from "@ethersproject/bignumber";
 import { parseUnits } from "@ethersproject/units";
 import { Wallet } from "@ethersproject/wallet";
@@ -23,7 +24,8 @@ import { v4 as uuidv4 } from "uuid";
 import { getConfig } from "../config";
 import { AutoRebalanceServiceError } from "../errors";
 import { parseBalanceToNumber, rebalancedTokens } from "../metrics";
-import { IRouterStore, RouterRebalanceStatus } from "./store";
+import { queueRebalance } from "./rebalanceQueue";
+import { IRouterStore, RouterRebalanceRecord, RouterRebalanceStatus } from "./store";
 
 const config = getConfig();
 
@@ -80,6 +82,26 @@ export const autoRebalanceTask = async (
 };
 
 export const rebalanceIfNeeded = async (
+  swap: AllowedSwap,
+  logger: BaseLogger,
+  wallet: Wallet,
+  chainService: VectorChainReader,
+  hydratedProviders: HydratedProviders,
+  store: IRouterStore,
+): Promise<Result<undefined, AutoRebalanceServiceError>> => {
+  return await queueRebalance<Result<undefined, AutoRebalanceServiceError>>(swap, () => {
+    return _rebalanceIfNeeded(
+      swap,
+      logger,
+      wallet,
+      chainService,
+      hydratedProviders,
+      store,
+    )
+  });
+}
+
+const _rebalanceIfNeeded = async (
   swap: AllowedSwap,
   logger: BaseLogger,
   wallet: Wallet,
@@ -179,87 +201,206 @@ export const rebalanceIfNeeded = async (
   // on each rebalance interval, check rebalance thresholds for allowedSwaps
   // if out of threshold, check if active rebalance for that swap exists
   // if it does not, create one and go through the approve/execute flow
-  // if it does exist, check status. if status == {completed: true} and if there is a tx in the response (is the case with matic withdraw), send the tx, and mark as completed. if no tx in the response, mark as completed immediately
-  // if it is not completed, wait for next poll
+  // if it does exist, check status. if status == {completed: true} and/or
+  // if there is a tx in the response (is the case with matic withdraw),
+  // send the tx, and mark as completed. if no tx in the response, mark as completed immediately
+  // if it is not finished, wait for next poll
 
   // check if an active rebalance is in progress
-  let latest = await store.getLatestRebalance(swap);
-  console.log("latest: ", latest);
-  if (!latest) {
-    // set dummy value
-    latest = {
-      status: RouterRebalanceStatus.COMPLETE,
+  let latestRebalance = await store.getLatestRebalance(swap);
+
+  if (!latestRebalance || latestRebalance.status === RouterRebalanceStatus.COMPLETE) {
+    // If there's no record of a previous rebalance, or if the last one finished successfully,
+    // create a new rebalance record.
+    latestRebalance = {
       swap,
-      approveHash: undefined,
-      executeHash: undefined,
-      completeHash: undefined,
-      id: uuidv4(), // dummy value, set by db
-    };
+      status: RouterRebalanceStatus.PENDING,
+      id: uuidv4()
+    } as RouterRebalanceRecord;
+    await store.saveRebalance(latestRebalance);
   }
 
-  if (latest.status === RouterRebalanceStatus.COMPLETE) {
-    // approve rebalance
-    const approveHash = await approveRebalance(amountToSend, swap, hydratedProviders, wallet, logger, methodId);
-    if (approveHash.isError) {
-      return Result.fail(approveHash.getError()!);
+  // STEP 1: Approve rebalance.
+  if (latestRebalance.status === RouterRebalanceStatus.PENDING) {
+    // Check if Tx already sent.
+    let { approveHash, approveChain } = latestRebalance;
+    if (!approveHash) {
+      const approveResult = await approveRebalance(
+        amountToSend,
+        swap,
+        hydratedProviders,
+        wallet,
+        logger,
+        methodId,
+      );
+      // Check for error.
+      if (approveResult.isError) {
+        return Result.fail(approveResult.getError()!);
+      }
+
+      const value = approveResult.getValue();
+      approveHash = value.transactionHash;
+      approveChain = value.transactionChainId;
+      if (value.isRequired) {
+          // Tx was successfully sent if needed.
+        latestRebalance = {
+          ...latestRebalance,
+          approveHash,
+          approveChain,
+        } as RouterRebalanceRecord;
+        await store.saveRebalance(latestRebalance);
+      }
     }
-    // save status
-    latest = {
-      ...latest,
+
+    // wait confirmation if the approveHash is defined (it will be undefined in the event
+    // an approve tx was not needed).
+    if (approveHash && approveChain) {
+      // Await confirmation.
+      const confirmationResult = await getConfirmation(
+        approveHash,
+        approveChain,
+        swap,
+        hydratedProviders,
+        logger,
+        methodId,
+      );
+      if (confirmationResult.isError) {
+        return Result.fail(confirmationResult.getError()!);
+      }
+    }
+    
+    // Save approved status. Once method above returns, receipt has been received.
+    latestRebalance = {
+      ...latestRebalance,
       status: RouterRebalanceStatus.APPROVED,
-      approveHash: approveHash.getValue(),
     };
-    await store.saveRebalance(latest);
+    await store.saveRebalance(latestRebalance);
   }
 
-  if (latest.status === RouterRebalanceStatus.APPROVED) {
-    const executeHash = await executeRebalance(amountToSend, swap, hydratedProviders, wallet, logger, methodId);
-    if (executeHash.isError) {
-      return Result.fail(executeHash.getError()!);
+  // STEP 2. Execute.
+  if (latestRebalance.status === RouterRebalanceStatus.APPROVED) {
+    // Check if Tx already sent.
+    let { executeHash, executeChain } = latestRebalance;
+    if (!executeHash) {
+      const executeResult = await executeRebalance(
+        amountToSend,
+        swap,
+        hydratedProviders,
+        wallet,
+        logger,
+        methodId,
+      );
+      // Check for error.
+      if (executeResult.isError) {
+        return Result.fail(executeResult.getError()!);
+      }
+      const value = executeResult.getValue();
+      executeHash = value.transactionHash;
+      executeChain = value.transactionChainId;
+      // Save hash.
+      latestRebalance = {
+        ...latestRebalance,
+        executeHash,
+        executeChain,
+      } as RouterRebalanceRecord;
+      await store.saveRebalance(latestRebalance);
     }
-    // save status
-    latest = {
-      ...latest,
-      status: RouterRebalanceStatus.EXECUTED,
-      executeHash: executeHash.getValue(),
+
+    // Await confirmation,
+    const confirmationResult = await getConfirmation(
+      executeHash,
+      // We can force unwrap here as it's impossible for the executeHash to have been
+      // saved/defined without executeChain being saved/defined.
+      executeChain!,
+      swap,
+      hydratedProviders,
+      logger,
+      methodId,
+    );
+    if (confirmationResult.isError) {
+      return Result.fail(confirmationResult.getError()!);
+    }
+    // Save executed status. Once method above returns, receipt has been received.
+    latestRebalance = {
+      ...latestRebalance,
+      status: RouterRebalanceStatus.EXECUTED
     };
-    await store.saveRebalance(latest);
+    await store.saveRebalance(latestRebalance);
   }
 
-  if (latest.status === RouterRebalanceStatus.EXECUTED) {
-    if (!latest.executeHash) {
+  // STEP 3. Complete rebalance.
+  if (latestRebalance.status === RouterRebalanceStatus.EXECUTED) {
+    // Ensure that the rebalance has been executed.
+    if (!latestRebalance.executeHash) {
       return Result.fail(
         new AutoRebalanceServiceError(
           AutoRebalanceServiceError.reasons.ExecutedWithoutHash,
           swap.fromChainId,
           swap.fromAssetId,
-          { method, methodId, latest },
+          { method, methodId, latestRebalance },
         ),
       );
     }
-    const completedHash = await completeRebalance(
-      amountToSend,
-      latest.executeHash,
-      swap,
-      hydratedProviders,
-      wallet,
-      logger,
-      methodId,
-    );
-    if (completedHash.isError) {
-      return Result.fail(completedHash.getError()!);
+
+    // Check if Tx already sent.
+    let { completeHash, completeChain } = latestRebalance;
+    if (!completeHash) {
+      const completedResult = await completeRebalance(
+        amountToSend,
+        latestRebalance.executeHash,
+        swap,
+        hydratedProviders,
+        wallet,
+        logger,
+        methodId,
+      );
+      if (completedResult.isError) {
+        return Result.fail(completedResult.getError()!);
+      }
+      const value = completedResult.getValue();
+      if (value.isRequired) {
+        if (!completedResult.getValue().didComplete) {
+          // Rebalance hasn't completed yet, so we'll return here
+          // and retry on the next call of this method.
+          return Result.ok(undefined);
+        }
+        const value = completedResult.getValue();
+        completeHash = value.transactionHash;
+        completeChain = value.transactionChainId;
+        latestRebalance = {
+          ...latestRebalance,
+          completeHash,
+          completeChain,
+        } as RouterRebalanceRecord;
+        await store.saveRebalance(latestRebalance);
+      }
     }
-    if (!completedHash.getValue().complete) {
-      return Result.ok(undefined);
+
+    // We do a separate check here once we're certain the above block has executed,
+    // guaranteeing completion tx has been sent if needed.
+    if (completeHash && completeChain) {
+      // Completion tx was needed and has been sent. Wait for confirmation.
+      const confirmationResult = await getConfirmation(
+        completeHash,
+        completeChain,
+        swap,
+        hydratedProviders,
+        logger,
+        methodId,
+      );
+      if (confirmationResult.isError) {
+        return Result.fail(confirmationResult.getError()!);
+      }
     }
-    // save status
-    latest = {
-      ...latest,
-      status: RouterRebalanceStatus.COMPLETE,
-      completeHash: completedHash.getValue().transactionHash,
+
+    // Save complete status.
+    latestRebalance = {
+      ...latestRebalance,
+      status: RouterRebalanceStatus.COMPLETE
     };
-    await store.saveRebalance(latest);
+    await store.saveRebalance(latestRebalance);
   }
+
   return Result.ok(undefined);
 };
 
@@ -271,7 +412,7 @@ export const approveRebalance = async (
   wallet: Wallet,
   logger: BaseLogger,
   methodId: string = getRandomBytes32(),
-): Promise<Result<string | undefined, AutoRebalanceServiceError>> => {
+): Promise<Result<{ isRequired: boolean; transactionHash?: string; transactionChainId?: number }, AutoRebalanceServiceError>> => {
   const method = "approveRebalance";
   logger.debug({ method, methodId, swap, amount: amount.toString() }, "Method started");
 
@@ -305,7 +446,8 @@ export const approveRebalance = async (
       },
       "Approval request complete",
     );
-    if (!approveRes.data.transaction) {
+    const isRequired = !!approveRes.data.transaction;
+    if (!isRequired) {
       logger.info(
         {
           method,
@@ -315,7 +457,9 @@ export const approveRebalance = async (
         },
         "Approval not needed",
       );
-      return Result.ok(undefined);
+      return Result.ok({
+        isRequired
+      });
     }
     logger.info(
       {
@@ -325,8 +469,9 @@ export const approveRebalance = async (
       },
       "Approval required",
     );
+    const transactionChainId = swap.fromChainId;
     const transactionHash = await sendTransaction(
-      swap.fromChainId,
+      transactionChainId,
       approveRes.data.transaction,
       wallet,
       hydratedProviders,
@@ -334,7 +479,11 @@ export const approveRebalance = async (
       method,
       methodId,
     );
-    return Result.ok(transactionHash);
+    return Result.ok({
+      isRequired,
+      transactionHash,
+      transactionChainId,
+    });
   } catch (e) {
     return Result.fail(
       new AutoRebalanceServiceError(
@@ -355,7 +504,7 @@ export const executeRebalance = async (
   wallet: Wallet,
   logger: BaseLogger,
   methodId: string = getRandomBytes32(),
-): Promise<Result<string, AutoRebalanceServiceError>> => {
+): Promise<Result<{ transactionHash: string; transactionChainId: number; }, AutoRebalanceServiceError>> => {
   // execute rebalance
   const method = "executeRebalance";
   logger.debug({ method, methodId, swap, amount: amount.toString() }, "Method started");
@@ -399,9 +548,9 @@ export const executeRebalance = async (
         ),
       );
     }
-
+    const transactionChainId = swap.fromChainId;
     const transactionHash = await sendTransaction(
-      swap.fromChainId,
+      transactionChainId,
       rebalanceRes.data.transaction,
       wallet,
       hydratedProviders,
@@ -409,7 +558,10 @@ export const executeRebalance = async (
       method,
       methodId,
     );
-    return Result.ok(transactionHash);
+    return Result.ok({
+      transactionHash,
+      transactionChainId,
+    });
   } catch (e) {
     return Result.fail(
       new AutoRebalanceServiceError(
@@ -432,7 +584,7 @@ export const completeRebalance = async (
   wallet: Wallet,
   logger: BaseLogger,
   methodId: string = getRandomBytes32(),
-): Promise<Result<{ transactionHash?: string; complete: boolean }, AutoRebalanceServiceError>> => {
+): Promise<Result<{ isRequired: boolean; didComplete: boolean; transactionHash?: string; transactionChainId?: number }, AutoRebalanceServiceError>> => {
   // complete/check rebalance status
   const method = "completeRebalance";
   logger.debug({ method, methodId, swap, amount: amount.toString() }, "Method started");
@@ -453,7 +605,7 @@ export const completeRebalance = async (
         statusUrl,
         postBody,
       },
-      "Sending rebalance complete request",
+      "Sending rebalance status request",
     );
     // check status
     const statusRes = await axios.post(statusUrl, postBody);
@@ -468,17 +620,18 @@ export const completeRebalance = async (
     const { status } = statusRes.data;
     if (!status || !status.completed) {
       logger.info({ status, method, intervalId: methodId }, "Rebalance not completed");
-      return Result.ok({ complete: false });
+      return Result.ok({ isRequired: true, didComplete: status.completed });
     }
     // is completed, check if tx is needed
     if (!status.transaction) {
       logger.info({ intervalId: methodId }, "No completion tx required");
-      return Result.ok({ complete: true });
+      return Result.ok({ isRequired: false, didComplete: status.completed });
     }
     logger.info({ status, method, intervalId: methodId }, "Sending complete tx");
     // need to send tx to complete rebalance
+    const transactionChainId = status.transaction.chainId;
     const transactionHash = await sendTransaction(
-      status.transaction.chainId,
+      transactionChainId,
       status.transaction,
       wallet,
       hydratedProviders,
@@ -490,7 +643,12 @@ export const completeRebalance = async (
       { transactionHash, transaction: status.transaction, method, intervalId: methodId },
       "Sent execute tx, completed",
     );
-    return Result.ok({ transactionHash, complete: true });
+    return Result.ok({
+      isRequired: true,
+      didComplete: true,
+      transactionHash,
+      transactionChainId,
+    });
   } catch (e) {
     return Result.fail(
       new AutoRebalanceServiceError(
@@ -544,14 +702,38 @@ const sendTransaction = async (
     },
     "Tx sent",
   );
-  const receipt = await response.wait(getConfirmationsForChain(chainId));
+  return response.hash;
+};
+
+const getConfirmation = async (
+  txHash: string,
+  chainId: number,
+  swap: AllowedSwap,
+  providers: HydratedProviders,
+  logger: BaseLogger,
+  method: string = "getConfirmation",
+  methodId: string = getRandomBytes32()
+): Promise<Result<TransactionReceipt, AutoRebalanceServiceError>> => {
+  const result = await waitForTransaction(providers[chainId], txHash, getConfirmationsForChain(chainId));
+  const error = result.getError()
+  if (error) {
+    // Result's error would be of type ChainError, hence the need for wrapping here.
+    return Result.fail(
+      new AutoRebalanceServiceError(
+        AutoRebalanceServiceError.reasons.CouldNotCompleteRebalance,
+        chainId,
+        swap.fromAssetId,
+        { methodId, method, error: jsonifyError(error) },
+      ),
+    );
+  }
   logger.info(
     {
       method,
       intervalId: methodId,
-      hash: response.hash,
+      hash: txHash,
     },
     "Tx mined",
   );
-  return receipt.transactionHash;
-};
+  return Result.ok(result.getValue());
+}

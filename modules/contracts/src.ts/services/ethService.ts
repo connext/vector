@@ -52,6 +52,9 @@ export const waitForTransaction = async (
 ): Promise<Result<TransactionReceipt, ChainError>> => {
   try {
     const receipt = await provider.waitForTransaction(transactionHash, confirmations, timeout);
+    if (!receipt) {
+      return Result.fail(new ChainError(ChainError.reasons.TransferNotFound, { receipt }));
+    }
     if (receipt.status === 0) {
       return Result.fail(new ChainError(ChainError.reasons.TxReverted, { receipt }));
     }
