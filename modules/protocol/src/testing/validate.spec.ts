@@ -35,7 +35,7 @@ import {
 import Sinon from "sinon";
 import { AddressZero } from "@ethersproject/constants";
 
-import { OutboundChannelUpdateError, InboundChannelUpdateError, ValidationError } from "../errors";
+import { QueuedUpdateError, ValidationError } from "../errors";
 import * as vectorUtils from "../utils";
 import * as validation from "../validate";
 import * as vectorUpdate from "../update";
@@ -757,7 +757,7 @@ describe.skip("validateParamsAndApplyUpdate", () => {
       activeTransfers,
       signer.publicIdentifier,
     );
-    expect(result.getError()?.message).to.be.eq(OutboundChannelUpdateError.reasons.OutboundValidationFailed);
+    expect(result.getError()?.message).to.be.eq(QueuedUpdateError.reasons.OutboundValidationFailed);
     expect(result.getError()?.context.params).to.be.deep.eq(params);
     expect(result.getError()?.context.state).to.be.deep.eq(previousState);
     expect(result.getError()?.context.error).to.be.eq("fail");
@@ -804,7 +804,7 @@ describe("validateAndApplyInboundUpdate", () => {
 
   // Create helper to run test
   const runErrorTest = async (
-    errorMessage: Values<typeof InboundChannelUpdateError.reasons>,
+    errorMessage: Values<typeof QueuedUpdateError.reasons>,
     signer: ChannelSigner = signers[0],
     context: any = {},
   ) => {
@@ -972,7 +972,7 @@ describe("validateAndApplyInboundUpdate", () => {
       for (const test of tests) {
         it(test.name, async () => {
           update = { ...valid, ...(test.overrides ?? {}) } as any;
-          await runErrorTest(InboundChannelUpdateError.reasons.MalformedUpdate, signers[0], {
+          await runErrorTest(QueuedUpdateError.reasons.MalformedUpdate, signers[0], {
             updateError: test.error,
           });
         });
@@ -1037,7 +1037,7 @@ describe("validateAndApplyInboundUpdate", () => {
               ...test.overrides,
             },
           };
-          await runErrorTest(InboundChannelUpdateError.reasons.MalformedDetails, signers[0], {
+          await runErrorTest(QueuedUpdateError.reasons.MalformedDetails, signers[0], {
             detailsError: test.error,
           });
         });
@@ -1077,7 +1077,7 @@ describe("validateAndApplyInboundUpdate", () => {
               ...test.overrides,
             },
           };
-          await runErrorTest(InboundChannelUpdateError.reasons.MalformedDetails, signers[0], {
+          await runErrorTest(QueuedUpdateError.reasons.MalformedDetails, signers[0], {
             detailsError: test.error,
           });
         });
@@ -1182,7 +1182,7 @@ describe("validateAndApplyInboundUpdate", () => {
               ...test.overrides,
             },
           };
-          await runErrorTest(InboundChannelUpdateError.reasons.MalformedDetails, signers[0], {
+          await runErrorTest(QueuedUpdateError.reasons.MalformedDetails, signers[0], {
             detailsError: test.error,
           });
         });
@@ -1247,7 +1247,7 @@ describe("validateAndApplyInboundUpdate", () => {
               ...test.overrides,
             },
           };
-          await runErrorTest(InboundChannelUpdateError.reasons.MalformedDetails, signers[0], {
+          await runErrorTest(QueuedUpdateError.reasons.MalformedDetails, signers[0], {
             detailsError: test.error,
           });
         });
@@ -1354,7 +1354,7 @@ describe("validateAndApplyInboundUpdate", () => {
       // Create update
       update = createTestChannelUpdate(UpdateType.resolve, { aliceSignature, bobSignature, nonce: updateNonce });
       activeTransfers = [createTestFullHashlockTransferState({ transferId: update.details.transferId })];
-      await runErrorTest(InboundChannelUpdateError.reasons.CouldNotGetFinalBalance, undefined, {
+      await runErrorTest(QueuedUpdateError.reasons.CouldNotGetResolvedBalance, undefined, {
         chainServiceError: jsonifyError(chainErr),
       });
     });
@@ -1365,7 +1365,7 @@ describe("validateAndApplyInboundUpdate", () => {
       // Create update
       update = createTestChannelUpdate(UpdateType.resolve, { aliceSignature, bobSignature, nonce: updateNonce });
       activeTransfers = [];
-      await runErrorTest(InboundChannelUpdateError.reasons.TransferNotActive, signers[0], { existing: [] });
+      await runErrorTest(QueuedUpdateError.reasons.TransferNotActive, signers[0], { existing: [] });
     });
 
     it("should fail if applyUpdate fails", async () => {
@@ -1378,7 +1378,7 @@ describe("validateAndApplyInboundUpdate", () => {
       // Create update
       update = createTestChannelUpdate(UpdateType.setup, { aliceSignature, bobSignature, nonce: updateNonce });
       activeTransfers = [];
-      await runErrorTest(InboundChannelUpdateError.reasons.ApplyUpdateFailed, signers[0], {
+      await runErrorTest(QueuedUpdateError.reasons.ApplyUpdateFailed, signers[0], {
         applyUpdateError: err.message,
         applyUpdateContext: err.context,
       });
@@ -1393,7 +1393,7 @@ describe("validateAndApplyInboundUpdate", () => {
       // Create update
       update = createTestChannelUpdate(UpdateType.setup, { aliceSignature, bobSignature, nonce: updateNonce });
       activeTransfers = [];
-      await runErrorTest(InboundChannelUpdateError.reasons.BadSignatures, signers[0], {
+      await runErrorTest(QueuedUpdateError.reasons.BadSignatures, signers[0], {
         validateSignatureError: "fail",
       });
     });
@@ -1403,7 +1403,7 @@ describe("validateAndApplyInboundUpdate", () => {
     // Set a passing mocked env
     prepEnv();
     update = createTestChannelUpdate(UpdateType.setup, { nonce: 2 });
-    await runErrorTest(InboundChannelUpdateError.reasons.InvalidUpdateNonce, signers[0]);
+    await runErrorTest(QueuedUpdateError.reasons.InvalidUpdateNonce, signers[0]);
   });
 
   it("should fail if externalValidation.validateInbound fails", async () => {
@@ -1413,7 +1413,7 @@ describe("validateAndApplyInboundUpdate", () => {
     externalValidationStub.validateInbound.resolves(Result.fail(new Error("fail")));
 
     update = createTestChannelUpdate(UpdateType.setup, { nonce: 1, aliceSignature: undefined });
-    await runErrorTest(InboundChannelUpdateError.reasons.ExternalValidationFailed, signers[0], {
+    await runErrorTest(QueuedUpdateError.reasons.ExternalValidationFailed, signers[0], {
       externalValidationError: "fail",
     });
   });
@@ -1425,7 +1425,7 @@ describe("validateAndApplyInboundUpdate", () => {
     validateParamsAndApplyUpdateStub.resolves(Result.fail(new ChainError("fail")));
 
     update = createTestChannelUpdate(UpdateType.setup, { nonce: 1, aliceSignature: undefined });
-    await runErrorTest(InboundChannelUpdateError.reasons.ApplyAndValidateInboundFailed, signers[0], {
+    await runErrorTest(QueuedUpdateError.reasons.ApplyAndValidateInboundFailed, signers[0], {
       validationError: "fail",
       validationContext: {},
     });
@@ -1438,7 +1438,7 @@ describe("validateAndApplyInboundUpdate", () => {
     validateChannelUpdateSignaturesStub.resolves(Result.fail(new Error("fail")));
 
     update = createTestChannelUpdate(UpdateType.setup, { nonce: 1, aliceSignature: undefined });
-    await runErrorTest(InboundChannelUpdateError.reasons.BadSignatures, signers[0], { signatureError: "fail" });
+    await runErrorTest(QueuedUpdateError.reasons.BadSignatures, signers[0], { signatureError: "fail" });
   });
 
   it("should fail if generateSignedChannelCommitment fails", async () => {
@@ -1448,7 +1448,7 @@ describe("validateAndApplyInboundUpdate", () => {
     generateSignedChannelCommitmentStub.resolves(Result.fail(new Error("fail")));
 
     update = createTestChannelUpdate(UpdateType.setup, { nonce: 1, aliceSignature: undefined });
-    await runErrorTest(InboundChannelUpdateError.reasons.GenerateSignatureFailed, signers[0], {
+    await runErrorTest(QueuedUpdateError.reasons.GenerateSignatureFailed, signers[0], {
       signatureError: "fail",
     });
   });

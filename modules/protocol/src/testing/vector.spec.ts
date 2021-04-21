@@ -23,7 +23,7 @@ import {
 } from "@connext/vector-types";
 import Sinon from "sinon";
 
-import { OutboundChannelUpdateError } from "../errors";
+import { QueuedUpdateError } from "../errors";
 import { Vector } from "../vector";
 import * as vectorSync from "../sync";
 
@@ -44,7 +44,7 @@ describe("Vector", () => {
     storeService.getChannelStates.resolves([]);
     // Mock sync outbound
     Sinon.stub(vectorSync, "outbound").resolves(
-      Result.ok({ updatedChannel: createTestChannelState(UpdateType.setup).channel }),
+      Result.ok({ updatedChannel: createTestChannelState(UpdateType.setup).channel, successfullyApplied: true }),
     );
   });
 
@@ -115,7 +115,7 @@ describe("Vector", () => {
       chainReader.getChannelFactoryBytecode.resolves(Result.fail(new ChainError(ChainError.reasons.ProviderNotFound)));
       const { details } = createTestUpdateParams(UpdateType.setup);
       const result = await vector.setup(details);
-      expect(result.getError()?.message).to.be.eq(OutboundChannelUpdateError.reasons.Create2Failed);
+      expect(result.getError()?.message).to.be.eq(QueuedUpdateError.reasons.Create2Failed);
     });
 
     describe("should validate parameters", () => {
@@ -198,7 +198,7 @@ describe("Vector", () => {
           const ret = await vector.setup(t.params);
           expect(ret.isError).to.be.true;
           const error = ret.getError();
-          expect(error?.message).to.be.eq(OutboundChannelUpdateError.reasons.InvalidParams);
+          expect(error?.message).to.be.eq(QueuedUpdateError.reasons.InvalidParams);
           expect(error?.context?.paramsError).to.include(t.error);
         });
       }
@@ -265,7 +265,7 @@ describe("Vector", () => {
           const ret = await vector.deposit(params);
           expect(ret.isError).to.be.true;
           const err = ret.getError();
-          expect(err?.message).to.be.eq(OutboundChannelUpdateError.reasons.InvalidParams);
+          expect(err?.message).to.be.eq(QueuedUpdateError.reasons.InvalidParams);
           expect(err?.context?.paramsError).to.include(error);
         });
       }
@@ -370,7 +370,7 @@ describe("Vector", () => {
           const ret = await vector.create(params);
           expect(ret.isError).to.be.true;
           const err = ret.getError();
-          expect(err?.message).to.be.eq(OutboundChannelUpdateError.reasons.InvalidParams);
+          expect(err?.message).to.be.eq(QueuedUpdateError.reasons.InvalidParams);
           expect(err?.context?.paramsError).to.include(error);
         });
       }
@@ -444,7 +444,7 @@ describe("Vector", () => {
           const ret = await vector.resolve(params);
           expect(ret.isError).to.be.true;
           const err = ret.getError();
-          expect(err?.message).to.be.eq(OutboundChannelUpdateError.reasons.InvalidParams);
+          expect(err?.message).to.be.eq(QueuedUpdateError.reasons.InvalidParams);
           expect(err?.context?.paramsError).to.include(error);
         });
       }

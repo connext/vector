@@ -8,6 +8,7 @@ import {
   UpdateParams,
   Values,
   ProtocolError,
+  Result,
 } from "@connext/vector-types";
 
 export class ValidationError extends ProtocolError {
@@ -56,78 +57,6 @@ export class ValidationError extends ProtocolError {
     );
   }
 }
-
-// Thrown by the protocol when applying an update
-export class InboundChannelUpdateError extends ProtocolError {
-  static readonly type = "InboundChannelUpdateError";
-
-  static readonly reasons = {
-    ApplyAndValidateInboundFailed: "Failed to validate + apply incoming update",
-    ApplyUpdateFailed: "Failed to apply update",
-    BadSignatures: "Could not recover signers",
-    CannotSyncSetup: "Cannot sync a setup update, must restore",
-    CouldNotGetParams: "Could not generate params from update",
-    CouldNotGetFinalBalance: "Could not retrieve resolved balance from chain",
-    GenerateSignatureFailed: "Failed to generate channel signature",
-    ExternalValidationFailed: "Failed external inbound validation",
-    InvalidUpdateNonce: "Update nonce must be previousState.nonce + 1",
-    MalformedDetails: "Channel update details are malformed",
-    MalformedUpdate: "Channel update is malformed",
-    RestoreNeeded: "Cannot sync channel from counterparty, must restore",
-    SaveChannelFailed: "Failed to save channel",
-    StoreFailure: "Failed to pull data from store",
-    StaleChannel: "Channel state is behind, cannot apply update",
-    StaleUpdate: "Update does not progress channel nonce",
-    SyncFailure: "Failed to sync channel from counterparty update",
-    TransferNotActive: "Transfer not found in activeTransfers",
-  } as const;
-
-  constructor(
-    public readonly message: Values<typeof InboundChannelUpdateError.reasons>,
-    update: ChannelUpdate<any>,
-    state?: FullChannelState,
-    context: any = {},
-  ) {
-    super(message, state, update, undefined, context, InboundChannelUpdateError.type);
-  }
-}
-
-// Thrown by the protocol when initiating an update
-export class OutboundChannelUpdateError extends ProtocolError {
-  static readonly type = "OutboundChannelUpdateError";
-
-  static readonly reasons = {
-    AcquireLockFailed: "Failed to acquire lock",
-    BadSignatures: "Could not recover signers",
-    CannotSyncSetup: "Cannot sync a setup update, must restore",
-    ChannelNotFound: "No channel found in storage",
-    CounterpartyFailure: "Counterparty failed to apply update",
-    CounterpartyOffline: "Message to counterparty timed out",
-    Create2Failed: "Failed to get create2 address",
-    ExternalValidationFailed: "Failed external outbound validation",
-    GenerateUpdateFailed: "Failed to generate update",
-    InvalidParams: "Invalid params",
-    NoUpdateToSync: "No update provided from responder to sync from",
-    OutboundValidationFailed: "Failed to validate outbound update",
-    RegenerateUpdateFailed: "Failed to regenerate update after sync",
-    ReleaseLockFailed: "Failed to release lock",
-    RestoreNeeded: "Cannot sync channel from counterparty, must restore",
-    SaveChannelFailed: "Failed to save channel",
-    StaleChannel: "Channel state is behind, cannot apply update",
-    StoreFailure: "Failed to pull data from store",
-    SyncFailure: "Failed to sync channel from counterparty update",
-  } as const;
-
-  constructor(
-    public readonly message: Values<typeof OutboundChannelUpdateError.reasons>,
-    params: UpdateParams<any>,
-    state?: FullChannelState,
-    context: any = {},
-  ) {
-    super(message, state, undefined, params, context, OutboundChannelUpdateError.type);
-  }
-}
-
 export class CreateUpdateError extends ProtocolError {
   static readonly type = "CreateUpdateError";
 
@@ -171,17 +100,61 @@ export class ApplyUpdateError extends ProtocolError {
   }
 }
 
-// Thrown by protocol when update added to the queue has failed
-// TODO: fix the context/protocol error
-// stuff
+// Thrown by protocol when update added to the queue has failed.
+// Thrown on inbound (other) and outbound (self) updates
 export class QueuedUpdateError extends ProtocolError {
   static readonly type = "QueuedUpdateError";
 
   static readonly reasons = {
+    ApplyAndValidateInboundFailed: "Failed to validate + apply incoming update",
+    ApplyUpdateFailed: "Failed to apply update",
+    BadSignatures: "Could not recover signers",
+    CannotSyncSetup: "Cannot sync a setup update, must restore", // TODO: remove
+    ChannelNotFound: "Channel not found",
+    CouldNotGetParams: "Could not generate params from update",
+    CouldNotGetResolvedBalance: "Could not retrieve resolved balance from chain",
+    CounterpartyFailure: "Counterparty failed to apply update",
+    CounterpartyOffline: "Message to counterparty timed out",
+    Create2Failed: "Failed to get create2 address",
+    ExternalValidationFailed: "Failed external validation",
+    GenerateSignatureFailed: "Failed to generate channel signature",
+    GenerateUpdateFailed: "Failed to generate update",
+    InvalidParams: "Invalid params",
+    InvalidUpdateNonce: "Update nonce must be previousState.nonce + 1",
+    MalformedDetails: "Channel update details are malformed",
+    MalformedUpdate: "Channel update is malformed",
     MissingTransferForUpdateInclusion: "Cannot evaluate update inclusion, missing proposed transfer",
+    OutboundValidationFailed: "Failed to validate outbound update",
+    RestoreNeeded: "Cannot sync channel from counterparty, must restore",
+    StaleChannel: "Channel state is behind, cannot apply update",
+    StaleUpdate: "Update does not progress channel nonce",
+    SyncFailure: "Failed to sync channel from counterparty update",
+    StoreFailure: "Store method failed",
+    TransferNotActive: "Transfer not found in activeTransfers",
+    UnhandledPromise: "Unhandled promise rejection encountered",
   } as const;
 
-  constructor(public readonly message: Values<typeof QueuedUpdateError.reasons>, context: any = {}) {
-    super(message, undefined, undefined, undefined, context, ApplyUpdateError.type);
+  // TODO: improve error from result
+  static fromResult(result: Result<any, Error>, reason: Values<typeof QueuedUpdateError.reasons>) {
+    return new QueuedUpdateError(reason, {
+      error: result.getError()!.message,
+      ...((result.getError() as any)!.context ?? {}),
+    });
+  }
+
+  constructor(
+    public readonly message: Values<typeof QueuedUpdateError.reasons>,
+    attempted: UpdateParams | ChannelUpdate,
+    state?: FullChannelState,
+    context: any = {},
+  ) {
+    super(
+      message,
+      state,
+      (attempted as any).fromIdentifier ? (attempted as ChannelUpdate) : undefined, // update
+      (attempted as any).fromIdentifier ? undefined : (attempted as UpdateParams), // params
+      context,
+      QueuedUpdateError.type,
+    );
   }
 }

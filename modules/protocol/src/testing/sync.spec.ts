@@ -31,7 +31,7 @@ import Sinon from "sinon";
 import { VectorChainReader } from "@connext/vector-contracts";
 
 // Import as full module for easy sinon function mocking
-import { OutboundChannelUpdateError, InboundChannelUpdateError } from "../errors";
+import { QueuedUpdateError } from "../errors";
 import * as vectorUtils from "../utils";
 import * as vectorValidation from "../validate";
 import { inbound, outbound } from "../sync";
@@ -96,7 +96,7 @@ describe("inbound", () => {
     );
     expect(result.isError).to.be.true;
     const error = result.getError()!;
-    expect(error.message).to.be.eq(InboundChannelUpdateError.reasons.StaleUpdate);
+    expect(error.message).to.be.eq(QueuedUpdateError.reasons.StaleUpdate);
 
     // Verify calls
     expect(messaging.respondWithProtocolError.callCount).to.be.eq(1);
@@ -135,7 +135,7 @@ describe("inbound", () => {
 
     expect(result.isError).to.be.true;
     const error = result.getError()!;
-    expect(error.message).to.be.eq(InboundChannelUpdateError.reasons.RestoreNeeded);
+    expect(error.message).to.be.eq(QueuedUpdateError.reasons.RestoreNeeded);
     // Make sure the calls were correctly performed
     expect(validationStub.callCount).to.be.eq(0);
     expect(store.saveChannelState.callCount).to.be.eq(0);
@@ -153,9 +153,7 @@ describe("inbound", () => {
     );
     // Set the validation stub
     validationStub.resolves(
-      Result.fail(
-        new InboundChannelUpdateError(InboundChannelUpdateError.reasons.ExternalValidationFailed, update, {} as any),
-      ),
+      Result.fail(new QueuedUpdateError(QueuedUpdateError.reasons.ExternalValidationFailed, update, {} as any)),
     );
 
     const result = await inbound(
@@ -172,7 +170,7 @@ describe("inbound", () => {
 
     expect(result.isError).to.be.true;
     const error = result.getError()!;
-    expect(error.message).to.be.eq(InboundChannelUpdateError.reasons.ExternalValidationFailed);
+    expect(error.message).to.be.eq(QueuedUpdateError.reasons.ExternalValidationFailed);
     // Make sure the calls were correctly performed
     expect(validationStub.callCount).to.be.eq(1);
     expect(store.saveChannelState.callCount).to.be.eq(0);
@@ -206,7 +204,7 @@ describe("inbound", () => {
 
     expect(result.isError).to.be.true;
     const error = result.getError()!;
-    expect(error.message).to.be.eq(InboundChannelUpdateError.reasons.SaveChannelFailed);
+    expect(error.message).to.be.eq(QueuedUpdateError.reasons.StoreFailure);
     // Make sure the calls were correctly performed
     expect(validationStub.callCount).to.be.eq(1);
     expect(store.saveChannelState.callCount).to.be.eq(1);
@@ -266,7 +264,7 @@ describe("inbound", () => {
         signers[1],
         logger,
       );
-      expect(result.getError()?.message).to.be.eq(InboundChannelUpdateError.reasons.StaleChannel);
+      expect(result.getError()?.message).to.be.eq(QueuedUpdateError.reasons.StaleChannel);
 
       // Verify nothing was saved and error properly sent
       expect(store.saveChannelState.callCount).to.be.eq(0);
@@ -299,7 +297,7 @@ describe("inbound", () => {
         signers[1],
         logger,
       );
-      expect(result.getError()?.message).to.be.eq(InboundChannelUpdateError.reasons.SyncFailure);
+      expect(result.getError()?.message).to.be.eq(QueuedUpdateError.reasons.SyncFailure);
       expect(result.getError()?.context.syncError).to.be.eq("Cannot sync single signed state");
 
       // Verify nothing was saved and error properly sent
@@ -335,7 +333,7 @@ describe("inbound", () => {
         signers[1],
         logger,
       );
-      expect(result.getError()!.message).to.be.eq(InboundChannelUpdateError.reasons.SyncFailure);
+      expect(result.getError()!.message).to.be.eq(QueuedUpdateError.reasons.SyncFailure);
       expect(result.getError()!.context.syncError).to.be.eq("fail");
 
       // Verify nothing was saved and error properly sent
@@ -372,7 +370,7 @@ describe("inbound", () => {
         signers[1],
         logger,
       );
-      expect(result.getError()!.message).to.be.eq(InboundChannelUpdateError.reasons.SyncFailure);
+      expect(result.getError()!.message).to.be.eq(QueuedUpdateError.reasons.SyncFailure);
       expect(result.getError()?.context.syncError).to.be.eq("fail");
 
       // Verify nothing was saved and error properly sent
@@ -453,9 +451,7 @@ describe("inbound", () => {
     validationStub
       .onSecondCall()
       .resolves(
-        Result.fail(
-          new InboundChannelUpdateError(InboundChannelUpdateError.reasons.ExternalValidationFailed, update, {} as any),
-        ),
+        Result.fail(new QueuedUpdateError(QueuedUpdateError.reasons.ExternalValidationFailed, update, {} as any)),
       );
     const result = await inbound(
       update,
@@ -471,7 +467,7 @@ describe("inbound", () => {
 
     expect(result.isError).to.be.true;
     const error = result.getError()!;
-    expect(error.message).to.be.eq(InboundChannelUpdateError.reasons.ExternalValidationFailed);
+    expect(error.message).to.be.eq(QueuedUpdateError.reasons.ExternalValidationFailed);
     expect(validationStub.callCount).to.be.eq(2);
     expect(validationStub.firstCall.args[3].nonce).to.be.eq(2);
     expect(validationStub.secondCall.args[3].nonce).to.be.eq(3);
@@ -579,7 +575,7 @@ describe("outbound", () => {
         // Assert error
         expect(result.isError).to.be.eq(true);
         const error = result.getError()!;
-        expect(error.message).to.be.eq(OutboundChannelUpdateError.reasons.StoreFailure);
+        expect(error.message).to.be.eq(QueuedUpdateError.reasons.StoreFailure);
         expect(error.context.storeError).to.be.eq(`${method} failed: fail`);
       });
     }
@@ -589,7 +585,7 @@ describe("outbound", () => {
     const params = createTestUpdateParams(UpdateType.deposit, { channelAddress: "0xfail" });
 
     // Stub the validation function
-    const error = new OutboundChannelUpdateError(OutboundChannelUpdateError.reasons.InvalidParams, params);
+    const error = new QueuedUpdateError(QueuedUpdateError.reasons.InvalidParams, params);
     validateParamsAndApplyStub.resolves(Result.fail(error));
 
     const res = await outbound(
@@ -611,7 +607,7 @@ describe("outbound", () => {
       details: { counterpartyIdentifier: signers[1].publicIdentifier },
     });
     // Create a messaging service stub
-    const counterpartyError = new InboundChannelUpdateError(InboundChannelUpdateError.reasons.StoreFailure, {} as any);
+    const counterpartyError = new QueuedUpdateError(QueuedUpdateError.reasons.StoreFailure, {} as any);
     messaging.sendProtocolMessage.resolves(Result.fail(counterpartyError));
 
     // Stub the generation function
@@ -637,7 +633,7 @@ describe("outbound", () => {
 
     // Verify the error is returned as an outbound error
     const error = res.getError();
-    expect(error?.message).to.be.eq(OutboundChannelUpdateError.reasons.CounterpartyFailure);
+    expect(error?.message).to.be.eq(QueuedUpdateError.reasons.CounterpartyFailure);
     expect(error?.context.counterpartyError.message).to.be.eq(counterpartyError.message);
     expect(error?.context.counterpartyError.context).to.be.ok;
 
@@ -672,43 +668,7 @@ describe("outbound", () => {
       signers[0],
       log,
     );
-    expect(res.getError()!.message).to.be.eq(OutboundChannelUpdateError.reasons.BadSignatures);
-  });
-
-  it("should fail if the channel is not saved to store", async () => {
-    // Stub save method to fail
-    store.saveChannelState.rejects("Failed to save channel");
-
-    const params = createTestUpdateParams(UpdateType.deposit, {
-      channelAddress,
-    });
-
-    // Stub the generation results
-    validateParamsAndApplyStub.resolves(
-      Result.ok({
-        update: createTestChannelUpdateWithSigners(signers, UpdateType.deposit),
-        updatedTransfer: undefined,
-        updatedActiveTransfers: undefined,
-        updatedChannel: createTestChannelStateWithSigners(signers, UpdateType.deposit),
-      }),
-    );
-
-    // Set the messaging mocks to return the proper update from the counterparty
-    messaging.sendProtocolMessage.onFirstCall().resolves(Result.ok({ update: {}, previousUpdate: {} } as any));
-
-    const result = await outbound(
-      params,
-      store,
-      chainService as IVectorChainReader,
-      messaging,
-      externalValidation,
-      signers[0],
-      log,
-    );
-
-    expect(result.isError).to.be.true;
-    const error = result.getError()!;
-    expect(error.message).to.be.eq(OutboundChannelUpdateError.reasons.SaveChannelFailed);
+    expect(res.getError()!.message).to.be.eq(QueuedUpdateError.reasons.BadSignatures);
   });
 
   it("should successfully initiate an update if channels are in sync", async () => {
@@ -776,8 +736,8 @@ describe("outbound", () => {
       // Stub counterparty return
       messaging.sendProtocolMessage.resolves(
         Result.fail(
-          new InboundChannelUpdateError(
-            InboundChannelUpdateError.reasons.StaleUpdate,
+          new QueuedUpdateError(
+            QueuedUpdateError.reasons.StaleUpdate,
             createTestChannelUpdateWithSigners(signers, UpdateType.setup),
           ),
         ),
@@ -795,7 +755,7 @@ describe("outbound", () => {
       );
 
       // Verify error
-      expect(result.getError()?.message).to.be.eq(OutboundChannelUpdateError.reasons.CannotSyncSetup);
+      expect(result.getError()?.message).to.be.eq(QueuedUpdateError.reasons.CannotSyncSetup);
       // Verify update was not retried
       expect(messaging.sendProtocolMessage.callCount).to.be.eq(1);
       // Verify channel was not updated
@@ -816,8 +776,8 @@ describe("outbound", () => {
       // Stub counterparty return
       messaging.sendProtocolMessage.resolves(
         Result.fail(
-          new InboundChannelUpdateError(
-            InboundChannelUpdateError.reasons.StaleUpdate,
+          new QueuedUpdateError(
+            QueuedUpdateError.reasons.StaleUpdate,
             createTestChannelUpdateWithSigners(signers, UpdateType.deposit, {
               aliceSignature: undefined,
               bobSignature: mkSig(),
@@ -838,7 +798,7 @@ describe("outbound", () => {
       );
 
       // Verify error
-      expect(result.getError()?.message).to.be.eq(OutboundChannelUpdateError.reasons.SyncFailure);
+      expect(result.getError()?.message).to.be.eq(QueuedUpdateError.reasons.SyncFailure);
       expect(result.getError()?.context.syncError).to.be.eq("Cannot sync single signed state");
       // Verify update was not retried
       expect(messaging.sendProtocolMessage.callCount).to.be.eq(1);
@@ -861,8 +821,8 @@ describe("outbound", () => {
       // Stub counterparty return
       messaging.sendProtocolMessage.resolves(
         Result.fail(
-          new InboundChannelUpdateError(
-            InboundChannelUpdateError.reasons.StaleUpdate,
+          new QueuedUpdateError(
+            QueuedUpdateError.reasons.StaleUpdate,
             createTestChannelUpdateWithSigners(signers, UpdateType.deposit, {
               nonce: 3,
             }),
@@ -885,7 +845,7 @@ describe("outbound", () => {
       );
 
       // Verify error
-      expect(result.getError()?.message).to.be.eq(OutboundChannelUpdateError.reasons.SyncFailure);
+      expect(result.getError()?.message).to.be.eq(QueuedUpdateError.reasons.SyncFailure);
       expect(result.getError()?.context.syncError).to.be.eq("fail");
       // Verify update was not retried
       expect(messaging.sendProtocolMessage.callCount).to.be.eq(1);
@@ -910,8 +870,8 @@ describe("outbound", () => {
       // Stub counterparty return
       messaging.sendProtocolMessage.resolves(
         Result.fail(
-          new InboundChannelUpdateError(
-            InboundChannelUpdateError.reasons.StaleUpdate,
+          new QueuedUpdateError(
+            QueuedUpdateError.reasons.StaleUpdate,
             createTestChannelUpdateWithSigners(signers, UpdateType.deposit, {
               nonce: 3,
             }),
@@ -934,59 +894,10 @@ describe("outbound", () => {
       );
 
       // Verify error
-      expect(result.getError()?.message).to.be.eq(OutboundChannelUpdateError.reasons.SyncFailure);
+      expect(result.getError()?.message).to.be.eq(QueuedUpdateError.reasons.SyncFailure);
       // Verify update was not retried
       expect(messaging.sendProtocolMessage.callCount).to.be.eq(1);
       // Verify channel save was attempted
-      expect(store.saveChannelState.callCount).to.be.eq(1);
-    });
-
-    it("should fail if it cannot re-validate proposed parameters", async () => {
-      // Set the apply/update return value
-      const applyRet = {
-        update: createTestChannelUpdate(UpdateType.deposit),
-        updatedChannel: createTestChannelUpdateWithSigners(signers, UpdateType.deposit, { nonce: 3 }),
-      };
-
-      // Set store mocks
-      store.getChannelState.resolves(createTestChannelStateWithSigners(signers, UpdateType.deposit, { nonce: 2 }));
-
-      // Set generation mock
-      validateParamsAndApplyStub.onFirstCall().resolves(Result.ok(applyRet));
-      validateParamsAndApplyStub.onSecondCall().resolves(Result.fail(new ChainError("fail")));
-
-      // Stub counterparty return
-      messaging.sendProtocolMessage.resolves(
-        Result.fail(
-          new InboundChannelUpdateError(
-            InboundChannelUpdateError.reasons.StaleUpdate,
-            createTestChannelUpdateWithSigners(signers, UpdateType.deposit, {
-              nonce: 3,
-            }),
-          ),
-        ),
-      );
-
-      // Stub the sync function
-      validateAndApplyInboundStub.resolves(Result.ok(applyRet));
-
-      // Send request
-      const result = await outbound(
-        createTestUpdateParams(UpdateType.deposit),
-        store,
-        chainService as IVectorChainReader,
-        messaging,
-        externalValidation,
-        signers[0],
-        log,
-      );
-
-      // Verify error
-      expect(result.getError()?.message).to.be.eq(OutboundChannelUpdateError.reasons.RegenerateUpdateFailed);
-      expect(result.getError()?.context.regenerateUpdateError).to.be.eq("fail");
-      // Verify update was not retried
-      expect(messaging.sendProtocolMessage.callCount).to.be.eq(1);
-      // Verify channel save was called
       expect(store.saveChannelState.callCount).to.be.eq(1);
     });
 
@@ -1002,7 +913,7 @@ describe("outbound", () => {
 
       // create a helper to create the proper counterparty error
       const createInboundError = (updateToSync: ChannelUpdate): any => {
-        return Result.fail(new InboundChannelUpdateError(InboundChannelUpdateError.reasons.StaleUpdate, updateToSync));
+        return Result.fail(new QueuedUpdateError(QueuedUpdateError.reasons.StaleUpdate, updateToSync));
       };
 
       // create a helper to create a post-sync state
