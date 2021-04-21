@@ -1,6 +1,5 @@
 import {
   ChannelUpdate,
-  IVectorStore,
   UpdateType,
   IMessagingService,
   FullChannelState,
@@ -18,7 +17,7 @@ import { getRandomBytes32 } from "@connext/vector-utils";
 import pino from "pino";
 
 import { QueuedUpdateError } from "./errors";
-import { extractContextFromStore, validateChannelSignatures } from "./utils";
+import { validateChannelSignatures } from "./utils";
 import { validateAndApplyInboundUpdate, validateParamsAndApplyUpdate } from "./validate";
 
 // Function responsible for handling user-initated/outbound channel updates.
@@ -39,7 +38,8 @@ export type SelfUpdateResult = UpdateResult & {
 
 export async function outbound(
   params: UpdateParams<any>,
-  storeService: IVectorStore,
+  activeTransfers: FullTransferState[],
+  previousState: FullChannelState | undefined,
   chainReader: IVectorChainReader,
   messagingService: IMessagingService,
   externalValidationService: IExternalValidation,
@@ -49,19 +49,6 @@ export async function outbound(
   const method = "outbound";
   const methodId = getRandomBytes32();
   logger.debug({ method, methodId }, "Method start");
-
-  // First, pull all information out from the store
-  const storeRes = await extractContextFromStore(storeService, params.channelAddress);
-  if (storeRes.isError) {
-    return Result.fail(
-      new QueuedUpdateError(QueuedUpdateError.reasons.StoreFailure, params, undefined, {
-        storeError: storeRes.getError()?.message,
-        method,
-      }),
-    );
-  }
-
-  const { activeTransfers, channelState: previousState } = storeRes.getValue();
 
   // Ensure parameters are valid, and action can be taken
   const updateRes = await validateParamsAndApplyUpdate(
@@ -201,10 +188,9 @@ export type OtherUpdateResult = UpdateResult & {
 export async function inbound(
   update: ChannelUpdate<any>,
   previousUpdate: ChannelUpdate<any>,
-  inbox: string,
+  activeTransfers: FullTransferState[],
+  channel: FullChannelState | undefined,
   chainReader: IVectorChainReader,
-  storeService: IVectorStore,
-  messagingService: IMessagingService,
   externalValidation: IExternalValidation,
   signer: IChannelSigner,
   logger: pino.BaseLogger,
@@ -225,19 +211,8 @@ export async function inbound(
       "Error responding to channel update",
     );
     const error = new QueuedUpdateError(reason, prevUpdate, state, context);
-    await messagingService.respondWithProtocolError(inbox, error);
     return Result.fail(error);
   };
-
-  const storeRes = await extractContextFromStore(storeService, update.channelAddress);
-  if (storeRes.isError) {
-    return returnError(QueuedUpdateError.reasons.StoreFailure, undefined, undefined, {
-      storeError: storeRes.getError()?.message,
-    });
-  }
-
-  // eslint-disable-next-line prefer-const
-  let { activeTransfers, channelState: channelFromStore } = storeRes.getValue();
 
   // Now that you have a valid starting state, you can try to apply the
   // update, and sync if necessary.
@@ -261,20 +236,20 @@ export async function inbound(
   // - n >= k + 3: we must restore state
 
   // Get the difference between the stored and received nonces
-  const prevNonce = channelFromStore?.nonce ?? 0;
+  const prevNonce = channel?.nonce ?? 0;
   const diff = update.nonce - prevNonce;
 
   // If we are ahead, or even, do not process update
   if (diff <= 0) {
     // NOTE: when you are out of sync as a protocol initiator, you will
     // use the information from this error to sync, then retry your update
-    return returnError(QueuedUpdateError.reasons.StaleUpdate, channelFromStore!.latestUpdate, channelFromStore);
+    return returnError(QueuedUpdateError.reasons.StaleUpdate, channel!.latestUpdate, channel);
   }
 
   // If we are behind by more than 3, we cannot sync from their latest
   // update, and must use restore
   if (diff >= 3) {
-    return returnError(QueuedUpdateError.reasons.RestoreNeeded, update, channelFromStore, {
+    return returnError(QueuedUpdateError.reasons.RestoreNeeded, update, channel, {
       counterpartyLatestUpdate: previousUpdate,
       ourLatestNonce: prevNonce,
     });
@@ -284,7 +259,7 @@ export async function inbound(
   // behind by one update. We can progress the state to the correct
   // state to be updated by applying the counterparty's supplied
   // latest action
-  let previousState = channelFromStore ? { ...channelFromStore } : undefined;
+  let previousState = channel ? { ...channel } : undefined;
   if (diff === 2) {
     // Create the proper state to play the update on top of using the
     // latest update
@@ -343,13 +318,6 @@ export async function inbound(
   }
 
   const { updatedChannel, updatedActiveTransfers, updatedTransfer } = validateRes.getValue();
-
-  // Send response to counterparty
-  await messagingService.respondToProtocolMessage(
-    inbox,
-    updatedChannel.latestUpdate,
-    previousState ? previousState!.latestUpdate : undefined,
-  );
 
   // Return the double signed state
   return Result.ok({ updatedActiveTransfers, updatedChannel, updatedTransfer, previousState });

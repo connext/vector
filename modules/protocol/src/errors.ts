@@ -109,6 +109,7 @@ export class QueuedUpdateError extends ProtocolError {
     ApplyAndValidateInboundFailed: "Failed to validate + apply incoming update",
     ApplyUpdateFailed: "Failed to apply update",
     BadSignatures: "Could not recover signers",
+    Cancelled: "Queued update was cancelled",
     CannotSyncSetup: "Cannot sync a setup update, must restore", // TODO: remove
     ChannelNotFound: "Channel not found",
     CouldNotGetParams: "Could not generate params from update",

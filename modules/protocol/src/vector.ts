@@ -18,6 +18,7 @@ import {
   TChannelUpdate,
   ProtocolError,
   jsonifyError,
+  Values,
 } from "@connext/vector-types";
 import { getCreate2MultisigAddress, getRandomBytes32 } from "@connext/vector-utils";
 import { Evt } from "evt";
@@ -26,7 +27,7 @@ import pino from "pino";
 import { QueuedUpdateError } from "./errors";
 import { Cancellable, OtherUpdate, SelfUpdate, SerializedQueue } from "./queue";
 import { outbound, inbound, OtherUpdateResult, SelfUpdateResult } from "./sync";
-import { persistChannel, validateSchema } from "./utils";
+import { extractContextFromStore, persistChannel, validateSchema } from "./utils";
 
 type EvtContainer = { [K in keyof ProtocolEventPayloadsMap]: Evt<ProtocolEventPayloadsMap[K]> };
 
@@ -148,10 +149,21 @@ export class Vector implements IVectorProtocol {
         return resolve({ cancelled: true, value: ret });
       });
       const outboundPromise = new Promise(async (resolve) => {
+        const storeRes = await extractContextFromStore(this.storeService, initiated.params.channelAddress);
+        if (storeRes.isError) {
+          // Return failure
+          return Result.fail(
+            new QueuedUpdateError(QueuedUpdateError.reasons.StoreFailure, initiated.params, undefined, {
+              storeError: storeRes.getError()?.message,
+            }),
+          );
+        }
+        const { channelState, activeTransfers } = storeRes.getValue();
         try {
           const ret = await outbound(
             initiated.params,
-            this.storeService,
+            activeTransfers,
+            channelState,
             this.chainReader,
             this.messagingService,
             this.externalValidationService,
@@ -208,6 +220,27 @@ export class Vector implements IVectorProtocol {
       received: OtherUpdate,
       cancel: Promise<unknown>,
     ) => {
+      // Create a helper to respond to counterparty for errors generated
+      // on inbound updates
+      const returnError = async (
+        reason: Values<typeof QueuedUpdateError.reasons>,
+        state?: FullChannelState,
+        context: any = {},
+      ): Promise<Result<never, QueuedUpdateError>> => {
+        const error = new QueuedUpdateError(reason, state?.latestUpdate ?? received.update, state, context);
+        await this.messagingService.respondWithProtocolError(received.inbox, error);
+        return Result.fail(error);
+      };
+
+      // Pull context from store
+      const storeRes = await extractContextFromStore(this.storeService, received.update.channelAddress);
+      if (storeRes.isError) {
+        // Send message with error
+        return returnError(QueuedUpdateError.reasons.StoreFailure, undefined, {
+          storeError: storeRes.getError()?.message,
+        });
+      }
+      const { channelState, activeTransfers } = storeRes.getValue();
       const cancelPromise = new Promise(async (resolve) => {
         let ret;
         try {
@@ -224,8 +257,9 @@ export class Vector implements IVectorProtocol {
             received.update,
             received.previous,
             received.inbox,
+            activeTransfers,
+            channelState,
             this.chainReader,
-            this.storeService,
             this.messagingService,
             this.externalValidationService,
             this.signer,
@@ -251,27 +285,25 @@ export class Vector implements IVectorProtocol {
       };
 
       if (res.cancelled) {
-        // TODO: Send message to counterparty that it has been cancelled
+        await returnError(QueuedUpdateError.reasons.Cancelled, channelState);
         return undefined;
       }
       const value = res.value as Result<OtherUpdateResult>;
       if (value.isError) {
-        // TODO: Send message to counterparty that it has errored
-        return res.value as Result<OtherUpdateResult>;
+        return returnError(value.getError().message, channelState);
       }
       // Save the newly signed update to your channel
       const { updatedChannel, updatedTransfer } = value.getValue();
       const saveRes = await persistChannel(this.storeService, updatedChannel, updatedTransfer);
       if (saveRes.isError) {
-        return Result.fail(
-          new QueuedUpdateError(QueuedUpdateError.reasons.StoreFailure, received.update, updatedChannel, {
-            method: "saveChannelState",
-            error: saveRes.getError()!.message,
-          }),
-        );
+        return returnError(QueuedUpdateError.reasons.StoreFailure, updatedChannel);
       }
-      // TODO: Send message to counterparty that it has succeeded
-      throw new Error("Send message with success");
+      await this.messagingService.respondToProtocolMessage(
+        received.inbox,
+        updatedChannel.latestUpdate,
+        channelState?.latestUpdate,
+      );
+      return value;
     };
     const queue = new SerializedQueue(
       this.publicIdentifier === aliceIdentifier,
@@ -284,8 +316,6 @@ export class Vector implements IVectorProtocol {
         return channel?.nonce ?? 0;
       },
     );
-
-    // TODO: remove messaging from sync methods
 
     this.queues.set(channelAddress, queue);
   }
