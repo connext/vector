@@ -1,4 +1,4 @@
-import { UpdateParams, UpdateType, Result } from "@connext/vector-types";
+import { UpdateParams, UpdateType, Result, ChannelUpdate } from "@connext/vector-types";
 import { getNextNonceForUpdate } from "./utils";
 
 type Nonce = number;
@@ -76,14 +76,14 @@ class Resolver<O> {
   }
 }
 
-// TODO: Slot in the real thing.
 export type SelfUpdate = {
   params: UpdateParams<UpdateType>;
 };
 
 export type OtherUpdate = {
-  params: UpdateParams<UpdateType>;
-  nonce: Nonce;
+  update: ChannelUpdate<UpdateType>;
+  previous: ChannelUpdate<UpdateType>;
+  inbox: string;
 };
 
 // Repeated wake-up promises.
@@ -155,7 +155,7 @@ class WakingQueue<I, O> {
 const NeverCancel: Promise<never> = new Promise((_resolve, _reject) => {});
 
 // If the Promise resolves to undefined it has been cancelled.
-type Cancellable<I, O> = (value: I, cancel: Promise<unknown>) => Promise<Result<O> | undefined>;
+export type Cancellable<I, O> = (value: I, cancel: Promise<unknown>) => Promise<Result<O> | undefined>;
 
 // Infallibly process an update.
 // If the function fails, this rejects the queue.
