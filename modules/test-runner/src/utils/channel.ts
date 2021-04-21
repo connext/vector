@@ -254,6 +254,9 @@ export const transfer = async (
 
   const senderCreatePromise = sender.waitFor(EngineEvents.CONDITIONAL_TRANSFER_CREATED, 30_000);
   const receiverCreatePromise = receiver.waitFor(EngineEvents.CONDITIONAL_TRANSFER_CREATED, 30_000);
+  sender.on(EngineEvents.CONDITIONAL_TRANSFER_ROUTING_COMPLETE, (data) => {
+    console.log("*************** EngineEvents.CONDITIONAL_TRANSFER_FORWARDED: ", data);
+  });
   const transferRes = await sender.conditionalTransfer(params);
   expect(transferRes.getError()).to.not.be.ok;
 

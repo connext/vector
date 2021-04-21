@@ -2,9 +2,8 @@ import { delay, expect, getRandomBytes32, RestServerNodeService } from "@connext
 import { Wallet, utils, constants } from "ethers";
 import pino from "pino";
 import { EngineEvents, INodeService, TransferNames } from "@connext/vector-types";
-import { waitForTransaction } from "@connext/vector-contracts";
 
-import { env, fundIfBelow, getOnchainBalance, getRandomIndex } from "../utils";
+import { env, fundIfBelow, getRandomIndex } from "../utils";
 import {
   advanceBlocktime,
   chainId1,
@@ -153,7 +152,7 @@ describe(testName, () => {
     );
   });
 
-  it("ETH: deposit, transfer C -> R -> D, withdraw", async () => {
+  it.only("ETH: deposit, transfer C -> R -> D, withdraw", async () => {
     const assetId = constants.AddressZero;
     const depositAmt = utils.parseEther("0.1");
     const transferAmt = utils.parseEther("0.05");

@@ -37,6 +37,7 @@ export const aliceEvts = {
     url: `${serverBase}${withdrawalReconciledPath}-alice`,
   },
   [EngineEvents.REQUEST_COLLATERAL]: {},
+  [EngineEvents.CONDITIONAL_TRANSFER_ROUTING_COMPLETE]: {},
   [EngineEvents.CONDITIONAL_TRANSFER_CREATED]: {
     evt: Evt.create<ConditionalTransferCreatedPayload>(),
     url: `${serverBase}${conditionalTransferCreatedPath}-alice`,
@@ -83,6 +84,7 @@ export const bobEvts = {
     evt: Evt.create<ConditionalTransferResolvedPayload>(),
     url: `${serverBase}${conditionalTransferResolvedPath}-bob`,
   },
+  [EngineEvents.CONDITIONAL_TRANSFER_ROUTING_COMPLETE]: {},
   [EngineEvents.DEPOSIT_RECONCILED]: {
     evt: Evt.create<DepositReconciledPayload>(),
     url: `${serverBase}${depositReconciledPath}-bob`,

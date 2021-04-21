@@ -18,6 +18,8 @@ import {
   NATS_CLUSTER_URL,
   NATS_AUTH_URL,
   NATS_WS_URL,
+  ConditionalTransferCreatedPayload,
+  ConditionalTransferRoutingCompletePayload,
 } from "@connext/vector-types";
 import axios, { AxiosResponse } from "axios";
 import pino, { BaseLogger } from "pino";
@@ -609,6 +611,31 @@ export class NatsMessagingService extends NatsBasicMessagingService implements I
     quote: Result<NodeResponses.WithdrawalQuote, NodeError>,
   ): Promise<void> {
     return this.respondToMessage(inbox, quote, "respondToWithdrawalQuoteMessage");
+  }
+  ////////////
+
+  // ROUTING COMPLETE
+  publishTransferRoutingCompleteMessage(
+    to: string,
+    from: string,
+    data: Result<ConditionalTransferRoutingCompletePayload, VectorError>,
+  ): Promise<void> {
+    return this.publish(`${to}.${from}.forwarded-transfer`, safeJsonStringify(data.toJson()));
+  }
+
+  onReceiveTransferRoutingCompleteMessage(
+    myPublicIdentifier: string,
+    callback: (
+      quoteRequest: Result<ConditionalTransferRoutingCompletePayload, NodeError>,
+      from: string,
+      inbox: string,
+    ) => void,
+  ): Promise<void> {
+    return this.registerCallback(
+      `${myPublicIdentifier}.*.forwarded-transfer`,
+      callback,
+      "onReceiveForwardedTransferMessage",
+    );
   }
   ////////////
 }
