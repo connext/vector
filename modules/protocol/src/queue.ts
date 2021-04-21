@@ -1,4 +1,4 @@
-import { UpdateParams, UpdateType, Result, ChannelUpdate } from "@connext/vector-types";
+import { UpdateParams, UpdateType, Result } from "@connext/vector-types";
 import { getNextNonceForUpdate } from "./utils";
 
 type Nonce = number;
@@ -82,9 +82,8 @@ export type SelfUpdate = {
 };
 
 export type OtherUpdate = {
-  update: ChannelUpdate<UpdateType>;
-  previous: ChannelUpdate<UpdateType>;
-  inbox: string;
+  params: UpdateParams<UpdateType>;
+  nonce: Nonce;
 };
 
 // Repeated wake-up promises.
@@ -156,7 +155,7 @@ class WakingQueue<I, O> {
 const NeverCancel: Promise<never> = new Promise((_resolve, _reject) => {});
 
 // If the Promise resolves to undefined it has been cancelled.
-export type Cancellable<I, O> = (value: I, cancel: Promise<unknown>) => Promise<Result<O> | undefined>;
+type Cancellable<I, O> = (value: I, cancel: Promise<unknown>) => Promise<Result<O> | undefined>;
 
 // Infallibly process an update.
 // If the function fails, this rejects the queue.
@@ -186,13 +185,22 @@ async function processOneUpdate<I, O>(
 export class SerializedQueue {
   private readonly incomingSelf: WakingQueue<SelfUpdate, Result<void>> = new WakingQueue();
   private readonly incomingOther: WakingQueue<OtherUpdate, Result<void>> = new WakingQueue();
+  private readonly selfIsAlice: boolean;
+
+  private readonly selfUpdateAsync: Cancellable<SelfUpdate, void>;
+  private readonly otherUpdateAsync: Cancellable<OtherUpdate, void>;
+  private readonly getCurrentNonce: () => Promise<Nonce>;
 
   constructor(
-    private readonly selfIsAlice: boolean,
-    private readonly selfUpdateAsync: Cancellable<SelfUpdate, void>,
-    private readonly otherUpdateAsync: Cancellable<OtherUpdate, void>,
-    private readonly getCurrentNonce: () => Promise<Nonce>,
+    selfIsAlice: boolean,
+    selfUpdateAsync: Cancellable<SelfUpdate, void>,
+    otherUpdateAsync: Cancellable<OtherUpdate, void>,
+    getCurrentNonce: () => Promise<Nonce>,
   ) {
+    this.selfIsAlice = selfIsAlice;
+    this.selfUpdateAsync = selfUpdateAsync;
+    this.otherUpdateAsync = otherUpdateAsync;
+    this.getCurrentNonce = getCurrentNonce;
     this.processUpdatesAsync();
   }
 
@@ -220,35 +228,23 @@ export class SerializedQueue {
       const selfPredictedNonce = getNextNonceForUpdate(currentNonce, this.selfIsAlice);
       const otherPredictedNonce = getNextNonceForUpdate(currentNonce, !this.selfIsAlice);
 
-      if (selfPredictedNonce === otherPredictedNonce) {
-        // TODO: handle this case, this shouldnt happen! this means
-        // there is a nonce collision, should resolve with Result.fail
-      }
-
       if (selfPredictedNonce > otherPredictedNonce) {
         // Our update has priority. If we have an update,
-        // execute it without inturruption. Otherwise,
-        // execute their update with inturruption
+        // execute it without interruption. Otherwise,
+        // execute their update with interruption
         if (self !== undefined) {
           await processOneUpdate(this.selfUpdateAsync, self, NeverCancel, this.incomingSelf);
         } else {
+          // TODO: In the case that our update cancels theirs, we already know their
+          // update will fail because it doesn't include ours (unless they reject our update)
+          // So, this may end up falling back to the sync protocol unnecessarily when we
+          // try to execute their update after ours. For robustness sake, it's probably
+          // best to leave this as-is and optimize that case later.
           await processOneUpdate(this.otherUpdateAsync, other!, selfPromise, this.incomingOther);
         }
       } else {
         // Their update has priority. Vice-versa from above
         if (other !== undefined) {
-          // Out of order update received?
-          // NOTE: this *may* not be an out of order update to be rejected,
-          // instead it may be an update that must be synced. it is likely
-          // that we should fall through and allow the otherUpdateAsync to
-          // handle this case?
-          if (otherPredictedNonce !== other.update.nonce) {
-            // TODO: Should resolve with Result::Error?
-            // What is Connext convention here?
-            this.incomingOther.reject("Out of order update");
-            continue;
-          }
-
           await processOneUpdate(this.otherUpdateAsync, other, NeverCancel, this.incomingOther);
         } else {
           await processOneUpdate(this.selfUpdateAsync, self!, otherPromise, this.incomingSelf);
