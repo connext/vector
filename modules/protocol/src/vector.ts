@@ -128,7 +128,7 @@ export class Vector implements IVectorProtocol {
     const result = await queue.executeSelfAsync({ params });
 
     // TODO: will this properly resolve to the right update ret?
-    // how can we tell if this was cancelled so we can retry?
+    // how to properly handle retries?
     return result as any;
   }
 
@@ -256,11 +256,9 @@ export class Vector implements IVectorProtocol {
           const ret = await inbound(
             received.update,
             received.previous,
-            received.inbox,
             activeTransfers,
             channelState,
             this.chainReader,
-            this.messagingService,
             this.externalValidationService,
             this.signer,
             this.logger,
@@ -427,7 +425,31 @@ export class Vector implements IVectorProtocol {
 
         // Update has been received and is properly formatted. Before
         // applying the update, make sure it is the highest seen nonce
-        throw new Error("fix apply other update");
+
+        // If queue does not exist, create it
+        if (!this.queues.has(received.update.channelAddress)) {
+          let aliceIdentifier: string;
+          if (received.update.type === UpdateType.setup) {
+            aliceIdentifier = this.publicIdentifier;
+          } else {
+            const channel = await this.storeService.getChannelState(received.update.channelAddress);
+            if (!channel) {
+              return Result.fail(new QueuedUpdateError(QueuedUpdateError.reasons.ChannelNotFound, received.update));
+            }
+            aliceIdentifier = channel.aliceIdentifier;
+          }
+          this.createChannelQueue(received.update.channelAddress, aliceIdentifier);
+        }
+
+        // Add operation to queue
+        const queue = this.queues.get(received.update.channelAddress)!;
+        const result = await queue.executeOtherAsync({
+          update: received.update,
+          previous: received.previousUpdate,
+          inbox,
+        });
+        this.logger.debug({ ...result.toJson() }, "Applied inbound update");
+        return;
       },
     );
 
@@ -451,42 +473,6 @@ export class Vector implements IVectorProtocol {
       });
     }
     return undefined;
-  }
-
-  // Adds a given task to the internal queue
-  // TODO: implement
-  private addToQueue(
-    params: UpdateParams<any>,
-    previous?: ChannelUpdate,
-  ): Promise<
-    Result<
-      {
-        updatedChannel: FullChannelState;
-        updatedActiveTransfers?: FullTransferState[];
-        updatedTransfer?: FullTransferState;
-      },
-      QueuedUpdateError
-    >
-  > {
-    throw new Error("addToQueue method not implemented");
-  }
-
-  // Adds a given task to the front of the internal queue
-  // TODO: implement
-  private addToFrontOfQueue(
-    params: UpdateParams<any>,
-    previous?: ChannelUpdate,
-  ): Promise<
-    Result<
-      {
-        updatedChannel: FullChannelState;
-        updatedActiveTransfers?: FullTransferState[];
-        updatedTransfer?: FullTransferState;
-      },
-      QueuedUpdateError
-    >
-  > {
-    throw new Error("addToQueue method not implemented");
   }
 
   /*
