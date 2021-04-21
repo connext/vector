@@ -19,20 +19,17 @@ import {
   UpdateParamsMap,
   UpdateType,
   ChainError,
-  jsonifyError,
 } from "@connext/vector-types";
 import { getAddress } from "@ethersproject/address";
 import { BigNumber } from "@ethersproject/bignumber";
 import {
   getSignerAddressFromPublicIdentifier,
-  getTransferId,
   hashChannelCommitment,
   hashTransferState,
   validateChannelUpdateSignatures,
 } from "@connext/vector-utils";
 import Ajv from "ajv";
 import { BaseLogger, Level } from "pino";
-import { CreateUpdateError } from "./errors";
 
 const ajv = new Ajv();
 
@@ -95,6 +92,22 @@ export const extractContextFromStore = async (
     activeTransfers,
     channelState,
   });
+};
+
+export const persistChannel = async (
+  storeService: IVectorStore,
+  updatedChannel: FullChannelState,
+  updatedTransfer?: FullTransferState,
+) => {
+  try {
+    await storeService.saveChannelState(updatedChannel, updatedTransfer);
+    return Result.ok({
+      updatedChannel,
+      updatedTransfer,
+    });
+  } catch (e) {
+    return Result.fail(new Error(`Failed to persist data: ${e.message}`));
+  }
 };
 
 // Channels store `ChannelUpdate<T>` types as the `latestUpdate` field, which
