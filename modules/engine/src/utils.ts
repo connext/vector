@@ -20,6 +20,7 @@ import {
   ChannelDefundedPayload,
   TransferDisputedPayload,
   TransferDefundedPayload,
+  ConditionalTransferRoutingCompletePayload,
 } from "@connext/vector-types";
 import { FeeCalculationError, normalizeFee } from "@connext/vector-utils";
 import { BigNumber } from "@ethersproject/bignumber";
@@ -34,6 +35,7 @@ export const getEngineEvtContainer = (): EngineEvtContainer => {
     [EngineEvents.SETUP]: Evt.create<SetupPayload>(),
     [EngineEvents.CONDITIONAL_TRANSFER_CREATED]: Evt.create<ConditionalTransferCreatedPayload>(),
     [EngineEvents.CONDITIONAL_TRANSFER_RESOLVED]: Evt.create<ConditionalTransferResolvedPayload>(),
+    [EngineEvents.CONDITIONAL_TRANSFER_ROUTING_COMPLETE]: Evt.create<ConditionalTransferRoutingCompletePayload>(),
     [EngineEvents.DEPOSIT_RECONCILED]: Evt.create<DepositReconciledPayload>(),
     [EngineEvents.REQUEST_COLLATERAL]: Evt.create<RequestCollateralPayload>(),
     [EngineEvents.RESTORE_STATE_EVENT]: Evt.create<RestoreStatePayload>(),
