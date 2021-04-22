@@ -421,6 +421,7 @@ export async function setupEngineListeners(
     evts.CONDITIONAL_TRANSFER_ROUTING_COMPLETE.post(data.getValue());
 
     // in a multihop world we would check if we routed this transfer ourselves and if so we would
+    // send a message back to our previous leg sender
   });
 
   ////////////////////////////
@@ -600,7 +601,7 @@ function handleDepositReconciliation(
   evts[EngineEvents.DEPOSIT_RECONCILED].post(payload);
 }
 
-async function handleConditionalTransferCreation(
+export async function handleConditionalTransferCreation(
   event: ChannelUpdateEvent,
   store: IEngineStore,
   chainService: IVectorChainReader,
@@ -618,6 +619,7 @@ async function handleConditionalTransferCreation(
     );
     return;
   }
+
   if (isWithdrawRes.getValue()) {
     return;
   }
@@ -683,6 +685,7 @@ async function handleConditionalTransferCreation(
       routingId,
       meta: transfer.meta,
     });
+    return;
   }
 
   // if we are the exit router, also send out-of-protocol NATS message to the sender
@@ -691,6 +694,16 @@ async function handleConditionalTransferCreation(
     transfer.initiatorIdentifier === signer.publicIdentifier &&
     (transfer.meta as RouterSchemas.RouterMeta)?.path[0]?.recipient === transfer.responderIdentifier
   ) {
+    // post event since routing is complete
+    evts.CONDITIONAL_TRANSFER_ROUTING_COMPLETE.post({
+      initiatorIdentifier: transfer.initiatorIdentifier,
+      responderIdentifier: transfer.responderIdentifier,
+      routingId,
+      meta: transfer.meta,
+    });
+
+    // notify previous leg sender
+    // first transfer leg should have been created at this point
     const _transfers = await store.getTransfersByRoutingId(routingId);
     const correspondingTransfer = _transfers.find((t) => t.responderIdentifier === signer.publicIdentifier);
     if (!correspondingTransfer) {
