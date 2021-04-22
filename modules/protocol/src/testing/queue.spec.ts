@@ -3,22 +3,22 @@ import { Result } from "@connext/vector-types";
 import { getNextNonceForUpdate } from "../utils";
 import { expect, delay } from "@connext/vector-utils";
 
-type Nonce = number;
+type FakeUpdate = { nonce: number };
 
 type Delayed = { __test_queue_delay__: number; error?: boolean };
 type DelayedSelfUpdate = SelfUpdate & Delayed;
 type DelayedOtherUpdate = OtherUpdate & Delayed;
 
 class DelayedUpdater {
-  readonly state: ["self" | "other", Nonce][] = [];
+  readonly state: ["self" | "other", FakeUpdate][] = [];
   readonly isAlice: boolean;
-  readonly initialNonce: number;
+  readonly initialUpdate: FakeUpdate;
 
   reentrant = false;
 
-  constructor(isAlice: boolean, initialNonce: Nonce) {
+  constructor(isAlice: boolean, initialUpdate: FakeUpdate) {
     this.isAlice = isAlice;
-    this.initialNonce = initialNonce;
+    this.initialUpdate = initialUpdate;
   }
 
   // Asserts that the function is not re-entrant with itself or other invocations.
@@ -37,11 +37,11 @@ class DelayedUpdater {
     return result;
   }
 
-  currentNonce(): Nonce {
+  currentNonce(): number {
     if (this.state.length == 0) {
-      return this.initialNonce;
+      return this.initialUpdate.nonce;
     }
-    return this.state[this.state.length - 1][1];
+    return this.state[this.state.length - 1][1].nonce;
   }
 
   private isCancelledAsync(cancel: Promise<unknown>, _delay: Delayed): Promise<boolean> {
@@ -66,7 +66,7 @@ class DelayedUpdater {
         return undefined;
       }
       let nonce = getNextNonceForUpdate(this.currentNonce(), this.isAlice);
-      this.state.push(["self", nonce]);
+      this.state.push(["self", { nonce }]);
       return Result.ok(undefined);
     });
   }
@@ -81,14 +81,14 @@ class DelayedUpdater {
         return undefined;
       }
 
-      this.state.push(["other", value.update.nonce]);
+      this.state.push(["other", { nonce: value.update.nonce }]);
       return Result.ok(undefined);
     });
   }
 }
 
-function setup(initialNonce: number = 0, isAlice: boolean = true): [DelayedUpdater, SerializedQueue] {
-  let updater = new DelayedUpdater(isAlice, initialNonce);
+function setup(initialUpdateNonce: number = 0, isAlice: boolean = true): [DelayedUpdater, SerializedQueue] {
+  let updater = new DelayedUpdater(isAlice, { nonce: initialUpdateNonce });
   let queue = new SerializedQueue(
     isAlice,
     updater.selfUpdateAsync.bind(updater),
@@ -106,9 +106,9 @@ function selfUpdate(delay: number): DelayedSelfUpdate {
 }
 
 function otherUpdate(delay: number, nonce: number): DelayedOtherUpdate {
-  const delayed: Delayed & { nonce: number } = {
+  const delayed: Delayed & { update: FakeUpdate } = {
     __test_queue_delay__: delay,
-    nonce,
+    update: { nonce },
   };
   return (delayed as unknown) as DelayedOtherUpdate;
 }
@@ -118,25 +118,25 @@ describe("Simple Updates", () => {
     let [updater, queue] = setup();
     let result = await queue.executeSelfAsync(selfUpdate(2));
     expect(result?.isError).to.be.false;
-    expect(updater.state).to.be.deep.equal([["self", 1]]);
+    expect(updater.state).to.be.deep.equal([["self", { nonce: 1 }]]);
   });
   it("Can update self when not interrupted and is not the leader", async () => {
     let [updater, queue] = setup(1);
     let result = await queue.executeSelfAsync(selfUpdate(2));
     expect(result?.isError).to.be.false;
-    expect(updater.state).to.be.deep.equal([["self", 4]]);
+    expect(updater.state).to.be.deep.equal([["self", { nonce: 4 }]]);
   });
   it("Can update other when not interrupted and is not the leader", async () => {
     let [updater, queue] = setup();
     let result = await queue.executeOtherAsync(otherUpdate(2, 2));
     expect(result?.isError).to.be.false;
-    expect(updater.state).to.be.deep.equal([["other", 2]]);
+    expect(updater.state).to.be.deep.equal([["other", { nonce: 2 }]]);
   });
   it("Can update other when not interrupted and is the leader", async () => {
     let [updater, queue] = setup(1);
     let result = await queue.executeOtherAsync(otherUpdate(2, 2));
     expect(result?.isError).to.be.false;
-    expect(updater.state).to.be.deep.equal([["other", 2]]);
+    expect(updater.state).to.be.deep.equal([["other", { nonce: 2 }]]);
   });
 });
 
@@ -159,13 +159,13 @@ describe("Interruptions", () => {
     // See that the other update finishes first, and that it's promise completes first.
     let first = await Promise.race([resultSelf, resultOther]);
     expect(first).to.be.equal("other");
-    expect(updater.state).to.be.deep.equal([["other", 2]]);
+    expect(updater.state).to.be.deep.equal([["other", { nonce: 2 }]]);
 
     // See that our own update completes after.
     await resultSelf;
     expect(updater.state).to.be.deep.equal([
-      ["other", 2],
-      ["self", 4],
+      ["other", { nonce: 2 }],
+      ["self", { nonce: 4 }],
     ]);
   });
   it("Discards other update after interruption", async () => {
@@ -176,7 +176,7 @@ describe("Interruptions", () => {
 
     expect((await resultOther).isError).to.be.true;
     expect((await resultSelf).isError).to.be.false;
-    expect(updater.state).to.be.deep.equal([["self", 4]]);
+    expect(updater.state).to.be.deep.equal([["self", { nonce: 4 }]]);
   });
   it("Does not interrupt self for low priority other update", async () => {
     let [updater, queue] = setup(2);
@@ -186,7 +186,7 @@ describe("Interruptions", () => {
 
     expect((await resultOther).isError).to.be.true;
     expect((await resultSelf).isError).to.be.false;
-    expect(updater.state).to.be.deep.equal([["self", 4]]);
+    expect(updater.state).to.be.deep.equal([["self", { nonce: 4 }]]);
   });
   it("Does not interrupt for low priority self update", async () => {
     let [updater, queue] = setup();
@@ -206,13 +206,13 @@ describe("Interruptions", () => {
     // See that the other update finishes first, and that it's promise completes first.
     let first = await Promise.race([resultSelf, resultOther]);
     expect(first).to.be.equal("other");
-    expect(updater.state).to.be.deep.equal([["other", 2]]);
+    expect(updater.state).to.be.deep.equal([["other", { nonce: 2 }]]);
 
     // See that our own update completes after.
     await resultSelf;
     expect(updater.state).to.be.deep.equal([
-      ["other", 2],
-      ["self", 4],
+      ["other", { nonce: 2 }],
+      ["self", { nonce: 4 }],
     ]);
   });
 });
@@ -230,25 +230,25 @@ describe("Sequences", () => {
     let ninth = queue.executeSelfAsync(selfUpdate(0));
     expect((await sixth).isError).to.be.false;
     expect(updater.state).to.be.deep.equal([
-      ["self", 1],
-      ["self", 4],
-      ["self", 5],
-      ["self", 8],
-      ["self", 9],
-      ["self", 12],
+      ["self", { nonce: 1 }],
+      ["self", { nonce: 4 }],
+      ["self", { nonce: 5 }],
+      ["self", { nonce: 8 }],
+      ["self", { nonce: 9 }],
+      ["self", { nonce: 12 }],
     ]);
     expect((await ninth).isError).to.be.false;
     expect(updater.state).to.be.deep.equal([
-      ["self", 1],
-      ["self", 4],
-      ["self", 5],
-      ["self", 8],
-      ["self", 9],
-      ["self", 12],
-      ["self", 13],
-      ["self", 16],
-      ["self", 17],
-      ["self", 20],
+      ["self", { nonce: 1 }],
+      ["self", { nonce: 4 }],
+      ["self", { nonce: 5 }],
+      ["self", { nonce: 8 }],
+      ["self", { nonce: 9 }],
+      ["self", { nonce: 12 }],
+      ["self", { nonce: 13 }],
+      ["self", { nonce: 16 }],
+      ["self", { nonce: 17 }],
+      ["self", { nonce: 20 }],
     ]);
   });
 });
@@ -263,7 +263,7 @@ describe("Errors", () => {
     let second = queue.executeSelfAsync(selfUpdate(0));
 
     expect((await first).isError).to.be.false;
-    expect(updater.state).to.be.deep.equal([["self", 1]]);
+    expect(updater.state).to.be.deep.equal([["self", { nonce: 1 }]]);
 
     let reached = false;
     try {
@@ -273,13 +273,13 @@ describe("Errors", () => {
       expect(err.message).to.be.equal("Delay error");
     }
     expect(reached).to.be.false;
-    expect(updater.state).to.be.deep.equal([["self", 1]]);
+    expect(updater.state).to.be.deep.equal([["self", { nonce: 1 }]]);
 
     await second;
 
     expect(updater.state).to.be.deep.equal([
-      ["self", 1],
-      ["self", 4],
+      ["self", { nonce: 1 }],
+      ["self", { nonce: 4 }],
     ]);
   });
 });
