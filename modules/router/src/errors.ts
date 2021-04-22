@@ -237,6 +237,8 @@ export class FeeError extends RouterError {
     ConversionError: "Error converting assets",
     ExchangeRateError: "Error getting exchange rate",
     FeesLargerThanAmount: "Fees are greater than the proposed transfer",
+    AmmError: "Error getting AMM rate"
+
   } as const;
 
   constructor(public readonly message: Values<typeof FeeError.reasons>, context: any = {}) {
