@@ -181,7 +181,7 @@ export function createTestChannelState<T extends UpdateType = typeof UpdateType.
   type: T,
   overrides: PartialFullChannelState<T> = {},
   transferOverrides: Partial<FullTransferState> = {},
-): { channel: FullChannelState; transfer: FullTransferState } {
+): { channel: FullChannelState<T>; transfer: FullTransferState } {
   // Get some default values that should be consistent between
   // the channel state and the channel update
   const publicIdentifiers = [

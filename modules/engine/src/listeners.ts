@@ -36,6 +36,7 @@ import {
   IVectorStore,
   DEFAULT_FEE_EXPIRY,
   DEFAULT_CHANNEL_TIMEOUT,
+  RouterSchemas,
 } from "@connext/vector-types";
 import { getRandomBytes32, hashWithdrawalQuote, mkSig } from "@connext/vector-utils";
 import { getAddress } from "@ethersproject/address";
@@ -46,7 +47,6 @@ import Pino, { BaseLogger } from "pino";
 import { IsAliveError, RestoreError, WithdrawQuoteError } from "./errors";
 
 import { EngineEvtContainer } from "./index";
-import { normalizeGasFees } from "./utils";
 
 export async function setupEngineListeners(
   evts: EngineEvtContainer,
@@ -95,7 +95,17 @@ export async function setupEngineListeners(
   // Set up listener for conditional transfer creations
   vector.on(
     ProtocolEventName.CHANNEL_UPDATE_EVENT,
-    async (event) => await handleConditionalTransferCreation(event, store, chainService, chainAddresses, evts, logger),
+    async (event) =>
+      await handleConditionalTransferCreation(
+        event,
+        store,
+        chainService,
+        chainAddresses,
+        evts,
+        logger,
+        signer,
+        messaging,
+      ),
     (event) => {
       const {
         updatedChannelState: {
@@ -405,6 +415,15 @@ export async function setupEngineListeners(
     logger.info({ quote: calculatedQuote.toJson(), method, methodId }, "Method complete");
   });
 
+  // if this message is received, means that a transfer we sent was routed completely to the end recipient
+  // emit the appropriate event to our external listeners
+  await messaging.onReceiveTransferRoutingCompleteMessage(signer.publicIdentifier, async (data) => {
+    evts.CONDITIONAL_TRANSFER_ROUTING_COMPLETE.post({ ...data.getValue(), publicIdentifier: signer.publicIdentifier });
+
+    // in a multihop world we would check if we routed this transfer ourselves and if so we would
+    // send a message back to our previous leg sender
+  });
+
   ////////////////////////////
   /// CHAIN SERVICE EVENTS
   chainService.on(EngineEvents.TRANSACTION_SUBMITTED, (data) => {
@@ -582,13 +601,15 @@ function handleDepositReconciliation(
   evts[EngineEvents.DEPOSIT_RECONCILED].post(payload);
 }
 
-async function handleConditionalTransferCreation(
+export async function handleConditionalTransferCreation(
   event: ChannelUpdateEvent,
   store: IEngineStore,
   chainService: IVectorChainReader,
   chainAddresses: ChainAddresses,
   evts: EngineEvtContainer,
   logger: Pino.BaseLogger,
+  signer: IChannelSigner,
+  messaging: IMessagingService,
 ): Promise<void> {
   const isWithdrawRes = await isWithdrawTransfer(event.updatedTransfer!, chainAddresses, chainService);
   if (isWithdrawRes.isError) {
@@ -598,6 +619,7 @@ async function handleConditionalTransferCreation(
     );
     return;
   }
+
   if (isWithdrawRes.getValue()) {
     return;
   }
@@ -650,10 +672,55 @@ async function handleConditionalTransferCreation(
   };
   evts[EngineEvents.CONDITIONAL_TRANSFER_CREATED].post(payload);
 
-  // If we should not route the transfer, do nothing
-  if (!routingId || transfer.meta?.routingId !== routingId) {
-    logger.warn({ transferId, routingId, meta: transfer.meta }, "Cannot route transfer");
+  // TRANSFER_ROUTING_COMPLETE event
+
+  // if transfer is created and we are the end recipient, emit event now and end
+  if (
+    transfer.responderIdentifier === signer.publicIdentifier &&
+    (transfer.meta as RouterSchemas.RouterMeta)?.path[0]?.recipient === signer.publicIdentifier
+  ) {
+    evts.CONDITIONAL_TRANSFER_ROUTING_COMPLETE.post({
+      publicIdentifier: signer.publicIdentifier,
+      initiatorIdentifier: transfer.initiatorIdentifier,
+      responderIdentifier: transfer.responderIdentifier,
+      routingId,
+      meta: transfer.meta,
+    });
     return;
+  }
+
+  // if we are the exit router, also send out-of-protocol NATS message to the sender
+  // of the linked transfer so they know the path is complete (and can forward to their sender and so on)
+  if (
+    transfer.initiatorIdentifier === signer.publicIdentifier &&
+    ((transfer.meta as RouterSchemas.RouterMeta)?.path ?? [])[0]?.recipient === transfer.responderIdentifier
+  ) {
+    // post event since routing is complete
+    evts.CONDITIONAL_TRANSFER_ROUTING_COMPLETE.post({
+      publicIdentifier: signer.publicIdentifier,
+      initiatorIdentifier: transfer.initiatorIdentifier,
+      responderIdentifier: transfer.responderIdentifier,
+      routingId,
+      meta: transfer.meta,
+    });
+
+    // notify previous leg sender
+    // first transfer leg should have been created at this point
+    const _transfers = await store.getTransfersByRoutingId(routingId);
+    const correspondingTransfer = _transfers.find((t) => t.responderIdentifier === signer.publicIdentifier);
+    if (!correspondingTransfer) {
+      return;
+    }
+    await messaging.publishTransferRoutingCompleteMessage(
+      correspondingTransfer.initiatorIdentifier,
+      signer.publicIdentifier,
+      Result.ok({
+        initiatorIdentifier: transfer.initiatorIdentifier,
+        responderIdentifier: transfer.responderIdentifier,
+        routingId,
+        meta: transfer.meta,
+      }),
+    );
   }
 }
 
