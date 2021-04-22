@@ -71,11 +71,8 @@ export interface IMessagingService extends IBasicMessaging {
   //    2. sends restore data
   // - counterparty responds
   // - restore-r restores
-  // - restore-r sends result (err or success) to counterparty
-  // - counterparty receives
-  //    1. releases lock
   sendRestoreStateMessage(
-    restoreData: Result<{ chainId: number } | { channelAddress: string }, EngineError>,
+    restoreData: Result<{ chainId: number }, EngineError>,
     to: string,
     from: string,
     timeout?: number,
@@ -85,11 +82,7 @@ export interface IMessagingService extends IBasicMessaging {
   >;
   onReceiveRestoreStateMessage(
     publicIdentifier: string,
-    callback: (
-      restoreData: Result<{ chainId: number } | { channelAddress: string }, EngineError>,
-      from: string,
-      inbox: string,
-    ) => void,
+    callback: (restoreData: Result<{ chainId: number }, EngineError>, from: string, inbox: string) => void,
   ): Promise<void>;
   respondToRestoreStateMessage(
     inbox: string,
