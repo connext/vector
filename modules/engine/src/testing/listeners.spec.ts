@@ -835,14 +835,17 @@ describe(testName, () => {
         { ...test.transfer, initiatorIdentifier: alice.publicIdentifier, responderIdentifier: signer.publicIdentifier },
       ]);
 
-      evts.CONDITIONAL_TRANSFER_ROUTING_COMPLETE.attachOnce((data) => {
-        expect(data).to.deep.eq({
-          publicIdentifier: signer.publicIdentifier,
-          initiatorIdentifier: test.transfer.initiatorIdentifier,
-          responderIdentifier: test.transfer.responderIdentifier,
-          routingId: test.transfer.meta.routingId,
-          meta: test.transfer.meta,
-        } as ConditionalTransferRoutingCompletePayload);
+      const promise = new Promise((resolve) => {
+        evts.CONDITIONAL_TRANSFER_ROUTING_COMPLETE.attachOnce((data) => {
+          expect(data).to.deep.eq({
+            publicIdentifier: signer.publicIdentifier,
+            initiatorIdentifier: test.transfer.initiatorIdentifier,
+            responderIdentifier: test.transfer.responderIdentifier,
+            routingId: test.transfer.meta.routingId,
+            meta: test.transfer.meta,
+          } as ConditionalTransferRoutingCompletePayload);
+          resolve(undefined);
+        });
       });
 
       await handleConditionalTransferCreation(
@@ -867,6 +870,7 @@ describe(testName, () => {
           meta: test.transfer.meta,
         } as ConditionalTransferRoutingCompletePayload),
       );
+      await promise;
     });
   });
 });
