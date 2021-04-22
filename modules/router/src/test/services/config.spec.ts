@@ -9,7 +9,7 @@ import { parseEther } from "ethers/lib/utils";
 
 const config = getConfig();
 
-describe.only("config.ts", () => {
+describe("config.ts", () => {
   const chainId = parseInt(Object.keys(config.chainProviders)[0]);
   const transferAmount = parseEther("1");
   const fromAssetId: string = mkAddress("0xA");
