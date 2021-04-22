@@ -157,7 +157,6 @@ export const onSwapGivenIn = async (
 
     const marketPrice = transferAmountBn;
     const priceImpact = marketPrice.sub(amountOut).mul(100).div(marketPrice);
-    console.log(priceImpact);
 
     return Result.ok({ priceImpact: priceImpact.toString(), amountOut: amountOut.toString() });
   } catch (e) {

@@ -85,7 +85,7 @@ export const calculateFeeAmount = async (
   // If recipient is router, i.e. fromChannel ===  toChannel, then the
   // fee amount is 0 because no fees are taken without forwarding
   if (toChannel.channelAddress === fromChannel.channelAddress) {
-    return Result.ok({ fee: Zero, amount: amountOut, priceImpact: priceImpact });
+    return Result.ok({ fee: Zero, amount: amountOut, priceImpact });
   }
 
   // Get fee values from config
@@ -110,7 +110,7 @@ export const calculateFeeAmount = async (
   );
   if (flatFee === "0" && percentageFee === 0 && gasSubsidyPercentage === 100) {
     // No fees configured
-    return Result.ok({ fee: Zero, amount: transferAmount });
+    return Result.ok({ fee: Zero, amount: transferAmount, priceImpact });
   }
   const isSwap = fromChainId !== toChainId || fromAssetId !== toAssetId;
 
@@ -150,7 +150,7 @@ export const calculateFeeAmount = async (
       "Method complete, gas is subsidized",
     );
 
-    return Result.ok({ fee: staticFees, amount: receiveExactAmount ? amtToTransfer.add(flatFee) : transferAmount });
+    return Result.ok({ fee: staticFees, amount: receiveExactAmount ? amtToTransfer.add(flatFee) : transferAmount, priceImpact });
   }
 
   logger.debug(
