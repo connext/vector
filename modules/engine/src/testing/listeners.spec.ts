@@ -183,7 +183,6 @@ describe(testName, () => {
       test.transfer.transferState.nonce = "0";
       test.transfer.transferState.initiatorSignature = mkSig("0xabc");
       test.transfer.transferResolver = { responderSignature: mkSig("0x0") };
-      console.log("test: ", test.transfer);
       Sinon.stub(listeners, "isWithdrawTransfer").resolves(Result.ok(true));
 
       await handleWithdrawalTransferResolution(
@@ -785,6 +784,7 @@ describe(testName, () => {
 
         evts.CONDITIONAL_TRANSFER_ROUTING_COMPLETE.attachOnce((data) => {
           expect(data).to.deep.eq({
+            publicIdentifier: signer.publicIdentifier,
             initiatorIdentifier: test.transfer.initiatorIdentifier,
             responderIdentifier: test.transfer.responderIdentifier,
             routingId: test.transfer.meta.routingId,
@@ -837,6 +837,7 @@ describe(testName, () => {
 
       evts.CONDITIONAL_TRANSFER_ROUTING_COMPLETE.attachOnce((data) => {
         expect(data).to.deep.eq({
+          publicIdentifier: signer.publicIdentifier,
           initiatorIdentifier: test.transfer.initiatorIdentifier,
           responderIdentifier: test.transfer.responderIdentifier,
           routingId: test.transfer.meta.routingId,
