@@ -1,4 +1,4 @@
-import { AllowedSwap, Result, jsonifyError } from "@connext/vector-types";
+import { AllowedSwap, Result, jsonifyError, IVectorChainReader } from "@connext/vector-types";
 import { JsonRpcProvider } from "@ethersproject/providers";
 import { VectorChainReader, StableSwap } from "@connext/vector-contracts";
 import { getAddress } from "@ethersproject/address";
@@ -110,7 +110,7 @@ export const onSwapGivenIn = async (
   toAssetId: string,
   toChainId: number,
   routerSignerAddress: string,
-  chainReader: VectorChainReader,
+  chainReader: IVectorChainReader,
 ): Promise<Result<{ priceImpact: string; amountOut: string }, ConfigServiceError>> => {
   // get router balance for each chain for balances array to get the trade size.
   // we will getOnChainBalance for routerSignerAddress
