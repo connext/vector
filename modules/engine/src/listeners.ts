@@ -693,7 +693,7 @@ export async function handleConditionalTransferCreation(
   // of the linked transfer so they know the path is complete (and can forward to their sender and so on)
   if (
     transfer.initiatorIdentifier === signer.publicIdentifier &&
-    (transfer.meta as RouterSchemas.RouterMeta)?.path[0]?.recipient === transfer.responderIdentifier
+    ((transfer.meta as RouterSchemas.RouterMeta)?.path ?? [])[0]?.recipient === transfer.responderIdentifier
   ) {
     // post event since routing is complete
     evts.CONDITIONAL_TRANSFER_ROUTING_COMPLETE.post({

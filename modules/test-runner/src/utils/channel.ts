@@ -273,12 +273,15 @@ export const transfer = async (
   expect(receiverCreate).to.be.ok;
   expect(senderCreate?.transfer.balance.amount).to.be.deep.eq([amount.toString(), "0"]);
   expect(receiverCreate?.transfer.balance.amount).to.be.deep.eq([amountForwarded.toString(), "0"]);
-  const [senderRoutingComplete, receiverRoutingComplete] = await Promise.all([
-    senderRoutingCompletePromise,
-    receiverRoutingCompletePromise,
-  ]);
-  expect(senderRoutingComplete).to.be.ok;
-  expect(receiverRoutingComplete).to.be.ok;
+  // check event if transfer is forwarded
+  if (senderChannelAddress !== receiverChannelAddress) {
+    const [senderRoutingComplete, receiverRoutingComplete] = await Promise.all([
+      senderRoutingCompletePromise,
+      receiverRoutingCompletePromise,
+    ]);
+    expect(senderRoutingComplete).to.be.ok;
+    expect(receiverRoutingComplete).to.be.ok;
+  }
 
   const receiverTransferRes = await receiver.getTransferByRoutingId({
     channelAddress: receiverChannel.channelAddress,
