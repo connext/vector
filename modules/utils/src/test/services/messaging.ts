@@ -158,7 +158,7 @@ export class MemoryMessagingService implements IMessagingService {
   }
 
   sendRestoreStateMessage(
-    restoreData: Result<{ chainId: number } | { channelAddress: string }, EngineError>,
+    restoreData: Result<{ chainId: number }, EngineError>,
     to: string,
     from: string,
     timeout?: number,
@@ -168,11 +168,7 @@ export class MemoryMessagingService implements IMessagingService {
   }
   onReceiveRestoreStateMessage(
     publicIdentifier: string,
-    callback: (
-      restoreData: Result<{ chainId: number } | { channelAddress: string }, EngineError>,
-      from: string,
-      inbox: string,
-    ) => void,
+    callback: (restoreData: Result<{ chainId: number }, EngineError>, from: string, inbox: string) => void,
   ): Promise<void> {
     throw new Error("Method not implemented.");
   }

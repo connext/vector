@@ -161,11 +161,7 @@ export async function setupEngineListeners(
 
   await messaging.onReceiveRestoreStateMessage(
     signer.publicIdentifier,
-    async (
-      restoreData: Result<{ chainId: number } | { channelAddress: string }, EngineError>,
-      from: string,
-      inbox: string,
-    ) => {
+    async (restoreData: Result<{ chainId: number }, EngineError>, from: string, inbox: string) => {
       // If it is from yourself, do nothing
       if (from === signer.publicIdentifier) {
         return;
@@ -173,7 +169,65 @@ export async function setupEngineListeners(
       const method = "onReceiveRestoreStateMessage";
       logger.debug({ method }, "Handling message");
 
-      throw new Error("call to protocol to add to internal queue");
+      // Received error from counterparty
+      if (restoreData.isError) {
+        logger.error({ message: restoreData.getError()!.message, method }, "Error received from counterparty restore");
+        return;
+      }
+
+      const data = restoreData.getValue();
+      const [key] = Object.keys(data ?? []);
+      if (key !== "chainId") {
+        logger.error({ data }, "Message malformed");
+        return;
+      }
+
+      // Counterparty looking to initiate a restore
+      let channel: FullChannelState | undefined;
+      const sendCannotRestoreFromError = (error: Values<typeof RestoreError.reasons>, context: any = {}) => {
+        return messaging.respondToRestoreStateMessage(
+          inbox,
+          Result.fail(
+            new RestoreError(error, channel?.channelAddress ?? "", signer.publicIdentifier, { ...context, method }),
+          ),
+        );
+      };
+
+      // Get info from store to send to counterparty
+      const { chainId } = data as any;
+      try {
+        channel = await store.getChannelStateByParticipants(signer.publicIdentifier, from, chainId);
+      } catch (e) {
+        return sendCannotRestoreFromError(RestoreError.reasons.CouldNotGetChannel, {
+          storeMethod: "getChannelStateByParticipants",
+          chainId,
+          identifiers: [signer.publicIdentifier, from],
+        });
+      }
+      if (!channel) {
+        return sendCannotRestoreFromError(RestoreError.reasons.ChannelNotFound, { chainId });
+      }
+      let activeTransfers: FullTransferState[];
+      try {
+        activeTransfers = await store.getActiveTransfers(channel.channelAddress);
+      } catch (e) {
+        return sendCannotRestoreFromError(RestoreError.reasons.CouldNotGetActiveTransfers, {
+          storeMethod: "getActiveTransfers",
+          chainId,
+          channelAddress: channel.channelAddress,
+        });
+      }
+
+      // Send info to counterparty
+      logger.debug(
+        {
+          channel: channel.channelAddress,
+          nonce: channel.nonce,
+          activeTransfers: activeTransfers.map((a) => a.transferId),
+        },
+        "Sending counterparty state to sync",
+      );
+      await messaging.respondToRestoreStateMessage(inbox, Result.ok({ channel, activeTransfers }));
     },
   );
 
