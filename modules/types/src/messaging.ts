@@ -174,10 +174,14 @@ export interface IMessagingService extends IBasicMessaging {
   publishTransferRoutingCompleteMessage(
     to: string,
     from: string,
-    data: Result<ConditionalTransferRoutingCompletePayload, VectorError>,
+    data: Result<Omit<ConditionalTransferRoutingCompletePayload, "publicIdentifier">, VectorError>,
   ): Promise<void>;
   onReceiveTransferRoutingCompleteMessage(
     myPublicIdentifier: string,
-    callback: (data: Result<ConditionalTransferRoutingCompletePayload, NodeError>, from: string, inbox: string) => void,
+    callback: (
+      data: Result<Omit<ConditionalTransferRoutingCompletePayload, "publicIdentifier">, NodeError>,
+      from: string,
+      inbox: string,
+    ) => void,
   ): Promise<void>;
 }

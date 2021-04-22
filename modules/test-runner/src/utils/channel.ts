@@ -20,6 +20,7 @@ import { BigNumber, constants, providers, utils, Wallet } from "ethers";
 import { env } from "./env";
 import { getOnchainBalance } from "./ethereum";
 import { waitForTransaction } from "@connext/vector-contracts";
+import { carolEvts } from "../trio/eventSetup";
 
 export const chainId1 = parseInt(Object.keys(env.chainProviders)[0]);
 export const provider1 = new providers.JsonRpcProvider(env.chainProviders[chainId1]);
@@ -254,9 +255,8 @@ export const transfer = async (
 
   const senderCreatePromise = sender.waitFor(EngineEvents.CONDITIONAL_TRANSFER_CREATED, 30_000);
   const receiverCreatePromise = receiver.waitFor(EngineEvents.CONDITIONAL_TRANSFER_CREATED, 30_000);
-  sender.on(EngineEvents.CONDITIONAL_TRANSFER_ROUTING_COMPLETE, (data) => {
-    console.log("*************** EngineEvents.CONDITIONAL_TRANSFER_FORWARDED: ", data);
-  });
+  const senderRoutingCompletePromise = sender.waitFor(EngineEvents.CONDITIONAL_TRANSFER_ROUTING_COMPLETE, 30_000);
+  const receiverRoutingCompletePromise = receiver.waitFor(EngineEvents.CONDITIONAL_TRANSFER_ROUTING_COMPLETE, 30_000);
   const transferRes = await sender.conditionalTransfer(params);
   expect(transferRes.getError()).to.not.be.ok;
 
@@ -273,6 +273,12 @@ export const transfer = async (
   expect(receiverCreate).to.be.ok;
   expect(senderCreate?.transfer.balance.amount).to.be.deep.eq([amount.toString(), "0"]);
   expect(receiverCreate?.transfer.balance.amount).to.be.deep.eq([amountForwarded.toString(), "0"]);
+  const [senderRoutingComplete, receiverRoutingComplete] = await Promise.all([
+    senderRoutingCompletePromise,
+    receiverRoutingCompletePromise,
+  ]);
+  expect(senderRoutingComplete).to.be.ok;
+  expect(receiverRoutingComplete).to.be.ok;
 
   const receiverTransferRes = await receiver.getTransferByRoutingId({
     channelAddress: receiverChannel.channelAddress,

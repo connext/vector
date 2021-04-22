@@ -53,6 +53,7 @@ export type ConditionalTransferResolvedPayload = ConditionalTransferCreatedPaylo
 // Emitted when transfer forwarded by router
 export const CONDITIONAL_TRANSFER_ROUTING_COMPLETE_EVENT = "CONDITIONAL_TRANSFER_ROUTING_COMPLETE";
 export type ConditionalTransferRoutingCompletePayload = {
+  publicIdentifier: string;
   routingId: string;
   initiatorIdentifier: string;
   responderIdentifier: string;

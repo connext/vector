@@ -244,10 +244,7 @@ export class NatsBasicMessagingService implements IBasicMessaging {
         callback(Result.fail(new MessagingError(err)), from, msg.reply);
         return;
       }
-      const { result, parsed } = this.parseIncomingMessage<T>(msg);
-      if (!parsed.reply) {
-        return;
-      }
+      const { result } = this.parseIncomingMessage<T>(msg);
 
       callback(result, from, msg.reply);
       return;
@@ -620,7 +617,8 @@ export class NatsMessagingService extends NatsBasicMessagingService implements I
     from: string,
     data: Result<ConditionalTransferRoutingCompletePayload, VectorError>,
   ): Promise<void> {
-    return this.publish(`${to}.${from}.forwarded-transfer`, safeJsonStringify(data.toJson()));
+    console.log("publishTransferRoutingCompleteMessage ======> ", `${to}.${from}.forwarded-transfer`);
+    return this.publish(`${to}.${from}.transfer-routing-complete`, safeJsonStringify(data.toJson()));
   }
 
   onReceiveTransferRoutingCompleteMessage(
@@ -631,8 +629,12 @@ export class NatsMessagingService extends NatsBasicMessagingService implements I
       inbox: string,
     ) => void,
   ): Promise<void> {
+    console.log(
+      "onReceiveTransferRoutingCompleteMessage ======> ",
+      `${myPublicIdentifier}.*.transfer-routing-complete`,
+    );
     return this.registerCallback(
-      `${myPublicIdentifier}.*.forwarded-transfer`,
+      `${myPublicIdentifier}.*.transfer-routing-complete`,
       callback,
       "onReceiveForwardedTransferMessage",
     );

@@ -418,7 +418,7 @@ export async function setupEngineListeners(
   // if this message is received, means that a transfer we sent was routed completely to the end recipient
   // emit the appropriate event to our external listeners
   await messaging.onReceiveTransferRoutingCompleteMessage(signer.publicIdentifier, async (data) => {
-    evts.CONDITIONAL_TRANSFER_ROUTING_COMPLETE.post(data.getValue());
+    evts.CONDITIONAL_TRANSFER_ROUTING_COMPLETE.post({ ...data.getValue(), publicIdentifier: signer.publicIdentifier });
 
     // in a multihop world we would check if we routed this transfer ourselves and if so we would
     // send a message back to our previous leg sender
@@ -680,6 +680,7 @@ export async function handleConditionalTransferCreation(
     (transfer.meta as RouterSchemas.RouterMeta)?.path[0]?.recipient === signer.publicIdentifier
   ) {
     evts.CONDITIONAL_TRANSFER_ROUTING_COMPLETE.post({
+      publicIdentifier: signer.publicIdentifier,
       initiatorIdentifier: transfer.initiatorIdentifier,
       responderIdentifier: transfer.responderIdentifier,
       routingId,
@@ -696,6 +697,7 @@ export async function handleConditionalTransferCreation(
   ) {
     // post event since routing is complete
     evts.CONDITIONAL_TRANSFER_ROUTING_COMPLETE.post({
+      publicIdentifier: signer.publicIdentifier,
       initiatorIdentifier: transfer.initiatorIdentifier,
       responderIdentifier: transfer.responderIdentifier,
       routingId,
