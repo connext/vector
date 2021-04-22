@@ -6,6 +6,7 @@ import {
   IVectorStore,
   IChannelSigner,
   FullTransferState,
+  FullChannelState,
 } from "@connext/vector-types";
 import { AddressZero } from "@ethersproject/constants";
 import { BigNumber } from "@ethersproject/bignumber";
@@ -13,6 +14,8 @@ import { BigNumber } from "@ethersproject/bignumber";
 import { createTransfer, getFundedChannel, resolveTransfer, depositInChannel } from "../utils";
 import { env } from "../env";
 import { chainId } from "../constants";
+import { getNextNonceForUpdate } from "../../utils";
+import { QueuedUpdateError } from "../../errors";
 
 const testName = "Resolve Integrations";
 const { log } = getTestLoggers(testName, env.logLevel);
@@ -23,12 +26,13 @@ describe(testName, () => {
   let channelAddress: string;
   let aliceSigner: IChannelSigner;
   let bobSigner: IChannelSigner;
-  let aliceStore: IVectorStore;
   let bobStore: IVectorStore;
 
   let assetId: string;
   let assetIdErc20: string;
   let transferAmount: any;
+
+  let setupChannel: FullChannelState;
 
   beforeEach(async () => {
     const setup = await getFundedChannel(testName, [
@@ -43,7 +47,6 @@ describe(testName, () => {
     ]);
     alice = setup.alice.protocol;
     aliceSigner = setup.alice.signer;
-    aliceStore = setup.alice.store;
     bob = setup.bob.protocol;
     bobSigner = setup.bob.signer;
     bobStore = setup.bob.store;
@@ -53,6 +56,8 @@ describe(testName, () => {
     assetId = AddressZero;
     assetIdErc20 = env.chainAddresses[chainId].testTokenAddress;
     transferAmount = "7";
+
+    setupChannel = setup.channel;
 
     log.info({
       alice: alice.publicIdentifier,
@@ -65,7 +70,7 @@ describe(testName, () => {
     await bob.off();
   });
 
-  const resolveTransferAlice = async (transfer: FullTransferState): Promise<void> => {
+  const resolveTransferCreatedByAlice = async (transfer: FullTransferState): Promise<void> => {
     const alicePromise = alice.waitFor(ProtocolEventName.CHANNEL_UPDATE_EVENT, 10_000);
     const bobPromise = bob.waitFor(ProtocolEventName.CHANNEL_UPDATE_EVENT, 10_000);
     await resolveTransfer(channelAddress, transfer, bob, alice);
@@ -85,7 +90,7 @@ describe(testName, () => {
     expect(bobEvent.updatedTransfer?.transferState.balance).to.be.deep.eq(transfer.balance);
   };
 
-  const resolveTransferBob = async (transfer: FullTransferState): Promise<void> => {
+  const resolveTransferCreatedByBob = async (transfer: FullTransferState): Promise<void> => {
     const alicePromise = alice.waitFor(ProtocolEventName.CHANNEL_UPDATE_EVENT, 10_000);
     const bobPromise = bob.waitFor(ProtocolEventName.CHANNEL_UPDATE_EVENT, 10_000);
     await resolveTransfer(channelAddress, transfer, alice, bob);
@@ -108,48 +113,48 @@ describe(testName, () => {
   it("should work for alice resolving an eth transfer", async () => {
     const { transfer } = await createTransfer(channelAddress, alice, bob, assetId, transferAmount);
 
-    await resolveTransferAlice(transfer);
+    await resolveTransferCreatedByAlice(transfer);
   });
 
   it("should work for alice resolving a token transfer", async () => {
     const { transfer } = await createTransfer(channelAddress, alice, bob, assetIdErc20, transferAmount);
 
-    await resolveTransferAlice(transfer);
+    await resolveTransferCreatedByAlice(transfer);
   });
 
   it("should work for alice resolving an eth transfer out of channel", async () => {
     const outsiderPayee = mkAddress("0xc");
     const { transfer } = await createTransfer(channelAddress, alice, bob, assetId, transferAmount, outsiderPayee);
-    await resolveTransferAlice(transfer);
+    await resolveTransferCreatedByAlice(transfer);
   });
 
   it("should work for alice resolving a token transfer out of channel", async () => {
     const outsiderPayee = mkAddress("0xc");
     const { transfer } = await createTransfer(channelAddress, alice, bob, assetIdErc20, transferAmount, outsiderPayee);
-    await resolveTransferAlice(transfer);
+    await resolveTransferCreatedByAlice(transfer);
   });
 
   it("should work for bob resolving an eth transfer", async () => {
     const { transfer } = await createTransfer(channelAddress, bob, alice, assetId, transferAmount);
 
-    await resolveTransferBob(transfer);
+    await resolveTransferCreatedByBob(transfer);
   });
 
   it("should work for bob resolving an eth transfer out of channel", async () => {
     const outsiderPayee = mkAddress("0xc");
     const { transfer } = await createTransfer(channelAddress, bob, alice, assetId, transferAmount, outsiderPayee);
-    await resolveTransferBob(transfer);
+    await resolveTransferCreatedByBob(transfer);
   });
 
   it("should work for bob resolving a token transfer", async () => {
     const { transfer } = await createTransfer(channelAddress, bob, alice, assetIdErc20, transferAmount);
-    await resolveTransferBob(transfer);
+    await resolveTransferCreatedByBob(transfer);
   });
 
   it("should work for bob resolving a token transfer out of channel", async () => {
     const outsiderPayee = mkAddress("0xc");
     const { transfer } = await createTransfer(channelAddress, bob, alice, assetIdErc20, transferAmount, outsiderPayee);
-    await resolveTransferBob(transfer);
+    await resolveTransferCreatedByBob(transfer);
   });
 
   it("should work concurrently", async () => {
@@ -167,20 +172,57 @@ describe(testName, () => {
   it("should work if initiator channel is out of sync", async () => {
     const depositAmount = BigNumber.from("1000");
     const preChannelState = await depositInChannel(channelAddress, alice, aliceSigner, bob, assetId, depositAmount);
-    const { transfer } = await createTransfer(channelAddress, alice, bob, assetId, transferAmount);
+    const { transfer, channel } = await createTransfer(channelAddress, alice, bob, assetId, transferAmount);
 
-    await aliceStore.saveChannelState(preChannelState);
+    await bobStore.saveChannelState(preChannelState);
 
-    await resolveTransferAlice(transfer);
+    // bob is resolver/initiator
+    await resolveTransferCreatedByAlice(transfer);
+  });
+
+  it("should fail if the initiator needs to restore", async () => {
+    const depositAmount = BigNumber.from("1000");
+    await depositInChannel(channelAddress, alice, aliceSigner, bob, assetId, depositAmount);
+    const { transfer, channel } = await createTransfer(channelAddress, alice, bob, assetId, transferAmount);
+
+    await bobStore.saveChannelState(setupChannel);
+
+    // bob is resolver/initiator
+    const result = await bob.resolve({
+      channelAddress: channel.channelAddress,
+      transferId: transfer.transferId,
+      transferResolver: transfer.transferResolver,
+    });
+    expect(result.isError).to.be.true;
+    expect(result.getError()?.message).to.be.eq(QueuedUpdateError.reasons.RestoreNeeded);
   });
 
   it("should work if responder channel is out of sync", async () => {
     const depositAmount = BigNumber.from("1000");
     const preChannelState = await depositInChannel(channelAddress, bob, bobSigner, alice, assetId, depositAmount);
-    const { transfer } = await createTransfer(channelAddress, bob, alice, assetId, transferAmount);
+    const { transfer, channel } = await createTransfer(channelAddress, bob, alice, assetId, transferAmount);
 
     await bobStore.saveChannelState(preChannelState);
 
-    await resolveTransferBob(transfer);
+    // alice is resolver/initiator
+    await resolveTransferCreatedByBob(transfer);
+  });
+
+  it("should fail if the responder needs to restore", async () => {
+    const depositAmount = BigNumber.from("1000");
+    await depositInChannel(channelAddress, bob, bobSigner, alice, assetId, depositAmount);
+    const { transfer } = await createTransfer(channelAddress, bob, alice, assetId, transferAmount);
+
+    await bobStore.saveChannelState(setupChannel);
+
+    // alice is resolver/initiator
+    const result = await alice.resolve({
+      channelAddress,
+      transferId: transfer.transferId,
+      transferResolver: transfer.transferResolver,
+    });
+    expect(result.isError).to.be.true;
+    expect(result.getError()?.message).to.be.eq(QueuedUpdateError.reasons.CounterpartyFailure);
+    expect(result.getError()?.context.counterpartyError.message).to.be.eq(QueuedUpdateError.reasons.RestoreNeeded);
   });
 });

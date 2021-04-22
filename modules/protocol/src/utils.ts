@@ -19,20 +19,18 @@ import {
   UpdateParamsMap,
   UpdateType,
   ChainError,
-  jsonifyError,
 } from "@connext/vector-types";
 import { getAddress } from "@ethersproject/address";
 import { BigNumber } from "@ethersproject/bignumber";
 import {
   getSignerAddressFromPublicIdentifier,
-  getTransferId,
   hashChannelCommitment,
   hashTransferState,
   validateChannelUpdateSignatures,
 } from "@connext/vector-utils";
 import Ajv from "ajv";
 import { BaseLogger, Level } from "pino";
-import { CreateUpdateError } from "./errors";
+import { QueuedUpdateError } from "./errors";
 
 const ajv = new Ajv();
 
@@ -45,6 +43,16 @@ export const validateSchema = (obj: any, schema: any): undefined | string => {
   }
   return undefined;
 };
+
+export function validateParamSchema(params: any, schema: any): undefined | QueuedUpdateError {
+  const error = validateSchema(params, schema);
+  if (error) {
+    return new QueuedUpdateError(QueuedUpdateError.reasons.InvalidParams, params, undefined, {
+      paramsError: error,
+    });
+  }
+  return undefined;
+}
 
 // NOTE: If you do *NOT* use this function within the protocol, it becomes
 // very difficult to write proper unit tests. When the same utility is imported
@@ -95,6 +103,22 @@ export const extractContextFromStore = async (
     activeTransfers,
     channelState,
   });
+};
+
+export const persistChannel = async (
+  storeService: IVectorStore,
+  updatedChannel: FullChannelState,
+  updatedTransfer?: FullTransferState,
+) => {
+  try {
+    await storeService.saveChannelState(updatedChannel, updatedTransfer);
+    return Result.ok({
+      updatedChannel,
+      updatedTransfer,
+    });
+  } catch (e) {
+    return Result.fail(new Error(`Failed to persist data: ${e.message}`));
+  }
 };
 
 // Channels store `ChannelUpdate<T>` types as the `latestUpdate` field, which

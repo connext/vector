@@ -62,7 +62,7 @@ export interface UpdateParamsMap {
 }
 
 // Protocol update
-export type UpdateParams<T extends UpdateType> = {
+export type UpdateParams<T extends UpdateType = any> = {
   channelAddress: string;
   type: T;
   details: UpdateParamsMap[T];

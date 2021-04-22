@@ -26,7 +26,13 @@ import { HashZero, AddressZero } from "@ethersproject/constants";
 import { BaseLogger } from "pino";
 
 import { ApplyUpdateError, CreateUpdateError } from "./errors";
-import { generateSignedChannelCommitment, getUpdatedChannelBalance, mergeAssetIds, reconcileDeposit } from "./utils";
+import {
+  generateSignedChannelCommitment,
+  getNextNonceForUpdate,
+  getUpdatedChannelBalance,
+  mergeAssetIds,
+  reconcileDeposit,
+} from "./utils";
 
 // Should return a state with the given update applied
 // It is assumed here that the update is validated before
@@ -74,7 +80,7 @@ export function applyUpdate<T extends UpdateType>(
       return Result.ok({
         updatedActiveTransfers: [...previousActiveTransfers],
         updatedChannel: {
-          nonce: 1,
+          nonce: update.nonce,
           channelAddress,
           timeout,
           alice: getSignerAddressFromPublicIdentifier(fromIdentifier),
@@ -597,7 +603,7 @@ function generateBaseUpdate<T extends UpdateType>(
   const isInitiator = signer.publicIdentifier === initiatorIdentifier;
   const counterparty = signer.publicIdentifier === state.bobIdentifier ? state.aliceIdentifier : state.bobIdentifier;
   return {
-    nonce: state.nonce + 1,
+    nonce: getNextNonceForUpdate(state.nonce, initiatorIdentifier === state.aliceIdentifier),
     channelAddress: state.channelAddress,
     type: params.type,
     fromIdentifier: initiatorIdentifier,

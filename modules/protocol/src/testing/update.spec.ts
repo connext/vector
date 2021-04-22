@@ -481,7 +481,7 @@ describe("applyUpdate", () => {
 // Therefore, only the `update` itself must be generated. The presence
 // of the other fields should be asserted, and validity tested in the
 // applyUpdate functino above
-describe("generateAndApplyUpdate", () => {
+describe.skip("generateAndApplyUpdate", () => {
   // Get test constants
   const { log } = getTestLoggers("generateAndApplyUpdate", env.logLevel);
   const chainId = parseInt(Object.keys(env.chainProviders)[0]);
