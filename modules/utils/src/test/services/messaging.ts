@@ -12,6 +12,7 @@ import {
   ProtocolError,
   RouterError,
   NodeResponses,
+  ConditionalTransferRoutingCompletePayload,
 } from "@connext/vector-types";
 import { Evt } from "evt";
 
@@ -244,6 +245,21 @@ export class MemoryMessagingService implements IMessagingService {
   respondToWithdrawalQuoteMessage(
     inbox: string,
     quote: Result<NodeResponses.WithdrawalQuote, NodeError>,
+  ): Promise<void> {
+    throw new Error("Method not implemented.");
+  }
+
+  publishTransferRoutingCompleteMessage(
+    to: string,
+    from: string,
+    data: Result<ConditionalTransferRoutingCompletePayload, VectorError>,
+  ): Promise<void> {
+    throw new Error("Method not implemented.");
+  }
+
+  onReceiveTransferRoutingCompleteMessage(
+    myPublicIdentifier: string,
+    callback: (data: Result<ConditionalTransferRoutingCompletePayload, NodeError>, from: string, inbox: string) => void,
   ): Promise<void> {
     throw new Error("Method not implemented.");
   }

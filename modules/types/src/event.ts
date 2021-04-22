@@ -1,5 +1,4 @@
 import { TransactionReceipt, TransactionResponse } from "@ethersproject/providers";
-import { TransferResolver, TransferState } from "./transferDefinitions/shared";
 
 import { FullTransferState, FullChannelState, CoreChannelState, CoreTransferState, Balance } from "./channel";
 import { ChannelDispute, TransferDispute } from "./dispute";

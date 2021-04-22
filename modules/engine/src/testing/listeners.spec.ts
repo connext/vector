@@ -24,6 +24,8 @@ import {
   ChainError,
   EngineParams,
   WithdrawalResolvedPayload,
+  RouterSchemas,
+  ConditionalTransferRoutingCompletePayload,
 } from "@connext/vector-types";
 import {
   getTestLoggers,
@@ -45,14 +47,15 @@ import {
 } from "@connext/vector-utils";
 import { Vector } from "@connext/vector-protocol";
 import { Evt } from "evt";
-import Sinon from "sinon";
-import { AddressZero, Zero } from "@ethersproject/constants";
+import Sinon, { stub } from "sinon";
+import { AddressZero } from "@ethersproject/constants";
 import { BigNumber } from "@ethersproject/bignumber";
 import { hexlify } from "@ethersproject/bytes";
 import { randomBytes } from "@ethersproject/random";
 
 import {
   getWithdrawalQuote,
+  handleConditionalTransferCreation,
   handleWithdrawalTransferResolution,
   resolveExistingWithdrawals,
   setupEngineListeners,
@@ -67,6 +70,7 @@ import { WithdrawQuoteError } from "../errors";
 
 const testName = "Engine listeners unit";
 const { log } = getTestLoggers(testName, env.logLevel);
+console.log("env.logLevel: ", env.logLevel);
 
 describe(testName, () => {
   // Get env constants
@@ -179,7 +183,6 @@ describe(testName, () => {
       test.transfer.transferState.nonce = "0";
       test.transfer.transferState.initiatorSignature = mkSig("0xabc");
       test.transfer.transferResolver = { responderSignature: mkSig("0x0") };
-      console.log("test: ", test.transfer);
       Sinon.stub(listeners, "isWithdrawTransfer").resolves(Result.ok(true));
 
       await handleWithdrawalTransferResolution(
@@ -735,6 +738,135 @@ describe(testName, () => {
         ...request,
         fee: "0",
       });
+    });
+  });
+
+  describe("handleConditionalTransferCreation", () => {
+    beforeEach(() => {
+      stub(listeners, "isWithdrawTransfer").resolves(Result.ok(false));
+      chainService.getRegisteredTransferByDefinition.resolves(
+        Result.ok({
+          definition: AddressZero,
+          name: "foo",
+          encodedCancel: "0x",
+          resolverEncoding: "bar",
+          stateEncoding: "baz",
+        }),
+      );
+    });
+
+    it("should emit CONDITIONAL_TRANSFER_ROUTING_COMPLETE for the end recipient", async () => {
+      return new Promise((res, rej) => {
+        const signer = getRandomChannelSigner();
+        const test = createTestChannelState("create", { networkContext: { chainId } });
+        const meta = {
+          routingId: mkHash("0xaaa"),
+          path: [
+            {
+              recipient: signer.publicIdentifier,
+              recipientAssetId: AddressZero,
+              recipientChainId: chainId,
+            },
+          ],
+        } as RouterSchemas.RouterMeta;
+        test.channel.latestUpdate.details.meta = meta;
+        test.transfer.responderIdentifier = signer.publicIdentifier;
+        test.transfer.meta = meta;
+        const event: ChannelUpdateEvent = {
+          updatedChannelState: test.channel,
+          updatedTransfer: test.transfer,
+        };
+        const evts = getEngineEvtContainer();
+
+        evts.CONDITIONAL_TRANSFER_ROUTING_COMPLETE.attachOnce((data) => {
+          expect(data).to.deep.eq({
+            publicIdentifier: signer.publicIdentifier,
+            initiatorIdentifier: test.transfer.initiatorIdentifier,
+            responderIdentifier: test.transfer.responderIdentifier,
+            routingId: test.transfer.meta.routingId,
+            meta: test.transfer.meta,
+          } as ConditionalTransferRoutingCompletePayload);
+          res();
+        });
+        handleConditionalTransferCreation(
+          event,
+          store,
+          chainService as any,
+          chainAddresses,
+          evts,
+          log,
+          signer,
+          messaging,
+        ).catch(rej);
+      });
+    });
+
+    it("should pass message back to sender as the exit router", async () => {
+      const signer = getRandomChannelSigner();
+      const test = createTestChannelState("create", { networkContext: { chainId } });
+      const meta = {
+        routingId: mkHash("0xaaa"),
+        path: [
+          {
+            recipient: bob.publicIdentifier,
+            recipientAssetId: AddressZero,
+            recipientChainId: chainId,
+          },
+        ],
+      } as RouterSchemas.RouterMeta;
+      test.channel.latestUpdate.details.meta = meta;
+      test.transfer.initiatorIdentifier = signer.publicIdentifier;
+      test.transfer.responderIdentifier = bob.publicIdentifier;
+      test.transfer.meta = meta;
+
+      const event: ChannelUpdateEvent = {
+        updatedChannelState: test.channel,
+        updatedTransfer: test.transfer,
+      };
+      const evts = getEngineEvtContainer();
+
+      // resolve to
+      store.getTransfersByRoutingId.resolves([
+        test.transfer,
+        { ...test.transfer, initiatorIdentifier: alice.publicIdentifier, responderIdentifier: signer.publicIdentifier },
+      ]);
+
+      const promise = new Promise((resolve) => {
+        evts.CONDITIONAL_TRANSFER_ROUTING_COMPLETE.attachOnce((data) => {
+          expect(data).to.deep.eq({
+            publicIdentifier: signer.publicIdentifier,
+            initiatorIdentifier: test.transfer.initiatorIdentifier,
+            responderIdentifier: test.transfer.responderIdentifier,
+            routingId: test.transfer.meta.routingId,
+            meta: test.transfer.meta,
+          } as ConditionalTransferRoutingCompletePayload);
+          resolve(undefined);
+        });
+      });
+
+      await handleConditionalTransferCreation(
+        event,
+        store,
+        chainService as any,
+        chainAddresses,
+        evts,
+        log,
+        signer,
+        messaging,
+      );
+      expect(messaging.publishTransferRoutingCompleteMessage.callCount).to.eq(1);
+      const call = messaging.publishTransferRoutingCompleteMessage.getCall(0);
+      expect(call.args[0]).to.eq(alice.publicIdentifier);
+      expect(call.args[1]).to.eq(signer.publicIdentifier);
+      expect(call.args[2]).to.deep.eq(
+        Result.ok({
+          initiatorIdentifier: test.transfer.initiatorIdentifier,
+          responderIdentifier: test.transfer.responderIdentifier,
+          routingId: test.transfer.meta.routingId,
+          meta: test.transfer.meta,
+        } as ConditionalTransferRoutingCompletePayload),
+      );
+      await promise;
     });
   });
 });
