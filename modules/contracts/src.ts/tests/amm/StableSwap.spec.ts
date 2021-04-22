@@ -17,7 +17,7 @@ describe("StableSwap.sol", function () {
   let amount90 = parseEther("90");
   let amount95 = parseEther("95");
   let amount99 = parseEther("99");
-  let balances = [parseEther("100"), parseEther("10")];
+  let balances = [parseEther("100"), parseEther("100"), parseEther("100")];
 
   beforeEach(async () => {
     await deployments.fixture(); // Start w fresh deployments
