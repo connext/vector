@@ -22,7 +22,7 @@ import { BaseLogger } from "pino";
 import { FeeError } from "../errors";
 import { getDecimals } from "../metrics";
 
-import { getRebalanceProfile, getSwapFees } from "./config";
+import { getRebalanceProfile, getSwapFees, onSwapGivenIn } from "./config";
 import { getSwappedAmount } from "./swap";
 import { normalizeGasFees } from "./utils";
 
@@ -38,7 +38,7 @@ export const calculateFeeAmount = async (
   ethReader: IVectorChainReader,
   routerPublicIdentifier: string,
   logger: BaseLogger,
-): Promise<Result<{ fee: BigNumber; amount: BigNumber }, FeeError>> => {
+): Promise<Result<{ fee: BigNumber; amount: BigNumber; priceImpact: string }, FeeError>> => {
   const method = "calculateFeeAmount";
   const methodId = getRandomBytes32();
   logger.info(
@@ -55,14 +55,39 @@ export const calculateFeeAmount = async (
     },
     "Method start",
   );
-  // If recipient is router, i.e. fromChannel ===  toChannel, then the
-  // fee amount is 0 because no fees are taken without forwarding
-  if (toChannel.channelAddress === fromChannel.channelAddress) {
-    return Result.ok({ fee: Zero, amount: transferAmount });
-  }
 
   const fromChainId = fromChannel.networkContext.chainId;
   const toChainId = toChannel.networkContext.chainId;
+
+  const onSwapGivenInRes = await onSwapGivenIn(
+    transferAmount.toString(),
+    fromAssetId,
+    fromChainId,
+    toAssetId,
+    toChainId,
+    fromChannel.alice,
+    ethReader,
+  );
+
+  if (onSwapGivenInRes.isError) {
+    return Result.fail(
+      new FeeError(FeeError.reasons.AmmError, {
+        toChainId,
+        toAssetId,
+        fromChainId,
+        fromAssetId,
+        conversionError: jsonifyError(onSwapGivenInRes.getError()!),
+      }),
+    );
+  }
+  const amountOut = BigNumber.from(onSwapGivenInRes.getValue().amountOut);
+  const priceImpact = onSwapGivenInRes.getValue().priceImpact;
+  // If recipient is router, i.e. fromChannel ===  toChannel, then the
+  // fee amount is 0 because no fees are taken without forwarding
+  if (toChannel.channelAddress === fromChannel.channelAddress) {
+    return Result.ok({ fee: Zero, amount: amountOut, priceImpact: priceImpact });
+  }
+
   // Get fee values from config
   const fees = getSwapFees(fromAssetId, fromChainId, toAssetId, toChainId);
   if (fees.isError) {
@@ -290,7 +315,8 @@ export const calculateFeeAmount = async (
   // returns the total fees applied to transfer
   return Result.ok({
     fee: totalFees,
-    amount: receiveExactAmount ? amtToTransfer.add(flatFee).add(dynamic) : transferAmount,
+    amount: receiveExactAmount ? amountOut.add(flatFee).add(dynamic) : transferAmount,
+    priceImpact: priceImpact,
   });
 };
 
