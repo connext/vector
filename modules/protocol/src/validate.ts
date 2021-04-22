@@ -32,6 +32,7 @@ import { QueuedUpdateError, ValidationError } from "./errors";
 import { applyUpdate, generateAndApplyUpdate } from "./update";
 import {
   generateSignedChannelCommitment,
+  getNextNonceForUpdate,
   getParamsFromUpdate,
   validateChannelSignatures,
   validateSchema,
@@ -394,9 +395,11 @@ export async function validateAndApplyInboundUpdate<T extends UpdateType = any>(
   }
 
   // Shortcut: check if the incoming update is double signed. If it is, and the
-  // nonce, only increments by 1, then it is safe to apply update and proceed
-  // without any additional validation.
-  const expected = (previousState?.nonce ?? 0) + 1;
+  // nonce, only increments by 1 transition, then it is safe to apply update
+  // and proceed without any additional validation.
+  const aliceSentUpdate =
+    update.type === UpdateType.setup ? true : previousState!.aliceIdentifier === update.fromIdentifier;
+  const expected = getNextNonceForUpdate(previousState?.nonce ?? 0, aliceSentUpdate);
   if (update.nonce !== expected) {
     return Result.fail(new QueuedUpdateError(QueuedUpdateError.reasons.InvalidUpdateNonce, update, previousState));
   }

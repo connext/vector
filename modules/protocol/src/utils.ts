@@ -30,6 +30,7 @@ import {
 } from "@connext/vector-utils";
 import Ajv from "ajv";
 import { BaseLogger, Level } from "pino";
+import { QueuedUpdateError } from "./errors";
 
 const ajv = new Ajv();
 
@@ -42,6 +43,16 @@ export const validateSchema = (obj: any, schema: any): undefined | string => {
   }
   return undefined;
 };
+
+export function validateParamSchema(params: any, schema: any): undefined | QueuedUpdateError {
+  const error = validateSchema(params, schema);
+  if (error) {
+    return new QueuedUpdateError(QueuedUpdateError.reasons.InvalidParams, params, undefined, {
+      paramsError: error,
+    });
+  }
+  return undefined;
+}
 
 // NOTE: If you do *NOT* use this function within the protocol, it becomes
 // very difficult to write proper unit tests. When the same utility is imported

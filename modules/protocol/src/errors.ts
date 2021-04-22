@@ -130,6 +130,7 @@ export class QueuedUpdateError extends ProtocolError {
     StaleChannel: "Channel state is behind, cannot apply update",
     StaleUpdate: "Update does not progress channel nonce",
     SyncFailure: "Failed to sync channel from counterparty update",
+    SyncSingleSigned: "Cannot sync single signed state",
     StoreFailure: "Store method failed",
     TransferNotActive: "Transfer not found in activeTransfers",
     UnhandledPromise: "Unhandled promise rejection encountered",

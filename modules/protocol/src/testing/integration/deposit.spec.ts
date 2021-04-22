@@ -6,6 +6,7 @@ import { AddressZero } from "@ethersproject/constants";
 import { deployChannelIfNeeded, depositInChannel, depositOnchain, getSetupChannel } from "../utils";
 import { env } from "../env";
 import { chainId } from "../constants";
+import { getNextNonceForUpdate } from "../../utils";
 
 const testName = "Deposit Integrations";
 const { log } = getTestLoggers(testName, env.logLevel);
@@ -259,7 +260,6 @@ describe(testName, () => {
     ]);
     expect(finalAlice).to.be.deep.eq(finalBob);
     expect(finalAlice).to.containSubset({
-      nonce: preDepositChannel.nonce + 2,
       assetIds: [AddressZero],
       balances: [
         {
@@ -284,7 +284,8 @@ describe(testName, () => {
       assetId,
       depositAmount,
     );
-    expect(final.nonce).to.be.eq(preDepositChannel.nonce + 2);
+    const expected = getNextNonceForUpdate(getNextNonceForUpdate(preDepositChannel.nonce, true), true);
+    expect(final.nonce).to.be.eq(expected);
   });
 
   it("should work if responder channel is out of sync", async () => {
@@ -300,6 +301,7 @@ describe(testName, () => {
       assetId,
       depositAmount,
     );
-    expect(final.nonce).to.be.eq(preDepositChannel.nonce + 2);
+    const expected = getNextNonceForUpdate(getNextNonceForUpdate(preDepositChannel.nonce, false), false);
+    expect(final.nonce).to.be.eq(expected);
   });
 });

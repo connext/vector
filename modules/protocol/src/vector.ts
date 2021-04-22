@@ -27,7 +27,7 @@ import pino from "pino";
 import { QueuedUpdateError } from "./errors";
 import { Cancellable, OtherUpdate, SelfUpdate, SerializedQueue } from "./queue";
 import { outbound, inbound, OtherUpdateResult, SelfUpdateResult } from "./sync";
-import { extractContextFromStore, persistChannel, validateSchema } from "./utils";
+import { extractContextFromStore, persistChannel, validateParamSchema } from "./utils";
 
 type EvtContainer = { [K in keyof ProtocolEventPayloadsMap]: Evt<ProtocolEventPayloadsMap[K]> };
 
@@ -37,7 +37,7 @@ export class Vector implements IVectorProtocol {
   };
 
   // Hold the serialized queue for each channel
-  private queues: Map<string, SerializedQueue> = new Map();
+  private queues: Map<string, SerializedQueue<SelfUpdateResult, OtherUpdateResult>> = new Map();
 
   // make it private so the only way to create the class is to use `connect`
   private constructor(
@@ -99,16 +99,20 @@ export class Vector implements IVectorProtocol {
   private async executeUpdate(params: UpdateParams<any>): Promise<Result<FullChannelState, QueuedUpdateError>> {
     const method = "executeUpdate";
     const methodId = getRandomBytes32();
-    this.logger.debug({
-      method,
-      methodId,
-      params,
-      channelAddress: params.channelAddress,
-      initiator: this.publicIdentifier,
-    });
+    this.logger.debug(
+      {
+        method,
+        methodId,
+        params,
+        channelAddress: params.channelAddress,
+        initiator: this.publicIdentifier,
+      },
+      "Executing update",
+    );
 
     // If queue does not exist, create it
     if (!this.queues.has(params.channelAddress)) {
+      this.logger.debug({ method, methodId }, "Creating queue");
       // Determine if this is alice
       let aliceIdentifier: string;
       if (params.type === UpdateType.setup) {
@@ -125,11 +129,19 @@ export class Vector implements IVectorProtocol {
 
     // Add operation to queue
     const queue = this.queues.get(params.channelAddress)!;
-    const result = await queue.executeSelfAsync({ params });
+    const selfResult = await queue.executeSelfAsync({ params });
 
-    // TODO: will this properly resolve to the right update ret?
-    // how to properly handle retries?
-    return result as any;
+    if (selfResult.isError) {
+      return Result.fail(selfResult.getError()!);
+    }
+    const { updatedTransfer, updatedChannel, updatedTransfers } = selfResult.getValue();
+    this.evts[ProtocolEventName.CHANNEL_UPDATE_EVENT].post({
+      updatedTransfer,
+      updatedTransfers,
+      updatedChannelState: updatedChannel,
+    });
+
+    return Result.ok(updatedChannel);
   }
 
   private createChannelQueue(channelAddress: string, aliceIdentifier: string): void {
@@ -212,7 +224,7 @@ export class Vector implements IVectorProtocol {
         return undefined;
       }
       // All is well, return value from outbound
-      return res.value as Result<SelfUpdateResult>;
+      return value;
     };
 
     // Create a cancellable inbound function to be used when receiving updates
@@ -303,7 +315,7 @@ export class Vector implements IVectorProtocol {
       );
       return value;
     };
-    const queue = new SerializedQueue(
+    const queue = new SerializedQueue<SelfUpdateResult, OtherUpdateResult>(
       this.publicIdentifier === aliceIdentifier,
       cancellableOutbound,
       cancellableInbound,
@@ -400,7 +412,7 @@ export class Vector implements IVectorProtocol {
           this.logger.warn({ method, methodId, received: Object.keys(received) }, "Message malformed");
           return;
         }
-        const receivedError = this.validateParamSchema(received.update, TChannelUpdate);
+        const receivedError = validateParamSchema(received.update, TChannelUpdate);
         if (receivedError) {
           this.logger.warn(
             { method, methodId, update: received.update, error: jsonifyError(receivedError) },
@@ -408,15 +420,19 @@ export class Vector implements IVectorProtocol {
           );
           return;
         }
-        // Previous update may be undefined, but if it exists, validate
-        const previousError = this.validateParamSchema(received.previousUpdate, TChannelUpdate);
-        if (previousError && received.previousUpdate) {
-          this.logger.warn(
-            { method, methodId, update: received.previousUpdate, error: jsonifyError(previousError) },
-            "Received malformed previous update",
-          );
-          return;
-        }
+
+        // TODO: why in the world is this causing it to fail
+        // // Previous update may be undefined, but if it exists, validate
+        // console.log("******** validating schema");
+        // const previousError = validateParamSchema(received.previousUpdate, TChannelUpdate);
+        // console.log("******** ran validation", previousError);
+        // if (previousError && received.previousUpdate) {
+        //   this.logger.warn(
+        //     { method, methodId, update: received.previousUpdate, error: jsonifyError(previousError) },
+        //     "Received malformed previous update",
+        //   );
+        //   return;
+        // }
 
         if (received.update.fromIdentifier === this.publicIdentifier) {
           this.logger.debug({ method, methodId }, "Received update from ourselves, doing nothing");
@@ -428,9 +444,10 @@ export class Vector implements IVectorProtocol {
 
         // If queue does not exist, create it
         if (!this.queues.has(received.update.channelAddress)) {
+          this.logger.debug({ method, methodId, channelAddress: received.update.channelAddress }, "Creating queue");
           let aliceIdentifier: string;
           if (received.update.type === UpdateType.setup) {
-            aliceIdentifier = this.publicIdentifier;
+            aliceIdentifier = received.update.fromIdentifier;
           } else {
             const channel = await this.storeService.getChannelState(received.update.channelAddress);
             if (!channel) {
@@ -443,10 +460,21 @@ export class Vector implements IVectorProtocol {
 
         // Add operation to queue
         const queue = this.queues.get(received.update.channelAddress)!;
+        this.logger.debug({ method, methodId }, "Executing other async");
         const result = await queue.executeOtherAsync({
           update: received.update,
           previous: received.previousUpdate,
           inbox,
+        });
+        if (result.isError) {
+          this.logger.warn({ ...jsonifyError(result.getError()!) }, "Failed to apply inbound update");
+          return;
+        }
+        const { updatedTransfer, updatedChannel, updatedTransfers } = result.getValue();
+        this.evts[ProtocolEventName.CHANNEL_UPDATE_EVENT].post({
+          updatedTransfer,
+          updatedTransfers,
+          updatedChannelState: updatedChannel,
         });
         this.logger.debug({ ...result.toJson() }, "Applied inbound update");
         return;
@@ -463,16 +491,6 @@ export class Vector implements IVectorProtocol {
       await this.registerDisputes();
     }
     return this;
-  }
-
-  private validateParamSchema(params: any, schema: any): undefined | QueuedUpdateError {
-    const error = validateSchema(params, schema);
-    if (error) {
-      return new QueuedUpdateError(QueuedUpdateError.reasons.InvalidParams, params, undefined, {
-        paramsError: error,
-      });
-    }
-    return undefined;
   }
 
   /*
@@ -493,7 +511,7 @@ export class Vector implements IVectorProtocol {
     const methodId = getRandomBytes32();
     this.logger.debug({ method, methodId }, "Method start");
     // Validate all parameters
-    const error = this.validateParamSchema(params, ProtocolParams.SetupSchema);
+    const error = validateParamSchema(params, ProtocolParams.SetupSchema);
     if (error) {
       this.logger.error({ method, methodId, params, error: jsonifyError(error) });
       return Result.fail(error);
@@ -560,7 +578,7 @@ export class Vector implements IVectorProtocol {
     const methodId = getRandomBytes32();
     this.logger.debug({ method, methodId }, "Method start");
     // Validate all input
-    const error = this.validateParamSchema(params, ProtocolParams.DepositSchema);
+    const error = validateParamSchema(params, ProtocolParams.DepositSchema);
     if (error) {
       return Result.fail(error);
     }
@@ -589,7 +607,7 @@ export class Vector implements IVectorProtocol {
     const methodId = getRandomBytes32();
     this.logger.debug({ method, methodId }, "Method start");
     // Validate all input
-    const error = this.validateParamSchema(params, ProtocolParams.CreateSchema);
+    const error = validateParamSchema(params, ProtocolParams.CreateSchema);
     if (error) {
       return Result.fail(error);
     }
@@ -618,7 +636,7 @@ export class Vector implements IVectorProtocol {
     const methodId = getRandomBytes32();
     this.logger.debug({ method, methodId }, "Method start");
     // Validate all input
-    const error = this.validateParamSchema(params, ProtocolParams.ResolveSchema);
+    const error = validateParamSchema(params, ProtocolParams.ResolveSchema);
     if (error) {
       return Result.fail(error);
     }

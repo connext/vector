@@ -17,7 +17,7 @@ import { getRandomBytes32 } from "@connext/vector-utils";
 import pino from "pino";
 
 import { QueuedUpdateError } from "./errors";
-import { validateChannelSignatures } from "./utils";
+import { getNextNonceForUpdate, validateChannelSignatures } from "./utils";
 import { validateAndApplyInboundUpdate, validateParamsAndApplyUpdate } from "./validate";
 
 // Function responsible for handling user-initated/outbound channel updates.
@@ -123,18 +123,11 @@ export async function outbound(
       error.context.update,
       previousState!, // safe to do bc will fail if syncing setup (only time state is undefined)
       activeTransfers,
-      (message: string) =>
+      (message: Values<typeof QueuedUpdateError.reasons>) =>
         Result.fail(
-          new QueuedUpdateError(
-            message !== QueuedUpdateError.reasons.CannotSyncSetup
-              ? QueuedUpdateError.reasons.SyncFailure
-              : QueuedUpdateError.reasons.CannotSyncSetup,
-            params,
-            previousState,
-            {
-              syncError: message,
-            },
-          ),
+          new QueuedUpdateError(message, params, previousState, {
+            syncError: message,
+          }),
         ),
       chainReader,
       externalValidationService,
@@ -219,48 +212,46 @@ export async function inbound(
   // Assume that our stored state has nonce `k`, and the update
   // has nonce `n`, and `k` is the latest double signed state for you. The
   // following cases exist:
-  // - n <= k - 2: counterparty is behind, they must restore
-  // - n == k - 1: counterparty is behind, they will sync and recover, we
-  //   can ignore update
-  // - n == k, single signed: counterparty is behind, ignore update
-  // - n == k, double signed:
-  //    - IFF the states are the same, the counterparty is behind
-  //    - IFF the states are different and signed at the same nonce,
-  //      that is VERY bad, and should NEVER happen
-  // - n == k + 1, single signed: counterparty proposing an update,
-  //   we should verify, store, + ack
-  // - n == k + 1, double signed: counterparty acking our update,
-  //   we should verify, store, + emit
-  // - n == k + 2: counterparty is proposing or acking on top of a
-  //   state we do not yet have, sync state + apply update
-  // - n >= k + 3: we must restore state
+  // (a) counterparty is behind, and they must restore (>1 transition behind)
+  // (b) counterparty is behind, but their state is syncable (1 transition
+  //     behind)
+  // (c) we are in sync, can apply update directly
+  // (d) we are behind, and must sync before applying update (1 transition
+  //     behind)
+  // (e) we are behind, and must restore before applying update (>1
+  //     transition behind)
+
+  // Nonce transitions for these cases:
+  // (a,b) update.nonce <= expectedInSync -- restore case handled in syncState
+  // (c) update.nonce === expectedInSync -- perform update
+  // (d,e) update.nonce > expectedInSync -- restore case handled in syncState
 
   // Get the difference between the stored and received nonces
-  const prevNonce = channel?.nonce ?? 0;
-  const diff = update.nonce - prevNonce;
+  const channelNonce = channel?.nonce ?? 0;
+  const ourPreviousNonce = channel?.latestUpdate?.nonce ?? -1;
+  const aliceSentUpdate = update.type === UpdateType.setup ? true : update.fromIdentifier === channel?.aliceIdentifier;
 
-  // If we are ahead, or even, do not process update
-  if (diff <= 0) {
+  // Get the expected nonce
+  const expectedNonce = getNextNonceForUpdate(channelNonce, aliceSentUpdate);
+  const givenPreviousNonce = previousUpdate?.nonce ?? -1;
+
+  // If the delivered nonce is lower than expected, counterparty is
+  // behind. NOTE: in cases where the update nonce increments by 2 and we expect
+  // it to increment by 1, initiator may be out of sync and still satisfy the
+  // first condition
+  if (update.nonce < expectedNonce || givenPreviousNonce < ourPreviousNonce) {
     // NOTE: when you are out of sync as a protocol initiator, you will
     // use the information from this error to sync, then retry your update
     return returnError(QueuedUpdateError.reasons.StaleUpdate, channel!.latestUpdate, channel);
   }
 
-  // If we are behind by more than 3, we cannot sync from their latest
-  // update, and must use restore
-  if (diff >= 3) {
-    return returnError(QueuedUpdateError.reasons.RestoreNeeded, update, channel, {
-      counterpartyLatestUpdate: previousUpdate,
-      ourLatestNonce: prevNonce,
-    });
-  }
-
-  // If the update nonce is ahead of the store nonce by 2, we are
-  // behind by one update. We can progress the state to the correct
-  // state to be updated by applying the counterparty's supplied
-  // latest action
+  // If the update nonce is greater than what we expected, counterparty
+  // is ahead and we should attempt a sync
+  // NOTE: in cases where the update nonce increments by 2 and we expect
+  // it to increment by 1, initiator may be out of sync and still satisfy the
+  // first condition
   let previousState = channel ? { ...channel } : undefined;
-  if (diff === 2) {
+  if (update.nonce > expectedNonce || givenPreviousNonce > ourPreviousNonce) {
     // Create the proper state to play the update on top of using the
     // latest update
     if (!previousUpdate) {
@@ -271,18 +262,11 @@ export async function inbound(
       previousUpdate,
       previousState!,
       activeTransfers,
-      (message: string) =>
+      (message: Values<typeof QueuedUpdateError.reasons>) =>
         Result.fail(
-          new QueuedUpdateError(
-            message !== QueuedUpdateError.reasons.CannotSyncSetup
-              ? QueuedUpdateError.reasons.SyncFailure
-              : QueuedUpdateError.reasons.CannotSyncSetup,
-            previousUpdate,
-            previousState,
-            {
-              syncError: message,
-            },
-          ),
+          new QueuedUpdateError(message, previousUpdate, previousState, {
+            syncError: message,
+          }),
         ),
       chainReader,
       externalValidation,
@@ -300,6 +284,8 @@ export async function inbound(
     previousState = syncedChannel;
     activeTransfers = syncedActiveTransfers;
   }
+
+  // Should be fully in sync, safe to apply provided update
 
   // We now have the latest state for the update, and should be
   // able to play it on top of the update
@@ -320,14 +306,14 @@ export async function inbound(
   const { updatedChannel, updatedActiveTransfers, updatedTransfer } = validateRes.getValue();
 
   // Return the double signed state
-  return Result.ok({ updatedActiveTransfers, updatedChannel, updatedTransfer, previousState });
+  return Result.ok({ updatedTransfers: updatedActiveTransfers, updatedChannel, updatedTransfer, previousState });
 }
 
 const syncState = async (
   toSync: ChannelUpdate,
   previousState: FullChannelState,
   activeTransfers: FullTransferState[],
-  handleError: (message: string) => Result<any, QueuedUpdateError>,
+  handleError: (message: Values<typeof QueuedUpdateError.reasons>) => Result<any, QueuedUpdateError>,
   chainReader: IVectorChainReader,
   externalValidation: IExternalValidation,
   signer: IChannelSigner,
@@ -349,7 +335,14 @@ const syncState = async (
   // Present signatures are already asserted to be valid via the validation,
   // here simply assert the length
   if (!toSync.aliceSignature || !toSync.bobSignature) {
-    return handleError("Cannot sync single signed state");
+    return handleError(QueuedUpdateError.reasons.SyncSingleSigned);
+  }
+
+  // Make sure the nonce is only one transition from what we expect.
+  // If not, we must restore.
+  const expected = getNextNonceForUpdate(previousState.nonce, toSync.fromIdentifier === previousState.aliceIdentifier);
+  if (toSync.nonce !== expected) {
+    return handleError(QueuedUpdateError.reasons.RestoreNeeded);
   }
 
   // Apply the update + validate the signatures (NOTE: full validation is not
