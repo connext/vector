@@ -132,7 +132,7 @@ export const onSwapGivenIn = async (
   const goerliProvider: JsonRpcProvider = "";
 
   try {
-    const stableSwap = new Contract(StableSwapGoerliAddress, StableSwap, goerliProvider);
+    const stableSwap = new Contract(StableSwapGoerliAddress, StableSwap.abi, goerliProvider);
     // Computes how many tokens can be taken out of a pool if `tokenAmountIn` are sent, given the current balances.
     const amountOut = await stableSwap.onSwapGivenIn(transferAmountBn, balances, 0, 1);
     // After we get the amountOut here
