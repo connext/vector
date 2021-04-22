@@ -63,8 +63,6 @@ export class VectorEngine implements IVectorEngine {
   // Setup event container to emit events from vector
   private readonly evts: EngineEvtContainer = getEngineEvtContainer();
 
-  private readonly restoreLocks: { [channelAddress: string]: string } = {};
-
   private constructor(
     private readonly signer: IChannelSigner,
     private readonly messaging: IMessagingService,
@@ -957,6 +955,18 @@ export class VectorEngine implements IVectorEngine {
     return Result.ok({ channel: res, transactionHash, transaction: transaction! });
   }
 
+  private async retryProtocolMethod<T = any>(fn: () => Promise<Result<T>>, retryCount = 5) {
+    let result;
+    for (let i = 0; i < retryCount; i++) {
+      result = await fn();
+      if (!result.isError) {
+        return result;
+      }
+      this.logger.warn({ attempt: i, error: result.getError().message }, "Protocol method failed");
+    }
+    return result;
+  }
+
   private async decrypt(encrypted: string): Promise<Result<string, EngineError>> {
     const method = "decrypt";
     const methodId = getRandomBytes32();
@@ -1046,7 +1056,11 @@ export class VectorEngine implements IVectorEngine {
   }
 
   // RESTORE STATE
-  // NOTE: MUST be under protocol lock
+  // NOTE: this is not added to the protocol queue. That is because if your
+  // channel needs to be restored, any updates you are sent or try to send
+  // will fail until your store is properly updated. The failures create
+  // a natural lock. However, it is due to these failures that the protocol
+  // methods are retried.
   private async restoreState(
     params: EngineParams.RestoreState,
   ): Promise<Result<ChannelRpcMethodsResponsesMap["chan_restoreState"], EngineError>> {
