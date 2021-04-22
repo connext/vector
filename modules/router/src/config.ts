@@ -39,6 +39,8 @@ const VectorRouterConfigSchema = Type.Object({
   authUrl: Type.Optional(TUrl),
   rebalanceProfiles: Type.Array(RebalanceProfileSchema),
   mnemonic: Type.Optional(Type.String()),
+  stableAmmProvider: Type.Optional(TUrl),
+  stableAmmAddress: Type.Optional(TAddress),
   autoRebalanceInterval: Type.Optional(Type.Number({ minimum: 1_800_000 })),
   basePercentageFee: Type.Optional(Type.Number({ minimum: 0, maximum: 100 })),
   baseFlatFee: Type.Optional(TIntegerString),
@@ -79,6 +81,10 @@ export const getEnvConfig = (): VectorRouterConfig => {
 
   const vectorConfig: VectorRouterConfig = {
     mnemonic: process.env.VECTOR_MNEMONIC || configJson.mnemonic || configFile.mnemonic,
+    stableAmmProvider:
+      process.env.VECTOR_STABLE_AMM_PROVIDER || configJson.stableAmmProvider || configFile.stableAmmProvider,
+    stableAmmAddress:
+      process.env.VECTOR_STABLE_AMM_ADDRESS || configJson.stableAmmAddress || configFile.stableAmmAddress,
     dbUrl: process.env.VECTOR_DATABASE_URL || configJson.dbUrl || configFile.dbUrl,
     messagingUrl: process.env.VECTOR_MESSAGING_URL || configJson.messagingUrl || configFile.messagingUrl,
     authUrl: process.env.VECTOR_AUTH_URL || configJson.authUrl || configFile.authUrl,
