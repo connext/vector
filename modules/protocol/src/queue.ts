@@ -182,19 +182,19 @@ async function processOneUpdate<I, O>(
   return result;
 }
 
-export class SerializedQueue {
-  private readonly incomingSelf: WakingQueue<SelfUpdate, Result<void>> = new WakingQueue();
-  private readonly incomingOther: WakingQueue<OtherUpdate, Result<void>> = new WakingQueue();
+export class SerializedQueue<S = void, O = void> {
+  private readonly incomingSelf: WakingQueue<SelfUpdate, Result<S>> = new WakingQueue();
+  private readonly incomingOther: WakingQueue<OtherUpdate, Result<O>> = new WakingQueue();
   private readonly selfIsAlice: boolean;
 
-  private readonly selfUpdateAsync: Cancellable<SelfUpdate, void>;
-  private readonly otherUpdateAsync: Cancellable<OtherUpdate, void>;
+  private readonly selfUpdateAsync: Cancellable<SelfUpdate, S>;
+  private readonly otherUpdateAsync: Cancellable<OtherUpdate, O>;
   private readonly getCurrentNonce: () => Promise<Nonce>;
 
   constructor(
     selfIsAlice: boolean,
-    selfUpdateAsync: Cancellable<SelfUpdate, void>,
-    otherUpdateAsync: Cancellable<OtherUpdate, void>,
+    selfUpdateAsync: Cancellable<SelfUpdate, S>,
+    otherUpdateAsync: Cancellable<OtherUpdate, O>,
     getCurrentNonce: () => Promise<Nonce>,
   ) {
     this.selfIsAlice = selfIsAlice;
@@ -204,11 +204,11 @@ export class SerializedQueue {
     this.processUpdatesAsync();
   }
 
-  executeSelfAsync(update: SelfUpdate): Promise<Result<void>> {
+  executeSelfAsync(update: SelfUpdate): Promise<Result<S>> {
     return this.incomingSelf.push(update);
   }
 
-  executeOtherAsync(update: OtherUpdate): Promise<Result<void>> {
+  executeOtherAsync(update: OtherUpdate): Promise<Result<O>> {
     return this.incomingOther.push(update);
   }
 
