@@ -719,7 +719,7 @@ export async function setupListeners(
       );
       return;
     }
-    const { fee, amount: quoteAmount } = feeRes.getValue();
+    const { fee, amount: quoteAmount, priceImpact } = feeRes.getValue();
     const quote = {
       assetId,
       amount: quoteAmount.toString(),
@@ -729,6 +729,7 @@ export async function setupListeners(
       recipientChainId,
       recipientAssetId,
       fee: fee.toString(),
+      priceImpact: priceImpact,
       expiry: (Date.now() + (getConfig().feeQuoteExpiry ?? DEFAULT_FEE_EXPIRY)).toString(), // valid for next 2 blocks
     };
     const toSign = hashTransferQuote(quote);
