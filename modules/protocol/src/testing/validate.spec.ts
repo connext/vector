@@ -782,7 +782,7 @@ describe.skip("validateParamsAndApplyUpdate", () => {
   });
 });
 
-describe("validateAndApplyInboundUpdate", () => {
+describe.skip("validateAndApplyInboundUpdate", () => {
   // Test values
   let signers: ChannelSigner[];
   let previousState: FullChannelState;
