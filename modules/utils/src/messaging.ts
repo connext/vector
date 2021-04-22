@@ -380,7 +380,7 @@ export class NatsMessagingService extends NatsBasicMessagingService implements I
 
   // RESTORE METHODS
   async sendRestoreStateMessage(
-    restoreData: Result<{ chainId: number } | { channelAddress: string }, EngineError>,
+    restoreData: Result<{ chainId: number }, EngineError>,
     to: string,
     from: string,
     timeout = 30_000,
@@ -399,11 +399,7 @@ export class NatsMessagingService extends NatsBasicMessagingService implements I
 
   async onReceiveRestoreStateMessage(
     publicIdentifier: string,
-    callback: (
-      restoreData: Result<{ chainId: number } | { channelAddress: string }, EngineError>,
-      from: string,
-      inbox: string,
-    ) => void,
+    callback: (restoreData: Result<{ chainId: number }, EngineError>, from: string, inbox: string) => void,
   ): Promise<void> {
     await this.registerCallback(`${publicIdentifier}.*.restore`, callback, "onReceiveRestoreStateMessage");
   }
