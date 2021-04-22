@@ -85,6 +85,24 @@ export const getSwapFees = (
   });
 };
 
+export const getMappedAssets = (_assetId: string, _chainId: number): { assetId: string; chainId: number }[] => {
+  const routerAllowedSwaps = getConfig().allowedSwaps;
+
+  let pair: { assetId: string; chainId: number }[] = [{ assetId: _assetId, chainId: _chainId }];
+  routerAllowedSwaps.map((s) => {
+    if (s.fromAssetId.toLowerCase() === _assetId.toLowerCase() && s.fromChainId === _chainId) {
+      pair.push({ assetId: getAddress(s.toAssetId), chainId: s.toChainId });
+    } else if (s.toAssetId.toLowerCase() === _assetId.toLowerCase() && s.toChainId === _chainId) {
+      pair.push({ assetId: getAddress(s.fromAssetId), chainId: s.fromChainId });
+    }
+  });
+
+  const uniquePairs = Array.from(new Set(pair.map((s) => s.assetId))).map((x) => {
+    return pair.find((z) => z.assetId === x)!;
+  });
+  return uniquePairs;
+};
+
 export const onSwapGivenIn = async (
   transferAmount: string,
   fromAssetId: string,
@@ -92,47 +110,44 @@ export const onSwapGivenIn = async (
   toAssetId: string,
   toChainId: number,
   routerSignerAddress: string,
-  chainService: VectorChainReader,
+  chainReader: VectorChainReader,
 ): Promise<Result<{ priceImpact: string; amountOut: string }, ConfigServiceError>> => {
   // get router balance for each chain for balances array to get the trade size.
   // we will getOnChainBalance for routerSignerAddress
   // get balance of token for fromChainId for router
-  const fromChainRouterBalance = await chainService.getOnchainBalance(fromAssetId, routerSignerAddress, fromChainId);
-  if (fromChainRouterBalance.isError) {
-    return Result.fail(
-      new ConfigServiceError(ConfigServiceError.reasons.CouldNotGetAssetBalance, {
-        transferAmount,
-        fromAssetId,
-        fromChainId,
-        routerSignerAddress,
-      }),
-    );
-  }
 
-  const toChainRouterBalance = await chainService.getOnchainBalance(toAssetId, routerSignerAddress, toChainId);
-  if (toChainRouterBalance.isError) {
-    return Result.fail(
-      new ConfigServiceError(ConfigServiceError.reasons.CouldNotGetAssetBalance, {
-        transferAmount,
-        toAssetId,
-        toChainId,
-        routerSignerAddress,
-      }),
-    );
-  }
+  const fromMappedAssets = getMappedAssets(fromAssetId, fromChainId);
+  const toMappedAssets = getMappedAssets(toAssetId, toChainId);
 
-  // Assumption we are only considering the balance on fromChain and toChain
-  const balances = [fromChainRouterBalance, toChainRouterBalance];
+  const mappedAssets = fromMappedAssets.concat(toMappedAssets);
+
+  const uniqueMappedAssets = Array.from(new Set(mappedAssets.map((s) => s.assetId))).map((x) => {
+    return mappedAssets.find((z) => z.assetId === x)!;
+  });
+
+  let balances = [];
+  for (var val of uniqueMappedAssets) {
+    console.log(val);
+    let onChainRouterBalance = await chainReader.getOnchainBalance(val.assetId, routerSignerAddress, val.chainId);
+    if (onChainRouterBalance.isError) {
+      return Result.fail(
+        new ConfigServiceError(ConfigServiceError.reasons.CouldNotGetAssetBalance, {
+          transferAmount,
+          fromAssetId,
+          fromChainId,
+          routerSignerAddress,
+        }),
+      );
+    }
+    balances.push(onChainRouterBalance);
+  }
 
   const transferAmountBn = BigNumber.from(transferAmount);
-  // get stableSwap address ( we only need to calculate stuff so it doesn't have to be on every other chain)
-  // provider based on which chain we deploy stableSwap contract.
-
-  const StableSwapGoerliAddress = "";
-  const goerliProvider: JsonRpcProvider = "";
+  const stableAmmAddress = getConfig().stableAmmAddress!;
+  const stableAmmProvider: JsonRpcProvider = new JsonRpcProvider(getConfig().stableAmmProvider!);
 
   try {
-    const stableSwap = new Contract(StableSwapGoerliAddress, StableSwap.abi, goerliProvider);
+    const stableSwap = new Contract(stableAmmAddress, StableSwap.abi, stableAmmProvider);
     // Computes how many tokens can be taken out of a pool if `tokenAmountIn` are sent, given the current balances.
     const amountOut = await stableSwap.onSwapGivenIn(transferAmountBn, balances, 0, 1);
     // After we get the amountOut here
