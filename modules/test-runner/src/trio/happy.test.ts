@@ -152,7 +152,7 @@ describe(testName, () => {
     );
   });
 
-  it.only("ETH: deposit, transfer C -> R -> D, withdraw", async () => {
+  it("ETH: deposit, transfer C -> R -> D, withdraw", async () => {
     const assetId = constants.AddressZero;
     const depositAmt = utils.parseEther("0.1");
     const transferAmt = utils.parseEther("0.05");
@@ -170,25 +170,25 @@ describe(testName, () => {
       assetId,
       transferAmt,
     );
-    // // withdraw to signing address
-    // await withdraw(carolService, carolRogerPostSetup.channelAddress, assetId, withdrawAmt, carolService.signerAddress);
-    // // withdraw to delegated recipient
-    // await withdraw(
-    //   daveService,
-    //   daveRogerPostSetup.channelAddress,
-    //   assetId,
-    //   withdrawAmt.sub(transferQuote.fee).div(2),
-    //   Wallet.createRandom().address,
-    // );
-    // // bob withdraws
-    // await withdraw(
-    //   daveService,
-    //   daveRogerPostSetup.channelAddress,
-    //   assetId,
-    //   withdrawAmt.sub(transferQuote.fee).div(2),
-    //   Wallet.createRandom().address,
-    //   true,
-    // );
+    // withdraw to signing address
+    await withdraw(carolService, carolRogerPostSetup.channelAddress, assetId, withdrawAmt, carolService.signerAddress);
+    // withdraw to delegated recipient
+    await withdraw(
+      daveService,
+      daveRogerPostSetup.channelAddress,
+      assetId,
+      withdrawAmt.sub(transferQuote.fee).div(2),
+      Wallet.createRandom().address,
+    );
+    // bob withdraws
+    await withdraw(
+      daveService,
+      daveRogerPostSetup.channelAddress,
+      assetId,
+      withdrawAmt.sub(transferQuote.fee).div(2),
+      Wallet.createRandom().address,
+      true,
+    );
   });
 
   it("ETH: deposit, requestCollateral + transfer C -> R -> D (x3)", async () => {
