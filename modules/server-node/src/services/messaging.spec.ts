@@ -112,28 +112,6 @@ describe("messaging", () => {
         type: "Setup",
       },
       {
-        name: "lock should work from A --> B",
-        message: Result.ok({
-          type: "acquire",
-          lockName: mkAddress("0xccc"),
-        }),
-        response: Result.ok({
-          type: "acquire",
-          lockName: mkAddress("0xccc"),
-        }),
-        type: "Lock",
-      },
-      {
-        name: "lock send failure messages properly from A --> B",
-        message: Result.fail(
-          new ServerNodeLockError("sender failure" as any, mkAddress("0xccc"), "", { type: "release" }),
-        ),
-        response: Result.fail(
-          new ServerNodeLockError("responder failure" as any, mkAddress("0xccc"), "", { type: "acquire" }),
-        ),
-        type: "Lock",
-      },
-      {
         name: "requestCollateral should work from A --> B",
         message: Result.ok({
           amount: "100",
