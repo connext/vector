@@ -2,6 +2,8 @@
 
 ## Next Release
 
+- [engine] TRANSFER_ROUTING_COMPLETE event emitted through to original sender.
+
 ## 0.2.4-beta.1
 
 - \[iframe\] Catch sig undefined error and propogate
