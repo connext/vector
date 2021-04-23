@@ -60,7 +60,7 @@ export const calculateFeeAmount = async (
   const toChainId = toChannel.networkContext.chainId;
 
   const onSwapGivenInRes = await onSwapGivenIn(
-    transferAmount.toString(),
+    transferAmount,
     fromAssetId,
     fromChainId,
     toAssetId,
