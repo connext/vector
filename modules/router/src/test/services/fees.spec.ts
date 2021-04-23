@@ -58,7 +58,7 @@ describe(testName, () => {
     Sinon.restore();
   });
 
-  describe.only("calculateFeeAmount", () => {
+  describe("calculateFeeAmount", () => {
     let transferAmount: BigNumber;
     let routerIdentifier: string;
     let fromAssetId: string;
