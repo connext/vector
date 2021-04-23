@@ -109,7 +109,7 @@ export const calculateFeeAmount = async (
   );
   if (flatFee === "0" && percentageFee === 0 && gasSubsidyPercentage === 100) {
     // No fees configured
-    return Result.ok({ fee: Zero, amount: transferAmount });
+    return Result.ok({ fee: Zero, amount: amountOut });
   }
   const isSwap = fromChainId !== toChainId || fromAssetId !== toAssetId;
 
@@ -143,13 +143,13 @@ export const calculateFeeAmount = async (
         methodId,
         startingAmount: transferAmount.toString(),
         staticFees: staticFees.toString(),
-        withStaticFees: staticFees.add(transferAmount).toString(),
+        withStaticFees: staticFees.add(amountOut).toString(),
         gasSubsidyPercentage,
       },
       "Method complete, gas is subsidized",
     );
 
-    return Result.ok({ fee: staticFees, amount: receiveExactAmount ? amtToTransfer.add(flatFee) : transferAmount });
+    return Result.ok({ fee: staticFees, amount: receiveExactAmount ? amountOut.add(flatFee) : amountOut });
   }
 
   logger.debug(
