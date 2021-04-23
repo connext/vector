@@ -116,7 +116,7 @@ export const getMappedAssets = (_assetId: string, _chainId: number): { assetId: 
 };
 
 export const onSwapGivenIn = async (
-  transferAmount: string,
+  transferAmount: BigNumber,
   fromAssetId: string,
   fromChainId: number,
   toAssetId: string,
@@ -124,7 +124,14 @@ export const onSwapGivenIn = async (
   routerSignerAddress: string,
   chainReader: IVectorChainReader,
   logger: BaseLogger,
-): Promise<Result<{ priceImpact: string; amountOut: string }, ConfigServiceError>> => {
+): Promise<Result<{ priceImpact: string; amountOut: BigNumber }, ConfigServiceError>> => {
+  // if there's no swap, rate is 1:1
+  if (fromAssetId === toAssetId && fromChainId === toChainId) {
+    return Result.ok({
+      priceImpact: "0",
+      amountOut: transferAmount,
+    });
+  }
   // get router balance for each chain for balances array to get the trade size.
   // we will getOnChainBalance for routerSignerAddress
   // get balance of token for fromChainId for router
@@ -154,8 +161,6 @@ export const onSwapGivenIn = async (
     balances.push(onChainRouterBalance.getValue().toString());
   }
 
-  const transferAmountBn = BigNumber.from(transferAmount);
-
   try {
     const fromAssetIdx = uniqueMappedAssets.findIndex(
       (asset) => asset.assetId === fromAssetId && asset.chainId === fromChainId,
@@ -168,7 +173,7 @@ export const onSwapGivenIn = async (
       {
         stableAmmAddress,
         stableAmmChainId: getConfig().stableAmmChainId,
-        transferAmount,
+        transferAmount: transferAmount.toString(),
         balances,
         fromAssetIdx,
         toAssetIdx,
@@ -176,13 +181,14 @@ export const onSwapGivenIn = async (
       "Calling onchain AMM",
     );
     // Computes how many tokens can be taken out of a pool if `tokenAmountIn` are sent, given the current balances.
-    const amountOut = await stableSwap.onSwapGivenIn(transferAmountBn, balances, fromAssetIdx, toAssetIdx);
+    const amountOut = await stableSwap.onSwapGivenIn(transferAmount, balances, fromAssetIdx, toAssetIdx);
+
     // After we get the amountOut here
     // we need to calculate the Price Impact: the difference between the market price and estimated price due to trade size
     // Here, Market Price could be transferAmount only as stable token & 1:1
     // PriceImpact is going to be ((marketPrice(i.e transferAmount) - amountOut) * 100)/marketPrice
-
-    const marketPrice = transferAmountBn;
+    // TODO: this will always be 0 bc of integer division
+    const marketPrice = transferAmount;
     const priceImpact = marketPrice.sub(amountOut).mul(100).div(marketPrice);
 
     logger.info(
