@@ -24,7 +24,7 @@ import {
   encodeTransferState,
   getRandomBytes32,
   generateMerkleTreeData,
-  hashCoreTransferState,
+  hashCoreTransferStateBuffer,
 } from "@connext/vector-utils";
 import { Signer } from "@ethersproject/abstract-signer";
 import { BigNumber } from "@ethersproject/bignumber";
@@ -35,6 +35,8 @@ import { BaseLogger } from "pino";
 import PriorityQueue from "p-queue";
 import { AddressZero, HashZero } from "@ethersproject/constants";
 import { Evt } from "evt";
+import { keccak256 } from "ethereumjs-util";
+import { MerkleTree } from "merkletreejs";
 
 import { ChannelFactory, VectorChannel } from "../artifacts";
 
@@ -1029,7 +1031,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
     }
 
     // Generate merkle root
-    const { tree } = generateMerkleTreeData(activeTransfers);
+    const { leaves } = generateMerkleTreeData(activeTransfers);
 
     return this.sendTxWithRetries(
       transferState.channelAddress,
@@ -1037,7 +1039,8 @@ export class EthereumChainService extends EthereumChainReader implements IVector
       TransactionReason.disputeTransfer,
       () => {
         const channel = new Contract(transferState.channelAddress, VectorChannel.abi, signer);
-        return channel.disputeTransfer(transferState, tree.getHexProof(hashCoreTransferState(transferState)));
+        const tree = new MerkleTree(leaves, keccak256, { sortPairs: true });
+        return channel.disputeTransfer(transferState, tree.getHexProof(hashCoreTransferStateBuffer(transferState)));
       },
     ) as Promise<Result<TransactionResponseWithResult, ChainError>>;
   }

@@ -15,12 +15,15 @@ import {
   hashCoreTransferState,
   hashTransferState,
   signChannelMessage,
+  hashCoreTransferStateBuffer,
 } from "@connext/vector-utils";
 import { BigNumber, BigNumberish } from "@ethersproject/bignumber";
 import { AddressZero, HashZero, Zero } from "@ethersproject/constants";
 import { Contract } from "@ethersproject/contracts";
 import { parseEther } from "@ethersproject/units";
 import { deployments } from "hardhat";
+import { keccak256 } from "ethereumjs-util";
+import { MerkleTree } from "merkletreejs";
 
 import { bob, alice, defaultLogLevel, networkName, provider, rando } from "../../constants";
 import { advanceBlocktime, createChannel, getContract } from "../../utils";
@@ -116,8 +119,10 @@ describe("CMCAdjudicator.sol", async function () {
 
   // Get merkle proof of transfer
   const getMerkleProof = (cts: FullTransferState[] = [transferState], toProve: string = transferState.transferId) => {
-    const { tree } = generateMerkleTreeData(cts);
-    return tree.getHexProof(hashCoreTransferState(cts.find((t) => t.transferId === toProve)!));
+    const { leaves } = generateMerkleTreeData(cts);
+    // TODO: remove the merkletree-js dependency
+    const tree = new MerkleTree(leaves, keccak256, { sortPairs: true });
+    return tree.getHexProof(hashCoreTransferStateBuffer(cts.find((t) => t.transferId === toProve)!));
   };
 
   // Helper to dispute transfers + bring to defund phase
@@ -597,14 +602,15 @@ describe("CMCAdjudicator.sol", async function () {
         { ...transferState, transferId: getRandomBytes32() },
         { ...transferState, transferId: getRandomBytes32() },
       ];
-      const { root, tree } = generateMerkleTreeData(transfers);
+      const { root } = generateMerkleTreeData(transfers);
 
       const newState = { ...channelState, merkleRoot: root };
       await disputeChannel(newState);
 
       const txs = [];
       for (const t of transfers) {
-        const tx = await channel.disputeTransfer(t, tree.getHexProof(hashCoreTransferState(t)));
+        const proof = getMerkleProof(transfers, t.transferId);
+        const tx = await channel.disputeTransfer(t, proof);
         txs.push(tx);
       }
       const receipts = await Promise.all(txs.map((tx) => tx.wait()));
