@@ -81,7 +81,7 @@ export const calculateFeeAmount = async (
       }),
     );
   }
-  const amountOut = BigNumber.from(onSwapGivenInRes.getValue().amountOut);
+  const amountOut = onSwapGivenInRes.getValue().amountOut;
   // If recipient is router, i.e. fromChannel ===  toChannel, then the
   // fee amount is 0 because no fees are taken without forwarding
   if (toChannel.channelAddress === fromChannel.channelAddress) {
@@ -315,7 +315,7 @@ export const calculateFeeAmount = async (
   // returns the total fees applied to transfer
   return Result.ok({
     fee: totalFees,
-    amount: receiveExactAmount ? amountOut.add(flatFee).add(dynamic) : transferAmount,
+    amount: receiveExactAmount ? amountOut.add(flatFee).add(dynamic) : amountOut,
   });
 };
 

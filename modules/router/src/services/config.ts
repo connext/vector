@@ -222,7 +222,7 @@ export const onSwapGivenIn = async (
       );
     }
 
-    return Result.ok({ priceImpact: priceImpact.toString(), amountOut: amountOut.toString() });
+    return Result.ok({ priceImpact: priceImpact.toString(), amountOut: amountOut });
   } catch (e) {
     return Result.fail(
       new ConfigServiceError(ConfigServiceError.reasons.UnableToGetSwapRate, {
