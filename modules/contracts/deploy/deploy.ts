@@ -109,7 +109,7 @@ const func: DeployFunction = async () => {
       from: deployer,
       args: [parseEther("2500")],
     });
-    log.info({ res }, `Deployed AMM ${network.config.chainId}`);
+    log.info({ address: res.address, txHash: res.transactionHash }, `Deployed AMM ${network.config.chainId}`);
   }
 
   ////////////////////////////////////////
