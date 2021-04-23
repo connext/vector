@@ -2,6 +2,8 @@
 
 ## Next Release
 
+## 0.2.4-beta.3
+
 - \[server-node\] Improve withdrawal commitment retrieval
 
 ## 0.2.4-beta.2
