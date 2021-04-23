@@ -1,4 +1,4 @@
-import { AllowedSwap, Result, jsonifyError, IVectorChainReader, DEFAULT_ROUTER_TOLERANCE } from "@connext/vector-types";
+import { AllowedSwap, Result, jsonifyError, IVectorChainReader, DEFAULT_ROUTER_SLIPPAGE_TOLERANCE } from "@connext/vector-types";
 import { JsonRpcProvider } from "@ethersproject/providers";
 import { StableSwap } from "@connext/vector-contracts";
 import { getAddress } from "@ethersproject/address";
@@ -117,7 +117,7 @@ export const onSwapGivenIn = async (
   // get balance of token for fromChainId for router
 
   // circuit-breaker
-  const routerSlippageTolerance = getConfig().routerSlippageTolerance ?? DEFAULT_ROUTER_TOLERANCE;
+  const routerSlippageTolerance = getConfig().routerSlippageTolerance ?? DEFAULT_ROUTER_SLIPPAGE_TOLERANCE;
 
   const fromMappedAssets = getMappedAssets(fromAssetId, fromChainId);
   const toMappedAssets = getMappedAssets(toAssetId, toChainId);
