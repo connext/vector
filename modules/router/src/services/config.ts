@@ -15,7 +15,7 @@ import { getConfig, RebalanceProfile } from "../config";
 import { ConfigServiceError } from "../errors";
 import { BaseLogger } from "pino";
 
-const stableAmmAddress = getConfig().stableAmmAddress!;
+const stableAmmAddress = getConfig().stableAmmAddress;
 const stableAmmProvider: JsonRpcProvider = new JsonRpcProvider(
   getConfig().chainProviders[getConfig().stableAmmChainId],
 );
@@ -141,6 +141,16 @@ export const onSwapGivenIn = async (
       amountOut: transferAmount,
     });
   }
+
+  // For feature alpha release
+  // ToDo: rmv once fully tested
+  if (!stableAmmAddress || stableAmmAddress === "0x") {
+    return Result.ok({
+      priceImpact: "0",
+      amountOut: transferAmount,
+    });
+  }
+
   // get router balance for each chain for balances array to get the trade size.
   // we will getOnChainBalance for routerSignerAddress
   // get balance of token for fromChainId for router

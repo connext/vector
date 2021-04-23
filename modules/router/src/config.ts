@@ -40,7 +40,7 @@ const VectorRouterConfigSchema = Type.Object({
   rebalanceProfiles: Type.Array(RebalanceProfileSchema),
   mnemonic: Type.Optional(Type.String()),
   stableAmmChainId: TChainId,
-  stableAmmAddress: TAddress,
+  stableAmmAddress: Type.Optional(TAddress),
   routerMaxSafePriceImpact: Type.Optional(TIntegerString),
   autoRebalanceInterval: Type.Optional(Type.Number({ minimum: 1_800_000 })),
   basePercentageFee: Type.Optional(Type.Number({ minimum: 0, maximum: 100 })),
@@ -82,14 +82,6 @@ export const getEnvConfig = (): VectorRouterConfig => {
 
   const vectorConfig: VectorRouterConfig = {
     mnemonic: process.env.VECTOR_MNEMONIC || configJson.mnemonic || configFile.mnemonic,
-    stableAmmChainId:
-      process.env.VECTOR_STABLE_AMM_CHAIN_ID || configJson.stableAmmChainId || configFile.stableAmmChainId || 5,
-    stableAmmAddress:
-      process.env.VECTOR_STABLE_AMM_ADDRESS || configJson.stableAmmAddress || configFile.stableAmmAddress || "0x", // TODO: goerli address
-    routerMaxSafePriceImpact:
-      process.env.ROUTER_MAX_SAFE_PRICE_IMPACT ||
-      configJson.routerMaxSafePriceImpact ||
-      configFile.routerMaxSafePriceImpact,
     dbUrl: process.env.VECTOR_DATABASE_URL || configJson.dbUrl || configFile.dbUrl,
     messagingUrl: process.env.VECTOR_MESSAGING_URL || configJson.messagingUrl || configFile.messagingUrl,
     authUrl: process.env.VECTOR_AUTH_URL || configJson.authUrl || configFile.authUrl,
@@ -112,6 +104,14 @@ export const getEnvConfig = (): VectorRouterConfig => {
       : configJson.allowedSwaps
       ? configJson.allowedSwaps
       : configFile.allowedSwaps,
+    stableAmmChainId:
+      process.env.VECTOR_STABLE_AMM_CHAIN_ID || configJson.stableAmmChainId || configFile.stableAmmChainId || 5,
+    routerMaxSafePriceImpact:
+      process.env.ROUTER_MAX_SAFE_PRICE_IMPACT ||
+      configJson.routerMaxSafePriceImpact ||
+      configFile.routerMaxSafePriceImpact,
+    stableAmmAddress:
+      process.env.VECTOR_STABLE_AMM_ADDRESS || configJson.stableAmmAddress || configFile.stableAmmAddress || "0x", // TODO: goerli address
     nodeUrl: process.env.VECTOR_NODE_URL || configJson.nodeUrl || configFile.nodeUrl || "http://node:8000",
     routerUrl: process.env.VECTOR_ROUTER_URL || configJson.routerUrl || configFile.routerUrl || "http://router:8000",
     rebalanceProfiles:
