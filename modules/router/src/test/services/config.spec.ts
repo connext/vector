@@ -1,15 +1,18 @@
-import { VectorChainReader, StableSwap } from "@connext/vector-contracts";
-import { expect, mkAddress } from "@connext/vector-utils";
-import { Result } from "@connext/vector-types";
+import { parseEther } from "@ethersproject/units";
+import { VectorChainReader } from "@connext/vector-contracts";
+import { expect, mkAddress, getTestLoggers } from "@connext/vector-utils";
+import { Result, IVectorChainReader, ChainError } from "@connext/vector-types";
 import Sinon from "sinon";
 import { getConfig } from "../../config";
 import { ConfigServiceError } from "../../errors";
-import { getRebalanceProfile, getMappedAssets, onSwapGivenIn } from "../../services/config";
-import { parseEther } from "ethers/lib/utils";
+import { getRebalanceProfile, getMappedAssets, getPriceImpact, onSwapGivenIn } from "../../services/config";
 
 const config = getConfig();
 
-describe("config.ts", () => {
+const testName = "config";
+const { log } = getTestLoggers(testName, config.logLevel ?? ("info" as any));
+
+describe.only("config.ts", () => {
   const chainId = parseInt(Object.keys(config.chainProviders)[0]);
   const transferAmount = parseEther("1");
   const fromAssetId: string = mkAddress("0xA");
@@ -54,40 +57,56 @@ describe("config.ts", () => {
     });
   });
 
-  describe.skip("onSwapGivenIn", () => {
-    it("error if getOnchainBalance errors", () => {
-      ethReader.getOnchainBalance.onFirstCall().rejects(
-        Result.fail(
-          new ConfigServiceError(ConfigServiceError.reasons.CouldNotGetAssetBalance, {
-            transferAmount,
-            fromAssetId,
-            fromChainId,
-            routerSignerAddress,
-          }),
-        ),
-      );
-      // const res = await onSwapGivenIn(
-      //   transferAmount.toString(),
-      //   fromAssetId,
-      //   fromChainId,
-      //   toAssetId,
-      //   toChainId,
-      //   routerSignerAddress,
-      //   ethReader,
-      // );
-      // expect(res.isError()).to.be.true;
+  describe("getPriceImpact", () => {
+    it("happy: getMappedAssets 1:1", () => {
+      const marketPrice = parseEther("1");
+      const estimatedPrice = parseEther("1");
+      const res = getPriceImpact(marketPrice, estimatedPrice);
+      console.log(res);
     });
 
-    it("case", async () => {
-      // const res = await onSwapGivenIn(
-      //   transferAmount.toString(),
-      //   fromAssetId,
-      //   fromChainId,
-      //   toAssetId,
-      //   toChainId,
-      //   routerSignerAddress,
-      //   ethReader,
-      // );
+    it("happy: getMappedAssets 1:1.2", () => {
+      const marketPrice = parseEther("1");
+      const estimatedPrice = parseEther("1.2");
+      const res = getPriceImpact(marketPrice, estimatedPrice);
+      console.log(res.toString());
+    });
+  });
+
+  describe("onSwapGivenIn", () => {
+    it("error if getOnchainBalance errors", async () => {
+      ethReader.getOnchainBalance.onFirstCall().resolves(Result.fail(new ChainError("getOnchainBalance error")));
+      const res = await onSwapGivenIn(
+        transferAmount,
+        fromAssetId,
+        fromChainId,
+        toAssetId,
+        toChainId,
+        routerSignerAddress,
+        ethReader as IVectorChainReader,
+        log,
+      );
+
+      expect(res.isError).to.be.true;
+      expect(res.getError()!.message).to.be.eq(ConfigServiceError.reasons.CouldNotGetAssetBalance);
+    });
+
+    it("error if provider isn't provided", async () => {
+      ethReader.getOnchainBalance.onFirstCall().resolves(Result.ok(parseEther("100")));
+      ethReader.getOnchainBalance.onSecondCall().resolves(Result.ok(parseEther("100")));
+      const res = await onSwapGivenIn(
+        transferAmount,
+        fromAssetId,
+        fromChainId,
+        toAssetId,
+        toChainId,
+        routerSignerAddress,
+        ethReader as IVectorChainReader,
+        log,
+      );
+
+      expect(res.isError).to.be.true;
+      expect(res.getError()!.message).to.be.eq(ConfigServiceError.reasons.UnableToGetSwapRate);
     });
   });
 
