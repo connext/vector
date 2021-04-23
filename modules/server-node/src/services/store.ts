@@ -124,7 +124,6 @@ const convertChannelEntityToFullChannelState = (
             to: [channelEntity.latestUpdate.transferToA!, channelEntity.latestUpdate.transferToB!],
             amount: [channelEntity.latestUpdate.transferAmountA!, channelEntity.latestUpdate.transferAmountB!],
           },
-          merkleProofData: channelEntity.latestUpdate.merkleProofData!.split(","),
           merkleRoot: channelEntity.latestUpdate.merkleRoot!,
           transferDefinition: channelEntity.latestUpdate.transferDefinition!,
           transferTimeout: channelEntity.latestUpdate.transferTimeout!,
@@ -675,7 +674,6 @@ export class PrismaStore implements IServerNodeStore {
         transferAmountB: (channelState.latestUpdate!.details as CreateUpdateDetails).balance?.amount[1] ?? undefined,
         transferToB: (channelState.latestUpdate!.details as CreateUpdateDetails).balance?.to[1] ?? undefined,
         merkleRoot: (channelState.latestUpdate!.details as CreateUpdateDetails).merkleRoot,
-        merkleProofData: (channelState.latestUpdate!.details as CreateUpdateDetails).merkleProofData?.join(),
         transferDefinition: (channelState.latestUpdate!.details as CreateUpdateDetails).transferDefinition,
         transferEncodings: (channelState.latestUpdate!.details as CreateUpdateDetails).transferEncodings
           ? (channelState.latestUpdate!.details as CreateUpdateDetails).transferEncodings.join("$") // comma separation doesnt work
@@ -890,7 +888,6 @@ export class PrismaStore implements IServerNodeStore {
         transferAmountB: (channel.latestUpdate!.details as CreateUpdateDetails).balance?.amount[1] ?? undefined,
         transferToB: (channel.latestUpdate!.details as CreateUpdateDetails).balance?.to[1] ?? undefined,
         merkleRoot: (channel.latestUpdate!.details as CreateUpdateDetails).merkleRoot,
-        merkleProofData: (channel.latestUpdate!.details as CreateUpdateDetails).merkleProofData?.join(),
         transferDefinition: (channel.latestUpdate!.details as CreateUpdateDetails).transferDefinition,
         transferEncodings: (channel.latestUpdate!.details as CreateUpdateDetails).transferEncodings
           ? (channel.latestUpdate!.details as CreateUpdateDetails).transferEncodings.join("$") // comma separation doesnt work
@@ -944,7 +941,6 @@ export class PrismaStore implements IServerNodeStore {
             transferTimeout: transfer.transferTimeout,
             transferInitialState: JSON.stringify(transfer.transferState),
             transferEncodings: transfer.transferEncodings.join("$"),
-            merkleProofData: "", // could recreate, but y tho
             meta: transfer.meta ? JSON.stringify(transfer.meta) : undefined,
             responder: transfer.responder,
           },
