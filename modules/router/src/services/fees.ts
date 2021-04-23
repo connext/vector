@@ -67,6 +67,7 @@ export const calculateFeeAmount = async (
     toChainId,
     fromChannel.alice,
     ethReader,
+    logger,
   );
 
   if (onSwapGivenInRes.isError) {

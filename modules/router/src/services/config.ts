@@ -13,6 +13,12 @@ import { Contract } from "@ethersproject/contracts";
 
 import { getConfig, RebalanceProfile } from "../config";
 import { ConfigServiceError } from "../errors";
+import { BaseLogger } from "pino";
+
+const stableAmmAddress = getConfig().stableAmmAddress!;
+const stableAmmProvider: JsonRpcProvider = new JsonRpcProvider(
+  getConfig().chainProviders[getConfig().stableAmmChainId],
+);
 
 export const getRebalanceProfile = (chainId: number, assetId: string): Result<RebalanceProfile, ConfigServiceError> => {
   const asset = getAddress(assetId);
@@ -117,6 +123,7 @@ export const onSwapGivenIn = async (
   toChainId: number,
   routerSignerAddress: string,
   chainReader: IVectorChainReader,
+  logger: BaseLogger,
 ): Promise<Result<{ priceImpact: string; amountOut: string }, ConfigServiceError>> => {
   // get router balance for each chain for balances array to get the trade size.
   // we will getOnChainBalance for routerSignerAddress
@@ -125,18 +132,14 @@ export const onSwapGivenIn = async (
   // circuit-breaker
   const routerSlippageTolerance = getConfig().routerSlippageTolerance ?? DEFAULT_ROUTER_SLIPPAGE_TOLERANCE;
 
+  // search through allowed swaps to get any swap that is related to our current swap
   const fromMappedAssets = getMappedAssets(fromAssetId, fromChainId);
   const toMappedAssets = getMappedAssets(toAssetId, toChainId);
-
   const mappedAssets = fromMappedAssets.concat(toMappedAssets);
-
-  const uniqueMappedAssets = Array.from(new Set(mappedAssets.map((s) => s.assetId))).map((x) => {
-    return mappedAssets.find((z) => z.assetId === x)!;
-  });
+  const uniqueMappedAssets = Array.from(new Set(mappedAssets));
 
   let balances = [];
   for (var val of uniqueMappedAssets) {
-    console.log(val);
     let onChainRouterBalance = await chainReader.getOnchainBalance(val.assetId, routerSignerAddress, val.chainId);
     if (onChainRouterBalance.isError) {
       return Result.fail(
@@ -148,17 +151,32 @@ export const onSwapGivenIn = async (
         }),
       );
     }
-    balances.push(onChainRouterBalance);
+    balances.push(onChainRouterBalance.getValue().toString());
   }
 
   const transferAmountBn = BigNumber.from(transferAmount);
-  const stableAmmAddress = getConfig().stableAmmAddress!;
-  const stableAmmProvider: JsonRpcProvider = new JsonRpcProvider(getConfig().stableAmmProvider!);
 
   try {
+    const fromAssetIdx = uniqueMappedAssets.findIndex(
+      (asset) => asset.assetId === fromAssetId && asset.chainId === fromChainId,
+    );
+    const toAssetIdx = uniqueMappedAssets.findIndex(
+      (asset) => asset.assetId === toAssetId && asset.chainId === toChainId,
+    );
     const stableSwap = new Contract(stableAmmAddress, StableSwap.abi, stableAmmProvider);
+    logger.info(
+      {
+        stableAmmAddress,
+        stableAmmChainId: getConfig().stableAmmChainId,
+        transferAmount,
+        balances,
+        fromAssetIdx,
+        toAssetIdx,
+      },
+      "Calling onchain AMM",
+    );
     // Computes how many tokens can be taken out of a pool if `tokenAmountIn` are sent, given the current balances.
-    const amountOut = await stableSwap.onSwapGivenIn(transferAmountBn, balances, 0, 1);
+    const amountOut = await stableSwap.onSwapGivenIn(transferAmountBn, balances, fromAssetIdx, toAssetIdx);
     // After we get the amountOut here
     // we need to calculate the Price Impact: the difference between the market price and estimated price due to trade size
     // Here, Market Price could be transferAmount only as stable token & 1:1
@@ -166,7 +184,16 @@ export const onSwapGivenIn = async (
 
     const marketPrice = transferAmountBn;
     const priceImpact = marketPrice.sub(amountOut).mul(100).div(marketPrice);
-    console.log(marketPrice, priceImpact);
+
+    logger.info(
+      {
+        priceImpact,
+        marketPrice: marketPrice.toString(),
+        amountOut: amountOut.toString(),
+        routerSlippageTolerance,
+      },
+      "Called onchain AMM",
+    );
 
     if (priceImpact.gte(routerSlippageTolerance)) {
       return Result.fail(

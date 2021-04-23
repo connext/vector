@@ -703,6 +703,7 @@ export async function setupListeners(
       logger,
     );
     if (feeRes.isError) {
+      logger.error({ error: feeRes.getError() }, "Error in calculateFeeAmount");
       await messagingService.respondToTransferQuoteMessage(
         inbox,
         Result.fail(

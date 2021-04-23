@@ -39,8 +39,8 @@ const VectorRouterConfigSchema = Type.Object({
   authUrl: Type.Optional(TUrl),
   rebalanceProfiles: Type.Array(RebalanceProfileSchema),
   mnemonic: Type.Optional(Type.String()),
-  stableAmmProvider: Type.Optional(TUrl),
-  stableAmmAddress: Type.Optional(TAddress),
+  stableAmmChainId: TChainId,
+  stableAmmAddress: TAddress,
   routerSlippageTolerance: Type.Optional(TIntegerString),
   autoRebalanceInterval: Type.Optional(Type.Number({ minimum: 1_800_000 })),
   basePercentageFee: Type.Optional(Type.Number({ minimum: 0, maximum: 100 })),
@@ -82,10 +82,10 @@ export const getEnvConfig = (): VectorRouterConfig => {
 
   const vectorConfig: VectorRouterConfig = {
     mnemonic: process.env.VECTOR_MNEMONIC || configJson.mnemonic || configFile.mnemonic,
-    stableAmmProvider:
-      process.env.VECTOR_STABLE_AMM_PROVIDER || configJson.stableAmmProvider || configFile.stableAmmProvider,
+    stableAmmChainId:
+      process.env.VECTOR_STABLE_AMM_CHAIN_ID || configJson.stableAmmChainId || configFile.stableAmmChainId || 5,
     stableAmmAddress:
-      process.env.VECTOR_STABLE_AMM_ADDRESS || configJson.stableAmmAddress || configFile.stableAmmAddress,
+      process.env.VECTOR_STABLE_AMM_ADDRESS || configJson.stableAmmAddress || configFile.stableAmmAddress || "0x", // TODO: goerli address
     routerSlippageTolerance:
       process.env.ROUTER_SLIPPAGE_TOLERANCE || configJson.routerSlippageTolerance || configFile.routerSlippageTolerance,
     dbUrl: process.env.VECTOR_DATABASE_URL || configJson.dbUrl || configFile.dbUrl,
@@ -169,6 +169,11 @@ vectorConfig.rebalanceProfiles = vectorConfig.rebalanceProfiles.map((profile) =>
     assetId: getAddress(profile.assetId),
   };
 });
+
+// check stableAmm params
+if (!vectorConfig.chainProviders[vectorConfig.stableAmmChainId]) {
+  throw new Error(`Config requires chain provider for stableAmmChainId ${vectorConfig.stableAmmChainId}`);
+}
 
 const config = vectorConfig as Omit<VectorRouterConfig, "mnemonic"> & { mnemonic: string };
 
