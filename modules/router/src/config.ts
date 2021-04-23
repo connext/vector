@@ -41,7 +41,7 @@ const VectorRouterConfigSchema = Type.Object({
   mnemonic: Type.Optional(Type.String()),
   stableAmmChainId: TChainId,
   stableAmmAddress: TAddress,
-  routerSlippageTolerance: Type.Optional(TIntegerString),
+  routerMaxSafePriceImpact: Type.Optional(TIntegerString),
   autoRebalanceInterval: Type.Optional(Type.Number({ minimum: 1_800_000 })),
   basePercentageFee: Type.Optional(Type.Number({ minimum: 0, maximum: 100 })),
   baseFlatFee: Type.Optional(TIntegerString),
@@ -86,8 +86,10 @@ export const getEnvConfig = (): VectorRouterConfig => {
       process.env.VECTOR_STABLE_AMM_CHAIN_ID || configJson.stableAmmChainId || configFile.stableAmmChainId || 5,
     stableAmmAddress:
       process.env.VECTOR_STABLE_AMM_ADDRESS || configJson.stableAmmAddress || configFile.stableAmmAddress || "0x", // TODO: goerli address
-    routerSlippageTolerance:
-      process.env.ROUTER_SLIPPAGE_TOLERANCE || configJson.routerSlippageTolerance || configFile.routerSlippageTolerance,
+    routerMaxSafePriceImpact:
+      process.env.ROUTER_MAX_SAFE_PRICE_IMPACT ||
+      configJson.routerMaxSafePriceImpact ||
+      configFile.routerMaxSafePriceImpact,
     dbUrl: process.env.VECTOR_DATABASE_URL || configJson.dbUrl || configFile.dbUrl,
     messagingUrl: process.env.VECTOR_MESSAGING_URL || configJson.messagingUrl || configFile.messagingUrl,
     authUrl: process.env.VECTOR_AUTH_URL || configJson.authUrl || configFile.authUrl,

@@ -176,7 +176,7 @@ export class ConfigServiceError extends RouterError {
 
   static readonly reasons = {
     CouldNotGetAssetBalance: "Could not get asset balance",
-    RouterSlippageTolerance: "Slippage is too high for Router",
+    RouterMaxSafePriceImpact: "price Impact is too high for Router",
     UnableToGetSwapRate: "Could not get swap rate",
     UnableToGetRebalanceProfile: "Could not get rebalance profile",
     UnableToFindSwap: "Could not get matching swap",

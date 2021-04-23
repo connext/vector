@@ -3,7 +3,7 @@ import {
   Result,
   jsonifyError,
   IVectorChainReader,
-  DEFAULT_ROUTER_SLIPPAGE_TOLERANCE,
+  DEFAULT_ROUTER_MAX_SAFE_PRICE_IMPACT,
 } from "@connext/vector-types";
 import { JsonRpcProvider } from "@ethersproject/providers";
 import { StableSwap } from "@connext/vector-contracts";
@@ -115,6 +115,15 @@ export const getMappedAssets = (_assetId: string, _chainId: number): { assetId: 
   return uniquePairs;
 };
 
+export const getPriceImpact = (marketPrice: BigNumber, estimatedPrice: BigNumber): BigNumber => {
+  // we need to calculate the Price Impact: the difference between the market price and estimated price due to trade size
+  // Here, Market Price could be transferAmount only as stable token & 1:1
+  // PriceImpact is going to be ((marketPrice(i.e transferAmount) - amountOut) * 100)/marketPrice
+
+  const priceImpact = estimatedPrice.sub(marketPrice).mul(100).div(marketPrice);
+  return priceImpact;
+};
+
 export const onSwapGivenIn = async (
   transferAmount: BigNumber,
   fromAssetId: string,
@@ -137,7 +146,7 @@ export const onSwapGivenIn = async (
   // get balance of token for fromChainId for router
 
   // circuit-breaker
-  const routerSlippageTolerance = getConfig().routerSlippageTolerance ?? DEFAULT_ROUTER_SLIPPAGE_TOLERANCE;
+  const routerMaxSafePriceImpact = getConfig().routerMaxSafePriceImpact ?? DEFAULT_ROUTER_MAX_SAFE_PRICE_IMPACT;
 
   // search through allowed swaps to get any swap that is related to our current swap
   const fromMappedAssets = getMappedAssets(fromAssetId, fromChainId);
@@ -147,13 +156,15 @@ export const onSwapGivenIn = async (
 
   let balances = [];
   for (var val of uniqueMappedAssets) {
-    let onChainRouterBalance = await chainReader.getOnchainBalance(val.assetId, routerSignerAddress, val.chainId);
+    let assetId = val.assetId;
+    let chainId = val.chainId;
+    let onChainRouterBalance = await chainReader.getOnchainBalance(assetId, routerSignerAddress, chainId);
     if (onChainRouterBalance.isError) {
       return Result.fail(
         new ConfigServiceError(ConfigServiceError.reasons.CouldNotGetAssetBalance, {
           transferAmount,
-          fromAssetId,
-          fromChainId,
+          assetId,
+          chainId,
           routerSignerAddress,
         }),
       );
@@ -183,30 +194,27 @@ export const onSwapGivenIn = async (
     // Computes how many tokens can be taken out of a pool if `tokenAmountIn` are sent, given the current balances.
     const amountOut = await stableSwap.onSwapGivenIn(transferAmount, balances, fromAssetIdx, toAssetIdx);
 
+    const priceImpact = getPriceImpact(transferAmount, amountOut);
     // After we get the amountOut here
-    // we need to calculate the Price Impact: the difference between the market price and estimated price due to trade size
-    // Here, Market Price could be transferAmount only as stable token & 1:1
-    // PriceImpact is going to be ((marketPrice(i.e transferAmount) - amountOut) * 100)/marketPrice
-    // TODO: this will always be 0 bc of integer division
-    const marketPrice = transferAmount;
-    const priceImpact = marketPrice.sub(amountOut).mul(100).div(marketPrice);
 
     logger.info(
       {
         priceImpact,
-        marketPrice: marketPrice.toString(),
+        marketPrice: transferAmount.toString(),
         amountOut: amountOut.toString(),
-        routerSlippageTolerance,
+        routerMaxSafePriceImpact,
       },
       "Called onchain AMM",
     );
 
-    if (priceImpact.gte(routerSlippageTolerance)) {
+    if (priceImpact.gte(routerMaxSafePriceImpact)) {
       return Result.fail(
-        new ConfigServiceError(ConfigServiceError.reasons.RouterSlippageTolerance, {
+        new ConfigServiceError(ConfigServiceError.reasons.RouterMaxSafePriceImpact, {
           transferAmount,
           amountOut,
           priceImpact,
+          fromAssetId,
+          fromChainId,
           toAssetId,
           toChainId,
           routerSignerAddress,
@@ -220,6 +228,8 @@ export const onSwapGivenIn = async (
       new ConfigServiceError(ConfigServiceError.reasons.UnableToGetSwapRate, {
         error: jsonifyError(e),
         transferAmount,
+        fromAssetId,
+        fromChainId,
         toAssetId,
         toChainId,
         routerSignerAddress,

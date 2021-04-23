@@ -10,7 +10,7 @@ export const DEFAULT_CHANNEL_TIMEOUT = DEFAULT_TRANSFER_TIMEOUT * 2; // 48 hrs
 export const MINIMUM_CHANNEL_TIMEOUT = DEFAULT_CHANNEL_TIMEOUT / 2; // 24 hrs
 export const MAXIMUM_CHANNEL_TIMEOUT = DEFAULT_CHANNEL_TIMEOUT * 7; // 336 hrs
 
-export const DEFAULT_ROUTER_SLIPPAGE_TOLERANCE = "15"; // 15 percent
+export const DEFAULT_ROUTER_MAX_SAFE_PRICE_IMPACT = "15"; // 15 percent
 
 export const TRANSFER_DECREMENT = 60 * 72; // 72 mins, must be greater than min which means we can have up to 10 hops.
 
