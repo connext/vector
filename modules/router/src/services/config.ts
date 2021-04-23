@@ -115,6 +115,7 @@ export const getMappedAssets = (_assetId: string, _chainId: number): { assetId: 
   return uniquePairs;
 };
 
+/// Returns price impact as a percentage number.
 export const getPriceImpact = (marketPrice: BigNumber, estimatedPrice: BigNumber): BigNumber => {
   // we need to calculate the Price Impact: the difference between the market price and estimated price due to trade size
   // Here, Market Price could be transferAmount only as stable token & 1:1

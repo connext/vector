@@ -12,7 +12,7 @@ const config = getConfig();
 const testName = "config";
 const { log } = getTestLoggers(testName, config.logLevel ?? ("info" as any));
 
-describe("config.ts", () => {
+describe.only("config.ts", () => {
   const chainId = parseInt(Object.keys(config.chainProviders)[0]);
   const transferAmount = parseEther("1");
   const fromAssetId: string = mkAddress("0xA");
@@ -51,25 +51,33 @@ describe("config.ts", () => {
   describe("getSwapFees", () => {});
 
   describe("getMappedAssets", () => {
-    it("happy: getMappedAssets", () => {
+    it("should map assets correctly", () => {
       const res = getMappedAssets(fromAssetId, fromChainId);
-      console.log(res);
+      expect(res).to.deep.equal(
+        [
+          {
+            assetId: '0xA000000000000000000000000000000000000000',
+            chainId: 1337
+          }
+        ],
+        "Did not return appropriate unique pair(s)."
+      );
     });
   });
 
   describe("getPriceImpact", () => {
-    it("happy: getMappedAssets 1:1", () => {
+    it("should return 0 for 1:1", () => {
       const marketPrice = parseEther("1");
       const estimatedPrice = parseEther("1");
       const res = getPriceImpact(marketPrice, estimatedPrice);
-      console.log(res);
+      expect(res).to.equal(0, "Did not return appropriate value for price impact.");
     });
 
-    it("happy: getMappedAssets 1:1.2", () => {
+    it("should return 20% for 1:1.2", () => {
       const marketPrice = parseEther("1");
       const estimatedPrice = parseEther("1.2");
       const res = getPriceImpact(marketPrice, estimatedPrice);
-      console.log(res.toString());
+      expect(res).to.equal(20, "Did not return appropriate value for price impact.");
     });
   });
 
