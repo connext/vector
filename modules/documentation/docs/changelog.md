@@ -2,9 +2,13 @@
 
 ## Next Release
 
+## 0.2.4-beta.3
+
+- \[server-node\] Improve withdrawal commitment retrieval
+
 ## 0.2.4-beta.2
 
-- [engine] TRANSFER_ROUTING_COMPLETE event emitted through to original sender.
+- \[engine\] TRANSFER_ROUTING_COMPLETE event emitted through to original sender.
 - \[router\] Improvements to `autoRebalance` for better state machine. Separate sending tx and waiting for confirmation. Store tx hashes after tx submit.
 
 ## 0.2.4-beta.1
