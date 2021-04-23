@@ -1,6 +1,6 @@
-import { AllowedSwap, Result, jsonifyError, IVectorChainReader } from "@connext/vector-types";
+import { AllowedSwap, Result, jsonifyError, IVectorChainReader, DEFAULT_ROUTER_TOLERANCE } from "@connext/vector-types";
 import { JsonRpcProvider } from "@ethersproject/providers";
-import { VectorChainReader, StableSwap } from "@connext/vector-contracts";
+import { StableSwap } from "@connext/vector-contracts";
 import { getAddress } from "@ethersproject/address";
 import { BigNumber } from "@ethersproject/bignumber";
 import { Contract } from "@ethersproject/contracts";
@@ -116,6 +116,9 @@ export const onSwapGivenIn = async (
   // we will getOnChainBalance for routerSignerAddress
   // get balance of token for fromChainId for router
 
+  // circuit-breaker
+  const routerSlippageTolerance = getConfig().routerSlippageTolerance ?? DEFAULT_ROUTER_TOLERANCE;
+
   const fromMappedAssets = getMappedAssets(fromAssetId, fromChainId);
   const toMappedAssets = getMappedAssets(toAssetId, toChainId);
 
@@ -158,10 +161,23 @@ export const onSwapGivenIn = async (
     const marketPrice = transferAmountBn;
     const priceImpact = marketPrice.sub(amountOut).mul(100).div(marketPrice);
 
+    if (routerSlippageTolerance <= priceImpact) {
+      return Result.fail(
+        new ConfigServiceError(ConfigServiceError.reasons.RouterSlippageTolerance, {
+          transferAmount,
+          amountOut,
+          priceImpact,
+          toAssetId,
+          toChainId,
+          routerSignerAddress,
+        }),
+      );
+    }
+
     return Result.ok({ priceImpact: priceImpact.toString(), amountOut: amountOut.toString() });
   } catch (e) {
     return Result.fail(
-      new ConfigServiceError(ConfigServiceError.reasons.CouldNotGetAssetBalance, {
+      new ConfigServiceError(ConfigServiceError.reasons.UnableToGetSwapRate, {
         error: jsonifyError(e),
         transferAmount,
         toAssetId,
