@@ -38,7 +38,7 @@ export const calculateFeeAmount = async (
   ethReader: IVectorChainReader,
   routerPublicIdentifier: string,
   logger: BaseLogger,
-): Promise<Result<{ fee: BigNumber; amount: BigNumber; priceImpact: string }, FeeError>> => {
+): Promise<Result<{ fee: BigNumber; amount: BigNumber }, FeeError>> => {
   const method = "calculateFeeAmount";
   const methodId = getRandomBytes32();
   logger.info(
@@ -81,11 +81,10 @@ export const calculateFeeAmount = async (
     );
   }
   const amountOut = BigNumber.from(onSwapGivenInRes.getValue().amountOut);
-  const priceImpact = onSwapGivenInRes.getValue().priceImpact;
   // If recipient is router, i.e. fromChannel ===  toChannel, then the
   // fee amount is 0 because no fees are taken without forwarding
   if (toChannel.channelAddress === fromChannel.channelAddress) {
-    return Result.ok({ fee: Zero, amount: amountOut, priceImpact });
+    return Result.ok({ fee: Zero, amount: amountOut });
   }
 
   // Get fee values from config
@@ -110,7 +109,7 @@ export const calculateFeeAmount = async (
   );
   if (flatFee === "0" && percentageFee === 0 && gasSubsidyPercentage === 100) {
     // No fees configured
-    return Result.ok({ fee: Zero, amount: transferAmount, priceImpact });
+    return Result.ok({ fee: Zero, amount: transferAmount });
   }
   const isSwap = fromChainId !== toChainId || fromAssetId !== toAssetId;
 
@@ -150,7 +149,7 @@ export const calculateFeeAmount = async (
       "Method complete, gas is subsidized",
     );
 
-    return Result.ok({ fee: staticFees, amount: receiveExactAmount ? amtToTransfer.add(flatFee) : transferAmount, priceImpact });
+    return Result.ok({ fee: staticFees, amount: receiveExactAmount ? amtToTransfer.add(flatFee) : transferAmount });
   }
 
   logger.debug(
@@ -316,7 +315,6 @@ export const calculateFeeAmount = async (
   return Result.ok({
     fee: totalFees,
     amount: receiveExactAmount ? amountOut.add(flatFee).add(dynamic) : transferAmount,
-    priceImpact: priceImpact,
   });
 };
 
