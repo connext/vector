@@ -1,26 +1,18 @@
 import * as merkle from "vector-merkle-tree";
 import { CoreTransferState } from "@connext/vector-types";
 import { HashZero } from "@ethersproject/constants";
+import { keccak256 } from "ethereumjs-util";
+import { MerkleTree } from "merkletreejs";
 
-import { hashCoreTransferStateBuffer } from "./transfers";
+import { encodeCoreTransferState, hashCoreTransferState } from "./transfers";
 
-export const generateMerkleTreeData = (
-  transfers: CoreTransferState[],
-): { root: string; tree: merkle.Tree; leaves: Buffer[] } => {
-  // Sort transfers alphabetically by id
-  const sorted = transfers.sort((a, b) => a.transferId.localeCompare(b.transferId));
-
+export const generateMerkleTreeData = (transfers: CoreTransferState[]): { root: string; tree: merkle.Tree } => {
   // Create leaves
   const tree = new merkle.Tree();
-  const leaves = sorted.map((transfer) => {
-    const leaf = hashCoreTransferStateBuffer(transfer);
-    const leafStr = `0x${leaf.toString("hex")}`;
-    tree.insert_hex_js(leafStr);
-    return leaf;
+  tree.free(); // handle memory leaks
+  transfers.forEach((transfer) => {
+    tree.insert_hex_js(encodeCoreTransferState(transfer));
   });
-
-  // Generate tree
-  // const tree = new MerkleTree(leaves, keccak256, { sortPairs: true });
 
   // Return
   const calculated = tree.root_js();
@@ -28,6 +20,17 @@ export const generateMerkleTreeData = (
   return {
     root: calculated === "0x" ? HashZero : calculated,
     tree,
-    leaves,
   };
+};
+
+// Get merkle proof of transfer
+// TODO: use merkle.Tree not MerkleTree
+export const getMerkleProof = (active: CoreTransferState[], toProve: string): string[] => {
+  // Sort transfers alphabetically by id
+  // TODO: same sorting in merkle.Tree?
+  const sorted = active.sort((a, b) => a.transferId.localeCompare(b.transferId));
+
+  const leaves = sorted.map((transfer) => hashCoreTransferState(transfer));
+  const tree = new MerkleTree(leaves, keccak256, { sortPairs: true });
+  return tree.getHexProof(hashCoreTransferState(active.find((t) => t.transferId === toProve)!));
 };

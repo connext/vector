@@ -15,15 +15,13 @@ import {
   hashCoreTransferState,
   hashTransferState,
   signChannelMessage,
-  hashCoreTransferStateBuffer,
+  getMerkleProof,
 } from "@connext/vector-utils";
 import { BigNumber, BigNumberish } from "@ethersproject/bignumber";
 import { AddressZero, HashZero, Zero } from "@ethersproject/constants";
 import { Contract } from "@ethersproject/contracts";
 import { parseEther } from "@ethersproject/units";
 import { deployments } from "hardhat";
-import { keccak256 } from "ethereumjs-util";
-import { MerkleTree } from "merkletreejs";
 
 import { bob, alice, defaultLogLevel, networkName, provider, rando } from "../../constants";
 import { advanceBlocktime, createChannel, getContract } from "../../utils";
@@ -118,16 +116,16 @@ describe("CMCAdjudicator.sol", async function () {
   };
 
   // Get merkle proof of transfer
-  const getMerkleProof = (cts: FullTransferState[] = [transferState], toProve: string = transferState.transferId) => {
-    const { leaves } = generateMerkleTreeData(cts);
-    // TODO: remove the merkletree-js dependency
-    const tree = new MerkleTree(leaves, keccak256, { sortPairs: true });
-    return tree.getHexProof(hashCoreTransferStateBuffer(cts.find((t) => t.transferId === toProve)!));
+  const getMerkleProofTest = (
+    cts: FullTransferState[] = [transferState],
+    toProve: string = transferState.transferId,
+  ) => {
+    return getMerkleProof(cts, toProve);
   };
 
   // Helper to dispute transfers + bring to defund phase
   const disputeTransfer = async (cts: FullTransferState = transferState) => {
-    await (await channel.disputeTransfer(cts, getMerkleProof([cts], cts.transferId))).wait();
+    await (await channel.disputeTransfer(cts, getMerkleProofTest([cts], cts.transferId))).wait();
   };
 
   // Helper to defund channels and verify transfers
@@ -541,7 +539,7 @@ describe("CMCAdjudicator.sol", async function () {
       }
       await disputeChannel();
       await expect(
-        channel.disputeTransfer({ ...transferState, channelAddress: getRandomAddress() }, getMerkleProof()),
+        channel.disputeTransfer({ ...transferState, channelAddress: getRandomAddress() }, getMerkleProofTest()),
       ).revertedWith("CMCAdjudicator: INVALID_TRANSFER");
     });
 
@@ -551,7 +549,7 @@ describe("CMCAdjudicator.sol", async function () {
       }
       await disputeChannel();
       await expect(
-        channel.disputeTransfer({ ...transferState, transferId: getRandomBytes32() }, getMerkleProof()),
+        channel.disputeTransfer({ ...transferState, transferId: getRandomBytes32() }, getMerkleProofTest()),
       ).revertedWith("CMCAdjudicator: INVALID_MERKLE_PROOF");
     });
 
@@ -563,7 +561,7 @@ describe("CMCAdjudicator.sol", async function () {
       // the defund phase
       const tx = await channel.disputeChannel(channelState, aliceSignature, bobSignature);
       await tx.wait();
-      await expect(channel.disputeTransfer(transferState, getMerkleProof())).revertedWith(
+      await expect(channel.disputeTransfer(transferState, getMerkleProofTest())).revertedWith(
         "CMCAdjudicator: INVALID_PHASE",
       );
     });
@@ -574,9 +572,9 @@ describe("CMCAdjudicator.sol", async function () {
       }
       const longerTimeout = { ...channelState, timeout: "4" };
       await disputeChannel(longerTimeout);
-      const tx = await channel.disputeTransfer(transferState, getMerkleProof());
+      const tx = await channel.disputeTransfer(transferState, getMerkleProofTest());
       await tx.wait();
-      await expect(channel.disputeTransfer(transferState, getMerkleProof())).revertedWith(
+      await expect(channel.disputeTransfer(transferState, getMerkleProofTest())).revertedWith(
         "CMCAdjudicator: TRANSFER_ALREADY_DISPUTED",
       );
     });
@@ -586,7 +584,7 @@ describe("CMCAdjudicator.sol", async function () {
         this.skip();
       }
       await disputeChannel();
-      const tx = await channel.disputeTransfer(transferState, getMerkleProof());
+      const tx = await channel.disputeTransfer(transferState, getMerkleProofTest());
       const { blockNumber } = await tx.wait();
       await verifyTransferDispute(transferState, blockNumber);
     });
@@ -609,7 +607,7 @@ describe("CMCAdjudicator.sol", async function () {
 
       const txs = [];
       for (const t of transfers) {
-        const proof = getMerkleProof(transfers, t.transferId);
+        const proof = getMerkleProofTest(transfers, t.transferId);
         const tx = await channel.disputeTransfer(t, proof);
         txs.push(tx);
       }
