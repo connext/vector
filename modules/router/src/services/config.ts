@@ -1,4 +1,10 @@
-import { AllowedSwap, Result, jsonifyError, IVectorChainReader, DEFAULT_ROUTER_SLIPPAGE_TOLERANCE } from "@connext/vector-types";
+import {
+  AllowedSwap,
+  Result,
+  jsonifyError,
+  IVectorChainReader,
+  DEFAULT_ROUTER_SLIPPAGE_TOLERANCE,
+} from "@connext/vector-types";
 import { JsonRpcProvider } from "@ethersproject/providers";
 import { StableSwap } from "@connext/vector-contracts";
 import { getAddress } from "@ethersproject/address";
@@ -160,8 +166,9 @@ export const onSwapGivenIn = async (
 
     const marketPrice = transferAmountBn;
     const priceImpact = marketPrice.sub(amountOut).mul(100).div(marketPrice);
+    console.log(marketPrice, priceImpact);
 
-    if (routerSlippageTolerance <= priceImpact) {
+    if (priceImpact.gte(routerSlippageTolerance)) {
       return Result.fail(
         new ConfigServiceError(ConfigServiceError.reasons.RouterSlippageTolerance, {
           transferAmount,
