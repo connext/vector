@@ -1,3 +1,4 @@
+import * as merkle from "vector-merkle-tree";
 import { CoreTransferState } from "@connext/vector-types";
 import { HashZero } from "@ethersproject/constants";
 import { keccak256 } from "ethereumjs-util";
@@ -15,7 +16,9 @@ export const generateMerkleTreeData = (transfers: CoreTransferState[]): { root: 
   });
 
   // Generate tree
-  const tree = new MerkleTree(leaves, keccak256, { sortPairs: true });
+  const tree = new merkle.Tree();
+  tree.insert_hex_js(leaves);
+  // const tree = new MerkleTree(leaves, keccak256, { sortPairs: true });
 
   // Return
   const calculated = tree.getHexRoot();
