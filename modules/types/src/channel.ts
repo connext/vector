@@ -201,7 +201,6 @@ export type CreateUpdateDetails = {
   transferTimeout: string;
   transferInitialState: TransferState;
   transferEncodings: string[]; // Included for `applyUpdate`
-  merkleProofData: string[];
   merkleRoot: string;
   meta?: BasicMeta;
 };

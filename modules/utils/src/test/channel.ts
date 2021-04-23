@@ -143,7 +143,6 @@ export function createTestChannelUpdate<T extends UpdateType>(
       break;
     case UpdateType.create:
       const createDeets: CreateUpdateDetails = {
-        merkleProofData: [mkBytes32("0xproof")],
         merkleRoot: mkBytes32("0xeeeeaaaaa333344444"),
         transferDefinition: mkAddress("0xdef"),
         transferId: mkBytes32("0xaaaeee"),

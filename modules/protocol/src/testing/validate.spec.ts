@@ -1148,16 +1148,6 @@ describe("validateAndApplyInboundUpdate", () => {
           error: "should be array",
         },
         {
-          name: "no merkleProofData",
-          overrides: { merkleProofData: undefined },
-          error: "should have required property 'merkleProofData'",
-        },
-        {
-          name: "malformed merkleProofData",
-          overrides: { merkleProofData: "fail" },
-          error: "should be array",
-        },
-        {
           name: "no merkleRoot",
           overrides: { merkleRoot: undefined },
           error: "should have required property 'merkleRoot'",
