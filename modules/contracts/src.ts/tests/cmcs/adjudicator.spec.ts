@@ -69,7 +69,7 @@ describe("CMCAdjudicator.sol", async function () {
   const verifyTransferDispute = async (cts: FullTransferState, disputeBlockNumber: number) => {
     const { timestamp } = await provider.getBlock(disputeBlockNumber);
     const transferDispute = await channel.getTransferDispute(cts.transferId);
-    expect(transferDispute.transferStateHash).to.be.eq(`0x` + hashCoreTransferState(cts).toString("hex"));
+    expect(transferDispute.transferStateHash).to.be.eq(hashCoreTransferState(cts));
     expect(transferDispute.isDefunded).to.be.false;
     expect(transferDispute.transferDisputeExpiry).to.be.eq(BigNumber.from(timestamp).add(cts.transferTimeout));
   };

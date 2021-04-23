@@ -9,10 +9,13 @@
     "types"
   ],
   "scripts": {
-    "build": "rm -rf dist && tsc",
+    "copy-wasm": "cp ../../node_modules/vector-merkle-tree/vector-merkle-tree_bg.wasm dist/vector-merkle-tree_bg.wasm",
+    "build": "rm -rf dist && tsc && npm run copy-wasm",
+    "build-bundle": "rm -f dist/package.json && webpack --config ops/webpack.config.js",
     "test": "nyc ts-mocha --check-leaks --exit 'src/**/*.spec.ts'"
   },
   "dependencies": {
+    "vector-merkle-tree": "0.1.0",
     "@connext/vector-types": "0.2.4-beta.2",
     "@ethersproject/abi": "5.1.0",
     "@ethersproject/abstract-provider": "5.1.0",

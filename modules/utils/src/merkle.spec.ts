@@ -9,7 +9,7 @@ import { keccak256 } from "ethereumjs-util";
 import { keccak256 as solidityKeccak256 } from "@ethersproject/solidity";
 import { bufferify } from "./crypto";
 
-describe("generateMerkleTreeData", () => {
+describe.only("generateMerkleTreeData", () => {
   const generateTransfers = (noTransfers = 1) => {
     return Array(noTransfers)
       .fill(0)
