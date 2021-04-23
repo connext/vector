@@ -12,7 +12,7 @@ const config = getConfig();
 const testName = "config";
 const { log } = getTestLoggers(testName, config.logLevel ?? ("info" as any));
 
-describe.only("config.ts", () => {
+describe("config.ts", () => {
   const chainId = parseInt(Object.keys(config.chainProviders)[0]);
   const transferAmount = parseEther("1");
   const fromAssetId: string = mkAddress("0xA");
