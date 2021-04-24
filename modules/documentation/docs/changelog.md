@@ -2,12 +2,11 @@
 
 ## Next Release
 
-- \[server-node\] Resave transaction hash for admin function
-
 ## 0.2.5-alpha.0
 
 - \[router\] AMM implementation to get swap rate.
 - \[contracts\] AMM contracts for swap rate.
+- \[server-node\] Resave transaction hash for admin function
 
 ## 0.2.4-beta.3
 
@@ -19,6 +18,7 @@
 - \[router\] Improvements to `autoRebalance` for better state machine. Separate sending tx and waiting for confirmation. Store tx hashes after tx submit.
 
 ## 0.2.4-beta.1
+
 - \[iframe\] Catch sig undefined error and propogate
 
 ## 0.2.3
