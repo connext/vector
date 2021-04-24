@@ -1,6 +1,6 @@
 {
   "name": "@connext/vector-engine",
-  "version": "0.2.4-beta.3",
+  "version": "0.2.5-alpha.0",
   "description": "",
   "author": "Arjun Bhuptani",
   "license": "MIT",
@@ -14,10 +14,10 @@
     "test": "nyc ts-mocha --check-leaks --exit --timeout 60000 'src/**/*.spec.ts'"
   },
   "dependencies": {
-    "@connext/vector-contracts": "0.2.4-beta.3",
-    "@connext/vector-protocol": "0.2.4-beta.3",
-    "@connext/vector-types": "0.2.4-beta.3",
-    "@connext/vector-utils": "0.2.4-beta.3",
+    "@connext/vector-contracts": "0.2.5-alpha.0",
+    "@connext/vector-protocol": "0.2.5-alpha.0",
+    "@connext/vector-types": "0.2.5-alpha.0",
+    "@connext/vector-utils": "0.2.5-alpha.0",
     "@ethersproject/address": "5.1.0",
     "@ethersproject/bignumber": "5.1.0",
     "@ethersproject/bytes": "5.1.0",
@@ -42,6 +42,6 @@
     "nyc": "15.1.0",
     "sinon": "10.0.0",
     "ts-mocha": "8.0.0",
-    "typescript": "4.2.2"
+    "typescript": "4.2.4"
   }
 }

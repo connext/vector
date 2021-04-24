@@ -4,6 +4,7 @@ import "hardhat-deploy-ethers";
 import "@nomiclabs/hardhat-etherscan";
 import "hardhat-gas-reporter";
 import "@tenderly/hardhat-tenderly";
+import "@typechain/hardhat";
 
 import { HardhatUserConfig } from "hardhat/types";
 
