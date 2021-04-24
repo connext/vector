@@ -2,9 +2,11 @@
 
 ## Next Release
 
+- \[server-node\] Resave transaction hash for admin function
+
 ## 0.2.5-alpha.0
 
-- \[router] AMM implementation to get swap rate.
+- \[router\] AMM implementation to get swap rate.
 - \[contracts\] AMM contracts for swap rate.
 
 ## 0.2.4-beta.3
