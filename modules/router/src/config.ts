@@ -4,6 +4,7 @@ import Ajv from "ajv";
 import { getAddress } from "@ethersproject/address";
 import { BigNumber } from "@ethersproject/bignumber";
 import { readFileSync } from "fs";
+import { AddressZero } from "@ethersproject/constants";
 
 const ajv = new Ajv();
 
@@ -39,7 +40,7 @@ const VectorRouterConfigSchema = Type.Object({
   authUrl: Type.Optional(TUrl),
   rebalanceProfiles: Type.Array(RebalanceProfileSchema),
   mnemonic: Type.Optional(Type.String()),
-  stableAmmChainId: TChainId,
+  stableAmmChainId: Type.Optional(TChainId),
   stableAmmAddress: Type.Optional(TAddress),
   routerMaxSafePriceImpact: Type.Optional(TIntegerString),
   autoRebalanceInterval: Type.Optional(Type.Number({ minimum: 1_800_000 })),
@@ -105,13 +106,13 @@ export const getEnvConfig = (): VectorRouterConfig => {
       ? configJson.allowedSwaps
       : configFile.allowedSwaps,
     stableAmmChainId:
-      process.env.VECTOR_STABLE_AMM_CHAIN_ID || configJson.stableAmmChainId || configFile.stableAmmChainId || 5,
+      process.env.VECTOR_STABLE_AMM_CHAIN_ID || configJson.stableAmmChainId || configFile.stableAmmChainId,
     routerMaxSafePriceImpact:
       process.env.ROUTER_MAX_SAFE_PRICE_IMPACT ||
       configJson.routerMaxSafePriceImpact ||
       configFile.routerMaxSafePriceImpact,
     stableAmmAddress:
-      process.env.VECTOR_STABLE_AMM_ADDRESS || configJson.stableAmmAddress || configFile.stableAmmAddress || "0x", // TODO: goerli address
+      process.env.VECTOR_STABLE_AMM_ADDRESS || configJson.stableAmmAddress || configFile.stableAmmAddress,
     nodeUrl: process.env.VECTOR_NODE_URL || configJson.nodeUrl || configFile.nodeUrl || "http://node:8000",
     routerUrl: process.env.VECTOR_ROUTER_URL || configJson.routerUrl || configFile.routerUrl || "http://router:8000",
     rebalanceProfiles:
@@ -173,7 +174,7 @@ vectorConfig.rebalanceProfiles = vectorConfig.rebalanceProfiles.map((profile) =>
 });
 
 // check stableAmm params
-if (!vectorConfig.chainProviders[vectorConfig.stableAmmChainId]) {
+if (!vectorConfig.chainProviders[vectorConfig.stableAmmChainId!]) {
   throw new Error(`Config requires chain provider for stableAmmChainId ${vectorConfig.stableAmmChainId}`);
 }
 
