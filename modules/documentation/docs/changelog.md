@@ -2,6 +2,16 @@
 
 ## Next Release
 
+## 0.2.5-alpha.1
+
+- \[router\] fix amm config params.
+
+## 0.2.5-alpha.0
+
+- \[router\] AMM implementation to get swap rate.
+- \[contracts\] AMM contracts for swap rate.
+- \[server-node\] Resave transaction hash for admin function
+
 ## 0.2.4-beta.3
 
 - \[server-node\] Improve withdrawal commitment retrieval

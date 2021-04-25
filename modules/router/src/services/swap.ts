@@ -22,6 +22,7 @@ export const getSwappedAmount = async (
   }
   const swap = swapRes.getValue();
 
+  // TODO: replace this with the actual current rate.
   if (swap.hardcodedRate) {
     const fromDecimals = await getDecimals(swap.fromChainId.toString(), swap.fromAssetId);
     const toDecimals = await getDecimals(swap.toChainId.toString(), swap.toAssetId);
