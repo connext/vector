@@ -2,6 +2,10 @@
 
 ## Next Release
 
+## 0.2.5-alpha.2
+
+- \[router\] fix router build error.
+
 ## 0.2.5-alpha.1
 
 - \[router\] fix amm config params.
