@@ -14,6 +14,7 @@ import { Contract } from "@ethersproject/contracts";
 import { getConfig, RebalanceProfile } from "../config";
 import { ConfigServiceError } from "../errors";
 import { BaseLogger } from "pino";
+import { AddressZero } from "@ethersproject/constants";
 
 const stableAmmAddress = getConfig().stableAmmAddress;
 const stableAmmProvider: JsonRpcProvider = new JsonRpcProvider(
@@ -145,7 +146,7 @@ export const onSwapGivenIn = async (
 
   // For feature alpha release
   // ToDo: rmv once fully tested
-  if (!stableAmmAddress || stableAmmAddress === "0x") {
+  if (!stableAmmAddress || stableAmmAddress === AddressZero) {
     return Result.ok({
       priceImpact: "0",
       amountOut: transferAmount,
