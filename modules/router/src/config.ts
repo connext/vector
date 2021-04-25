@@ -174,7 +174,7 @@ vectorConfig.rebalanceProfiles = vectorConfig.rebalanceProfiles.map((profile) =>
 });
 
 // check stableAmm params
-if (!vectorConfig.chainProviders[vectorConfig.stableAmmChainId!]) {
+if (vectorConfig.stableAmmChainId && !vectorConfig.chainProviders[vectorConfig.stableAmmChainId!]) {
   throw new Error(`Config requires chain provider for stableAmmChainId ${vectorConfig.stableAmmChainId}`);
 }
 
