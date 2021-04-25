@@ -2,6 +2,10 @@
 
 ## Next Release
 
+## 0.2.5-alpha.1
+
+- \[router\] fix amm config params.
+
 ## 0.2.5-alpha.0
 
 - \[router\] AMM implementation to get swap rate.
