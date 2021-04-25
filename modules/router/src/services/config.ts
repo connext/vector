@@ -18,7 +18,7 @@ import { AddressZero } from "@ethersproject/constants";
 
 const stableAmmAddress = getConfig().stableAmmAddress;
 const stableAmmProvider: JsonRpcProvider = new JsonRpcProvider(
-  getConfig().chainProviders[getConfig().stableAmmChainId],
+  getConfig().chainProviders[getConfig().stableAmmChainId!],
 );
 
 export const getRebalanceProfile = (chainId: number, assetId: string): Result<RebalanceProfile, ConfigServiceError> => {
