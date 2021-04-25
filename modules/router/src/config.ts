@@ -39,7 +39,7 @@ const VectorRouterConfigSchema = Type.Object({
   authUrl: Type.Optional(TUrl),
   rebalanceProfiles: Type.Array(RebalanceProfileSchema),
   mnemonic: Type.Optional(Type.String()),
-  stableAmmChainId: TChainId,
+  stableAmmChainId: Type.Optional(TChainId),
   stableAmmAddress: Type.Optional(TAddress),
   routerMaxSafePriceImpact: Type.Optional(TIntegerString),
   autoRebalanceInterval: Type.Optional(Type.Number({ minimum: 1_800_000 })),
