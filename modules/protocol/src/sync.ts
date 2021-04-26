@@ -50,6 +50,11 @@ export async function outbound(
     transfer: FullTransferState,
     update: typeof UpdateType.create | typeof UpdateType.resolve,
   ) => string,
+  undoMerkleRootUpdates: (
+    channelAddress: string,
+    transferToUndo: string,
+    updateToUndo: typeof UpdateType.create | typeof UpdateType.resolve,
+  ) => Promise<void>,
   logger: pino.BaseLogger,
 ): Promise<Result<SelfUpdateResult, QueuedUpdateError>> {
   const method = "outbound";
@@ -125,6 +130,15 @@ export async function outbound(
       `Behind, syncing then cancelling proposed`,
     );
 
+    // NOTE: because you have already updated the merkle root here,
+    // you must undo the updates before syncing otherwise you cannot
+    // safely sync properly (merkle root may be incorrect when
+    // generating a new one). This is otherwise handled in the queued
+    // update
+    if (update.type === UpdateType.create || update.type === UpdateType.resolve) {
+      await undoMerkleRootUpdates(params.channelAddress, updatedTransfer!.transferId, update.type);
+    }
+
     // Get the synced state and new update
     const syncedResult = await syncState(
       error.context.update,
@@ -150,8 +164,17 @@ export async function outbound(
 
     // Return that proposed update was not successfully applied, but
     // make sure to save state
-    const { updatedChannel, updatedTransfer, updatedActiveTransfers } = syncedResult.getValue()!;
-    return Result.ok({ updatedChannel, updatedActiveTransfers, updatedTransfer, successfullyApplied: false });
+    const {
+      updatedChannel: syncedChannel,
+      updatedTransfer: syncedTransfer,
+      updatedActiveTransfers: syncedActiveTransfers,
+    } = syncedResult.getValue()!;
+    return Result.ok({
+      updatedChannel: syncedChannel,
+      updatedActiveTransfers: syncedActiveTransfers,
+      updatedTransfer: syncedTransfer,
+      successfullyApplied: false,
+    });
   }
 
   logger.debug({ method, methodId, to: update.toIdentifier, type: update.type }, "Received protocol response");
