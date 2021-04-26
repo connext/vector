@@ -511,22 +511,17 @@ export class Vector implements IVectorProtocol {
     activeTransfers: FullTransferState[],
     transfer: FullTransferState,
     update: typeof UpdateType.create | typeof UpdateType.resolve,
-  ): Result<string> {
-    if (!this.trees.has(channelAddress)) {
-      const { tree } = generateMerkleTreeData(activeTransfers);
-      this.trees.set(channelAddress, tree);
+  ): string {
+    let tree = this.trees.get(channelAddress);
+    if (tree === undefined) {
+      const generated = generateMerkleTreeData(activeTransfers);
+      tree = generated.tree;
+      this.trees.set(channelAddress, generated.tree);
     }
-    const tree = this.trees.get(channelAddress)!;
-    try {
-      update === UpdateType.resolve
-        ? tree.delete_id_js(transfer.transferId)
-        : tree.insert_hex_js(encodeCoreTransferState(transfer));
-      return Result.ok(tree.root_js());
-    } catch (e) {
-      tree.free();
-      this.trees.delete(channelAddress);
-      return Result.fail(e);
-    }
+    update === UpdateType.resolve
+      ? tree.delete_id_js(transfer.transferId)
+      : tree.insert_hex_js(encodeCoreTransferState(transfer));
+    return tree.root_js();
   }
 
   /*

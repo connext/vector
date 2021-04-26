@@ -230,7 +230,7 @@ export async function generateAndApplyUpdate<T extends UpdateType>(
     activeTransfers: FullTransferState[],
     transfer: FullTransferState,
     update: typeof UpdateType.create | typeof UpdateType.resolve,
-  ) => Result<string>,
+  ) => string,
   logger?: BaseLogger,
 ): Promise<
   Result<
@@ -447,7 +447,7 @@ async function generateCreateUpdate(
     activeTransfers: FullTransferState[],
     transfer: FullTransferState,
     update: typeof UpdateType.create | typeof UpdateType.resolve,
-  ) => Result<string>,
+  ) => string,
 ): Promise<Result<ChannelUpdate<"create">, CreateUpdateError>> {
   const {
     details: { assetId, transferDefinition, timeout, transferInitialState, meta, balance },
@@ -507,14 +507,7 @@ async function generateCreateUpdate(
     initiatorIdentifier,
     responderIdentifier: signer.publicIdentifier === initiatorIdentifier ? counterpartyId : signer.address,
   };
-  const root = getUpdatedMerkleRoot(state.channelAddress, transfers, transferState, UpdateType.create);
-  if (root.isError) {
-    return Result.fail(
-      new CreateUpdateError(CreateUpdateError.reasons.FailedToUpdateMerkleRoot, params, state, {
-        error: root.getError().message,
-      }),
-    );
-  }
+  const merkleRoot = getUpdatedMerkleRoot(state.channelAddress, transfers, transferState, UpdateType.create);
 
   // Create the update from the user provided params
   const channelBalance = getUpdatedChannelBalance(UpdateType.create, assetId, balance, state, transferState.initiator);
@@ -529,7 +522,7 @@ async function generateCreateUpdate(
       balance,
       transferInitialState,
       transferEncodings: [stateEncoding, resolverEncoding],
-      merkleRoot: root.getValue(),
+      merkleRoot,
       meta: { ...(meta ?? {}), createdAt: Date.now() },
     },
   };
@@ -549,7 +542,7 @@ async function generateResolveUpdate(
     activeTransfers: FullTransferState[],
     transfer: FullTransferState,
     update: typeof UpdateType.create | typeof UpdateType.resolve,
-  ) => Result<string>,
+  ) => string,
 ): Promise<Result<{ update: ChannelUpdate<"resolve">; transferBalance: Balance }, CreateUpdateError>> {
   // A transfer resolution update can effect the following
   // channel fields:
@@ -568,14 +561,7 @@ async function generateResolveUpdate(
       }),
     );
   }
-  const root = getUpdatedMerkleRoot(state.channelAddress, transfers, transferToResolve, UpdateType.resolve);
-  if (root.isError) {
-    return Result.fail(
-      new CreateUpdateError(CreateUpdateError.reasons.FailedToUpdateMerkleRoot, params, state, {
-        error: root.getError().message,
-      }),
-    );
-  }
+  const merkleRoot = getUpdatedMerkleRoot(state.channelAddress, transfers, transferToResolve, UpdateType.resolve);
 
   // Get the final transfer balance from contract
   const transferBalanceResult = await chainService.resolve(
@@ -609,7 +595,7 @@ async function generateResolveUpdate(
       transferId,
       transferDefinition: transferToResolve.transferDefinition,
       transferResolver,
-      merkleRoot: root.getValue(),
+      merkleRoot,
       meta: { ...(transferToResolve.meta ?? {}), ...(meta ?? {}) },
     },
   };

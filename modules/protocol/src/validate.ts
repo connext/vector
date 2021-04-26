@@ -283,7 +283,7 @@ export const validateParamsAndApplyUpdate = async (
     activeTransfers: FullTransferState[],
     transfer: FullTransferState,
     update: typeof UpdateType.create | typeof UpdateType.resolve,
-  ) => Result<string>,
+  ) => string,
   logger?: BaseLogger,
 ): Promise<
   Result<
@@ -371,7 +371,7 @@ export async function validateAndApplyInboundUpdate<T extends UpdateType = any>(
     activeTransfers: FullTransferState[],
     transfer: FullTransferState,
     update: typeof UpdateType.create | typeof UpdateType.resolve,
-  ) => Result<string>,
+  ) => string,
   logger?: BaseLogger,
 ): Promise<
   Result<

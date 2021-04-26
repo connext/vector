@@ -49,7 +49,7 @@ export async function outbound(
     activeTransfers: FullTransferState[],
     transfer: FullTransferState,
     update: typeof UpdateType.create | typeof UpdateType.resolve,
-  ) => Result<string>,
+  ) => string,
   logger: pino.BaseLogger,
 ): Promise<Result<SelfUpdateResult, QueuedUpdateError>> {
   const method = "outbound";
@@ -199,7 +199,7 @@ export async function inbound(
     activeTransfers: FullTransferState[],
     transfer: FullTransferState,
     update: typeof UpdateType.create | typeof UpdateType.resolve,
-  ) => Result<string>,
+  ) => string,
   logger: pino.BaseLogger,
 ): Promise<Result<UpdateResult, QueuedUpdateError>> {
   const method = "inbound";
@@ -338,7 +338,7 @@ const syncState = async (
     activeTransfers: FullTransferState[],
     transfer: FullTransferState,
     update: typeof UpdateType.create | typeof UpdateType.resolve,
-  ) => Result<string>,
+  ) => string,
   logger?: pino.BaseLogger,
 ) => {
   // NOTE: We do not want to sync a setup update here, because it is a
