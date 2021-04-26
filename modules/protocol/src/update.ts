@@ -514,7 +514,6 @@ async function generateCreateUpdate(
       balance,
       transferInitialState,
       transferEncodings: [stateEncoding, resolverEncoding],
-      merkleProofData: tree.getHexProof(hashCoreTransferState(transferState)),
       merkleRoot: root,
       meta: { ...(meta ?? {}), createdAt: Date.now() },
     },
