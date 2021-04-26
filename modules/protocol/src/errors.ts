@@ -66,6 +66,7 @@ export class CreateUpdateError extends ProtocolError {
     CouldNotSign: "Failed to sign updated channel hash",
     FailedToReconcileDeposit: "Could not reconcile deposit",
     FailedToResolveTransferOnchain: "Could not resolve transfer onchain",
+    FailedToUpdateMerkleRoot: "Could not generate new merkle root",
     TransferNotActive: "Transfer not found in active transfers",
     TransferNotRegistered: "Transfer not found in registry",
   } as const;

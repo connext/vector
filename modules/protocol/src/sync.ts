@@ -44,6 +44,12 @@ export async function outbound(
   messagingService: IMessagingService,
   externalValidationService: IExternalValidation,
   signer: IChannelSigner,
+  getUpdatedMerkleRoot: (
+    channelAddress: string,
+    activeTransfers: FullTransferState[],
+    transfer: FullTransferState,
+    update: typeof UpdateType.create | typeof UpdateType.resolve,
+  ) => Result<string>,
   logger: pino.BaseLogger,
 ): Promise<Result<SelfUpdateResult, QueuedUpdateError>> {
   const method = "outbound";
@@ -59,6 +65,7 @@ export async function outbound(
     previousState,
     activeTransfers,
     signer.publicIdentifier,
+    getUpdatedMerkleRoot,
     logger,
   );
   if (updateRes.isError) {
@@ -132,6 +139,7 @@ export async function outbound(
       chainReader,
       externalValidationService,
       signer,
+      getUpdatedMerkleRoot,
       logger,
     );
     if (syncedResult.isError) {
@@ -186,6 +194,12 @@ export async function inbound(
   chainReader: IVectorChainReader,
   externalValidation: IExternalValidation,
   signer: IChannelSigner,
+  getUpdatedMerkleRoot: (
+    channelAddress: string,
+    activeTransfers: FullTransferState[],
+    transfer: FullTransferState,
+    update: typeof UpdateType.create | typeof UpdateType.resolve,
+  ) => Result<string>,
   logger: pino.BaseLogger,
 ): Promise<Result<UpdateResult, QueuedUpdateError>> {
   const method = "inbound";
@@ -271,6 +285,7 @@ export async function inbound(
       chainReader,
       externalValidation,
       signer,
+      getUpdatedMerkleRoot,
       logger,
     );
     if (syncRes.isError) {
@@ -296,6 +311,7 @@ export async function inbound(
     update,
     previousState,
     activeTransfers,
+    getUpdatedMerkleRoot,
     logger,
   );
   if (validateRes.isError) {
@@ -317,6 +333,12 @@ const syncState = async (
   chainReader: IVectorChainReader,
   externalValidation: IExternalValidation,
   signer: IChannelSigner,
+  getUpdatedMerkleRoot: (
+    channelAddress: string,
+    activeTransfers: FullTransferState[],
+    transfer: FullTransferState,
+    update: typeof UpdateType.create | typeof UpdateType.resolve,
+  ) => Result<string>,
   logger?: pino.BaseLogger,
 ) => {
   // NOTE: We do not want to sync a setup update here, because it is a
@@ -354,6 +376,7 @@ const syncState = async (
     toSync,
     previousState,
     activeTransfers,
+    getUpdatedMerkleRoot,
     logger,
   );
   if (validateRes.isError) {

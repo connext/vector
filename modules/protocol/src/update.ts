@@ -1,10 +1,4 @@
-import {
-  getSignerAddressFromPublicIdentifier,
-  hashTransferState,
-  getTransferId,
-  generateMerkleTreeData,
-  hashCoreTransferState,
-} from "@connext/vector-utils";
+import { getSignerAddressFromPublicIdentifier, hashTransferState, getTransferId } from "@connext/vector-utils";
 import {
   UpdateType,
   ChannelUpdate,
@@ -231,6 +225,12 @@ export async function generateAndApplyUpdate<T extends UpdateType>(
   previousState: FullChannelState | undefined, // undefined IFF setup
   activeTransfers: FullTransferState[],
   initiatorIdentifier: string,
+  getUpdatedMerkleRoot: (
+    channelAddress: string,
+    activeTransfers: FullTransferState[],
+    transfer: FullTransferState,
+    update: typeof UpdateType.create | typeof UpdateType.resolve,
+  ) => Result<string>,
   logger?: BaseLogger,
 ): Promise<
   Result<
@@ -277,6 +277,7 @@ export async function generateAndApplyUpdate<T extends UpdateType>(
         activeTransfers,
         chainReader,
         initiatorIdentifier,
+        getUpdatedMerkleRoot,
       );
       if (createRes.isError) {
         return Result.fail(createRes.getError()!);
@@ -294,6 +295,7 @@ export async function generateAndApplyUpdate<T extends UpdateType>(
         activeTransfers,
         chainReader,
         initiatorIdentifier,
+        getUpdatedMerkleRoot,
       );
       if (resolveRes.isError) {
         return Result.fail(resolveRes.getError()!);
@@ -440,6 +442,12 @@ async function generateCreateUpdate(
   transfers: FullTransferState[],
   chainReader: IVectorChainReader,
   initiatorIdentifier: string,
+  getUpdatedMerkleRoot: (
+    channelAddress: string,
+    activeTransfers: FullTransferState[],
+    transfer: FullTransferState,
+    update: typeof UpdateType.create | typeof UpdateType.resolve,
+  ) => Result<string>,
 ): Promise<Result<ChannelUpdate<"create">, CreateUpdateError>> {
   const {
     details: { assetId, transferDefinition, timeout, transferInitialState, meta, balance },
@@ -499,7 +507,14 @@ async function generateCreateUpdate(
     initiatorIdentifier,
     responderIdentifier: signer.publicIdentifier === initiatorIdentifier ? counterpartyId : signer.address,
   };
-  const { tree, root } = generateMerkleTreeData([...transfers, transferState]);
+  const root = getUpdatedMerkleRoot(state.channelAddress, transfers, transferState, UpdateType.create);
+  if (root.isError) {
+    return Result.fail(
+      new CreateUpdateError(CreateUpdateError.reasons.FailedToUpdateMerkleRoot, params, state, {
+        error: root.getError().message,
+      }),
+    );
+  }
 
   // Create the update from the user provided params
   const channelBalance = getUpdatedChannelBalance(UpdateType.create, assetId, balance, state, transferState.initiator);
@@ -514,7 +529,7 @@ async function generateCreateUpdate(
       balance,
       transferInitialState,
       transferEncodings: [stateEncoding, resolverEncoding],
-      merkleRoot: root,
+      merkleRoot: root.getValue(),
       meta: { ...(meta ?? {}), createdAt: Date.now() },
     },
   };
@@ -529,6 +544,12 @@ async function generateResolveUpdate(
   transfers: FullTransferState[],
   chainService: IVectorChainReader,
   initiatorIdentifier: string,
+  getUpdatedMerkleRoot: (
+    channelAddress: string,
+    activeTransfers: FullTransferState[],
+    transfer: FullTransferState,
+    update: typeof UpdateType.create | typeof UpdateType.resolve,
+  ) => Result<string>,
 ): Promise<Result<{ update: ChannelUpdate<"resolve">; transferBalance: Balance }, CreateUpdateError>> {
   // A transfer resolution update can effect the following
   // channel fields:
@@ -547,7 +568,14 @@ async function generateResolveUpdate(
       }),
     );
   }
-  const { root } = generateMerkleTreeData(transfers.filter((x) => x.transferId !== transferId));
+  const root = getUpdatedMerkleRoot(state.channelAddress, transfers, transferToResolve, UpdateType.resolve);
+  if (root.isError) {
+    return Result.fail(
+      new CreateUpdateError(CreateUpdateError.reasons.FailedToUpdateMerkleRoot, params, state, {
+        error: root.getError().message,
+      }),
+    );
+  }
 
   // Get the final transfer balance from contract
   const transferBalanceResult = await chainService.resolve(
@@ -581,7 +609,7 @@ async function generateResolveUpdate(
       transferId,
       transferDefinition: transferToResolve.transferDefinition,
       transferResolver,
-      merkleRoot: root,
+      merkleRoot: root.getValue(),
       meta: { ...(transferToResolve.meta ?? {}), ...(meta ?? {}) },
     },
   };

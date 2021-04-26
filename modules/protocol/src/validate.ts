@@ -278,6 +278,12 @@ export const validateParamsAndApplyUpdate = async (
   previousState: FullChannelState | undefined,
   activeTransfers: FullTransferState[],
   initiatorIdentifier: string,
+  getUpdatedMerkleRoot: (
+    channelAddress: string,
+    activeTransfers: FullTransferState[],
+    transfer: FullTransferState,
+    update: typeof UpdateType.create | typeof UpdateType.resolve,
+  ) => Result<string>,
   logger?: BaseLogger,
 ): Promise<
   Result<
@@ -332,6 +338,7 @@ export const validateParamsAndApplyUpdate = async (
     previousState,
     activeTransfers,
     initiatorIdentifier,
+    getUpdatedMerkleRoot,
     logger,
   );
   if (updateRes.isError) {
@@ -359,6 +366,12 @@ export async function validateAndApplyInboundUpdate<T extends UpdateType = any>(
   update: ChannelUpdate<T>,
   previousState: FullChannelState | undefined,
   activeTransfers: FullTransferState[],
+  getUpdatedMerkleRoot: (
+    channelAddress: string,
+    activeTransfers: FullTransferState[],
+    transfer: FullTransferState,
+    update: typeof UpdateType.create | typeof UpdateType.resolve,
+  ) => Result<string>,
   logger?: BaseLogger,
 ): Promise<
   Result<
@@ -502,6 +515,7 @@ export async function validateAndApplyInboundUpdate<T extends UpdateType = any>(
     previousState,
     activeTransfers,
     update.fromIdentifier,
+    getUpdatedMerkleRoot,
     logger,
   );
   if (validRes.isError) {
