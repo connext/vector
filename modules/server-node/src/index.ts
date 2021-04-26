@@ -1073,6 +1073,8 @@ server.post<{ Body: NodeParams.RetryWithdrawTransaction }>(
       if (tx.isError) {
         return reply.status(500).send(jsonifyError(tx.getError()!));
       }
+      commitment!.addTransaction(tx.getValue().hash);
+      await store.saveWithdrawalCommitment(request.body.transferId, commitment!.toJson());
       return reply.status(200).send({
         transactionHash: tx.getValue().hash,
         transferId: request.body.transferId,
