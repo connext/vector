@@ -3,11 +3,13 @@ import { getRandomBytes32, isValidBytes32 } from "./hexStrings";
 import { generateMerkleTreeData } from "./merkle";
 import { HashZero } from "@ethersproject/constants";
 import { hashCoreTransferState } from "./transfers";
+import * as merkle from "@graphprotocol/vector-merkle-tree";
 
 import { MerkleTree } from "merkletreejs";
 import { keccak256 } from "ethereumjs-util";
 import { keccak256 as solidityKeccak256 } from "@ethersproject/solidity";
 import { bufferify } from "./crypto";
+import { encodeCoreTransferState } from "./transfers";
 
 describe.only("generateMerkleTreeData", () => {
   const generateTransfers = (noTransfers = 1) => {
@@ -29,7 +31,7 @@ describe.only("generateMerkleTreeData", () => {
     // expect(tree.verify(tree.getHexProof(leaf), leaf, root)).to.be.true;
   });
 
-  it.only("should generate the same root for both libs", () => {
+  it("should generate the same root for both libs", () => {
     const transfers = generateTransfers(15);
     const { root } = generateMerkleTreeData(transfers);
 
@@ -40,7 +42,7 @@ describe.only("generateMerkleTreeData", () => {
     expect(root).to.be.eq(tree.getHexRoot());
   });
 
-  it.skip("should work for multiple transfers", () => {
+  it("should work for multiple transfers", () => {
     const transfers = generateTransfers(1);
 
     const randomIdx = Math.floor(Math.random() * 1);
@@ -54,7 +56,7 @@ describe.only("generateMerkleTreeData", () => {
     // expect(tree.verify(tree.getHexProof(leaf), leaf, root)).to.be.true;
   });
 
-  it.skip("library should work in general", () => {
+  it("library should work in general", () => {
     const numLeaves = 2;
     const leaves = Array(numLeaves)
       .fill(0)
@@ -88,4 +90,48 @@ describe.only("generateMerkleTreeData", () => {
     const verifyEthJsHex = treeKeccak.verify(hexProof, hashedKeccak[randomIdx], treeKeccak.getHexRoot());
     expect(verifyEthJsHex).to.be.true;
   });
+
+  it("Is not very slow", () => {
+    let count = 2000;
+
+    let start = Date.now();
+
+    // Create leaves
+    const tree = new merkle.Tree();
+    let each = Date.now();
+    try {
+      for (let i = 0; i < count; i++) {
+        tree.insert_hex_js(encodeCoreTransferState(generateTransfers(1)[0]));
+        let _calculated = tree.root_js();
+
+        if (i % 50 === 0) {
+          let now = Date.now();
+          console.log("Count:", i, " ", (now - each) / 50, "ms ", (now - start) / 1000, "s");
+          each = now;
+        }
+      }
+    } finally {
+      tree.free();
+    }
+
+    console.log("Time Good:", Date.now() - start);
+
+    console.log("-------");
+
+    start = Date.now();
+
+    let transfers = [];
+    each = Date.now();
+    for (let i = 0; i < count; i++) {
+      transfers.push(generateTransfers(1)[0]);
+      generateMerkleTreeData(transfers);
+      if (i % 50 === 0) {
+        let now = Date.now();
+        console.log("Count:", i, " ", (now - each) / 50, "ms ", (now - start) / 1000, "s");
+        each = now;
+      }
+    }
+    console.log("Time Bad:", Date.now() - start);
+  })
+
 });
