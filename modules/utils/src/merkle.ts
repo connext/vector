@@ -1,4 +1,4 @@
-import * as merkle from "@connext/vector-merkle-tree";
+import * as merkle from "@graphprotocol/vector-merkle-tree";
 import { CoreTransferState } from "@connext/vector-types";
 import { HashZero } from "@ethersproject/constants";
 import { keccak256 } from "ethereumjs-util";

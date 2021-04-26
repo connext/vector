@@ -13,7 +13,7 @@
     "test": "nyc ts-mocha --check-leaks --exit 'src/**/*.spec.ts'"
   },
   "dependencies": {
-    "@connext/vector-merkle-tree": "0.0.1",
+    "@graphprotocol/vector-merkle-tree": "0.1.0",
     "@connext/vector-types": "0.2.4-beta.2",
     "@ethersproject/abi": "5.1.0",
     "@ethersproject/abstract-provider": "5.1.0",
