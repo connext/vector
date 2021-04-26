@@ -49,7 +49,7 @@ export const addTransferToTree = (transfer: CoreTransferState, tree: merkle.Tree
 export const removeTransferFromTree = (transfer: CoreTransferState, tree: merkle.Tree): MerkleTreeUpdate => {
   let root: string;
   try {
-    tree.insert_hex_js(encodeCoreTransferState(transfer));
+    tree.delete_id_js(transfer.transferId);
     root = tree.root_js();
   } catch (e) {
     tree.free();
