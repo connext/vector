@@ -1,3 +1,4 @@
+import * as merkle from "@connext/vector-merkle-tree";
 import {
   ChannelUpdate,
   ChannelUpdateEvent,
@@ -20,7 +21,13 @@ import {
   jsonifyError,
   Values,
 } from "@connext/vector-types";
-import { getCreate2MultisigAddress, getRandomBytes32 } from "@connext/vector-utils";
+import {
+  addTransferToTree,
+  generateMerkleTreeData,
+  getCreate2MultisigAddress,
+  getRandomBytes32,
+  removeTransferFromTree,
+} from "@connext/vector-utils";
 import { Evt } from "evt";
 import pino from "pino";
 
@@ -38,6 +45,9 @@ export class Vector implements IVectorProtocol {
 
   // Hold the serialized queue for each channel
   private queues: Map<string, SerializedQueue<SelfUpdateResult, OtherUpdateResult>> = new Map();
+
+  // Hold the merkle tree for each channel
+  private trees: Map<string, merkle.Tree> = new Map();
 
   // make it private so the only way to create the class is to use `connect`
   private constructor(
@@ -180,6 +190,7 @@ export class Vector implements IVectorProtocol {
             this.messagingService,
             this.externalValidationService,
             this.signer,
+            this.getUpdatedMerkleRoot.bind(this),
             this.logger,
           );
           return resolve({ cancelled: false, value: ret });
@@ -273,6 +284,7 @@ export class Vector implements IVectorProtocol {
             this.chainReader,
             this.externalValidationService,
             this.signer,
+            this.getUpdatedMerkleRoot.bind(this),
             this.logger,
           );
           return resolve({ cancelled: false, value: ret });
@@ -491,6 +503,34 @@ export class Vector implements IVectorProtocol {
       await this.registerDisputes();
     }
     return this;
+  }
+
+  private getUpdatedMerkleRoot(
+    channelAddress: string,
+    activeTransfers: FullTransferState[],
+    transfer: FullTransferState,
+    update: typeof UpdateType.create | typeof UpdateType.resolve,
+  ): Result<string> {
+    if (!this.trees.has(channelAddress)) {
+      console.log("***** generating new merkle tree data");
+      const { tree } = generateMerkleTreeData(activeTransfers);
+      this.trees.set(channelAddress, tree);
+    } else {
+      console.log("***** updating existing tree, yay!");
+    }
+    const existing = this.trees.get(channelAddress)!;
+    let root: string;
+    try {
+      const { tree, root: _root } =
+        update === UpdateType.resolve
+          ? removeTransferFromTree(transfer, existing)
+          : addTransferToTree(transfer, existing);
+      root = _root;
+      this.trees.set(channelAddress, tree);
+    } catch (e) {
+      return Result.fail(e);
+    }
+    return Result.ok(root);
   }
 
   /*
