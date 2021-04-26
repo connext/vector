@@ -135,8 +135,6 @@ export interface IVectorChainReader {
 
   getChannelMastercopyAddress(channelFactoryAddress: string, chainId: number): Promise<Result<string, ChainError>>;
 
-  getDecimals(assetId: string, chainId: number): Promise<Result<number, ChainError>>;
-
   getChannelAddress(
     initiator: string,
     responder: string,
@@ -164,10 +162,6 @@ export interface IVectorChainReader {
     bytecode?: string,
   ): Promise<Result<RegisteredTransfer[], ChainError>>;
 
-  getChainProviders(): Result<ChainProviders, ChainError>;
-
-  getHydratedProviders(): Result<HydratedProviders, ChainError>;
-
   create(
     initialState: TransferState,
     balance: Balance,
@@ -184,6 +178,14 @@ export interface IVectorChainReader {
   getBlockNumber(chainId: number): Promise<Result<number, ChainError>>;
 
   getGasPrice(chainId: number): Promise<Result<BigNumber, ChainError>>;
+
+  getOnchainBalance(assetId: string, balanceOf: string, chainId: number): Promise<Result<BigNumber, ChainError>>;
+
+  getDecimals(assetId: string, chainId: number): Promise<Result<number, ChainError>>;
+
+  getChainProviders(): Result<ChainProviders, ChainError>;
+
+  getHydratedProviders(): Result<HydratedProviders, ChainError>;
 
   estimateGas(chainId: number, transaction: TransactionRequest): Promise<Result<BigNumber, ChainError>>;
 

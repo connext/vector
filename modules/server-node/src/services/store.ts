@@ -234,6 +234,7 @@ const convertTransferEntityToFullTransferState = (
 };
 
 const convertEntitiesToWithdrawalCommitment = (
+  transferEntity: Transfer,
   resolveEntity: Update | null,
   createEntity: Update,
   channel: Channel,
@@ -258,7 +259,7 @@ const convertEntitiesToWithdrawalCommitment = (
     nonce: initialState.nonce,
     callData: initialState.callData,
     callTo: initialState.callTo,
-    transactionHash: resolveMeta.transactionHash ?? undefined,
+    transactionHash: transferEntity.transactionHash ?? resolveMeta.transactionHash ?? undefined,
   };
 };
 
@@ -421,7 +422,7 @@ export class PrismaStore implements IServerNodeStore {
       throw new Error("Could not retrieve channel for withdraw commitment");
     }
 
-    return convertEntitiesToWithdrawalCommitment(entity.resolveUpdate!, entity.createUpdate!, channel);
+    return convertEntitiesToWithdrawalCommitment(entity, entity.resolveUpdate!, entity.createUpdate!, channel);
   }
 
   async getWithdrawalCommitment(transferId: string): Promise<WithdrawCommitmentJson | undefined> {
@@ -445,7 +446,7 @@ export class PrismaStore implements IServerNodeStore {
       throw new Error("Could not retrieve channel for withdraw commitment");
     }
 
-    return convertEntitiesToWithdrawalCommitment(entity.resolveUpdate!, entity.createUpdate!, channel);
+    return convertEntitiesToWithdrawalCommitment(entity, entity.resolveUpdate!, entity.createUpdate!, channel);
   }
 
   async saveWithdrawalCommitment(transferId: string, withdrawCommitment: WithdrawCommitmentJson): Promise<void> {
@@ -502,7 +503,7 @@ export class PrismaStore implements IServerNodeStore {
       entities
         .map((e) => {
           return {
-            commitment: convertEntitiesToWithdrawalCommitment(e.resolveUpdate, e.createUpdate!, e.channel!),
+            commitment: convertEntitiesToWithdrawalCommitment(e, e.resolveUpdate, e.createUpdate!, e.channel!),
             transfer: convertTransferEntityToFullTransferState(e),
           };
         })

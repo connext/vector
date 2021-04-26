@@ -175,6 +175,9 @@ export class ConfigServiceError extends RouterError {
   static readonly type = "ConfigServiceError";
 
   static readonly reasons = {
+    CouldNotGetAssetBalance: "Could not get asset balance",
+    RouterMaxSafePriceImpact: "price Impact is too high for Router",
+    UnableToGetSwapRate: "Could not get swap rate",
     UnableToGetRebalanceProfile: "Could not get rebalance profile",
     UnableToFindSwap: "Could not get matching swap",
   } as const;
@@ -236,6 +239,7 @@ export class FeeError extends RouterError {
     ConversionError: "Error converting assets",
     ExchangeRateError: "Error getting exchange rate",
     FeesLargerThanAmount: "Fees are greater than the proposed transfer",
+    AmmError: "Error getting AMM rate",
   } as const;
 
   constructor(public readonly message: Values<typeof FeeError.reasons>, context: any = {}) {
