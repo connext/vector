@@ -1,28 +1,62 @@
-import * as merkle from "@graphprotocol/vector-merkle-tree";
+import * as merkle from "@connext/vector-merkle-tree";
 import { CoreTransferState } from "@connext/vector-types";
-import { HashZero } from "@ethersproject/constants";
 import { keccak256 } from "ethereumjs-util";
 import { MerkleTree } from "merkletreejs";
 
 import { encodeCoreTransferState, hashCoreTransferState } from "./transfers";
 
-export const generateMerkleTreeData = (transfers: CoreTransferState[]): { root: string; tree: merkle.Tree } => {
+type MerkleTreeUpdate = {
+  root: string;
+  tree: merkle.Tree;
+};
+
+export const generateMerkleTreeData = (transfers: CoreTransferState[]): MerkleTreeUpdate => {
   // Create leaves
   const tree = new merkle.Tree();
-  transfers.forEach((transfer) => {
-    tree.insert_hex_js(encodeCoreTransferState(transfer));
-  });
 
-  // Return
-  let calculated: string;
+  let root: string;
   try {
-    calculated = tree.root_js();
-  } finally {
-    tree.free(); // handle memory leaks
+    transfers.forEach((transfer) => {
+      tree.insert_hex_js(encodeCoreTransferState(transfer));
+    });
+    root = tree.root_js();
+  } catch (e) {
+    tree.free();
+    throw e;
   }
 
   return {
-    root: calculated === "0x" ? HashZero : calculated,
+    root,
+    tree,
+  };
+};
+
+export const addTransferToTree = (transfer: CoreTransferState, tree: merkle.Tree): MerkleTreeUpdate => {
+  let root: string;
+  try {
+    tree.insert_hex_js(encodeCoreTransferState(transfer));
+    root = tree.root_js();
+  } catch (e) {
+    tree.free();
+    throw e;
+  }
+  return {
+    root,
+    tree,
+  };
+};
+
+export const removeTransferFromTree = (transfer: CoreTransferState, tree: merkle.Tree): MerkleTreeUpdate => {
+  let root: string;
+  try {
+    tree.insert_hex_js(encodeCoreTransferState(transfer));
+    root = tree.root_js();
+  } catch (e) {
+    tree.free();
+    throw e;
+  }
+  return {
+    root,
     tree,
   };
 };
@@ -31,7 +65,6 @@ export const generateMerkleTreeData = (transfers: CoreTransferState[]): { root: 
 // TODO: use merkle.Tree not MerkleTree
 export const getMerkleProof = (active: CoreTransferState[], toProve: string): string[] => {
   // Sort transfers alphabetically by id
-  // TODO: same sorting in merkle.Tree?
   const sorted = active.sort((a, b) => a.transferId.localeCompare(b.transferId));
 
   const leaves = sorted.map((transfer) => hashCoreTransferState(transfer));
