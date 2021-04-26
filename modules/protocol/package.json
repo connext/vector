@@ -15,7 +15,7 @@
   "license": "MIT",
   "dependencies": {
     "@connext/vector-contracts": "0.2.5-alpha.2",
-    "@connext/vector-merkle-tree": "0.1.1",
+    "@connext/vector-merkle-tree": "0.1.3",
     "@connext/vector-types": "0.2.5-alpha.2",
     "@connext/vector-utils": "0.2.5-alpha.2",
     "@ethersproject/abi": "5.1.0",
