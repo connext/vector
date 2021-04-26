@@ -17,9 +17,9 @@ export const generateMerkleTreeData = (transfers: CoreTransferState[]): MerkleTr
   let root: string;
   try {
     transfers.forEach((transfer) => {
-      tree.insert_hex_js(encodeCoreTransferState(transfer));
+      tree.insertHex(encodeCoreTransferState(transfer));
     });
-    root = tree.root_js();
+    root = tree.root();
   } catch (e) {
     tree.free();
     throw e;
