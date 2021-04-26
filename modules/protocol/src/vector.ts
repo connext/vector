@@ -22,13 +22,7 @@ import {
   Values,
 } from "@connext/vector-types";
 import { encodeCoreTransferState } from "@connext/vector-utils";
-import {
-  addTransferToTree,
-  generateMerkleTreeData,
-  getCreate2MultisigAddress,
-  getRandomBytes32,
-  removeTransferFromTree,
-} from "@connext/vector-utils";
+import { generateMerkleTreeData, getCreate2MultisigAddress, getRandomBytes32 } from "@connext/vector-utils";
 import { Evt } from "evt";
 import pino from "pino";
 
