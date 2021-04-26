@@ -31,36 +31,6 @@ export const generateMerkleTreeData = (transfers: CoreTransferState[]): MerkleTr
   };
 };
 
-export const addTransferToTree = (transfer: CoreTransferState, tree: merkle.Tree): MerkleTreeUpdate => {
-  let root: string;
-  try {
-    tree.insert_hex_js(encodeCoreTransferState(transfer));
-    root = tree.root_js();
-  } catch (e) {
-    tree.free();
-    throw e;
-  }
-  return {
-    root,
-    tree,
-  };
-};
-
-export const removeTransferFromTree = (transfer: CoreTransferState, tree: merkle.Tree): MerkleTreeUpdate => {
-  let root: string;
-  try {
-    tree.delete_id_js(transfer.transferId);
-    root = tree.root_js();
-  } catch (e) {
-    tree.free();
-    throw e;
-  }
-  return {
-    root,
-    tree,
-  };
-};
-
 // Get merkle proof of transfer
 // TODO: use merkle.Tree not MerkleTree
 export const getMerkleProof = (active: CoreTransferState[], toProve: string): string[] => {

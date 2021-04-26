@@ -21,6 +21,7 @@ import {
   jsonifyError,
   Values,
 } from "@connext/vector-types";
+import { encodeCoreTransferState } from "@connext/vector-utils";
 import {
   addTransferToTree,
   generateMerkleTreeData,
@@ -512,25 +513,20 @@ export class Vector implements IVectorProtocol {
     update: typeof UpdateType.create | typeof UpdateType.resolve,
   ): Result<string> {
     if (!this.trees.has(channelAddress)) {
-      console.log("***** generating new merkle tree data");
       const { tree } = generateMerkleTreeData(activeTransfers);
       this.trees.set(channelAddress, tree);
-    } else {
-      console.log("***** updating existing tree, yay!");
     }
-    const existing = this.trees.get(channelAddress)!;
-    let root: string;
+    const tree = this.trees.get(channelAddress)!;
     try {
-      const { tree, root: _root } =
-        update === UpdateType.resolve
-          ? removeTransferFromTree(transfer, existing)
-          : addTransferToTree(transfer, existing);
-      root = _root;
-      this.trees.set(channelAddress, tree);
+      update === UpdateType.resolve
+        ? tree.delete_id_js(transfer.transferId)
+        : tree.insert_hex_js(encodeCoreTransferState(transfer));
+      return Result.ok(tree.root_js());
     } catch (e) {
+      tree.free();
+      this.trees.delete(channelAddress);
       return Result.fail(e);
     }
-    return Result.ok(root);
   }
 
   /*
