@@ -1,4 +1,4 @@
-import * as merkle from "vector-merkle-tree";
+import * as merkle from "@connext/vector-merkle-tree";
 import { CoreTransferState } from "@connext/vector-types";
 import { HashZero } from "@ethersproject/constants";
 import { keccak256 } from "ethereumjs-util";
@@ -9,13 +9,17 @@ import { encodeCoreTransferState, hashCoreTransferState } from "./transfers";
 export const generateMerkleTreeData = (transfers: CoreTransferState[]): { root: string; tree: merkle.Tree } => {
   // Create leaves
   const tree = new merkle.Tree();
-  tree.free(); // handle memory leaks
   transfers.forEach((transfer) => {
     tree.insert_hex_js(encodeCoreTransferState(transfer));
   });
 
   // Return
-  const calculated = tree.root_js();
+  let calculated: string;
+  try {
+    calculated = tree.root_js();
+  } finally {
+    tree.free(); // handle memory leaks
+  }
 
   return {
     root: calculated === "0x" ? HashZero : calculated,
