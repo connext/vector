@@ -27,13 +27,17 @@ describe("generateMerkleTreeData", () => {
       });
   };
 
-  let toFree: merkle.Tree;
+  let toFree: merkle.Tree | undefined;
 
   const getMerkleTreeRoot = (transfers: CoreTransferState[]): string => {
     const data = generateMerkleTreeData(transfers);
     toFree = data.tree;
     return data.root;
   };
+
+  beforeEach(() => {
+    toFree = undefined;
+  });
 
   afterEach(() => {
     if (toFree) {
