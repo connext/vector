@@ -52,6 +52,11 @@ module.exports = {
           },
         },
       },
+      {
+        test: /\.wasm$/,
+        type: "javascript/auto",
+        use: "wasm-loader",
+      },
     ],
   },
 
