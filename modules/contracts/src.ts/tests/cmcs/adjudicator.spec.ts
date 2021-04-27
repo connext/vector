@@ -608,7 +608,7 @@ describe("CMCAdjudicator.sol", async function () {
 
       const txs = [];
       for (const t of transfers) {
-        const tx = await channel.disputeTransfer(t, getMerkleProof(transfers, t));
+        const tx = await channel.disputeTransfer(t, getMerkleProof(transfers, t.transferId));
         txs.push(tx);
       }
       const receipts = await Promise.all(txs.map((tx) => tx.wait()));
