@@ -571,4 +571,8 @@ describe("ethService", () => {
       assertResult(result, false);
     });
   });
+
+  describe("revitalizeTxs", () => {
+    it("should start monitoring active txs", async () => {};
+  });
 });
