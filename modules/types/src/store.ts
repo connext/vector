@@ -132,6 +132,7 @@ export interface IChainServiceStore {
 
   // Getters
   getTransactionByHash(transactionHash: string): Promise<StoredTransaction | undefined>;
+  getActiveTransactions(): Promise<StoredTransaction[]>;
 
   // Setters
   saveTransactionResponse(

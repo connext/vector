@@ -40,9 +40,15 @@ import { ChannelFactory, VectorChannel } from "../artifacts";
 
 import { EthereumChainReader } from "./ethReader";
 import { parseUnits } from "ethers/lib/utils";
+import { ethers } from "hardhat";
 
 export const EXTRA_GAS = 50_000;
-export const BIG_GAS_LIMIT = BigNumber.from(1_000_000); // 1M gas should cover all Connext txs
+// The number of blocks to wait before resubmitting tx if the tx is not confirmed.
+export const GAS_BUMP_THRESHOLD = 3;
+// The min percentage to bump gas.
+export const GAS_BUMP_PERCENT = 0.2;
+// 1M gas should cover all Connext txs. Gas won't exceed this amount.
+export const BIG_GAS_LIMIT = BigNumber.from(1_000_000);
 
 export const waitForTransaction = async (
   provider: JsonRpcProvider,
@@ -85,6 +91,20 @@ export class EthereumChainService extends EthereumChainReader implements IVector
         parseInt(chainId),
         typeof signer === "string" ? new Wallet(signer, provider) : (signer.connect(provider) as Signer),
       );
+    });
+
+    // TODO: Check to see which tx's are still active / unresolved, and resolve them.
+  }
+
+  /// Check to see if any txs were left in an unfinished state. This should only execute on
+  /// contructor / init.
+  private async revitalizeTxs() {
+    // Get all tx's from store that were left in submitted state. Resubmit them.
+    const activeTransactions = await this.store.getActiveTransactions();
+    // TODO: Should we filter out "stale" tx's (older than a specified elapsed time)?
+    activeTransactions.forEach(t => {
+      // TODO: Resend tx.
+      // this.sendTxWithRetries(t.channelAddress, t.chainId, t.reason, ...)
     });
   }
 
@@ -543,7 +563,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
     const method = "sendTxWithRetries";
     const methodId = getRandomBytes32();
     const errors = [];
-    for (let attempt = 1; attempt++; attempt < this.defaultRetries) {
+    for (let attempt = 1; attempt < this.defaultRetries; attempt++) {
       this.log.info(
         {
           method,
@@ -613,52 +633,14 @@ export class EthereumChainService extends EthereumChainReader implements IVector
           channelAddress,
           reason,
         });
-
-        // Register callbacks for saving tx, then return
-        response
-          .wait(getConfirmationsForChain(chainId))
-          .then(async (receipt) => {
-            if (receipt.status === 0) {
-              this.log.error({ method: "sendTxAndParseResponse", receipt }, "Transaction reverted");
-              await this.store.saveTransactionFailure(channelAddress, response.hash, "Tx reverted");
-              this.evts[ChainServiceEvents.TRANSACTION_FAILED].post({
-                receipt: Object.fromEntries(
-                  Object.entries(receipt).map(([key, value]) => {
-                    return [key, BigNumber.isBigNumber(value) ? value.toString() : value];
-                  }),
-                ) as StringifiedTransactionReceipt,
-                channelAddress,
-                reason,
-              });
-            } else {
-              await this.store.saveTransactionReceipt(channelAddress, receipt);
-              this.evts[ChainServiceEvents.TRANSACTION_MINED].post({
-                receipt: Object.fromEntries(
-                  Object.entries(receipt).map(([key, value]) => {
-                    return [key, BigNumber.isBigNumber(value) ? value.toString() : value];
-                  }),
-                ) as StringifiedTransactionReceipt,
-                channelAddress,
-                reason,
-              });
-            }
-          })
-          .catch(async (e) => {
-            this.log.error({ method: "sendTxAndParseResponse", error: jsonifyError(e) }, "Transaction reverted");
-            await this.store.saveTransactionFailure(channelAddress, response.hash, e.message);
-            this.evts[ChainServiceEvents.TRANSACTION_FAILED].post({
-              error: e,
-              channelAddress,
-              reason,
-            });
-          });
-        return response;
+  
+        return await this.waitForConfirmation(channelAddress, chainId, reason, response);
       });
 
       if (!response) {
         return Result.ok(response);
       }
-
+    
       // add completed function
       return Result.ok({
         ...response,
@@ -682,6 +664,89 @@ export class EthereumChainService extends EthereumChainReader implements IVector
       }
       return Result.fail(error);
     }
+  }
+
+  private async waitForConfirmation(
+    channelAddress: string,
+    chainId: number,
+    reason: TransactionReason,
+    response: TransactionResponse,
+  ): Promise<TransactionResponse | undefined> {
+    // Register callbacks for saving tx, then return.
+
+    // An anon fn to get the tx receipt, as we may require multiple retries with raised gas price.
+    const getTransactionReceipt = async (): Promise<TransactionReceipt | undefined> => {
+      try {
+        let receipt = await ethers.provider.getTransactionReceipt(response.hash)
+        if (receipt.status === 0) {
+          this.log.error({ method: "sendTxAndParseResponse", receipt }, "Transaction reverted");
+          await this.store.saveTransactionFailure(channelAddress, response.hash, "Tx reverted");
+          this.evts[ChainServiceEvents.TRANSACTION_FAILED].post({
+            receipt: Object.fromEntries(
+              Object.entries(receipt).map(([key, value]) => {
+                return [key, BigNumber.isBigNumber(value) ? value.toString() : value];
+              }),
+            ) as StringifiedTransactionReceipt,
+            channelAddress,
+            reason,
+          });
+        } else {
+          await this.store.saveTransactionReceipt(channelAddress, receipt);
+          this.evts[ChainServiceEvents.TRANSACTION_MINED].post({
+            receipt: Object.fromEntries(
+              Object.entries(receipt).map(([key, value]) => {
+                return [key, BigNumber.isBigNumber(value) ? value.toString() : value];
+              }),
+            ) as StringifiedTransactionReceipt,
+            channelAddress,
+            reason,
+          });
+        }
+        return receipt;
+      } catch (e) {
+        this.log.error({ method: "sendTxAndParseResponse", error: jsonifyError(e) }, "Transaction reverted");
+        await this.store.saveTransactionFailure(channelAddress, response.hash, e.message);
+        this.evts[ChainServiceEvents.TRANSACTION_FAILED].post({
+          error: e,
+          channelAddress,
+          reason,
+        });
+      }
+      return undefined;
+    }
+
+    // Poll for receipt.
+    let receipt: TransactionReceipt | undefined = await getTransactionReceipt();
+    // TODO: Should we have a diff. system of defaultRetries for this operation?
+    // NOTE: This loop won't execute if receipt is valid (not undefined).
+    for (let attempt = 1; attempt < this.defaultRetries && !receipt; attempt++) {
+      // Pause for 2 sec.
+      await delay(2000);
+      receipt = await getTransactionReceipt();
+      if (receipt) {
+        break;
+      }
+    }
+    
+
+
+    
+
+    response
+      .wait(getConfirmationsForChain(chainId))
+      .then(async (receipt) => {
+        
+      })
+      .catch(async (e) => {
+        this.log.error({ method: "sendTxAndParseResponse", error: jsonifyError(e) }, "Transaction reverted");
+        await this.store.saveTransactionFailure(channelAddress, response.hash, e.message);
+        this.evts[ChainServiceEvents.TRANSACTION_FAILED].post({
+          error: e,
+          channelAddress,
+          reason,
+        });
+      });
+    return response;
   }
 
   public async approveTokens(

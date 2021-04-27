@@ -295,6 +295,48 @@ export class PrismaStore implements IServerNodeStore {
     this.prisma = new PrismaClient(_dbUrl ? { datasources: { db: { url: _dbUrl } } } : undefined);
   }
 
+  /// Retrieve all tx's that have been submitted, but were not confirmed/mined
+  /// (and did not fail).
+  async getActiveTransactions(): Promise<StoredTransaction[]> {
+    const activeTransactions = await this.prisma.onchainTransaction.findMany({
+      where: {
+        transactionHash: {
+          not: undefined
+        },
+        // TODO: Any other key fields that we know HAVE to be defined for receipts that we should include here?
+        // If these key receipt fields are undefined, then we know we never got
+        // a valid receipt for this transaction.
+        blockHash: undefined,
+        gasUsed: undefined,
+      }
+    });
+    return activeTransactions.map(t => ({
+      channelAddress: t.channelAddress,
+      status: t.status,
+      reason: t.reason,
+      error: t.error ?? undefined,
+      to: t.to,
+      from: t.from,
+      data: t.data,
+      value: t.value,
+      nonce: t.nonce,
+      gasLimit: t.gasLimit,
+      transactionHash: t.transactionHash,
+      timestamp: t.timestamp ?? undefined,
+      raw: t.raw ?? undefined,
+      blockHash: t.blockHash ?? undefined,
+      blockNumber: t.blockNumber ?? undefined,
+      logs: t.logs ?? undefined,
+      contractAddress: t.contractAddress ?? undefined,
+      transactionIndex: t.transactionIndex ?? undefined,
+      root: t.root ?? undefined,
+      gasUsed: t.gasUsed ?? undefined,
+      logsBloom: t.logsBloom ?? undefined,
+      cumulativeGasUsed: t.cumulativeGasUsed ?? undefined,
+      byzantium: t.byzantium ?? undefined,
+    } as StoredTransaction))
+  }
+
   async getTransactionByHash(transactionHash: string): Promise<StoredTransaction | undefined> {
     const entity = await this.prisma.onchainTransaction.findUnique({
       where: { transactionHash },
