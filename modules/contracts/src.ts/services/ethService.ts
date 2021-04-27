@@ -599,6 +599,9 @@ export class EthereumChainService extends EthereumChainReader implements IVector
   ): Promise<Result<TransactionResponseWithResult | undefined, ChainError>> {
     try {
       const response = await this.queue.add(async () => {
+        // TODO: We should raise gas price if the waitForConfirmation below "times out" essentially.
+        // Default timeout should be around ~15 sec.
+        // Raise gas price in intervals of GAS_BUMP_PERCENT
         const gasPriceRes = await this.getGasPrice(chainId);
         if (gasPriceRes.isError) {
           throw gasPriceRes.getError()!;
