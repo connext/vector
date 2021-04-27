@@ -41,7 +41,7 @@ export const generateMerkleTreeData = (
 // TODO: use merkle.Tree not MerkleTree
 export const getMerkleProof = (active: CoreTransferState[], toProve: string): string[] => {
   // Sort transfers alphabetically by id
-  const sorted = active.sort((a, b) => a.transferId.localeCompare(b.transferId));
+  const sorted = active.slice(0).sort((a, b) => a.transferId.localeCompare(b.transferId));
 
   const leaves = sorted.map((transfer) => hashCoreTransferState(transfer));
   const tree = new MerkleTree(leaves, keccak256, { sortPairs: true });
