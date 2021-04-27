@@ -104,8 +104,29 @@ export class EthereumChainService extends EthereumChainReader implements IVector
     const activeTransactions = await this.store.getActiveTransactions();
     // TODO: Should we filter out "stale" tx's (older than a specified elapsed time)?
     activeTransactions.forEach(t => {
-      // TODO: Resend tx.
-      // this.sendTxWithRetries(t.channelAddress, t.chainId, t.reason, ...)
+      // TODO: Wait for confirmation from here - will handle resend as needed.
+      // this.waitForConfirmation(t.channelAddress, t.chainId, t.reason, {
+      //   hash: t.transactionHash,
+      //   reason: t.reason,
+        
+      //   to: t.to,
+      //   from: t.from,
+      //   data: t.data,
+      //   value: t.value,
+      //   chainId: t.chainId,
+      //   nonce: t.nonce,
+      //   gasLimit: t.gasLimit,
+      //   gasPrice: t.gasPrice,
+      //   timestamp: t.timestamp,
+      //   raw: t.raw,
+      //   blockHash: t.blockHash,
+      //   blockNumber: t.blockNumber,
+      //     // channel: {
+      //     //   connect: {
+      //     //     channelAddress,
+      //     //   },
+      //     // },
+      //   } as TransactionResponse)
     });
   }
 
