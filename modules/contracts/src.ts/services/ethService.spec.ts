@@ -573,6 +573,6 @@ describe("ethService", () => {
   });
 
   describe("revitalizeTxs", () => {
-    it("should start monitoring active txs", async () => {};
+    it("should start monitoring active txs", async () => {});
   });
 });
