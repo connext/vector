@@ -14,6 +14,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@connext/vector-merkle-tree": "0.1.2",
     "@connext/vector-contracts": "0.2.5-alpha.2",
     "@connext/vector-engine": "0.2.5-alpha.2",
     "@connext/vector-types": "0.2.5-alpha.2",
