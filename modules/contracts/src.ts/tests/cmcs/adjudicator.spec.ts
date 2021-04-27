@@ -594,36 +594,25 @@ describe("CMCAdjudicator.sol", async function () {
       if (nonAutomining) {
         this.skip();
       }
-      const transfers = Array(10)
-        .fill(0)
-        .map((_) => {
-          return { ...transferState, transferId: getRandomBytes32() };
-        });
+      const transfers = [
+        transferState,
+        { ...transferState, transferId: getRandomBytes32() },
+        { ...transferState, transferId: getRandomBytes32() },
+        { ...transferState, transferId: getRandomBytes32() },
+        { ...transferState, transferId: getRandomBytes32() },
+      ];
       const { root } = generateMerkleTreeData(transfers);
 
       const newState = { ...channelState, merkleRoot: root };
       await disputeChannel(newState);
 
-      const disputed: { id: string; receipt: TransactionReceipt }[] = [];
-      for (const _trans of transfers) {
-        const ids = disputed.map((d) => d.id);
-        if (ids.includes(_trans.transferId)) {
-          continue;
-        }
-        const proof = getMerkleProof(transfers, _trans.transferId);
-        const tx = await channel.disputeTransfer(_trans, proof);
-        const receipt = await tx.wait();
-        disputed.push({ id: _trans.transferId, receipt });
+      const txs = [];
+      for (const t of transfers) {
+        const tx = await channel.disputeTransfer(t, getMerkleProof(transfers, t));
+        txs.push(tx);
       }
-      await Promise.all(
-        transfers.map((t) => {
-          const { receipt } = disputed.find((d) => d.id === t.transferId) ?? {};
-          if (!receipt) {
-            return;
-          }
-          return verifyTransferDispute(t, receipt.blockNumber);
-        }),
-      );
+      const receipts = await Promise.all(txs.map((tx) => tx.wait()));
+      await Promise.all(transfers.map((t, i) => verifyTransferDispute(t, receipts[i].blockNumber)));
     });
   });
 
