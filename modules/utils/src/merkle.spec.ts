@@ -3,7 +3,6 @@ import { getRandomBytes32, isValidBytes32 } from "./hexStrings";
 import { generateMerkleTreeData } from "./merkle";
 import { hashCoreTransferState } from "./transfers";
 
-import * as merkle from "@connext/vector-merkle-tree";
 import { MerkleTree } from "merkletreejs";
 import { keccak256 } from "ethereumjs-util";
 import { keccak256 as solidityKeccak256 } from "@ethersproject/solidity";
