@@ -94,6 +94,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
     });
 
     // TODO: Check to see which tx's are still active / unresolved, and resolve them.
+    this.revitalizeTxs();
   }
 
   /// Check to see if any txs were left in an unfinished state. This should only execute on
