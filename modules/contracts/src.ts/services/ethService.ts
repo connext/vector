@@ -666,31 +666,36 @@ export class EthereumChainService extends EthereumChainReader implements IVector
 
     // An anon fn to get the tx receipt, as we may require multiple retries with raised gas price.
     const getTransactionReceipt = async (): Promise<TransactionReceipt | undefined> => {
-      try {
-        return await ethers.provider.getTransactionReceipt(response.hash);
-      } catch (e) {
-        this.log.error({ method: "sendTxAndParseResponse", error: jsonifyError(e) }, "Transaction reverted");
-        await this.store.saveTransactionFailure(channelAddress, response.hash, e.message);
-        this.evts[ChainServiceEvents.TRANSACTION_FAILED].post({
-          error: e,
-          channelAddress,
-          reason,
-        });
-      }
-      return undefined;
+      // TODO: This should be replaced with a polling method (?)
+      // TODO: If we're polling here, we shouldn't be awaiting a receipt, but checking to see if it's available
+      // (i.e. it's been confirmed / mined).
+      return await ethers.provider.getTransactionReceipt(response.hash);
+      // TODO: If the tx has not yet been mined, return undefined.
+      // return undefined;
     }
 
-    // Poll for receipt.
-    let receipt: TransactionReceipt | undefined = await getTransactionReceipt();
-    // TODO: Should we have a diff. system of defaultRetries for this operation?
-    // NOTE: This loop won't execute if receipt is valid (not undefined).
-    for (let attempt = 1; attempt < this.defaultRetries && !receipt; attempt++) {
-      // Pause for 2 sec.
-      await delay(2000);
+    let receipt: TransactionReceipt | undefined;
+    try {
+      // Poll for receipt.
       receipt = await getTransactionReceipt();
-      if (receipt) {
-        break;
+      // TODO: Should we have a diff. system of defaultRetries for this operation?
+      // NOTE: This loop won't execute if receipt is valid (not undefined).
+      for (let attempt = 1; attempt < this.defaultRetries && !receipt; attempt++) {
+        // Pause for 2 sec.
+        await delay(2000);
+        receipt = await getTransactionReceipt();
+        if (receipt) {
+          break;
+        }
       }
+    } catch (e) {
+      this.log.error({ method: "sendTxAndParseResponse", error: jsonifyError(e) }, "Transaction reverted");
+      await this.store.saveTransactionFailure(channelAddress, response.hash, e.message);
+      this.evts[ChainServiceEvents.TRANSACTION_FAILED].post({
+        error: e,
+        channelAddress,
+        reason,
+      });
     }
 
     if (!receipt) {
