@@ -22,7 +22,6 @@ import {
   Values,
   ResolveUpdateDetails,
   CreateUpdateDetails,
-  ResolveTransferParams,
 } from "@connext/vector-types";
 import { encodeCoreTransferState, getTransferId } from "@connext/vector-utils";
 import { generateMerkleTreeData, getCreate2MultisigAddress, getRandomBytes32 } from "@connext/vector-utils";
@@ -158,6 +157,24 @@ export class Vector implements IVectorProtocol {
       initiated: SelfUpdate,
       cancel: Promise<unknown>,
     ) => {
+      // Create a helper to undo merkle changes
+      const undoMerkleIfNeeded = async (nonce: number, _transferId?: string): Promise<void> => {
+        if (initiated.params.type !== UpdateType.create && initiated.params.type !== UpdateType.resolve) {
+          // No updates to undo
+          return;
+        }
+        const transferId =
+          _transferId ?? initiated.params.type === UpdateType.resolve
+            ? (initiated.params as UpdateParams<typeof UpdateType.resolve>).details.transferId
+            : getTransferId(
+                initiated.params.channelAddress,
+                nonce.toString(),
+                (initiated.params as UpdateParams<typeof UpdateType.create>).details.transferDefinition,
+                (initiated.params as UpdateParams<typeof UpdateType.create>).details.timeout,
+              );
+        await this.undoMerkleRootUpdates(initiated.params.channelAddress, transferId, initiated.params.type);
+      };
+
       // This channel nonce is used to derive the `transferId` should the
       // merkle root changes need to be undone if the `outbound` operation
       // is cancelled. Set to `0` to handle case where the store fails.
@@ -219,35 +236,13 @@ export class Vector implements IVectorProtocol {
       };
       if (res.cancelled) {
         // Undo the merkle root changes if outbound was cancelled
-        if (initiated.params.type === UpdateType.create || initiated.params.type === UpdateType.resolve) {
-          const transferId =
-            initiated.params.type === "resolve"
-              ? (initiated.params.details as ResolveUpdateDetails).transferId
-              : getTransferId(
-                  initiated.params.channelAddress,
-                  storedNonce.toString(),
-                  ((initiated.params.details as unknown) as CreateUpdateDetails).transferDefinition,
-                  ((initiated.params.details as unknown) as CreateUpdateDetails).transferTimeout,
-                );
-          await this.undoMerkleRootUpdates(initiated.params.channelAddress, transferId, initiated.params.type);
-        }
+        await undoMerkleIfNeeded(storedNonce);
         return undefined;
       }
       const value = res.value as Result<SelfUpdateResult>;
       if (value.isError) {
         // Undo merkle root updates if the update failed
-        if (initiated.params.type === UpdateType.create || initiated.params.type === UpdateType.resolve) {
-          const transferId =
-            initiated.params.type === "resolve"
-              ? (initiated.params.details as ResolveTransferParams).transferId
-              : getTransferId(
-                  initiated.params.channelAddress,
-                  storedNonce.toString(),
-                  ((initiated.params.details as unknown) as CreateUpdateDetails).transferDefinition,
-                  ((initiated.params.details as unknown) as CreateUpdateDetails).transferTimeout,
-                );
-          await this.undoMerkleRootUpdates(initiated.params.channelAddress, transferId, initiated.params.type);
-        }
+        await undoMerkleIfNeeded(storedNonce);
         return res.value as Result<SelfUpdateResult>;
       }
       // Save all information returned from the sync result
@@ -255,13 +250,7 @@ export class Vector implements IVectorProtocol {
       const saveRes = await persistChannel(this.storeService, updatedChannel, updatedTransfer);
       if (saveRes.isError) {
         // Undo merkle root updates if saving fails
-        if (initiated.params.type === UpdateType.create || initiated.params.type === UpdateType.resolve) {
-          await this.undoMerkleRootUpdates(
-            initiated.params.channelAddress,
-            updatedTransfer!.transferId,
-            initiated.params.type,
-          );
-        }
+        await undoMerkleIfNeeded(updatedChannel.nonce, updatedTransfer?.transferId);
         return Result.fail(
           new QueuedUpdateError(QueuedUpdateError.reasons.StoreFailure, initiated.params, updatedChannel, {
             method: "saveChannelState",
@@ -304,15 +293,7 @@ export class Vector implements IVectorProtocol {
         return Result.fail(error);
       };
 
-      // Pull context from store
-      const storeRes = await extractContextFromStore(this.storeService, received.update.channelAddress);
-      if (storeRes.isError) {
-        // Send message with error
-        return returnError(QueuedUpdateError.reasons.StoreFailure, undefined, {
-          storeError: storeRes.getError()?.message,
-        });
-      }
-      const { channelState, activeTransfers } = storeRes.getValue();
+      let channelState: FullChannelState | undefined = undefined;
       const cancelPromise = new Promise(async (resolve) => {
         let ret;
         try {
@@ -324,12 +305,22 @@ export class Vector implements IVectorProtocol {
         return resolve({ cancelled: true, value: ret });
       });
       const inboundPromise = new Promise(async (resolve) => {
+        // Pull context from store
+        const storeRes = await extractContextFromStore(this.storeService, received.update.channelAddress);
+        if (storeRes.isError) {
+          // Send message with error
+          return returnError(QueuedUpdateError.reasons.StoreFailure, undefined, {
+            storeError: storeRes.getError()?.message,
+          });
+        }
+        const stored = storeRes.getValue();
+        channelState = stored.channelState;
         try {
           const ret = await inbound(
             received.update,
             received.previous,
-            activeTransfers,
-            channelState,
+            stored.activeTransfers,
+            stored.channelState,
             this.chainReader,
             this.externalValidationService,
             this.signer,
@@ -372,7 +363,7 @@ export class Vector implements IVectorProtocol {
       await this.messagingService.respondToProtocolMessage(
         received.inbox,
         updatedChannel.latestUpdate,
-        channelState?.latestUpdate,
+        (channelState as FullChannelState | undefined)?.latestUpdate,
       );
       return value;
     };
