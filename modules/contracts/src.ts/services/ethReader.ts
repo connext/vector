@@ -26,7 +26,6 @@ import {
   CoreChannelState,
   CoreTransferState,
   TransferDispute,
-  jsonifyError,
 } from "@connext/vector-types";
 import axios from "axios";
 import { encodeBalance, encodeTransferResolver, encodeTransferState } from "@connext/vector-utils";

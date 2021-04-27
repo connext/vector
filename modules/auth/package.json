@@ -12,8 +12,8 @@
     "test": "ts-mocha --check-leaks --exit --timeout 60000 'src/**/*.spec.ts'"
   },
   "dependencies": {
-    "@connext/vector-types": "0.2.3",
-    "@connext/vector-utils": "0.2.3",
+    "@connext/vector-types": "0.2.5-alpha.2",
+    "@connext/vector-utils": "0.2.5-alpha.2",
     "@sinclair/typebox": "0.12.7",
     "crypto": "1.0.1",
     "fastify": "3.13.0",
@@ -37,7 +37,7 @@
     "ts-loader": "8.0.7",
     "ts-mocha": "8.0.0",
     "ts-node": "9.1.1",
-    "typescript": "4.2.2",
+    "typescript": "4.2.4",
     "webpack": "4.44.2",
     "webpack-cli": "4.1.0"
   }

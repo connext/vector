@@ -25,6 +25,7 @@ import {
   TransferDisputedPayload,
   ChannelDefundedPayload,
   ChannelDisputedPayload,
+  ConditionalTransferRoutingCompletePayload,
 } from "@connext/vector-types";
 import { collectDefaultMetrics, register } from "prom-client";
 import { Wallet } from "ethers";
@@ -45,6 +46,7 @@ const isAlivePath = "/is-alive";
 const setupPath = "/setup";
 const conditionalTransferCreatedPath = "/conditional-transfer-created";
 const conditionalTransferResolvedPath = "/conditional-transfer-resolved";
+const conditionalTransferRoutingCompletePath = "/conditional-transfer-routing-complete";
 const depositReconciledPath = "/deposit-reconciled";
 const requestCollateralPath = "/request-collateral";
 const restoreStatePath = "/restore-state";
@@ -74,6 +76,10 @@ const evts: EventCallbackConfig = {
   [EngineEvents.CONDITIONAL_TRANSFER_RESOLVED]: {
     evt: Evt.create<ConditionalTransferResolvedPayload>(),
     url: `${routerBase}${conditionalTransferResolvedPath}`,
+  },
+  [EngineEvents.CONDITIONAL_TRANSFER_ROUTING_COMPLETE]: {
+    evt: Evt.create<ConditionalTransferRoutingCompletePayload>(),
+    url: `${routerBase}${conditionalTransferRoutingCompletePath}`,
   },
   [EngineEvents.DEPOSIT_RECONCILED]: {
     evt: Evt.create<DepositReconciledPayload>(),
