@@ -562,7 +562,7 @@ export class Vector implements IVectorProtocol {
   ): string {
     let tree = this.trees.get(channelAddress);
     if (tree === undefined) {
-      const generated = generateMerkleTreeData(activeTransfers);
+      const generated = generateMerkleTreeData(activeTransfers, false);
       tree = generated.tree;
       this.trees.set(channelAddress, generated.tree);
     }

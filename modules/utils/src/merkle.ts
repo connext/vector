@@ -10,7 +10,10 @@ type MerkleTreeUpdate = {
   tree: merkle.Tree;
 };
 
-export const generateMerkleTreeData = (transfers: CoreTransferState[]): MerkleTreeUpdate => {
+export const generateMerkleTreeData = (
+  transfers: CoreTransferState[],
+  freeTreeImmediately: boolean = true,
+): MerkleTreeUpdate => {
   // Create leaves
   const tree = new merkle.Tree();
 
@@ -23,6 +26,9 @@ export const generateMerkleTreeData = (transfers: CoreTransferState[]): MerkleTr
   } catch (e) {
     tree.free();
     throw e;
+  }
+  if (freeTreeImmediately) {
+    tree.free();
   }
 
   return {
