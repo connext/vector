@@ -634,7 +634,8 @@ export class EthereumChainService extends EthereumChainReader implements IVector
           reason,
         });
   
-        return await this.waitForConfirmation(channelAddress, chainId, reason, response);
+        await this.waitForConfirmation(channelAddress, chainId, reason, response);
+        return response;
       });
 
       if (!response) {
