@@ -136,6 +136,10 @@ export class BrowserStore implements IEngineStore, IChainServiceStore {
     this.db = new VectorIndexedDBDatabase(dbName, indexedDB, idbKeyRange);
   }
 
+  getActiveTransactions(): Promise<StoredTransaction[]> {
+    throw new Error("Method not implemented.");
+  }
+
   public static async create(
     publicIdentifer: string,
     log: BaseLogger,
