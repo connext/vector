@@ -671,38 +671,13 @@ export class EthereumChainService extends EthereumChainReader implements IVector
     chainId: number,
     reason: TransactionReason,
     response: TransactionResponse,
-  ): Promise<TransactionResponse | undefined> {
+  ): Promise<TransactionReceipt | undefined> {
     // Register callbacks for saving tx, then return.
 
     // An anon fn to get the tx receipt, as we may require multiple retries with raised gas price.
     const getTransactionReceipt = async (): Promise<TransactionReceipt | undefined> => {
       try {
-        let receipt = await ethers.provider.getTransactionReceipt(response.hash)
-        if (receipt.status === 0) {
-          this.log.error({ method: "sendTxAndParseResponse", receipt }, "Transaction reverted");
-          await this.store.saveTransactionFailure(channelAddress, response.hash, "Tx reverted");
-          this.evts[ChainServiceEvents.TRANSACTION_FAILED].post({
-            receipt: Object.fromEntries(
-              Object.entries(receipt).map(([key, value]) => {
-                return [key, BigNumber.isBigNumber(value) ? value.toString() : value];
-              }),
-            ) as StringifiedTransactionReceipt,
-            channelAddress,
-            reason,
-          });
-        } else {
-          await this.store.saveTransactionReceipt(channelAddress, receipt);
-          this.evts[ChainServiceEvents.TRANSACTION_MINED].post({
-            receipt: Object.fromEntries(
-              Object.entries(receipt).map(([key, value]) => {
-                return [key, BigNumber.isBigNumber(value) ? value.toString() : value];
-              }),
-            ) as StringifiedTransactionReceipt,
-            channelAddress,
-            reason,
-          });
-        }
-        return receipt;
+        return await ethers.provider.getTransactionReceipt(response.hash);
       } catch (e) {
         this.log.error({ method: "sendTxAndParseResponse", error: jsonifyError(e) }, "Transaction reverted");
         await this.store.saveTransactionFailure(channelAddress, response.hash, e.message);
@@ -727,26 +702,37 @@ export class EthereumChainService extends EthereumChainReader implements IVector
         break;
       }
     }
-    
 
+    if (!receipt) {
+      return receipt;
+    }
 
-    
-
-    response
-      .wait(getConfirmationsForChain(chainId))
-      .then(async (receipt) => {
-        
-      })
-      .catch(async (e) => {
-        this.log.error({ method: "sendTxAndParseResponse", error: jsonifyError(e) }, "Transaction reverted");
-        await this.store.saveTransactionFailure(channelAddress, response.hash, e.message);
-        this.evts[ChainServiceEvents.TRANSACTION_FAILED].post({
-          error: e,
-          channelAddress,
-          reason,
-        });
+    if (receipt.status === 0) {
+      this.log.error({ method: "sendTxAndParseResponse", receipt }, "Transaction reverted");
+      await this.store.saveTransactionFailure(channelAddress, response.hash, "Tx reverted");
+      this.evts[ChainServiceEvents.TRANSACTION_FAILED].post({
+        receipt: Object.fromEntries(
+          Object.entries(receipt).map(([key, value]) => {
+            return [key, BigNumber.isBigNumber(value) ? value.toString() : value];
+          }),
+        ) as StringifiedTransactionReceipt,
+        channelAddress,
+        reason,
       });
-    return response;
+    } else {
+      await this.store.saveTransactionReceipt(channelAddress, receipt);
+      this.evts[ChainServiceEvents.TRANSACTION_MINED].post({
+        receipt: Object.fromEntries(
+          Object.entries(receipt).map(([key, value]) => {
+            return [key, BigNumber.isBigNumber(value) ? value.toString() : value];
+          }),
+        ) as StringifiedTransactionReceipt,
+        channelAddress,
+        reason,
+      });
+    }
+
+    return receipt;
   }
 
   public async approveTokens(
