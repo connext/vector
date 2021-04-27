@@ -264,31 +264,19 @@ export async function inbound(
   // (d,e) update.nonce > expectedInSync -- restore case handled in syncState
 
   // Get the difference between the stored and received nonces
-  const channelNonce = channel?.nonce ?? 0;
   const ourPreviousNonce = channel?.latestUpdate?.nonce ?? -1;
-  const aliceSentUpdate = update.type === UpdateType.setup ? true : update.fromIdentifier === channel?.aliceIdentifier;
 
-  // Get the expected nonce
-  const expectedNonce = getNextNonceForUpdate(channelNonce, aliceSentUpdate);
+  // Get the expected previous update nonce
   const givenPreviousNonce = previousUpdate?.nonce ?? -1;
 
-  // If the delivered nonce is lower than expected, counterparty is
-  // behind. NOTE: in cases where the update nonce increments by 2 and we expect
-  // it to increment by 1, initiator may be out of sync and still satisfy the
-  // first condition
-  if (update.nonce < expectedNonce || givenPreviousNonce < ourPreviousNonce) {
+  if (givenPreviousNonce < ourPreviousNonce) {
     // NOTE: when you are out of sync as a protocol initiator, you will
     // use the information from this error to sync, then retry your update
     return returnError(QueuedUpdateError.reasons.StaleUpdate, channel!.latestUpdate, channel);
   }
 
-  // If the update nonce is greater than what we expected, counterparty
-  // is ahead and we should attempt a sync
-  // NOTE: in cases where the update nonce increments by 2 and we expect
-  // it to increment by 1, initiator may be out of sync and still satisfy the
-  // first condition
   let previousState = channel ? { ...channel } : undefined;
-  if (update.nonce > expectedNonce || givenPreviousNonce > ourPreviousNonce) {
+  if (givenPreviousNonce > ourPreviousNonce) {
     // Create the proper state to play the update on top of using the
     // latest update
     if (!previousUpdate) {
