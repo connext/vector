@@ -63,6 +63,10 @@ module.exports = {
           to: path.join(__dirname, "../dist/pure-evm_bg.wasm"),
         },
         {
+          from: path.join(__dirname, "../../../node_modules/@connext/vector-merkle-tree/dist/node/index_bg.wasm"),
+          to: path.join(__dirname, "../dist/index_bg.wasm"),
+        },
+        {
           from: path.join(__dirname, "../prisma-postgres"),
           to: path.join(__dirname, "../dist/prisma-postgres"),
         },
