@@ -1,7 +1,7 @@
 import { ChainProviders, HydratedProviders } from "@connext/vector-types";
 import { Provider } from "@ethersproject/abstract-provider";
 import { BigNumber } from "@ethersproject/bignumber";
-import { JsonRpcProvider } from "@ethersproject/providers";
+import { JsonRpcProvider, StaticJsonRpcProvider } from "@ethersproject/providers";
 
 const classicProviders = ["https://www.ethercluster.com/etc"];
 const classicChainIds = [61];
@@ -23,7 +23,7 @@ export const getGasPrice = async (provider: Provider, providedChainId?: number):
 export const hydrateProviders = (chainProviders: ChainProviders): HydratedProviders => {
   const hydratedProviders: { [url: string]: JsonRpcProvider } = {};
   Object.entries(chainProviders).map(([chainId, url]) => {
-    hydratedProviders[chainId] = new JsonRpcProvider(url as string, parseInt(chainId));
+    hydratedProviders[chainId] = new StaticJsonRpcProvider(url as string, parseInt(chainId));
   });
   return hydratedProviders;
 };
