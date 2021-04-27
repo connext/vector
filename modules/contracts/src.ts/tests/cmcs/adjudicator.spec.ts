@@ -615,7 +615,15 @@ describe("CMCAdjudicator.sol", async function () {
         const receipt = await tx.wait();
         disputed.push({ id: _trans.transferId, receipt });
       }
-      await Promise.all(transfers.map((t, i) => verifyTransferDispute(t, disputed[i].receipt.blockNumber)));
+      await Promise.all(
+        transfers.map((t) => {
+          const { receipt } = disputed.find((d) => d.id === t.transferId) ?? {};
+          if (!receipt) {
+            return;
+          }
+          return verifyTransferDispute(t, receipt.blockNumber);
+        }),
+      );
     });
   });
 
