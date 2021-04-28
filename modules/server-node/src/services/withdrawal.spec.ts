@@ -155,6 +155,7 @@ describe(testName, () => {
       const { transfer, commitment } = await prepEnv();
       const { channel } = createTestChannelState(UpdateType.resolve, { channelAddress: mkAddress("0xdddeee") });
       store.getUnsubmittedWithdrawals.resolves([{ commitment, transfer }]);
+      store.getUnminedWithdrawals.resolves([]);
 
       const result = await submitUnsubmittedWithdrawals([channel], store);
       expect(result.isError).to.be.false;
