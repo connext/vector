@@ -73,8 +73,7 @@ if [[ "$VECTOR_PROD" == "true" ]]
 then
   echo "Starting node in prod-mode"
   export NODE_ENV=production
-  node --no-deprecation dist/bundle.js &
-
+  node --inspect --no-deprecation dist/bundle.js &
 else
   echo "Starting node in dev-mode"
   nodemon \
