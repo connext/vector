@@ -61,6 +61,21 @@ export async function outbound(
   const methodId = getRandomBytes32();
   logger.debug({ method, methodId }, "Method start");
 
+  logger.warn(
+    {
+      method,
+      methodId,
+      ourLatestNonce: previousState?.nonce ?? 0,
+      updateNonce: getNextNonceForUpdate(
+        previousState?.nonce ?? 0,
+        signer.publicIdentifier === previousState?.aliceIdentifier ?? true,
+      ),
+      alice: previousState?.aliceIdentifier ?? signer.publicIdentifier,
+      updateInitiator: signer.publicIdentifier,
+    },
+    "Preparing outbound update",
+  );
+
   // Ensure parameters are valid, and action can be taken
   const updateRes = await validateParamsAndApplyUpdate(
     signer,
@@ -124,10 +139,15 @@ export async function outbound(
       {
         method,
         methodId,
-        proposed: update.nonce,
+        ourLatestNonce: previousState?.nonce ?? 0,
+        updateNonce: update.nonce,
+        alice: previousState?.aliceIdentifier ?? signer.publicIdentifier,
+        updateInitiator: signer.publicIdentifier,
+        toSyncIdentifier: error.context.update.fromIdentifier,
+        toSyncNonce: error.context.update.nonce,
         error: jsonifyError(error),
       },
-      `Behind, syncing then cancelling proposed`,
+      "Behind, syncing then cancelling proposed",
     );
 
     // NOTE: because you have already updated the merkle root here,
@@ -262,6 +282,18 @@ export async function inbound(
   // (a,b) update.nonce <= expectedInSync -- restore case handled in syncState
   // (c) update.nonce === expectedInSync -- perform update
   // (d,e) update.nonce > expectedInSync -- restore case handled in syncState
+  logger.warn(
+    {
+      method,
+      methodId,
+      ourLatestNonce: channel?.nonce ?? 0,
+      updateNonce: update.nonce,
+      alice: channel?.aliceIdentifier ?? update.fromIdentifier,
+      updateInitiator: update.fromIdentifier,
+      ourIdentifier: signer.publicIdentifier,
+    },
+    "Handling inbound update",
+  );
 
   // Get the difference between the stored and received nonces
   const ourPreviousNonce = channel?.latestUpdate?.nonce ?? -1;
@@ -282,6 +314,20 @@ export async function inbound(
     if (!previousUpdate) {
       return returnError(QueuedUpdateError.reasons.StaleChannel, previousUpdate, previousState);
     }
+    logger.warn(
+      {
+        method,
+        methodId,
+        ourLatestNonce: channel?.nonce ?? 0,
+        updateNonce: update.nonce,
+        alice: channel?.aliceIdentifier ?? update.fromIdentifier,
+        updateInitiator: update.fromIdentifier,
+        ourIdentifier: signer.publicIdentifier,
+        toSyncIdentifier: previousUpdate.fromIdentifier,
+        toSyncNonce: givenPreviousNonce,
+      },
+      "Behind, syncing",
+    );
 
     const syncRes = await syncState(
       previousUpdate,

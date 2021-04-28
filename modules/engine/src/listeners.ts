@@ -177,7 +177,7 @@ export async function setupEngineListeners(
         return;
       }
       const method = "onReceiveRestoreStateMessage";
-      logger.debug({ method }, "Handling message");
+      logger.warn({ method, data: restoreData.toJson(), inbox }, "Handling message");
 
       // Received error from counterparty
       if (restoreData.isError) {
@@ -229,8 +229,9 @@ export async function setupEngineListeners(
       }
 
       // Send info to counterparty
-      logger.debug(
+      logger.warn(
         {
+          method,
           channel: channel.channelAddress,
           nonce: channel.nonce,
           activeTransfers: activeTransfers.map((a) => a.transferId),
