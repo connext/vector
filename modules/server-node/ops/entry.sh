@@ -76,8 +76,7 @@ then
   node --inspect --no-deprecation dist/bundle.js &
 else
   echo "Starting node in dev-mode"
-  nodemon \
-    --inspect \
+  NODE_OPTIONS="$NODE_OPTIONS --inspect" nodemon \
     --delay 1 \
     --exitcrash \
     --ignore ./**/*.test.ts \
