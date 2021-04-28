@@ -165,6 +165,7 @@ describe(testName, () => {
     it("should not include result if submitWithdrawalToChain fails", async () => {
       const { channel, transfer, commitment } = await prepEnv();
       store.getUnsubmittedWithdrawals.resolves([{ commitment, transfer }]);
+      store.getUnminedWithdrawals.resolves([]);
       chainService.sendWithdrawTx.resolves(Result.fail(new ChainError("fail")));
 
       const result = await submitUnsubmittedWithdrawals([channel], store);
@@ -175,6 +176,7 @@ describe(testName, () => {
     it("should work", async () => {
       const { channel, transfer, commitment } = await prepEnv();
       store.getUnsubmittedWithdrawals.resolves([{ commitment, transfer }]);
+      store.getUnminedWithdrawals.resolves([]);
 
       const result = await submitUnsubmittedWithdrawals([channel], store);
       expect(result.isError).to.be.false;
