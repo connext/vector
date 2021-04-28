@@ -72,7 +72,7 @@ then
 
 else
   echo "Starting router in dev-mode"
-  NODE_OPTIONS="$NODE_OPTIONS --inspect" nodemon \
+  nodemon \
     --delay 1 \
     --exitcrash \
     --ignore ./**/*.test.ts \
