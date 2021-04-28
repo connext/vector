@@ -19,6 +19,7 @@ COPY ops/package.json package.json
 RUN npm install
 RUN npm audit --audit-level=moderate
 RUN npm outdated || true
+RUN npm install -g nodemon
 
 COPY ops ops
 COPY prisma-postgres prisma-postgres
