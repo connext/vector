@@ -78,10 +78,12 @@ const getUnsubmittedWithdrawals = async (
         channel.channelAddress,
         withdrawalDefinition.getValue().definition,
       );
-      if (forChannel.length === 0) {
-        continue;
-      }
       unsubmitted.push(...forChannel);
+      const forChannelUnmined = await store.getUnminedWithdrawals(
+        channel.channelAddress,
+        withdrawalDefinition.getValue().definition,
+      );
+      unsubmitted.push(...forChannelUnmined);
     }
   } catch (e) {
     logger.error({ method, methodId, error: jsonifyError(e) }, "Failed to get unsubmitted withdrawals");
@@ -114,6 +116,22 @@ export const submitWithdrawalToChain = async (
         record.transfer.transferId,
       ),
     );
+  }
+
+  const onchainTx = await store.getOnchainTxForTransfer(record.transfer.transferId);
+  if (onchainTx) {
+    const providers = chainService.getHydratedProviders();
+    const provider = providers.getValue()[channel.networkContext.chainId];
+    const receipt = await provider.getTransactionReceipt(onchainTx.transactionHash);
+    if (receipt) {
+      logger.info({ txHash: receipt.transactionHash }, "Receipt exists, saving and not submitting");
+      await store.saveTransactionReceipt(channel.channelAddress, receipt);
+      return Result.ok({
+        transactionHash: receipt.transactionHash,
+        transferId: record.transfer.transferId,
+        channelAddress: channel.channelAddress,
+      });
+    }
   }
 
   // submit to chain

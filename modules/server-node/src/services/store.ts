@@ -450,6 +450,20 @@ export class PrismaStore implements IServerNodeStore {
     return convertEntitiesToWithdrawalCommitment(entity, entity.resolveUpdate!, entity.createUpdate!, channel);
   }
 
+  async getOnchainTxForTransfer(transferId: string): Promise<StoredTransaction | undefined> {
+    const entity = await this.prisma.transfer.findUnique({
+      where: { transferId },
+      include: { onchainTransaction: { include: { channel: true } } },
+    });
+    if (!entity) {
+      return undefined;
+    }
+
+    return entity.onchainTransaction
+      ? convertOnchainTransactionEntityToTransaction(entity.onchainTransaction)
+      : undefined;
+  }
+
   async saveWithdrawalCommitment(transferId: string, withdrawCommitment: WithdrawCommitmentJson): Promise<void> {
     if (!withdrawCommitment.transactionHash) {
       return;
@@ -487,6 +501,42 @@ export class PrismaStore implements IServerNodeStore {
       where: {
         channelAddressId: channelAddress,
         onchainTransactionId: null,
+        resolveUpdateChannelAddressId: channelAddress,
+        createUpdate: { transferDefinition: withdrawalDefinition },
+      },
+      include: { channel: true, createUpdate: true, resolveUpdate: true, dispute: true },
+    });
+
+    for (const transfer of entities) {
+      if (!transfer.channel) {
+        const channel = await this.prisma.channel.findUnique({ where: { channelAddress: transfer.channelAddressId } });
+        transfer.channel = channel;
+      }
+    }
+
+    return (
+      entities
+        .map((e) => {
+          return {
+            commitment: convertEntitiesToWithdrawalCommitment(e, e.resolveUpdate, e.createUpdate!, e.channel!),
+            transfer: convertTransferEntityToFullTransferState(e),
+          };
+        })
+        // filter canceled, need to do it here because it's a string in the db
+        .filter((withdraw) => withdraw.transfer.transferResolver.responderSignature !== mkSig("0x0"))
+    );
+  }
+
+  async getUnminedWithdrawals(
+    channelAddress: string,
+    withdrawalDefinition: string,
+  ): Promise<{ commitment: WithdrawCommitmentJson; transfer: FullTransferState }[]> {
+    const entities = await this.prisma.transfer.findMany({
+      where: {
+        channelAddressId: channelAddress,
+        onchainTransaction: {
+          NOT: { status: StoredTransactionStatus.mined },
+        },
         resolveUpdateChannelAddressId: channelAddress,
         createUpdate: { transferDefinition: withdrawalDefinition },
       },
