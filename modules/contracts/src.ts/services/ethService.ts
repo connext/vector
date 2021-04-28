@@ -17,6 +17,7 @@ import {
   StringifiedTransactionResponse,
   TransactionResponseWithResult,
   getConfirmationsForChain,
+  StoredTransaction,
 } from "@connext/vector-types";
 import {
   delay,
@@ -43,8 +44,9 @@ import { parseUnits } from "ethers/lib/utils";
 import { ethers } from "hardhat";
 
 export const EXTRA_GAS = 50_000;
-// The number of blocks to wait before resubmitting tx if the tx is not confirmed.
-export const GAS_BUMP_THRESHOLD = 3;
+// The amount of time (ms) to wait before resubmitting tx with higher gas
+// if the tx is not confirmed.
+export const GAS_BUMP_THRESHOLD = 15000;
 // The min percentage to bump gas.
 export const GAS_BUMP_PERCENT = 0.2;
 // 1M gas should cover all Connext txs. Gas won't exceed this amount.
@@ -97,13 +99,55 @@ export class EthereumChainService extends EthereumChainReader implements IVector
     this.revitalizeTxs();
   }
 
+  private getSigner(chainId: number): Signer {
+    const signer = this.signers.get(chainId);
+    if (!signer?._isSigner) {
+      throw new ChainError(ChainError.reasons.SignerNotFound);
+    }
+    return signer;
+  }
+
   /// Check to see if any txs were left in an unfinished state. This should only execute on
   /// contructor / init.
   private async revitalizeTxs() {
     // Get all tx's from store that were left in submitted state. Resubmit them.
-    const activeTransactions = await this.store.getActiveTransactions();
+    const storedTransactions: StoredTransaction[] = await this.store.getActiveTransactions();
+    let transactionReceipts = []
     // TODO: Should we filter out "stale" tx's (older than a specified elapsed time)?
-    activeTransactions.forEach(t => {
+    for (let i = 0; i < storedTransactions.length; i++) {
+      let tx: StoredTransaction = storedTransactions[i];
+      try {
+        const receipt = await this.getTxReceiptFromHash(
+          tx.chainId,
+          {
+            to: tx.to,
+            data: tx.data,
+            value: tx.value,
+            transactionHash: tx.transactionHash,
+            nonce: tx.nonce,
+          }
+        );
+        if (!receipt) {
+          continue;
+        }
+        // transactionReceipts.push(receipt);
+        this.sendTxWithRetries(tx.to, tx.chainId, tx.reason, async (suggestedGasPrice: BigNumber) => {
+          this.getSigner(tx.chainId);
+          return signer.sendTransaction({
+            to: tx.to,
+            data: tx.data,
+            chainId,
+            gasPrice: increased,
+            nonce: tx.nonce,
+            value: BigNumber.from(tx.value),
+          });
+        })
+      } catch (e) {
+        // TODO: Log?
+        continue;
+      }
+    }
+      
       // TODO: Wait for confirmation from here - will handle resend as needed.
       // this.waitForConfirmation(t.channelAddress, t.chainId, t.reason, {
       //   hash: t.transactionHash,
@@ -127,60 +171,281 @@ export class EthereumChainService extends EthereumChainReader implements IVector
       //     //   },
       //     // },
       //   } as TransactionResponse)
-    });
   }
 
-  async speedUpTx(
+  /// Helper method to grab signer from chain ID and check provider for a transaction.
+  /// Returns the transaction if found.
+  /// Throws ChainError if signer not found, tx not found, or tx already mined.
+  private async getTxReceiptFromHash(
     chainId: number,
     tx: MinimalTransaction & { transactionHash: string; nonce: number },
-  ): Promise<Result<TransactionResponseWithResult, ChainError>> {
-    const method = "speedUpTx";
-    const methodId = getRandomBytes32();
-    this.log.info({ method, methodId, transactionHash: tx.transactionHash }, "Method started");
-    const signer = this.signers.get(chainId);
-    if (!signer?._isSigner) {
-      return Result.fail(new ChainError(ChainError.reasons.SignerNotFound));
-    }
+  ): Promise<TransactionResponse | null> {
+    const signer = this.getSigner(chainId);
 
-    // Make sure tx is not mined already
     let receipt: TransactionResponse | null;
     try {
       receipt = await signer.provider!.getTransaction(tx.transactionHash);
     } catch (e) {
-      return Result.fail(
-        new ChainError(ChainError.reasons.TxNotFound, { error: e.message, transactionHash: tx.transactionHash }),
-      );
+      throw new ChainError(ChainError.reasons.TxNotFound, { error: e.message, transactionHash: tx.transactionHash });
     }
     if (receipt && receipt.confirmations > 0) {
-      return Result.fail(
-        new ChainError(ChainError.reasons.TxAlreadyMined, {
-          transactionHash: tx.transactionHash,
-          confirmations: receipt.confirmations,
-          blockNumber: receipt.blockNumber,
-        }),
+      throw new ChainError(ChainError.reasons.TxAlreadyMined, {
+        transactionHash: tx.transactionHash,
+        confirmations: receipt.confirmations,
+        blockNumber: receipt.blockNumber,
+      });
+    }
+    return receipt;
+  }
+
+  // async speedUpTx(
+  //   chainId: number,
+  //   tx: MinimalTransaction & { transactionHash: string; nonce: number },
+  // ): Promise<Result<TransactionResponseWithResult, ChainError>> {
+  //   const method = "speedUpTx";
+  //   const methodId = getRandomBytes32();
+  //   this.log.info({ method, methodId, transactionHash: tx.transactionHash }, "Method started");
+  //   const signer = this.getSigner(chainId);
+
+  //   // Make sure tx is not mined already
+  //   const receipt = this.getTxReceiptFromHash(chainId, tx);
+
+  //   // Safe to retry sending
+  //   return this.sendTxWithRetries(tx.to, chainId, TransactionReason.speedUpTransaction, async (suggestedGasPrice: BigNumber) => {
+  //     const price = await this.getGasPrice(chainId);
+  //     if (price.isError) {
+  //       throw price.getError()!;
+  //     }
+  //     // const current = price.getValue().add(parseUnits("20", "gwei"));
+  //     // const increased = current.gt(receipt?.gasPrice ?? 0)
+  //     //   ? current
+  //     //   : BigNumber.from(receipt?.gasPrice ?? 0).add(parseUnits("20", "gwei"));
+  //     return signer.sendTransaction({
+  //       to: tx.to,
+  //       data: tx.data,
+  //       chainId,
+  //       gasPrice: increased,
+  //       nonce: tx.nonce,
+  //       value: BigNumber.from(tx.value),
+  //     });
+  //   }) as Promise<Result<TransactionResponseWithResult, ChainError>>;
+  // }
+
+  public async sendTxWithRetries(
+    channelAddress: string,
+    chainId: number,
+    reason: TransactionReason,
+    // should return undefined IFF tx didnt send based on validation in
+    // fn
+    txFn: (suggestedGasPrice: BigNumber) => Promise<undefined | TransactionResponse>,
+  ): Promise<Result<TransactionResponseWithResult | undefined, ChainError>> {
+    const method = "sendTxWithRetries";
+    const methodId = getRandomBytes32();
+    const errors = [];
+    let receipt: TransactionResponse | null = null;
+    for (let attempt = 0; attempt < this.defaultRetries; attempt++) {
+
+      // TODO: Replace: this should only fire in the event of a confirmation time out.
+      // If we have a valid receipt, then the tx has already fired once.
+      // We should raise our gas price for this subsuquent attempt.
+      if (receipt) {
+        const price = await this.getGasPrice(chainId);
+        if (price.isError) {
+          throw price.getError()!;
+        }
+        const current = price.getValue().add(parseUnits("20", "gwei"));
+        const increased = current.gt(receipt?.gasPrice ?? 0)
+          ? current
+          : BigNumber.from(receipt?.gasPrice ?? 0).add(parseUnits("20", "gwei"));
+
+        const gasPriceRes = await this.getGasPrice(chainId);
+        if (gasPriceRes.isError) {
+          throw gasPriceRes.getError()!;
+        }
+        const gasPrice = gasPriceRes.getValue();
+      }
+      
+      // TODO: Scale up gas by percentage as specified by GAS_BUMP_PERCENT.
+
+      // TODO: We should raise gas price if the waitForConfirmation below "times out" essentially.
+      // Default timeout should be around ~15 sec. (GAS_BUMP_THRESHOLD)
+      // Raise gas price in intervals of GAS_BUMP_PERCENT
+      
+      const response = await txFn(gasPrice);
+
+      this.log.info(
+        {
+          method,
+          methodId,
+          retries: this.defaultRetries,
+          attempt,
+          channelAddress,
+          reason,
+        },
+        "Attempting to send tx",
       );
+      const response = await this.sendTxAndParseResponse(channelAddress, chainId, reason, txFn);
+      console.log("response: ", response);
+      if (!response.isError) {
+        return response;
+      }
+      // Otherwise, handle error
+      const error = response.getError()!;
+      if (!error.canRetry) {
+        this.log.error(
+          { error: error.message, channelAddress, reason, stack: error.stack, method, methodId },
+          "Failed to send tx, will not retry",
+        );
+        return response;
+      }
+      // wait before retrying
+      errors.push(error);
+      this.log.warn(
+        { error: error.message, channelAddress, attempt, retries: this.defaultRetries, method, methodId },
+        "Tx failed, waiting before retry",
+      );
+      await delay(1000);
+    }
+    return Result.fail(
+      new ChainError(ChainError.reasons.FailedToSendTx, {
+        errors: errors.map((e) => e.message).toString(),
+        retries: this.defaultRetries,
+        channelAddress,
+        reason,
+      }),
+    );
+  }
+
+  public async sendTxAndParseResponse(
+    channelAddress: string,
+    chainId: number,
+    reason: TransactionReason,
+    txFn: (suggestedGasPrice: BigNumber) => Promise<undefined | TransactionResponse>,
+  ): Promise<Result<TransactionResponseWithResult | undefined, ChainError>> {
+    try {
+      const response = await this.queue.add(async () => {
+        if (!response) {
+          this.log.warn({ channelAddress, reason }, "Did not attempt tx");
+          return response;
+        }
+
+        // save to store
+        await this.store.saveTransactionResponse(channelAddress, reason, response);
+        this.evts[ChainServiceEvents.TRANSACTION_SUBMITTED].post({
+          response: Object.fromEntries(
+            Object.entries(response).map(([key, value]) => {
+              return [key, BigNumber.isBigNumber(value) ? value.toString() : value];
+            }),
+          ) as StringifiedTransactionResponse,
+          channelAddress,
+          reason,
+        });
+  
+        await this.waitForConfirmation(channelAddress, chainId, reason, response);
+        return response;
+      });
+
+      if (!response) {
+        return Result.ok(response);
+      }
+    
+      // add completed function
+      return Result.ok({
+        ...response,
+        completed: async (confirmations?: number) => {
+          try {
+            const receipt = await response.wait(confirmations);
+            if (receipt.status === 0) {
+              return Result.fail(new ChainError(ChainError.reasons.TxReverted, { receipt }));
+            }
+            return Result.ok(receipt);
+          } catch (e) {
+            return Result.fail(new ChainError(e.message, { stack: e.stack, channelAddress, reason }));
+          }
+        },
+      });
+    } catch (e) {
+      // Don't save tx if it failed to submit, only if it fails to mine
+      let error = e;
+      if (e.message.includes("sender doesn't have enough funds")) {
+        error = new ChainError(ChainError.reasons.NotEnoughFunds);
+      }
+      return Result.fail(error);
+    }
+  }
+
+  private async waitForConfirmation(
+    channelAddress: string,
+    chainId: number,
+    reason: TransactionReason,
+    response: TransactionResponse,
+  ): Promise<TransactionReceipt | undefined> {
+    // Register callbacks for saving tx, then return.
+
+    // An anon fn to get the tx receipt, as we may require multiple retries with raised gas price.
+    const getTransactionReceipt = async (): Promise<TransactionReceipt | undefined> => {
+      // TODO: This should be replaced with a polling method (?)
+      // TODO: If we're polling here, we shouldn't be awaiting a receipt, but checking to see if it's available
+      // (i.e. it's been confirmed / mined).
+      return await ethers.provider.getTransactionReceipt(response.hash);
+      // TODO: If the tx has not yet been mined, return undefined.
+      // return undefined;
     }
 
-    // Safe to retry sending
-    return this.sendTxWithRetries(tx.to, chainId, TransactionReason.speedUpTransaction, async () => {
-      const price = await this.getGasPrice(chainId);
-      if (price.isError) {
-        throw price.getError()!;
+    let receipt: TransactionReceipt | undefined;
+    try {
+      // Poll for receipt.
+      receipt = await getTransactionReceipt();
+      // TODO: Should we have a diff. system of defaultRetries for this operation?
+      // NOTE: This loop won't execute if receipt is valid (not undefined).
+      while (!receipt && timeElapsed < GAS_BUMP_THRESHOLD) {
+        // Pause for 2 sec.
+        await delay(2000);
+        receipt = await getTransactionReceipt();
+        if (receipt) {
+          break;
+        }
       }
-      // TODO: Scale up gas by percentage as specified by GAS_BUMP_PERCENT.
-      const current = price.getValue().add(parseUnits("20", "gwei"));
-      const increased = current.gt(receipt?.gasPrice ?? 0)
-        ? current
-        : BigNumber.from(receipt?.gasPrice ?? 0).add(parseUnits("20", "gwei"));
-      return signer.sendTransaction({
-        to: tx.to,
-        data: tx.data,
-        chainId,
-        gasPrice: increased,
-        nonce: tx.nonce,
-        value: BigNumber.from(tx.value),
+    } catch (e) {
+      this.log.error({ method: "sendTxAndParseResponse", error: jsonifyError(e) }, "Transaction reverted");
+      await this.store.saveTransactionFailure(channelAddress, response.hash, e.message);
+      this.evts[ChainServiceEvents.TRANSACTION_FAILED].post({
+        error: e,
+        channelAddress,
+        reason,
       });
-    }) as Promise<Result<TransactionResponseWithResult, ChainError>>;
+    }
+
+    if (!receipt) {
+      return receipt;
+    }
+
+    if (receipt.status === 0) {
+      this.log.error({ method: "sendTxAndParseResponse", receipt }, "Transaction reverted");
+      await this.store.saveTransactionFailure(channelAddress, response.hash, "Tx reverted");
+      this.evts[ChainServiceEvents.TRANSACTION_FAILED].post({
+        receipt: Object.fromEntries(
+          Object.entries(receipt).map(([key, value]) => {
+            return [key, BigNumber.isBigNumber(value) ? value.toString() : value];
+          }),
+        ) as StringifiedTransactionReceipt,
+        channelAddress,
+        reason,
+      });
+    } else {
+      await this.store.saveTransactionReceipt(channelAddress, receipt);
+      this.evts[ChainServiceEvents.TRANSACTION_MINED].post({
+        receipt: Object.fromEntries(
+          Object.entries(receipt).map(([key, value]) => {
+            return [key, BigNumber.isBigNumber(value) ? value.toString() : value];
+          }),
+        ) as StringifiedTransactionReceipt,
+        channelAddress,
+        reason,
+      });
+    }
+
+    return receipt;
   }
 
   public async sendDeployChannelTx(
@@ -219,7 +484,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
         channelState.channelAddress,
         channelState.networkContext.chainId,
         TransactionReason.deploy,
-        async (gasPrice: BigNumber) => {
+        async (suggestedGasPrice: BigNumber) => {
           const multisigRes = await this.getCode(channelState.channelAddress, channelState.networkContext.chainId);
           if (multisigRes.isError) {
             return Result.fail(multisigRes.getError()!);
@@ -282,7 +547,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
         channelState.channelAddress,
         channelState.networkContext.chainId,
         TransactionReason.deployWithDepositAlice,
-        async (gasPrice: BigNumber) => {
+        async (suggestedGasPrice: BigNumber) => {
           const multisigRes = await this.getCode(channelState.channelAddress, channelState.networkContext.chainId);
           if (multisigRes.isError) {
             return Result.fail(multisigRes.getError()!);
@@ -325,7 +590,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
       channelState.channelAddress,
       channelState.networkContext.chainId,
       TransactionReason.deployWithDepositAlice,
-      async (gasPrice: BigNumber) => {
+      async (suggestedGasPrice: BigNumber) => {
         const multisigRes = await this.getCode(channelState.channelAddress, channelState.networkContext.chainId);
         if (multisigRes.isError) {
           return Result.fail(multisigRes.getError()!);
@@ -422,7 +687,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
       channelState.channelAddress,
       channelState.networkContext.chainId,
       TransactionReason.withdraw,
-      async (gasPrice: BigNumber) => {
+      async (suggestedGasPrice: BigNumber) => {
         return signer.sendTransaction({ ...minTx, gasPrice, gasLimit: BIG_GAS_LIMIT, from: sender });
       },
     ) as Promise<Result<TransactionResponseWithResult, ChainError>>;
@@ -558,203 +823,6 @@ export class EthereumChainService extends EthereumChainReader implements IVector
 
   ////////////////////////////
   /// INTERNAL METHODS
-  public async sendTxWithRetries(
-    channelAddress: string,
-    chainId: number,
-    reason: TransactionReason,
-    // should return undefined IFF tx didnt send based on validation in
-    // fn
-    txFn: (gasPrice: BigNumber) => Promise<undefined | TransactionResponse>,
-  ): Promise<Result<TransactionResponseWithResult | undefined, ChainError>> {
-    const method = "sendTxWithRetries";
-    const methodId = getRandomBytes32();
-    const errors = [];
-    for (let attempt = 1; attempt < this.defaultRetries; attempt++) {
-      this.log.info(
-        {
-          method,
-          methodId,
-          retries: this.defaultRetries,
-          attempt,
-          channelAddress,
-          reason,
-        },
-        "Attempting to send tx",
-      );
-      const response = await this.sendTxAndParseResponse(channelAddress, chainId, reason, txFn);
-      console.log("response: ", response);
-      if (!response.isError) {
-        return response;
-      }
-      // Otherwise, handle error
-      const error = response.getError()!;
-      if (!error.canRetry) {
-        this.log.error(
-          { error: error.message, channelAddress, reason, stack: error.stack, method, methodId },
-          "Failed to send tx, will not retry",
-        );
-        return response;
-      }
-      // wait before retrying
-      errors.push(error);
-      this.log.warn(
-        { error: error.message, channelAddress, attempt, retries: this.defaultRetries, method, methodId },
-        "Tx failed, waiting before retry",
-      );
-      await delay(1000);
-    }
-    return Result.fail(
-      new ChainError(ChainError.reasons.FailedToSendTx, {
-        errors: errors.map((e) => e.message).toString(),
-        retries: this.defaultRetries,
-        channelAddress,
-        reason,
-      }),
-    );
-  }
-
-  public async sendTxAndParseResponse(
-    channelAddress: string,
-    chainId: number,
-    reason: TransactionReason,
-    txFn: (gasPrice: BigNumber) => Promise<undefined | TransactionResponse>,
-  ): Promise<Result<TransactionResponseWithResult | undefined, ChainError>> {
-    try {
-      const response = await this.queue.add(async () => {
-        // TODO: We should raise gas price if the waitForConfirmation below "times out" essentially.
-        // Default timeout should be around ~15 sec.
-        // Raise gas price in intervals of GAS_BUMP_PERCENT
-        const gasPriceRes = await this.getGasPrice(chainId);
-        if (gasPriceRes.isError) {
-          throw gasPriceRes.getError()!;
-        }
-        const gasPrice = gasPriceRes.getValue();
-        const response = await txFn(gasPrice);
-
-        if (!response) {
-          this.log.warn({ channelAddress, reason }, "Did not attempt tx");
-          return response;
-        }
-
-        // save to store
-        await this.store.saveTransactionResponse(channelAddress, reason, response);
-        this.evts[ChainServiceEvents.TRANSACTION_SUBMITTED].post({
-          response: Object.fromEntries(
-            Object.entries(response).map(([key, value]) => {
-              return [key, BigNumber.isBigNumber(value) ? value.toString() : value];
-            }),
-          ) as StringifiedTransactionResponse,
-          channelAddress,
-          reason,
-        });
-  
-        await this.waitForConfirmation(channelAddress, chainId, reason, response);
-        return response;
-      });
-
-      if (!response) {
-        return Result.ok(response);
-      }
-    
-      // add completed function
-      return Result.ok({
-        ...response,
-        completed: async (confirmations?: number) => {
-          try {
-            const receipt = await response.wait(confirmations);
-            if (receipt.status === 0) {
-              return Result.fail(new ChainError(ChainError.reasons.TxReverted, { receipt }));
-            }
-            return Result.ok(receipt);
-          } catch (e) {
-            return Result.fail(new ChainError(e.message, { stack: e.stack, channelAddress, reason }));
-          }
-        },
-      });
-    } catch (e) {
-      // Don't save tx if it failed to submit, only if it fails to mine
-      let error = e;
-      if (e.message.includes("sender doesn't have enough funds")) {
-        error = new ChainError(ChainError.reasons.NotEnoughFunds);
-      }
-      return Result.fail(error);
-    }
-  }
-
-  private async waitForConfirmation(
-    channelAddress: string,
-    chainId: number,
-    reason: TransactionReason,
-    response: TransactionResponse,
-  ): Promise<TransactionReceipt | undefined> {
-    // Register callbacks for saving tx, then return.
-
-    // An anon fn to get the tx receipt, as we may require multiple retries with raised gas price.
-    const getTransactionReceipt = async (): Promise<TransactionReceipt | undefined> => {
-      // TODO: This should be replaced with a polling method (?)
-      // TODO: If we're polling here, we shouldn't be awaiting a receipt, but checking to see if it's available
-      // (i.e. it's been confirmed / mined).
-      return await ethers.provider.getTransactionReceipt(response.hash);
-      // TODO: If the tx has not yet been mined, return undefined.
-      // return undefined;
-    }
-
-    let receipt: TransactionReceipt | undefined;
-    try {
-      // Poll for receipt.
-      receipt = await getTransactionReceipt();
-      // TODO: Should we have a diff. system of defaultRetries for this operation?
-      // NOTE: This loop won't execute if receipt is valid (not undefined).
-      for (let attempt = 1; attempt < this.defaultRetries && !receipt; attempt++) {
-        // Pause for 2 sec.
-        await delay(2000);
-        receipt = await getTransactionReceipt();
-        if (receipt) {
-          break;
-        }
-      }
-    } catch (e) {
-      this.log.error({ method: "sendTxAndParseResponse", error: jsonifyError(e) }, "Transaction reverted");
-      await this.store.saveTransactionFailure(channelAddress, response.hash, e.message);
-      this.evts[ChainServiceEvents.TRANSACTION_FAILED].post({
-        error: e,
-        channelAddress,
-        reason,
-      });
-    }
-
-    if (!receipt) {
-      return receipt;
-    }
-
-    if (receipt.status === 0) {
-      this.log.error({ method: "sendTxAndParseResponse", receipt }, "Transaction reverted");
-      await this.store.saveTransactionFailure(channelAddress, response.hash, "Tx reverted");
-      this.evts[ChainServiceEvents.TRANSACTION_FAILED].post({
-        receipt: Object.fromEntries(
-          Object.entries(receipt).map(([key, value]) => {
-            return [key, BigNumber.isBigNumber(value) ? value.toString() : value];
-          }),
-        ) as StringifiedTransactionReceipt,
-        channelAddress,
-        reason,
-      });
-    } else {
-      await this.store.saveTransactionReceipt(channelAddress, receipt);
-      this.evts[ChainServiceEvents.TRANSACTION_MINED].post({
-        receipt: Object.fromEntries(
-          Object.entries(receipt).map(([key, value]) => {
-            return [key, BigNumber.isBigNumber(value) ? value.toString() : value];
-          }),
-        ) as StringifiedTransactionReceipt,
-        channelAddress,
-        reason,
-      });
-    }
-
-    return receipt;
-  }
-
   public async approveTokens(
     channelAddress: string,
     spender: string,
@@ -831,7 +899,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
       channelAddress,
       chainId,
       TransactionReason.approveTokens,
-      async (gasPrice: BigNumber) => {
+      async (suggestedGasPrice: BigNumber) => {
         return erc20.approve(spender, approvalAmount, { gasPrice });
       },
     );
@@ -903,7 +971,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
         channelState.channelAddress,
         channelState.networkContext.chainId,
         TransactionReason.depositA,
-        async (gasPrice: BigNumber) => {
+        async (suggestedGasPrice: BigNumber) => {
           return vectorChannel.depositAlice(assetId, amount, { gasPrice });
         },
       ) as Promise<Result<TransactionResponseWithResult, ChainError>>;
@@ -912,7 +980,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
       channelState.channelAddress,
       channelState.networkContext.chainId,
       TransactionReason.depositA,
-      async (gasPrice: BigNumber) => {
+      async (suggestedGasPrice: BigNumber) => {
         return vectorChannel.depositAlice(assetId, amount, { value: amount, gasPrice });
       },
     ) as Promise<Result<TransactionResponseWithResult, ChainError>>;
@@ -934,7 +1002,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
         channelState.channelAddress,
         channelState.networkContext.chainId,
         TransactionReason.depositB,
-        async (gasPrice: BigNumber) => {
+        async (suggestedGasPrice: BigNumber) => {
           return signer.sendTransaction({
             data: "0x",
             to: channelState.channelAddress,
@@ -951,7 +1019,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
         channelState.channelAddress,
         channelState.networkContext.chainId,
         TransactionReason.depositB,
-        async (gasPrice: BigNumber) => {
+        async (suggestedGasPrice: BigNumber) => {
           return erc20.transfer(channelState.channelAddress, amount, { gasPrice });
         },
       ) as Promise<Result<TransactionResponseWithResult, ChainError>>;
