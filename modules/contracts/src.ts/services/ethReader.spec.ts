@@ -1,43 +1,15 @@
-import {
-  ChainError,
-  FullChannelState,
-  IChainServiceStore,
-  IChannelSigner,
-  MinimalTransaction,
-  Result,
-  TransactionReason,
-  TransactionResponseWithResult,
-} from "@connext/vector-types";
-import {
-  ChannelSigner,
-  createTestChannelState,
-  expect,
-  getTestLoggers,
-  MemoryStoreService,
-  mkAddress,
-  mkBytes32,
-  mkHash,
-} from "@connext/vector-utils";
+import { ChainError, FullChannelState, Result } from "@connext/vector-types";
+import { createTestChannelState, expect, getTestLoggers, mkHash } from "@connext/vector-utils";
 import { AddressZero, One, Zero } from "@ethersproject/constants";
 import { JsonRpcProvider, TransactionReceipt } from "@ethersproject/providers";
-import { BigNumber, Contract } from "ethers";
-import { restore, reset, createStubInstance, SinonStubbedInstance, stub, SinonStub } from "sinon";
-import { ChannelFactory, ChannelMastercopy, TransferDefinition, TransferRegistry, VectorChannel } from "../artifacts";
+import { restore, reset, createStubInstance, SinonStubbedInstance } from "sinon";
 
 import { EthereumChainReader } from "./ethReader";
 
-// let storeMock: SinonStubbedInstance<IChainServiceStore>;
-// let signer: SinonStubbedInstance<IChannelSigner>;
 let ethReader: EthereumChainReader;
+let channelState: FullChannelState;
 let provider1337: SinonStubbedInstance<JsonRpcProvider>;
 let provider1338: SinonStubbedInstance<JsonRpcProvider>;
-
-// let sendTxWithRetriesMock: SinonStub;
-// let approveMock: SinonStub;
-// let getCodeMock: SinonStub;
-// let getOnchainBalanceMock: SinonStub;
-
-let channelState: FullChannelState;
 
 const assertResult = (result: Result<any>, isError: boolean, unwrappedVal?: any) => {
   if (isError) {
@@ -66,13 +38,8 @@ const _txResponse = {
   wait: () => Promise.resolve({} as TransactionReceipt),
 };
 
-const txResponse: TransactionResponseWithResult = {
-  ..._txResponse,
-  completed: () => Promise.resolve(Result.ok({} as any)),
-};
-
 const { log } = getTestLoggers("ethReader");
-describe.only("ethReader", () => {
+describe("ethReader", () => {
   const chain1337: number = 1337;
   const chain1338: number = 1338;
   beforeEach(() => {
@@ -83,13 +50,6 @@ describe.only("ethReader", () => {
     provider1337 = _provider;
     provider1338 = _provider;
 
-    // signer = createStubInstance(ChannelSigner);
-    // signer.connect.returns(signer as any);
-    // (signer as any)._isSigner = true;
-
-    // (signer as any).provider = provider1337;
-
-    // create eth service class
     ethReader = new EthereumChainReader(
       {
         [chain1337]: provider1337,
@@ -98,16 +58,10 @@ describe.only("ethReader", () => {
       log,
     );
 
-    // stubs with default friendly behavior
-    // getCodeMock = stub(ethService, "getCode").resolves(Result.ok("0x"));
-    // approveMock = stub(ethService, "approveTokens").resolves(Result.ok(txResponse));
-    // getOnchainBalanceMock = stub(ethService, "getOnchainBalance").resolves(Result.ok(BigNumber.from("100")));
-
     // channel state
     const test = createTestChannelState("create");
     channelState = test.channel;
     channelState.networkContext.chainId = 1337;
-    // signer.getAddress.resolves(channelState.alice);
   });
 
   afterEach(() => {
@@ -262,7 +216,6 @@ describe.only("ethReader", () => {
   describe("create", () => {});
   describe("resolve", () => {});
   describe("getChannelAddress", () => {});
-
   describe("getBlockNumber", () => {});
   describe("getGasPrice", () => {});
   describe("estimateGas", () => {});
