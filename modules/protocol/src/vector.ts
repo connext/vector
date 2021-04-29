@@ -279,6 +279,7 @@ export class Vector implements IVectorProtocol {
         reason: Values<typeof QueuedUpdateError.reasons>,
         state?: FullChannelState,
         context: any = {},
+        error?: QueuedUpdateError,
       ): Promise<Result<never, QueuedUpdateError>> => {
         // Always undo the merkle root change for the received update
         if (received.update.type === UpdateType.resolve || received.update.type === UpdateType.create) {
@@ -288,9 +289,9 @@ export class Vector implements IVectorProtocol {
             received.update.type,
           );
         }
-        const error = new QueuedUpdateError(reason, state?.latestUpdate ?? received.update, state, context);
-        await this.messagingService.respondWithProtocolError(received.inbox, error);
-        return Result.fail(error);
+        const e = error ?? new QueuedUpdateError(reason, received.update, state, context);
+        await this.messagingService.respondWithProtocolError(received.inbox, e);
+        return Result.fail(e);
       };
 
       let channelState: FullChannelState | undefined = undefined;
@@ -352,13 +353,17 @@ export class Vector implements IVectorProtocol {
       }
       const value = res.value as Result<OtherUpdateResult>;
       if (value.isError) {
-        return returnError(value.getError().message, channelState);
+        const error = value.getError() as QueuedUpdateError;
+        const { state, update, params, ...usefulContext } = error.context;
+        return returnError(error.message, state ?? channelState, update, usefulContext);
       }
       // Save the newly signed update to your channel
       const { updatedChannel, updatedTransfer } = value.getValue();
       const saveRes = await persistChannel(this.storeService, updatedChannel, updatedTransfer);
       if (saveRes.isError) {
-        return returnError(QueuedUpdateError.reasons.StoreFailure, updatedChannel);
+        return returnError(QueuedUpdateError.reasons.StoreFailure, updatedChannel, {
+          saveError: saveRes.getError().message,
+        });
       }
       await this.messagingService.respondToProtocolMessage(
         received.inbox,

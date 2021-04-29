@@ -119,7 +119,10 @@ export async function outbound(
   let error = counterpartyResult.getError();
   if (error && error.message !== QueuedUpdateError.reasons.StaleUpdate) {
     // Error is something other than sync, fail
-    logger.error({ method, methodId, error: jsonifyError(error) }, "Error receiving response, will not save state!");
+    logger.error(
+      { method, methodId, counterpartyError: jsonifyError(error), previousState, update, params },
+      "Error receiving response, will not save state!",
+    );
     return Result.fail(
       new QueuedUpdateError(
         error.message === MessagingError.reasons.Timeout
@@ -143,9 +146,13 @@ export async function outbound(
         updateNonce: update.nonce,
         alice: previousState?.aliceIdentifier ?? signer.publicIdentifier,
         updateInitiator: signer.publicIdentifier,
-        toSyncIdentifier: error.context.update.fromIdentifier,
-        toSyncNonce: error.context.update.nonce,
+        toSyncIdentifier: error.context.state.latestUpdate.fromIdentifier,
+        toSyncNonce: error.context.state.latestUpdate.nonce,
         error: jsonifyError(error),
+        expectedNextNonce: getNextNonceForUpdate(
+          previousState?.nonce ?? 0,
+          previousState?.aliceIdentifier === error.context.state.latestUpdate.fromIdentifier,
+        ),
       },
       "Behind, syncing then cancelling proposed",
     );
@@ -161,7 +168,7 @@ export async function outbound(
 
     // Get the synced state and new update
     const syncedResult = await syncState(
-      error.context.update,
+      error.context.state.latestUpdate,
       previousState!, // safe to do bc will fail if syncing setup (only time state is undefined)
       activeTransfers,
       (message: Values<typeof QueuedUpdateError.reasons>) =>
@@ -213,7 +220,7 @@ export async function outbound(
     const error = new QueuedUpdateError(QueuedUpdateError.reasons.BadSignatures, params, previousState, {
       recoveryError: sigRes.getError()?.message,
     });
-    logger.error({ method, error: jsonifyError(error) }, "Error receiving response, will not save state!");
+    logger.error({ method, error: jsonifyError(error) }, "Failed to recover signer");
     return Result.fail(error);
   }
 
@@ -291,6 +298,7 @@ export async function inbound(
       alice: channel?.aliceIdentifier ?? update.fromIdentifier,
       updateInitiator: update.fromIdentifier,
       ourIdentifier: signer.publicIdentifier,
+      expectedNextNonce: getNextNonceForUpdate(channel?.nonce ?? 0, update.fromIdentifier === channel?.aliceIdentifier),
     },
     "Handling inbound update",
   );
@@ -325,6 +333,10 @@ export async function inbound(
         ourIdentifier: signer.publicIdentifier,
         toSyncIdentifier: previousUpdate.fromIdentifier,
         toSyncNonce: givenPreviousNonce,
+        expectedNextNonce: getNextNonceForUpdate(
+          channel?.nonce ?? 0,
+          previousUpdate.fromIdentifier === channel?.aliceIdentifier,
+        ),
       },
       "Behind, syncing",
     );
