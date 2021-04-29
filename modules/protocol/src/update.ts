@@ -1,4 +1,9 @@
-import { getSignerAddressFromPublicIdentifier, hashTransferState, getTransferId } from "@connext/vector-utils";
+import {
+  getSignerAddressFromPublicIdentifier,
+  hashTransferState,
+  getTransferId,
+  generateMerkleRoot,
+} from "@connext/vector-utils";
 import {
   UpdateType,
   ChannelUpdate,
@@ -225,12 +230,6 @@ export async function generateAndApplyUpdate<T extends UpdateType>(
   previousState: FullChannelState | undefined, // undefined IFF setup
   activeTransfers: FullTransferState[],
   initiatorIdentifier: string,
-  getUpdatedMerkleRoot: (
-    channelAddress: string,
-    activeTransfers: FullTransferState[],
-    transfer: FullTransferState,
-    update: typeof UpdateType.create | typeof UpdateType.resolve,
-  ) => string,
   logger?: BaseLogger,
 ): Promise<
   Result<
@@ -277,7 +276,6 @@ export async function generateAndApplyUpdate<T extends UpdateType>(
         activeTransfers,
         chainReader,
         initiatorIdentifier,
-        getUpdatedMerkleRoot,
       );
       if (createRes.isError) {
         return Result.fail(createRes.getError()!);
@@ -295,7 +293,6 @@ export async function generateAndApplyUpdate<T extends UpdateType>(
         activeTransfers,
         chainReader,
         initiatorIdentifier,
-        getUpdatedMerkleRoot,
       );
       if (resolveRes.isError) {
         return Result.fail(resolveRes.getError()!);
@@ -442,12 +439,6 @@ async function generateCreateUpdate(
   transfers: FullTransferState[],
   chainReader: IVectorChainReader,
   initiatorIdentifier: string,
-  getUpdatedMerkleRoot: (
-    channelAddress: string,
-    activeTransfers: FullTransferState[],
-    transfer: FullTransferState,
-    update: typeof UpdateType.create | typeof UpdateType.resolve,
-  ) => string,
 ): Promise<Result<ChannelUpdate<"create">, CreateUpdateError>> {
   const {
     details: { assetId, transferDefinition, timeout, transferInitialState, meta, balance },
@@ -507,7 +498,7 @@ async function generateCreateUpdate(
     initiatorIdentifier,
     responderIdentifier: signer.publicIdentifier === initiatorIdentifier ? counterpartyId : signer.address,
   };
-  const merkleRoot = getUpdatedMerkleRoot(state.channelAddress, transfers, transferState, UpdateType.create);
+  const merkleRoot = generateMerkleRoot([...transfers, transferState]);
 
   // Create the update from the user provided params
   const channelBalance = getUpdatedChannelBalance(UpdateType.create, assetId, balance, state, transferState.initiator);
@@ -537,12 +528,6 @@ async function generateResolveUpdate(
   transfers: FullTransferState[],
   chainService: IVectorChainReader,
   initiatorIdentifier: string,
-  getUpdatedMerkleRoot: (
-    channelAddress: string,
-    activeTransfers: FullTransferState[],
-    transfer: FullTransferState,
-    update: typeof UpdateType.create | typeof UpdateType.resolve,
-  ) => string,
 ): Promise<Result<{ update: ChannelUpdate<"resolve">; transferBalance: Balance }, CreateUpdateError>> {
   // A transfer resolution update can effect the following
   // channel fields:
@@ -561,7 +546,7 @@ async function generateResolveUpdate(
       }),
     );
   }
-  const merkleRoot = getUpdatedMerkleRoot(state.channelAddress, transfers, transferToResolve, UpdateType.resolve);
+  const merkleRoot = generateMerkleRoot(transfers.filter((t) => t.transferId !== transferId));
 
   // Get the final transfer balance from contract
   const transferBalanceResult = await chainService.resolve(

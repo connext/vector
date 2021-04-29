@@ -5,15 +5,7 @@ import { MerkleTree } from "merkletreejs";
 
 import { encodeCoreTransferState, hashCoreTransferState } from "./transfers";
 
-type MerkleTreeUpdate = {
-  root: string;
-  tree: merkle.Tree;
-};
-
-export const generateMerkleTreeData = (
-  transfers: CoreTransferState[],
-  freeTreeImmediately: boolean = true,
-): MerkleTreeUpdate => {
+export const generateMerkleRoot = (transfers: CoreTransferState[]): string => {
   // Create leaves
   const tree = new merkle.Tree();
 
@@ -24,17 +16,12 @@ export const generateMerkleTreeData = (
     });
     root = tree.root();
   } catch (e) {
-    tree.free();
     throw e;
-  }
-  if (freeTreeImmediately) {
+  } finally {
     tree.free();
   }
 
-  return {
-    root,
-    tree,
-  };
+  return root;
 };
 
 // Get merkle proof of transfer

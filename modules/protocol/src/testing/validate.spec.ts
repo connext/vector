@@ -11,7 +11,7 @@
 //   mkAddress,
 //   createTestChannelStateWithSigners,
 //   getTransferId,
-//   generateMerkleTreeData,
+//   generateMerkleRoot,
 //   getRandomBytes32,
 // } from "@connext/vector-utils";
 // import {
@@ -140,7 +140,7 @@
 //       balance: { to: [initiator.address, responder.address], amount: ["3", "0"] },
 //       transferResolver: undefined,
 //     });
-//     const { root } = generateMerkleTreeData([transfer]);
+//     const { root } = generateMerkleRoot([transfer]);
 //     const previousState = createTestChannelStateWithSigners([initiator, responder], UpdateType.deposit, {
 //       channelAddress,
 //       nonce,

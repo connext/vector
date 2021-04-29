@@ -1,6 +1,6 @@
 import { createCoreTransferState, expect } from "./test";
 import { getRandomBytes32, isValidBytes32 } from "./hexStrings";
-import { generateMerkleTreeData } from "./merkle";
+import { generateMerkleRoot } from "./merkle";
 import { hashCoreTransferState } from "./transfers";
 
 import { MerkleTree } from "merkletreejs";
@@ -17,7 +17,7 @@ const generateMerkleTreeJs = (transfers: CoreTransferState[]) => {
   return tree;
 };
 
-describe("generateMerkleTreeData", () => {
+describe("generateMerkleRoot", () => {
   const generateTransfers = (noTransfers = 1) => {
     return Array(noTransfers)
       .fill(0)
@@ -27,8 +27,8 @@ describe("generateMerkleTreeData", () => {
   };
 
   const getMerkleTreeRoot = (transfers: CoreTransferState[]): string => {
-    const data = generateMerkleTreeData(transfers);
-    return data.root;
+    const data = generateMerkleRoot(transfers);
+    return data;
   };
 
   it("should work for a single transfer", () => {

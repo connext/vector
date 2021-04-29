@@ -1,6 +1,6 @@
 import { FullChannelState, FullTransferState, HashlockTransferStateEncoding } from "@connext/vector-types";
 import {
-  generateMerkleTreeData,
+  generateMerkleRoot,
   ChannelSigner,
   createlockHash,
   createTestChannelStateWithSigners,
@@ -224,7 +224,7 @@ describe("CMCAdjudicator.sol", async function () {
       transferTimeout: "3",
       initialStateHash: hashTransferState(state, HashlockTransferStateEncoding),
     });
-    const { root } = generateMerkleTreeData([transferState]);
+    const root = generateMerkleRoot([transferState]);
     channelState = createTestChannelStateWithSigners([aliceSigner, bobSigner], "create", {
       channelAddress: channel.address,
       assetIds: [AddressZero],
@@ -601,7 +601,7 @@ describe("CMCAdjudicator.sol", async function () {
         { ...transferState, transferId: getRandomBytes32() },
         { ...transferState, transferId: getRandomBytes32() },
       ];
-      const { root } = generateMerkleTreeData(transfers);
+      const root = generateMerkleRoot(transfers);
 
       const newState = { ...channelState, merkleRoot: root };
       await disputeChannel(newState);

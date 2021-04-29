@@ -24,7 +24,7 @@ import {
   CreateUpdateDetails,
 } from "@connext/vector-types";
 import { encodeCoreTransferState, getTransferId } from "@connext/vector-utils";
-import { generateMerkleTreeData, getCreate2MultisigAddress, getRandomBytes32 } from "@connext/vector-utils";
+import { generateMerkleRoot, getCreate2MultisigAddress, getRandomBytes32 } from "@connext/vector-utils";
 import { Evt } from "evt";
 import pino from "pino";
 
@@ -42,9 +42,6 @@ export class Vector implements IVectorProtocol {
 
   // Hold the serialized queue for each channel
   private queues: Map<string, SerializedQueue<SelfUpdateResult, OtherUpdateResult>> = new Map();
-
-  // Hold the merkle tree for each channel
-  private trees: Map<string, merkle.Tree> = new Map();
 
   // make it private so the only way to create the class is to use `connect`
   private constructor(
@@ -157,31 +154,6 @@ export class Vector implements IVectorProtocol {
       initiated: SelfUpdate,
       cancel: Promise<unknown>,
     ) => {
-      // Create a helper to undo merkle changes
-      const undoMerkleIfNeeded = async (nonce: number, _transferId?: string): Promise<void> => {
-        if (initiated.params.type !== UpdateType.create && initiated.params.type !== UpdateType.resolve) {
-          // No updates to undo
-          return;
-        }
-        const transferId =
-          _transferId ?? initiated.params.type === UpdateType.resolve
-            ? (initiated.params as UpdateParams<typeof UpdateType.resolve>).details.transferId
-            : getTransferId(
-                initiated.params.channelAddress,
-                nonce.toString(),
-                (initiated.params as UpdateParams<typeof UpdateType.create>).details.transferDefinition,
-                (initiated.params as UpdateParams<typeof UpdateType.create>).details.timeout,
-              );
-        await this.undoMerkleRootUpdates(initiated.params.channelAddress, transferId, initiated.params.type);
-      };
-
-      // This channel nonce is used to derive the `transferId` should the
-      // merkle root changes need to be undone if the `outbound` operation
-      // is cancelled. Set to `0` to handle case where the store fails.
-      // This is safe because the merkle library will not fail loudly if
-      // removing a transferId that does not exist, and transfer ids can not
-      // be generated at nonce 0
-      let storedNonce = 0;
       const cancelPromise = new Promise(async (resolve) => {
         let ret;
         try {
@@ -203,7 +175,6 @@ export class Vector implements IVectorProtocol {
           );
         }
         const { channelState, activeTransfers } = storeRes.getValue();
-        storedNonce = channelState?.nonce ?? 0;
         try {
           const ret = await outbound(
             initiated.params,
@@ -213,8 +184,6 @@ export class Vector implements IVectorProtocol {
             this.messagingService,
             this.externalValidationService,
             this.signer,
-            this.getUpdatedMerkleRoot.bind(this),
-            this.undoMerkleRootUpdates.bind(this),
             this.logger,
           );
           return resolve({ cancelled: false, value: ret });
@@ -235,22 +204,16 @@ export class Vector implements IVectorProtocol {
         value: unknown | Result<SelfUpdateResult>;
       };
       if (res.cancelled) {
-        // Undo the merkle root changes if outbound was cancelled
-        await undoMerkleIfNeeded(storedNonce);
         return undefined;
       }
       const value = res.value as Result<SelfUpdateResult>;
       if (value.isError) {
-        // Undo merkle root updates if the update failed
-        await undoMerkleIfNeeded(storedNonce);
         return res.value as Result<SelfUpdateResult>;
       }
       // Save all information returned from the sync result
       const { updatedChannel, updatedTransfer, successfullyApplied } = value.getValue();
       const saveRes = await persistChannel(this.storeService, updatedChannel, updatedTransfer);
       if (saveRes.isError) {
-        // Undo merkle root updates if saving fails
-        await undoMerkleIfNeeded(updatedChannel.nonce, updatedTransfer?.transferId);
         return Result.fail(
           new QueuedUpdateError(QueuedUpdateError.reasons.StoreFailure, initiated.params, updatedChannel, {
             method: "saveChannelState",
@@ -281,14 +244,6 @@ export class Vector implements IVectorProtocol {
         context: any = {},
         error?: QueuedUpdateError,
       ): Promise<Result<never, QueuedUpdateError>> => {
-        // Always undo the merkle root change for the received update
-        if (received.update.type === UpdateType.resolve || received.update.type === UpdateType.create) {
-          await this.undoMerkleRootUpdates(
-            received.update.channelAddress,
-            (received.update.details as CreateUpdateDetails | ResolveUpdateDetails).transferId,
-            received.update.type,
-          );
-        }
         const e = error ?? new QueuedUpdateError(reason, received.update, state, context);
         await this.messagingService.respondWithProtocolError(received.inbox, e);
         return Result.fail(e);
@@ -325,7 +280,6 @@ export class Vector implements IVectorProtocol {
             this.chainReader,
             this.externalValidationService,
             this.signer,
-            this.getUpdatedMerkleRoot.bind(this),
             this.logger,
           );
           return resolve({ cancelled: false, value: ret });
@@ -548,54 +502,6 @@ export class Vector implements IVectorProtocol {
       await this.registerDisputes();
     }
     return this;
-  }
-
-  private getUpdatedMerkleRoot(
-    channelAddress: string,
-    activeTransfers: FullTransferState[],
-    transfer: FullTransferState,
-    update: typeof UpdateType.create | typeof UpdateType.resolve,
-  ): string {
-    let tree = this.trees.get(channelAddress);
-    if (tree === undefined) {
-      const generated = generateMerkleTreeData(activeTransfers, false);
-      tree = generated.tree;
-      this.trees.set(channelAddress, generated.tree);
-    }
-    update === UpdateType.resolve
-      ? tree.deleteId(transfer.transferId)
-      : tree.insertHex(encodeCoreTransferState(transfer));
-    return tree.root();
-  }
-
-  private async undoMerkleRootUpdates(
-    channelAddress: string,
-    transferIdToUndo: string,
-    updateToUndo: typeof UpdateType.create | typeof UpdateType.resolve,
-  ): Promise<void> {
-    const tree = this.trees.get(channelAddress);
-    if (tree === undefined) {
-      // Nothing to undo
-      return;
-    }
-    // If undoing a resolve update, reinsert transfer
-    if (updateToUndo === UpdateType.resolve) {
-      // Pull transfer from store (should be in active)
-      const transfer = await this.storeService.getTransferState(transferIdToUndo);
-      if (!transfer) {
-        // This is not performant, but something has gone wrong
-        // with the store and the tree alignment. The safest thing
-        // to do is delete the tree from memory and regenerate it
-        tree.free();
-        this.trees.delete(channelAddress);
-        return;
-      }
-      tree.insertHex(encodeCoreTransferState(transfer));
-      return;
-    }
-    // If undoing a create update, delete transfer
-    tree.deleteId(transferIdToUndo);
-    return;
   }
 
   /*
