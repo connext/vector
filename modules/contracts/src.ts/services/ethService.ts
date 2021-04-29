@@ -215,7 +215,6 @@ export class EthereumChainService extends EthereumChainReader implements IVector
     const method = "sendTxWithRetries";
     const methodId = getRandomBytes32();
     const errors = [];
-    let receipt: TransactionResponse | null = null;
     let currentGasPrice: BigNumber;
     const price = await this.getGasPrice(chainId);
     if (price.isError) {
@@ -228,7 +227,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
       // We should raise gas price if the confirmation of tx below "times out" essentially.
       // Default timeout should be around ~15 sec. (GAS_BUMP_THRESHOLD)
       // We should raise our gas price for any subsuquent attempt.
-      if (errors[attempt - 1].message === ChainError.retryableTxErrors.ConfirmationTimeout) {
+      if (errors.length > 0 && errors[attempt - 1].message === ChainError.retryableTxErrors.ConfirmationTimeout) {
         // Scale up gas by percentage as specified by GAS_BUMP_PERCENT.
         currentGasPrice = currentGasPrice.add(currentGasPrice.mul(GAS_BUMP_PERCENT));
       }
