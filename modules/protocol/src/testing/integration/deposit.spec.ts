@@ -272,7 +272,7 @@ describe(testName, () => {
     });
   });
 
-  it("should work if initiator channel is out of sync", async () => {
+  it.only("should work if initiator channel is out of sync", async () => {
     await depositInChannel(preDepositChannel.channelAddress, alice, aliceSigner, bob, assetId, depositAmount);
 
     await aliceStore.saveChannelState(preDepositChannel);

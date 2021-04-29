@@ -188,6 +188,7 @@ export class Vector implements IVectorProtocol {
           );
           return resolve({ cancelled: false, value: ret });
         } catch (e) {
+          console.log("**** outbound error", e);
           return resolve({
             cancelled: false,
             value: Result.fail(
@@ -245,6 +246,7 @@ export class Vector implements IVectorProtocol {
         error?: QueuedUpdateError,
       ): Promise<Result<never, QueuedUpdateError>> => {
         const e = error ?? new QueuedUpdateError(reason, received.update, state, context);
+        console.log("*** sending error", e);
         await this.messagingService.respondWithProtocolError(received.inbox, e);
         return Result.fail(e);
       };

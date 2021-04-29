@@ -15,8 +15,6 @@ export const generateMerkleRoot = (transfers: CoreTransferState[]): string => {
       tree.insertHex(encodeCoreTransferState(transfer));
     });
     root = tree.root();
-  } catch (e) {
-    throw e;
   } finally {
     tree.free();
   }
