@@ -4,7 +4,7 @@ import {
   WithdrawDataEncoding,
   ChannelCommitmentTypes,
 } from "@connext/vector-types";
-import { mkSig, recoverAddressFromChannelMessage } from "@connext/vector-utils";
+import { recoverAddressFromChannelMessage } from "@connext/vector-utils";
 import { AddressZero } from "@ethersproject/constants";
 import { Interface, defaultAbiCoder } from "@ethersproject/abi";
 import { keccak256 as solidityKeccak256 } from "@ethersproject/solidity";

@@ -107,6 +107,10 @@ class VectorIndexedDBDatabase extends Dexie {
       transferDisputes: "transferId",
     });
 
+    this.version(5).stores({
+      withdrawCommitment: "transferId,transactionHash,channelAddress",
+    });
+
     this.channels = this.table("channels");
     this.transfers = this.table("transfers");
     this.transactions = this.table("transactions");
@@ -388,6 +392,23 @@ export class BrowserStore implements IEngineStore, IChainServiceStore {
     }
     const { transferId, ...commitment } = w;
     return commitment;
+  }
+
+  async getUnsubmittedWithdrawals(
+    channelAddress: string,
+    withdrawalDefinition: string,
+  ): Promise<{ commitment: WithdrawCommitmentJson; transfer: FullTransferState }[]> {
+    const w = await this.db.withdrawCommitment.where({ channelAddress }).toArray();
+    console.log("w: ", w);
+    const noTxHash = w.filter((_w) => !_w.transactionHash);
+    const res = await Promise.all(
+      noTxHash.map(async (_w) => {
+        const transfer = await this.db.transfers.get({ transferId: _w.transferId });
+        return { commitment: _w, transfer: transfer! };
+      }),
+    );
+
+    return res;
   }
 
   async saveTransferDispute(
