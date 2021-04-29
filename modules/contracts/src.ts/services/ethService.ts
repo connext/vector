@@ -41,7 +41,6 @@ import { ChannelFactory, VectorChannel } from "../artifacts";
 
 import { EthereumChainReader } from "./ethReader";
 import { parseUnits } from "ethers/lib/utils";
-import { ethers } from "hardhat";
 
 export const EXTRA_GAS = 50_000;
 // The amount of time (ms) to wait before a confirmation polling period times out,
@@ -318,7 +317,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
           reason,
         });
   
-        await this.waitForConfirmation(channelAddress, reason, response);
+        await this.waitForConfirmation(channelAddress, chainId, reason, response);
         return response;
       });
 
@@ -353,6 +352,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
 
   private async waitForConfirmation(
     channelAddress: string,
+    chainId: number,
     reason: TransactionReason,
     response: TransactionResponse,
   ): Promise<TransactionReceipt | undefined> {
@@ -361,7 +361,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
       // TODO: This should be replaced with a polling method (?)
       // TODO: If we're polling here, we shouldn't be awaiting a receipt, but checking to see if it's available
       // (i.e. it's been confirmed / mined).
-      return await ethers.provider.getTransactionReceipt(response.hash);
+      return await this.chainProviders[chainId].getTransactionReceipt(response.hash);
       // TODO: If the tx has not yet been mined, return undefined.
       // return undefined;
     }
