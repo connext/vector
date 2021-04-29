@@ -349,6 +349,8 @@ export class EthereumChainService extends EthereumChainReader implements IVector
       let error = e;
       if (e.message.includes("sender doesn't have enough funds")) {
         error = new ChainError(ChainError.reasons.NotEnoughFunds);
+      } else {
+        this.log.error({ channelAddress, reason, error: jsonifyError(e) }, "Failed to do tx");
       }
       return Result.fail(error);
     }
