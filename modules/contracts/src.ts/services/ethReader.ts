@@ -39,6 +39,8 @@ import pino from "pino";
 import { ChannelFactory, ChannelMastercopy, TransferDefinition, TransferRegistry, VectorChannel } from "../artifacts";
 import { Evt } from "evt";
 
+export const MinGasPrice = parseUnits("5", "gwei");
+
 // https://github.com/rustwasm/wasm-bindgen/issues/700#issuecomment-419708471
 const execEvmBytecode = (bytecode: string, payload: string): Uint8Array =>
   evm.exec(
@@ -477,7 +479,6 @@ export class EthereumChainReader implements IVectorChainReader {
   }
 
   async getGasPrice(chainId: number): Promise<Result<BigNumber, ChainError>> {
-    const minGasPrice = parseUnits("5", "gwei");
     const provider = this.chainProviders[chainId];
     if (!provider) {
       return Result.fail(new ChainError(ChainError.reasons.ProviderNotFound));
@@ -500,8 +501,8 @@ export class EthereumChainReader implements IVectorChainReader {
           return Result.fail(e);
         }
       }
-      if (gasPrice.lt(minGasPrice)) {
-        gasPrice = BigNumber.from(minGasPrice);
+      if (gasPrice.lt(MinGasPrice)) {
+        gasPrice = BigNumber.from(MinGasPrice);
       }
       return Result.ok(gasPrice);
     });
