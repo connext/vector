@@ -7,7 +7,7 @@ import { createTransfer, depositInChannel, getSetupChannel, resolveTransfer } fr
 const testName = "Happy Integration";
 const { log } = getTestLoggers(testName, env.logLevel);
 
-describe(testName, () => {
+describe.skip(testName, () => {
   it("should work for a simple ETH setup -> deposit -> create -> resolve flow", async () => {
     // Set test constants
     const assetId = AddressZero;

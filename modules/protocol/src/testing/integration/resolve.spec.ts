@@ -19,7 +19,7 @@ import { QueuedUpdateError } from "../../errors";
 
 const testName = "Resolve Integrations";
 const { log } = getTestLoggers(testName, env.logLevel);
-describe(testName, () => {
+describe.skip(testName, () => {
   let alice: IVectorProtocol;
   let bob: IVectorProtocol;
 

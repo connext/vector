@@ -11,7 +11,7 @@ import { getNextNonceForUpdate } from "../../utils";
 const testName = "Create Integrations";
 const { log } = getTestLoggers(testName, env.logLevel);
 
-describe(testName, () => {
+describe.skip(testName, () => {
   let alice: IVectorProtocol;
   let bob: IVectorProtocol;
 

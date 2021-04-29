@@ -310,8 +310,8 @@ export class Vector implements IVectorProtocol {
       const value = res.value as Result<OtherUpdateResult>;
       if (value.isError) {
         const error = value.getError() as QueuedUpdateError;
-        const { state, update, params, ...usefulContext } = error.context;
-        return returnError(error.message, state ?? channelState, update, usefulContext);
+        const { state } = error.context;
+        return returnError(error.message, state ?? channelState, undefined, error);
       }
       // Save the newly signed update to your channel
       const { updatedChannel, updatedTransfer } = value.getValue();

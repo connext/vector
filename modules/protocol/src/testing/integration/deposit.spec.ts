@@ -50,7 +50,7 @@ describe(testName, () => {
     });
   });
 
-  describe("should work if there have been no deposits onchain", () => {
+  describe.skip("should work if there have been no deposits onchain", () => {
     it("should deposit eth for Alice (depositA)", async () => {
       await depositInChannel(preDepositChannel.channelAddress, alice, aliceSigner, bob, assetId, depositAmount);
     });
@@ -68,7 +68,7 @@ describe(testName, () => {
     });
   });
 
-  describe("should work if there have been single deposits onchain", () => {
+  describe.skip("should work if there have been single deposits onchain", () => {
     beforeEach(async () => {
       // Deploy multisig
       await deployChannelIfNeeded(
@@ -157,7 +157,7 @@ describe(testName, () => {
     });
   });
 
-  it("should work after multiple deposits", async () => {
+  it.skip("should work after multiple deposits", async () => {
     // Deploy multisig
     await deployChannelIfNeeded(
       preDepositChannel.channelAddress,
@@ -222,7 +222,7 @@ describe(testName, () => {
     );
   });
 
-  it("should work concurrently", async () => {
+  it.skip("should work concurrently", async () => {
     // Perform an alice deposit to make sure multisig is deployed
     await deployChannelIfNeeded(
       preDepositChannel.channelAddress,
@@ -272,7 +272,7 @@ describe(testName, () => {
     });
   });
 
-  it.only("should work if initiator channel is out of sync", async () => {
+  it("should work if initiator channel is out of sync", async () => {
     await depositInChannel(preDepositChannel.channelAddress, alice, aliceSigner, bob, assetId, depositAmount);
 
     await aliceStore.saveChannelState(preDepositChannel);
@@ -288,7 +288,7 @@ describe(testName, () => {
     expect(final.nonce).to.be.eq(expected);
   });
 
-  it("should work if responder channel is out of sync", async () => {
+  it.skip("should work if responder channel is out of sync", async () => {
     await depositInChannel(preDepositChannel.channelAddress, bob, bobSigner, alice, assetId, depositAmount);
 
     await bobStore.saveChannelState(preDepositChannel);
