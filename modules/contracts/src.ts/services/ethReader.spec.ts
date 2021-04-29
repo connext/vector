@@ -1,10 +1,11 @@
 import { ChainError, FullChannelState, Result } from "@connext/vector-types";
 import { createTestChannelState, expect, getTestLoggers, mkHash } from "@connext/vector-utils";
-import { AddressZero, One, Zero } from "@ethersproject/constants";
 import { JsonRpcProvider, TransactionReceipt } from "@ethersproject/providers";
+import { AddressZero, One, Zero } from "@ethersproject/constants";
+import { parseUnits } from "@ethersproject/units";
 import { restore, reset, createStubInstance, SinonStubbedInstance } from "sinon";
 
-import { EthereumChainReader } from "./ethReader";
+import { EthereumChainReader, MinGasPrice } from "./ethReader";
 
 let ethReader: EthereumChainReader;
 let channelState: FullChannelState;
@@ -217,7 +218,45 @@ describe("ethReader", () => {
   describe("resolve", () => {});
   describe("getChannelAddress", () => {});
   describe("getBlockNumber", () => {});
-  describe("getGasPrice", () => {});
+  describe.only("getGasPrice", () => {
+    it("errors if cannot get a provider", async () => {
+      const chainId: number = 1234;
+      const res = await ethReader.getGasPrice(chainId);
+
+      assertResult(res, true, ChainError.reasons.ProviderNotFound);
+    });
+
+    it("errors if provider.getGasPrice errors", async () => {
+      const errorMessage = "provider.getGasPrice errors";
+      provider1337.getGasPrice.rejects(new Error(errorMessage));
+      const res = await ethReader.getGasPrice(chain1337);
+
+      assertResult(res, true);
+      expect(res.getError()!.msg).to.be.eq("Could not execute rpc method");
+      expect(res.getError()!.context.chainId).to.be.eq(chain1337);
+      expect(res.getError()!.context.errors[0]).to.be.eq(errorMessage);
+      expect(res.getError()!.context.errors[4]).to.be.eq(errorMessage);
+    });
+
+    it("happy: getGasPricem, gasPrice < minGasPrice", async () => {
+      const _gasPrice = parseUnits("4", "gwei");
+      provider1337.getGasPrice.resolves(_gasPrice);
+      const res = await ethReader.getGasPrice(chain1337);
+
+      assertResult(res, false);
+      expect(res.getValue()).to.be.eq(MinGasPrice);
+    });
+
+    it("happy: getGasPrice, gasPrice > minGasPrice", async () => {
+      const _gasPrice = parseUnits("6", "gwei");
+      provider1337.getGasPrice.resolves(_gasPrice);
+      const res = await ethReader.getGasPrice(chain1337);
+
+      assertResult(res, false);
+      expect(res.getValue()).to.be.gt(MinGasPrice);
+      expect(res.getValue()).to.be.eq(_gasPrice);
+    });
+  });
   describe("estimateGas", () => {});
   describe("getTokenAllowance", () => {});
   describe("getOnchainBalance", () => {});
