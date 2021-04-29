@@ -8,18 +8,15 @@ import {
   expect,
   getRandomAddress,
   getRandomBytes32,
-  hashCoreTransferState,
   hashTransferState,
   MemoryStoreService,
   generateMerkleTreeData,
 } from "@connext/vector-utils";
 import { AddressZero } from "@ethersproject/constants";
 import { Contract } from "@ethersproject/contracts";
-import { keccak256 } from "@ethersproject/keccak256";
 import { parseEther } from "@ethersproject/units";
 import { BigNumber } from "@ethersproject/bignumber";
 import { deployments } from "hardhat";
-import { MerkleTree } from "merkletreejs";
 
 import { alice, bob, chainIdReq, logger, provider, rando } from "../../constants";
 import { advanceBlocktime, getContract, createChannel } from "../../utils";
@@ -161,5 +158,9 @@ describe("EthereumChainService", function () {
     );
     const res = await bobChainService.sendDefundTransferTx(transferState);
     expect(res.getValue()).to.be.ok;
+  });
+
+  describe("revitalizeTxs", () => {
+    it("should start monitoring active txs", async () => {});
   });
 });

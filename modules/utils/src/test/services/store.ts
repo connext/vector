@@ -15,7 +15,7 @@ import {
 import { TransactionReceipt, TransactionResponse } from "@ethersproject/abstract-provider";
 
 export class MemoryStoreService implements IEngineStore {
-  getActiveTransactions(): Promise<[StoredTransaction]> {
+  getActiveTransactions(): Promise<StoredTransaction[]> {
     throw new Error("Method not implemented.");
   }
 
