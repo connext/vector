@@ -30,6 +30,7 @@ import {
 import axios from "axios";
 import { encodeBalance, encodeTransferResolver, encodeTransferState } from "@connext/vector-utils";
 import { BigNumber } from "@ethersproject/bignumber";
+import { parseUnits } from "@ethersproject/units";
 import { AddressZero, HashZero } from "@ethersproject/constants";
 import { Contract } from "@ethersproject/contracts";
 import { JsonRpcProvider, TransactionRequest } from "@ethersproject/providers";
@@ -429,6 +430,7 @@ export class EthereumChainReader implements IVectorChainReader {
   }
 
   async getGasPrice(chainId: number): Promise<Result<BigNumber, ChainError>> {
+    const minGasPrice = parseUnits("5", "gwei");
     return await this.retryWrapper<BigNumber>(chainId, async (provider: JsonRpcProvider) => {
       let gasPrice: BigNumber | undefined = undefined;
       if (chainId === 1) {
@@ -446,6 +448,9 @@ export class EthereumChainReader implements IVectorChainReader {
         } catch (e) {
           return Result.fail(e);
         }
+      }
+      if (gasPrice.lt(minGasPrice)) {
+        gasPrice = BigNumber.from(minGasPrice);
       }
       return Result.ok(gasPrice);
     });
