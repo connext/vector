@@ -14,12 +14,11 @@ import { BigNumber } from "@ethersproject/bignumber";
 import { createTransfer, getFundedChannel, resolveTransfer, depositInChannel } from "../utils";
 import { env } from "../env";
 import { chainId } from "../constants";
-import { getNextNonceForUpdate } from "../../utils";
 import { QueuedUpdateError } from "../../errors";
 
 const testName = "Resolve Integrations";
 const { log } = getTestLoggers(testName, env.logLevel);
-describe.skip(testName, () => {
+describe(testName, () => {
   let alice: IVectorProtocol;
   let bob: IVectorProtocol;
 

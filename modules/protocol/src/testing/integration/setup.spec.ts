@@ -8,7 +8,7 @@ import { env } from "../env";
 const testName = "Setup Integrations";
 const { log } = getTestLoggers(testName, env.logLevel);
 
-describe.skip(testName, () => {
+describe(testName, () => {
   let alice: IVectorProtocol;
   let bob: IVectorProtocol;
   let carol: IVectorProtocol;
