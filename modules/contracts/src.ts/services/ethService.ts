@@ -178,10 +178,15 @@ export class EthereumChainService extends EthereumChainReader implements IVector
     const method = "speedUpTx";
     const methodId = getRandomBytes32();
     this.log.info({ method, methodId, transactionHash: tx.transactionHash }, "Method started");
-    const signer = this.getSigner(chainId);
-
-    // Make sure tx is not mined already
-    const receipt = await this.getTxReceiptFromHash(chainId, tx);
+    let signer: Signer;
+    let receipt: TransactionResponse | null;
+    try {
+      signer = this.getSigner(chainId);
+      // Make sure tx is not mined already
+      receipt = await this.getTxReceiptFromHash(chainId, tx);
+    } catch (e) {
+      return Result.fail(e);
+    }
 
     // Safe to retry sending
     return this.sendTxWithRetries(tx.to, chainId, TransactionReason.speedUpTransaction, async (gasPrice: BigNumber) => {
