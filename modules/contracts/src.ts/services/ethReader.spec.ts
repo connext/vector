@@ -238,8 +238,8 @@ describe("ethReader", () => {
       expect(res.getError()!.context.errors[4]).to.be.eq(errorMessage);
     });
 
-    it("happy: getGasPricem, gasPrice < minGasPrice", async () => {
-      const _gasPrice = parseUnits("4", "gwei");
+    it("happy: getGasPrice, gasPrice < minGasPrice", async () => {
+      const _gasPrice = parseUnits("2", "gwei");
       provider1337.getGasPrice.resolves(_gasPrice);
       const res = await ethReader.getGasPrice(chain1337);
 
@@ -254,7 +254,7 @@ describe("ethReader", () => {
 
       assertResult(res, false);
       expect(res.getValue()).to.be.gt(MinGasPrice);
-      expect(res.getValue()).to.be.eq(_gasPrice);
+      expect(res.getValue()).to.be.eq(_gasPrice.add(_gasPrice.mul(30).div(100)));
     });
   });
   describe("estimateGas", () => {});

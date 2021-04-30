@@ -497,6 +497,7 @@ export class EthereumChainReader implements IVectorChainReader {
       if (!gasPrice) {
         try {
           gasPrice = await provider.getGasPrice();
+          gasPrice = gasPrice.add(gasPrice.mul(30).div(100))
         } catch (e) {
           return Result.fail(e);
         }
