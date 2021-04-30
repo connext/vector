@@ -295,6 +295,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
         while (gasPrice < BIG_GAS_LIMIT) {
           // Send transaction using the passed in callback.
           response = await txFn(gasPrice);
+          this.log.info({ channelAddress, reason, response }, "Tx response:");
           // If response returns undefined, we assume the tx was not sent / reverted.
           if (!response) {
             this.log.warn({ channelAddress, reason }, "Did not attempt tx");
@@ -314,18 +315,53 @@ export class EthereumChainService extends EthereumChainReader implements IVector
           });
 
           try {
-            await this.waitForConfirmation(channelAddress, chainId, reason, response);
+            // Wait for confirmation.
+            const receipt = await this.waitForConfirmation(chainId, response);
+            // Handle receipt / store updates to complete tx.
+            if (receipt.status === 0) {
+              this.log.error({ method: "sendTxAndParseResponse", receipt }, "Transaction reverted.");
+              await this.store.saveTransactionFailure(channelAddress, response.hash, "Tx reverted");
+              this.evts[ChainServiceEvents.TRANSACTION_FAILED].post({
+                receipt: Object.fromEntries(
+                  Object.entries(receipt).map(([key, value]) => {
+                    return [key, BigNumber.isBigNumber(value) ? value.toString() : value];
+                  }),
+                ) as StringifiedTransactionReceipt,
+                channelAddress,
+                reason,
+              });
+            } else {
+              await this.store.saveTransactionReceipt(channelAddress, receipt);
+              this.evts[ChainServiceEvents.TRANSACTION_MINED].post({
+                receipt: Object.fromEntries(
+                  Object.entries(receipt).map(([key, value]) => {
+                    return [key, BigNumber.isBigNumber(value) ? value.toString() : value];
+                  }),
+                ) as StringifiedTransactionReceipt,
+                channelAddress,
+                reason,
+              });
+            }
+            // Break out of the loop here, as the tx has been completed.
             break;
           } catch (e) {
             // TODO: Maybe it would be more robust to have waitForConfirmation return undefined or something
             // specific in the event of timeout, as opposed to using error comparison?
+
             // Check if the error was a confirmation timeout.
             if (e.message === ChainError.retryableTxErrors.ConfirmationTimeout) {
               // Scale up gas by percentage as specified by GAS_BUMP_PERCENT.
+              this.log.info(
+                { channelAddress, reason, },
+                "Tx timed out waiting for confirmation. Bumping gas price and reattempting."
+              );
               gasPrice = gasPrice.add(gasPrice.mul(GAS_BUMP_PERCENT));
             } else {
               // If we get any other error here, we classify this event as a tx failure and break out of the loop.
-              this.log.error({ method: "sendTxAndParseResponse", error: jsonifyError(e) }, "Transaction reverted");
+              this.log.error(
+                { method: "sendTxAndParseResponse", error: jsonifyError(e) },
+                "Transaction reverted."
+              );
               await this.store.saveTransactionFailure(channelAddress, response.hash, e.message);
               this.evts[ChainServiceEvents.TRANSACTION_FAILED].post({
                 error: e,
@@ -371,11 +407,9 @@ export class EthereumChainService extends EthereumChainReader implements IVector
   }
 
   private async waitForConfirmation(
-    channelAddress: string,
     chainId: number,
-    reason: TransactionReason,
     response: TransactionResponse,
-  ): Promise<TransactionReceipt | undefined> {
+  ): Promise<TransactionReceipt> {
     const provider: JsonRpcProvider = this.chainProviders[chainId];
     if (!provider) {
       throw new ChainError(ChainError.reasons.ProviderNotFound);
@@ -408,36 +442,9 @@ export class EthereumChainService extends EthereumChainReader implements IVector
       // Update elapsed time.
       timeElapsed = new Date().getTime() - startMark;
     }
-
     if (!receipt) {
       throw new ChainError(ChainError.retryableTxErrors.ConfirmationTimeout)
     }
-
-    if (receipt.status === 0) {
-      this.log.error({ method: "sendTxAndParseResponse", receipt }, "Transaction reverted");
-      await this.store.saveTransactionFailure(channelAddress, response.hash, "Tx reverted");
-      this.evts[ChainServiceEvents.TRANSACTION_FAILED].post({
-        receipt: Object.fromEntries(
-          Object.entries(receipt).map(([key, value]) => {
-            return [key, BigNumber.isBigNumber(value) ? value.toString() : value];
-          }),
-        ) as StringifiedTransactionReceipt,
-        channelAddress,
-        reason,
-      });
-    } else {
-      await this.store.saveTransactionReceipt(channelAddress, receipt);
-      this.evts[ChainServiceEvents.TRANSACTION_MINED].post({
-        receipt: Object.fromEntries(
-          Object.entries(receipt).map(([key, value]) => {
-            return [key, BigNumber.isBigNumber(value) ? value.toString() : value];
-          }),
-        ) as StringifiedTransactionReceipt,
-        channelAddress,
-        reason,
-      });
-    }
-
     return receipt;
   }
 
