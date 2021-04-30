@@ -16,8 +16,8 @@ import {
   hashTransferState,
   signChannelMessage,
   getMerkleProof,
+  encodeCoreTransferState,
 } from "@connext/vector-utils";
-import { TransactionReceipt } from "@ethersproject/abstract-provider";
 import { BigNumber, BigNumberish } from "@ethersproject/bignumber";
 import { AddressZero, HashZero, Zero } from "@ethersproject/constants";
 import { Contract } from "@ethersproject/contracts";
@@ -32,7 +32,7 @@ const getOnchainBalance = async (assetId: string, address: string): Promise<BigN
     ? provider.getBalance(address)
     : new Contract(assetId, (await deployments.getArtifact("TestToken")).abi, provider).balanceOf(address);
 };
-describe("CMCAdjudicator.sol", async function () {
+describe.only("CMCAdjudicator.sol", async function () {
   this.timeout(120_000);
 
   // These tests could be running on chains without automining
@@ -224,6 +224,7 @@ describe("CMCAdjudicator.sol", async function () {
       transferTimeout: "3",
       initialStateHash: hashTransferState(state, HashlockTransferStateEncoding),
     });
+    transferState.encodedCoreState = encodeCoreTransferState(transferState);
     const root = generateMerkleRoot([transferState]);
     channelState = createTestChannelStateWithSigners([aliceSigner, bobSigner], "create", {
       channelAddress: channel.address,
