@@ -153,6 +153,7 @@ model Transfer {
   toB     String
 
   initialStateHash String
+  encodedCoreState String
 
   channel          Channel? @relation(fields: [channelAddress], references: [channelAddress])
   channelAddress   String?

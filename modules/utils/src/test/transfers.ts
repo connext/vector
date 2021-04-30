@@ -62,6 +62,7 @@ export type TestHashlockTransferOptions = {
   transferState: any;
   initiatorIdentifier: string;
   responderIdentifier: string;
+  encodedCoreState: string;
 } & CoreTransferState;
 
 export function createTestFullHashlockTransferState(
@@ -100,6 +101,7 @@ export function createTestFullHashlockTransferState(
     initiatorIdentifier: overrides.initiatorIdentifier ?? channel?.aliceIdentifier ?? mkPublicIdentifier("vector111"),
     responderIdentifier: overrides.responderIdentifier ?? channel?.bobIdentifier ?? mkPublicIdentifier("vector222"),
     channelNonce: channel?.nonce ?? 9,
+    encodedCoreState: "0xeeeeeffffffaaaaa",
   };
 
   const channelOverrides = channel

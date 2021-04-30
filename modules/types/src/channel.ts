@@ -143,6 +143,8 @@ export type FullTransferState<M extends TransferMeta = any> = CoreTransferState 
   chainId: number;
   transferEncodings: string[]; // Initial state encoding, resolver encoding
   transferState: any;
+  encodedCoreState: string; // added 4/29/2021 to speed up. stores have
+  // backwards compatible fix in their getters. not ideal.
   transferResolver?: any; // undefined iff not resolved
   meta: M; // meta req. values assigned in protocol
   inDispute: boolean;

@@ -1,7 +1,7 @@
-import { createCoreTransferState, expect } from "./test";
+import { createCoreTransferState, createTestFullHashlockTransferState, expect } from "./test";
 import { getRandomBytes32, isValidBytes32 } from "./hexStrings";
 import { generateMerkleRoot } from "./merkle";
-import { hashCoreTransferState } from "./transfers";
+import { encodeCoreTransferState, hashCoreTransferState } from "./transfers";
 
 import { MerkleTree } from "merkletreejs";
 import { keccak256 } from "ethereumjs-util";
@@ -22,7 +22,8 @@ describe("generateMerkleRoot", () => {
     return Array(noTransfers)
       .fill(0)
       .map((_, i) => {
-        return createCoreTransferState({ transferId: getRandomBytes32() });
+        const core = createCoreTransferState({ transferId: getRandomBytes32() });
+        const full = createTestFullHashlockTransferState({ ...core, encodedCoreState: encodeCoreTransferState(core) });
       });
   };
 

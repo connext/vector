@@ -44,6 +44,7 @@ import {
   PartialFullChannelState,
   ChannelSigner,
   mkSig,
+  encodeCoreTransferState,
 } from "@connext/vector-utils";
 import { Vector } from "@connext/vector-protocol";
 import { Evt } from "evt";
@@ -261,6 +262,15 @@ describe(testName, () => {
 
       // Generate transfer
       const json: WithdrawCommitmentJson = commitment.toJson();
+      const core = createCoreTransferState({
+        balance,
+        assetId: commitment.assetId,
+        channelAddress: commitment.channelAddress,
+        transferDefinition: withdrawAddress,
+        initialStateHash,
+        initiator: initiator.address,
+        responder: responder.address,
+      });
       const transfer = {
         channelFactoryAddress: chainAddresses[chainId].channelFactoryAddress,
         chainId,
@@ -272,15 +282,8 @@ describe(testName, () => {
         channelNonce: 4,
         initiatorIdentifier: initiator.publicIdentifier,
         responderIdentifier: responder.publicIdentifier,
-        ...createCoreTransferState({
-          balance,
-          assetId: commitment.assetId,
-          channelAddress: commitment.channelAddress,
-          transferDefinition: withdrawAddress,
-          initialStateHash,
-          initiator: initiator.address,
-          responder: responder.address,
-        }),
+        encodedCoreState: encodeCoreTransferState(core),
+        ...core,
       };
 
       return { resolver: { responderSignature }, transfer, commitment: json };
