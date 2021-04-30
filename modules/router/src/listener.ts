@@ -336,6 +336,8 @@ export async function setupListeners(
           return;
         }
 
+        // if receiver channel balance is reclaimable, attempt a reclaim
+        // protects against double collateralization type cases
         if (BigNumber.from(data.channelBalance.amount[participant === "alice" ? 0 : 1]).gt(profile.reclaimThreshold)) {
           logger.info(
             {
@@ -348,27 +350,26 @@ export async function setupListeners(
             },
             "receiver channel balance gt reclaim threshold",
           );
-          return;
-        }
 
-        const responseReceiverChannel = await adjustCollateral(
-          data.channelAddress,
-          data.transfer.assetId,
-          data.bobIdentifier,
-          nodeService,
-          chainReader,
-          logger,
-        );
-        if (responseReceiverChannel.isError) {
-          return logger.error(
-            { method: "adjustCollateral", error: jsonifyError(responseReceiverChannel.getError()!) },
-            "Error adjusting collateral for Receiver Channel",
+          const responseReceiverChannel = await adjustCollateral(
+            data.channelAddress,
+            data.transfer.assetId,
+            data.bobIdentifier,
+            nodeService,
+            chainReader,
+            logger,
+          );
+          if (responseReceiverChannel.isError) {
+            return logger.error(
+              { method: "adjustCollateral", error: jsonifyError(responseReceiverChannel.getError()!) },
+              "Error adjusting collateral for Receiver Channel",
+            );
+          }
+          logger.info(
+            { method: "adjustCollateral", result: responseReceiverChannel.getValue() },
+            "Successfully adjusted collateral for Receiver Channel",
           );
         }
-        logger.info(
-          { method: "adjustCollateral", result: responseReceiverChannel.getValue() },
-          "Successfully adjusted collateral for Receiver Channel",
-        );
       }
     },
     (data: ConditionalTransferCreatedPayload) => {
