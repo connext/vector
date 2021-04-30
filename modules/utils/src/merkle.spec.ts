@@ -7,7 +7,7 @@ import { MerkleTree } from "merkletreejs";
 import { keccak256 } from "ethereumjs-util";
 import { keccak256 as solidityKeccak256 } from "@ethersproject/solidity";
 import { bufferify } from "./crypto";
-import { CoreTransferState } from "@connext/vector-types";
+import { CoreTransferState, FullTransferState } from "@connext/vector-types";
 
 const generateMerkleTreeJs = (transfers: CoreTransferState[]) => {
   const sorted = transfers.sort((a, b) => a.transferId.localeCompare(b.transferId));
@@ -18,12 +18,13 @@ const generateMerkleTreeJs = (transfers: CoreTransferState[]) => {
 };
 
 describe("generateMerkleRoot", () => {
-  const generateTransfers = (noTransfers = 1) => {
+  const generateTransfers = (noTransfers = 1): FullTransferState[] => {
     return Array(noTransfers)
       .fill(0)
       .map((_, i) => {
         const core = createCoreTransferState({ transferId: getRandomBytes32() });
         const full = createTestFullHashlockTransferState({ ...core, encodedCoreState: encodeCoreTransferState(core) });
+        return full;
       });
   };
 
