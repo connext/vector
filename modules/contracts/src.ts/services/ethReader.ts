@@ -30,6 +30,7 @@ import {
 import axios from "axios";
 import { encodeBalance, encodeTransferResolver, encodeTransferState } from "@connext/vector-utils";
 import { BigNumber } from "@ethersproject/bignumber";
+import { parseUnits } from "@ethersproject/units";
 import { AddressZero, HashZero } from "@ethersproject/constants";
 import { Contract } from "@ethersproject/contracts";
 import { JsonRpcProvider, TransactionRequest } from "@ethersproject/providers";
@@ -37,6 +38,8 @@ import pino from "pino";
 
 import { ChannelFactory, ChannelMastercopy, TransferDefinition, TransferRegistry, VectorChannel } from "../artifacts";
 import { Evt } from "evt";
+
+export const MinGasPrice = parseUnits("5", "gwei");
 
 // https://github.com/rustwasm/wasm-bindgen/issues/700#issuecomment-419708471
 const execEvmBytecode = (bytecode: string, payload: string): Uint8Array =>
@@ -497,6 +500,9 @@ export class EthereumChainReader implements IVectorChainReader {
         } catch (e) {
           return Result.fail(e);
         }
+      }
+      if (gasPrice.lt(MinGasPrice)) {
+        gasPrice = BigNumber.from(MinGasPrice);
       }
       return Result.ok(gasPrice);
     });
