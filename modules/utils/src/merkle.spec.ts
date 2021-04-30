@@ -1,3 +1,4 @@
+import * as merkle from "@connext/vector-merkle-tree";
 import { createCoreTransferState, createTestFullHashlockTransferState, expect } from "./test";
 import { getRandomBytes32, isValidBytes32 } from "./hexStrings";
 import { generateMerkleRoot } from "./merkle";
@@ -32,6 +33,76 @@ describe("generateMerkleRoot", () => {
     const data = generateMerkleRoot(transfers);
     return data;
   };
+
+  it.skip("Is not very slow", () => {
+    let count = 2000;
+
+    let start = Date.now();
+
+    let tree = new merkle.Tree();
+    let each = Date.now();
+    try {
+      for (let i = 0; i < count; i++) {
+        tree.insertHex(encodeCoreTransferState(generateTransfers(1)[0]));
+        let _calculated = tree.root();
+
+        if (i % 50 === 0) {
+          let now = Date.now();
+          console.log("Count:", i, " ", (now - each) / 50, "ms ", (now - start) / 1000, "s");
+          each = now;
+        }
+      }
+    } finally {
+      tree.free();
+    }
+
+    console.log("Time Good:", Date.now() - start);
+
+    console.log("-------");
+
+    start = Date.now();
+
+    each = Date.now();
+    const encodedTransfers = [];
+    for (let i = 0; i < count; i++) {
+      encodedTransfers.push(encodeCoreTransferState(generateTransfers(1)[0]));
+
+      tree = new merkle.Tree();
+      try {
+        for (let encoded of encodedTransfers) {
+          tree.insertHex(encoded);
+        }
+        let _calculated = tree.root();
+
+        if (i % 50 === 0) {
+          let now = Date.now();
+          console.log("Count:", i, " ", (now - each) / 50, "ms ", (now - start) / 1000, "s");
+          each = now;
+        }
+      } finally {
+        tree.free();
+      }
+    }
+
+    console.log("Time Some:", Date.now() - start);
+
+    console.log("-------");
+
+    start = Date.now();
+
+    let transfers = [];
+    each = Date.now();
+    for (let i = 0; i < count; i++) {
+      transfers.push(generateTransfers(1)[0]);
+      generateMerkleRoot(transfers);
+      if (i % 50 === 0) {
+        let now = Date.now();
+        console.log("Count:", i, " ", (now - each) / 50, "ms ", (now - start) / 1000, "s");
+        each = now;
+      }
+    }
+    console.log("Time Bad:", Date.now() - start);
+  });
 
   it("should work for a single transfer", () => {
     const [transfer] = generateTransfers();
