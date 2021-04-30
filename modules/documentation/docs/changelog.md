@@ -2,6 +2,12 @@
 
 ## Next Release
 
+## 0.2.5-alpha.3
+
+- \[router\] add adjustCollateral for receiver channel.
+- \[contracts\] Add `ethReader` tests, Add min gas price, 
+- \[utils\] use static json provider
+
 ## 0.2.5-alpha.2
 
 - \[router\] fix router build error.
