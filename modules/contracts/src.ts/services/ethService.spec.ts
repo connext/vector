@@ -486,25 +486,25 @@ describe("ethService", () => {
     it("if txFn returns undefined, returns undefined", async () => {
       const result = await ethService.sendTxAndParseResponse(AddressZero, 111, "allowance", async () => {
         return undefined;
-      });
+      }, BigNumber.from(10_000));
       assertResult(result, false, undefined);
     });
 
     it("if txFn errors, returns error", async () => {
       const result = await ethService.sendTxAndParseResponse(AddressZero, 111, "allowance", async () => {
         throw new Error("Boooo");
-      });
+      }, BigNumber.from(10_000));
       assertResult(result, true, "Boooo");
     });
 
     it("if txFn errors, with not enough funds, return special error", async () => {
       const result = await ethService.sendTxAndParseResponse(AddressZero, 111, "allowance", async () => {
         throw new Error("sender doesn't have enough funds");
-      });
+      }, BigNumber.from(10_000));
       assertResult(result, true, ChainError.reasons.NotEnoughFunds);
     });
 
-    it("if receipt status = 0, saves response with error", async () => {
+    it("if receipt status == 0, saves response with error", async () => {
       const t = {
         ..._txResponse,
         wait: async () => {

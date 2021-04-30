@@ -762,6 +762,7 @@ export class EthereumChainReader implements IVectorChainReader {
     chainId: number,
     targetMethod: (provider: JsonRpcProvider) => Promise<Result<T, ChainError>>,
   ): Promise<Result<T, ChainError>> {
+    console.log(this.chainProviders, Object.keys(this.chainProviders), "TEST123")
     const provider = this.chainProviders[chainId];
     if (!provider) {
       return Result.fail(new ChainError(ChainError.reasons.ProviderNotFound));
