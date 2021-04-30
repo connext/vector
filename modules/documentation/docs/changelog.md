@@ -2,6 +2,10 @@
 
 ## Next Release
 
+## 0.2.5-alpha.4
+
+- \[router\] fix adjustCollateral for receiver channel.
+
 ## 0.2.5-alpha.3
 
 - \[router\] add adjustCollateral for receiver channel.
