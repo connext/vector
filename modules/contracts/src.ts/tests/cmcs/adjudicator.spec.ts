@@ -32,7 +32,7 @@ const getOnchainBalance = async (assetId: string, address: string): Promise<BigN
     ? provider.getBalance(address)
     : new Contract(assetId, (await deployments.getArtifact("TestToken")).abi, provider).balanceOf(address);
 };
-describe.only("CMCAdjudicator.sol", async function () {
+describe("CMCAdjudicator.sol", async function () {
   this.timeout(120_000);
 
   // These tests could be running on chains without automining
