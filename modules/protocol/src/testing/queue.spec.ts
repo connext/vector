@@ -282,4 +282,26 @@ describe("Errors", () => {
       ["self", { nonce: 4 }],
     ]);
   });
+
+  it("Gracefully handles timeout", async () => {
+    let [updater, queue] = setup();
+
+    // This update takes 50ms - too long!
+    let willTimeout = queue.executeOtherAsync(otherUpdate(50, 2));
+    // Timeout
+    await delay(5);
+    // Assume (wrongly) it's ok to make another update. Same nonce.
+    let attemptToConflict = queue.executeOtherAsync(otherUpdate(5, 2));
+
+    // We can await these in any order. The original update succeeds,
+    // the conflicting nonce fails due to validation..
+    expect((await willTimeout).isError).to.be.false;
+    expect((await attemptToConflict).isError).to.be.true;
+
+    // Shows only one succeeded because if not we would see two updates with
+    // the same nonce here.
+    expect(updater.state).to.be.deep.equal([
+      ["other", { nonce: 2 }],
+    ]);
+  });
 });
