@@ -2,6 +2,57 @@
 
 ## Next Release
 
+## 0.2.5-alpha.4
+
+- \[router\] fix adjustCollateral for receiver channel.
+
+## 0.2.5-alpha.3
+
+- \[router\] add adjustCollateral for receiver channel.
+- \[contracts\] Add `ethReader` tests, Add min gas price, 
+- \[utils\] use static json provider
+
+## 0.2.5-alpha.2
+
+- \[router\] fix router build error.
+
+## 0.2.5-alpha.1
+
+- \[router\] fix amm config params.
+
+## 0.2.5-alpha.0
+
+- \[router\] AMM implementation to get swap rate.
+- \[contracts\] AMM contracts for swap rate.
+- \[server-node\] Resave transaction hash for admin function
+
+## 0.2.4-beta.3
+
+- \[server-node\] Improve withdrawal commitment retrieval
+
+## 0.2.4-beta.2
+
+- \[engine\] TRANSFER_ROUTING_COMPLETE event emitted through to original sender.
+- \[router\] Improvements to `autoRebalance` for better state machine. Separate sending tx and waiting for confirmation. Store tx hashes after tx submit.
+
+## 0.2.4-beta.1
+
+- \[iframe\] Catch sig undefined error and propogate
+
+## 0.2.3
+
+- \[utils\] Improve merkle tree
+- \[router\] Add support for basis fees
+
+## 0.2.3-beta.1
+
+- \[router\] Broadcast global metrics
+- \[contracts\] Add `ethService` tests
+
+## 0.2.2
+
+- \[utils\] Improve merkle root generation
+
 ## 0.2.2-beta.8
 
 - \[iframe\] Isolate signing to iframe

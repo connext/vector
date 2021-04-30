@@ -954,6 +954,26 @@ export class VectorEngine implements IVectorEngine {
     }
     const createParams = createResult.getValue();
     const initiatorSubmits = createParams.meta.initiatorSubmits ?? false;
+
+    // set up event listeners before sending request
+    const timeout = 90_000;
+    const resolvedReconciled = Promise.all([
+      // resolved should always happen
+      this.evts[WITHDRAWAL_RESOLVED_EVENT].waitFor(
+        (data) => data.channelAddress === params.channelAddress && data.transfer.transferId === transferId,
+        timeout,
+      ),
+      // reconciling (submission to chain) may not happen (i.e. holding
+      // mainnet withdrawals for lower gas)
+      Promise.race([
+        this.evts[WITHDRAWAL_RECONCILED_EVENT].waitFor(
+          (data) => data.channelAddress === params.channelAddress && data.transferId === transferId,
+        ),
+        delay(timeout),
+      ]),
+    ]);
+
+    // create withdrawal transfer
     const protocolRes = await this.vector.create(createParams);
     if (protocolRes.isError) {
       return Result.fail(protocolRes.getError()!);
@@ -964,23 +984,8 @@ export class VectorEngine implements IVectorEngine {
 
     let transactionHash: string | undefined = undefined;
     let transaction: MinimalTransaction | undefined = undefined;
-    const timeout = 90_000;
     try {
-      const [resolved, reconciled] = await Promise.all([
-        // resolved should always happen
-        this.evts[WITHDRAWAL_RESOLVED_EVENT].waitFor(
-          (data) => data.channelAddress === params.channelAddress && data.transfer.transferId === transferId,
-          timeout,
-        ),
-        // reconciling (submission to chain) may not happen (i.e. holding
-        // mainnet withdrawals for lower gas)
-        Promise.race([
-          this.evts[WITHDRAWAL_RECONCILED_EVENT].waitFor(
-            (data) => data.channelAddress === params.channelAddress && data.transferId === transferId,
-          ),
-          delay(timeout),
-        ]),
-      ]);
+      const [resolved, reconciled] = await resolvedReconciled;
       transactionHash = typeof reconciled === "object" ? reconciled.transactionHash : undefined;
       transaction = resolved.transaction;
     } catch (e) {

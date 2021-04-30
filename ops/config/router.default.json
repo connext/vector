@@ -17,6 +17,8 @@
       "hardcodedRate": "1"
     }
   ],
+  "stableAmmChainId": 1337,
+  "stableAmmAddress": "0xFB88dE099e13c3ED21F80a7a1E49f8CAEcF10df6",
   "messagingUrl": "",
   "production": false,
   "rebalanceProfiles": [

@@ -1,4 +1,5 @@
 import { ChannelUpdate, FullChannelState, FullTransferState } from "./channel";
+import { ConditionalTransferCreatedPayload, ConditionalTransferRoutingCompletePayload } from "./engine";
 import { EngineError, NodeError, MessagingError, ProtocolError, Result, RouterError, VectorError } from "./error";
 import { LockInformation } from "./lock";
 import { EngineParams, NodeResponses } from "./schemas";
@@ -169,4 +170,18 @@ export interface IMessagingService extends IBasicMessaging {
     timeout?: number,
     numRetries?: number,
   ): Promise<Result<NodeResponses.TransferQuote, RouterError | MessagingError>>;
+
+  publishTransferRoutingCompleteMessage(
+    to: string,
+    from: string,
+    data: Result<Omit<ConditionalTransferRoutingCompletePayload, "publicIdentifier">, VectorError>,
+  ): Promise<void>;
+  onReceiveTransferRoutingCompleteMessage(
+    myPublicIdentifier: string,
+    callback: (
+      data: Result<Omit<ConditionalTransferRoutingCompletePayload, "publicIdentifier">, NodeError>,
+      from: string,
+      inbox: string,
+    ) => void,
+  ): Promise<void>;
 }

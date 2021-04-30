@@ -9,6 +9,7 @@ import {
   WithdrawalCreatedPayload,
   WithdrawalReconciledPayload,
   WithdrawalResolvedPayload,
+  ConditionalTransferRoutingCompletePayload,
 } from "@connext/vector-types";
 
 import { env } from "../utils";
@@ -16,6 +17,7 @@ import { env } from "../utils";
 const serverBase = `http://${env.testerName}:${env.port}`;
 const conditionalTransferCreatedPath = "/conditional-transfer-created";
 const conditionalTransferResolvedPath = "/conditional-transfer-resolved";
+const conditionalTransferRoutingCompletePath = "/conditional-transfer-routing-complete";
 const depositReconciledPath = "/deposit-reconciled";
 const withdrawalCreatedPath = "/withdrawal-created";
 const withdrawalResolvedPath = "/withdrawal-resolved";
@@ -37,6 +39,10 @@ export const aliceEvts = {
     url: `${serverBase}${withdrawalReconciledPath}-alice`,
   },
   [EngineEvents.REQUEST_COLLATERAL]: {},
+  [EngineEvents.CONDITIONAL_TRANSFER_ROUTING_COMPLETE]: {
+    evt: Evt.create<ConditionalTransferRoutingCompletePayload>(),
+    url: `${serverBase}${conditionalTransferRoutingCompletePath}-alice`,
+  },
   [EngineEvents.CONDITIONAL_TRANSFER_CREATED]: {
     evt: Evt.create<ConditionalTransferCreatedPayload>(),
     url: `${serverBase}${conditionalTransferCreatedPath}-alice`,
@@ -83,6 +89,10 @@ export const bobEvts = {
     evt: Evt.create<ConditionalTransferResolvedPayload>(),
     url: `${serverBase}${conditionalTransferResolvedPath}-bob`,
   },
+  [EngineEvents.CONDITIONAL_TRANSFER_ROUTING_COMPLETE]: {
+    evt: Evt.create<ConditionalTransferRoutingCompletePayload>(),
+    url: `${serverBase}${conditionalTransferRoutingCompletePath}-bob`,
+  },
   [EngineEvents.DEPOSIT_RECONCILED]: {
     evt: Evt.create<DepositReconciledPayload>(),
     url: `${serverBase}${depositReconciledPath}-bob`,
@@ -109,6 +119,13 @@ server.post(`${conditionalTransferCreatedPath}-alice`, async (request, response)
 
 server.post(`${conditionalTransferResolvedPath}-alice`, async (request, response) => {
   aliceEvts[EngineEvents.CONDITIONAL_TRANSFER_RESOLVED].evt.post(request.body as ConditionalTransferResolvedPayload);
+  return response.status(200).send({ message: "success" });
+});
+
+server.post(`${conditionalTransferRoutingCompletePath}-alice`, async (request, response) => {
+  aliceEvts[EngineEvents.CONDITIONAL_TRANSFER_ROUTING_COMPLETE].evt.post(
+    request.body as ConditionalTransferRoutingCompletePayload,
+  );
   return response.status(200).send({ message: "success" });
 });
 
@@ -139,6 +156,13 @@ server.post(`${conditionalTransferCreatedPath}-bob`, async (request, response) =
 
 server.post(`${conditionalTransferResolvedPath}-bob`, async (request, response) => {
   bobEvts[EngineEvents.CONDITIONAL_TRANSFER_RESOLVED].evt.post(request.body as ConditionalTransferResolvedPayload);
+  return response.status(200).send({ message: "success" });
+});
+
+server.post(`${conditionalTransferRoutingCompletePath}-bob`, async (request, response) => {
+  aliceEvts[EngineEvents.CONDITIONAL_TRANSFER_ROUTING_COMPLETE].evt.post(
+    request.body as ConditionalTransferRoutingCompletePayload,
+  );
   return response.status(200).send({ message: "success" });
 });
 

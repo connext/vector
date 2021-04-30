@@ -308,3 +308,41 @@ const moonbasealphaDeployment = {
 };
 deployments.moonbasealpha = moonbasealphaDeployment;
 deployments["1287"] = moonbasealphaDeployment;
+
+////////////////////////////////////////
+// 212984383488152 - arbitrumtest4
+import * as arbitrumtest4ChannelFactory from "../deployments/arbitrumtest4/ChannelFactory.json";
+import * as arbitrumtest4ChannelMastercopy from "../deployments/arbitrumtest4/ChannelMastercopy.json";
+import * as arbitrumtest4HashlockTransfer from "../deployments/arbitrumtest4/HashlockTransfer.json";
+import * as arbitrumtest4TestToken from "../deployments/arbitrumtest4/TestToken.json";
+import * as arbitrumtest4TransferRegistry from "../deployments/arbitrumtest4/TransferRegistry.json";
+import * as arbitrumtest4Withdraw from "../deployments/arbitrumtest4/Withdraw.json";
+const arbitrumtest4Deployment = {
+  ChannelFactory: arbitrumtest4ChannelFactory,
+  ChannelMastercopy: arbitrumtest4ChannelMastercopy,
+  HashlockTransfer: arbitrumtest4HashlockTransfer,
+  TestToken: arbitrumtest4TestToken,
+  TransferRegistry: arbitrumtest4TransferRegistry,
+  Withdraw: arbitrumtest4Withdraw,
+};
+deployments.arbitrumtest4 = arbitrumtest4Deployment;
+deployments["212984383488152"] = arbitrumtest4Deployment;
+
+////////////////////////////////////////
+// 1666600000 - harmony
+import * as harmonyChannelFactory from "../deployments/harmony/ChannelFactory.json";
+import * as harmonyChannelMastercopy from "../deployments/harmony/ChannelMastercopy.json";
+import * as harmonyHashlockTransfer from "../deployments/harmony/HashlockTransfer.json";
+import * as harmonyTestToken from "../deployments/harmony/TestToken.json";
+import * as harmonyTransferRegistry from "../deployments/harmony/TransferRegistry.json";
+import * as harmonyWithdraw from "../deployments/harmony/Withdraw.json";
+const harmonyDeployment = {
+  ChannelFactory: harmonyChannelFactory,
+  ChannelMastercopy: harmonyChannelMastercopy,
+  HashlockTransfer: harmonyHashlockTransfer,
+  TestToken: harmonyTestToken,
+  TransferRegistry: harmonyTransferRegistry,
+  Withdraw: harmonyWithdraw,
+};
+deployments.harmony = harmonyDeployment;
+deployments["1666600000"] = harmonyDeployment;

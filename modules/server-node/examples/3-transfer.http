@@ -89,10 +89,10 @@ Content-Type: application/json
   "publicIdentifier": "{{carolPublicIdentifier}}",
   "amount": "1000000",
   "assetId": "0x0000000000000000000000000000000000000000",
-  "chainId": 137,
+  "chainId": 1337,
   "recipient": "{{davePublicIdentifier}}",
-  "recipientChainId": 1,
-  "recipientAssetId": "0x7D1AfA7B718fb893dB30A3aBc0Cfc608AaCfeBB0"
+  "recipientChainId": 1338,
+  "recipientAssetId": "0x0000000000000000000000000000000000000000"
 }
 
 ##############

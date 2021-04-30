@@ -1,6 +1,6 @@
 import { BigNumber } from "@ethersproject/bignumber";
 import { EtherSymbol, Zero } from "@ethersproject/constants";
-import { formatEther } from "@ethersproject/units";
+import { formatEther, parseEther } from "@ethersproject/units";
 import { deployments, ethers, getNamedAccounts, getChainId, network } from "hardhat";
 import { DeployFunction } from "hardhat-deploy/types";
 
@@ -101,6 +101,15 @@ const func: DeployFunction = async () => {
     }
     await registerTransfer("Withdraw", deployer);
     await registerTransfer("HashlockTransfer", deployer);
+  }
+
+  if ([1337, 5].includes(network.config.chainId ?? 0)) {
+    log.info(`Detected AMM deployment chain ${network.config.chainId}`);
+    const res = await deployments.deploy("StableSwap", {
+      from: deployer,
+      args: [parseEther("2500")],
+    });
+    log.info({ address: res.address, txHash: res.transactionHash }, `Deployed AMM ${network.config.chainId}`);
   }
 
   ////////////////////////////////////////

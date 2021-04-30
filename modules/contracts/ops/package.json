@@ -3,7 +3,7 @@
   "description": "This is only used to install a few packages into the ethprovider docker container",
   "dependencies": {
     "ethers": "5.1.0",
-    "hardhat": "2.1.2",
+    "hardhat": "2.2.0",
     "pino-pretty": "4.6.0"
   }
 }

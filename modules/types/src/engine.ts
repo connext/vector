@@ -50,6 +50,16 @@ export type ConditionalTransferCreatedPayload = {
 export const CONDITIONAL_TRANSFER_RESOLVED_EVENT = "CONDITIONAL_TRANSFER_RESOLVED";
 export type ConditionalTransferResolvedPayload = ConditionalTransferCreatedPayload;
 
+// Emitted when transfer forwarded by router
+export const CONDITIONAL_TRANSFER_ROUTING_COMPLETE_EVENT = "CONDITIONAL_TRANSFER_ROUTING_COMPLETE";
+export type ConditionalTransferRoutingCompletePayload = {
+  publicIdentifier: string;
+  routingId: string;
+  initiatorIdentifier: string;
+  responderIdentifier: string;
+  meta?: any;
+};
+
 // Emitted when an onchain deposit is reconciled with offchain balance
 export const DEPOSIT_RECONCILED_EVENT = "DEPOSIT_RECONCILED";
 export type DepositReconciledPayload = {
@@ -113,6 +123,7 @@ export const EngineEvents = {
   [SETUP_EVENT]: SETUP_EVENT,
   [CONDITIONAL_TRANSFER_CREATED_EVENT]: CONDITIONAL_TRANSFER_CREATED_EVENT,
   [CONDITIONAL_TRANSFER_RESOLVED_EVENT]: CONDITIONAL_TRANSFER_RESOLVED_EVENT,
+  [CONDITIONAL_TRANSFER_ROUTING_COMPLETE_EVENT]: CONDITIONAL_TRANSFER_ROUTING_COMPLETE_EVENT,
   [DEPOSIT_RECONCILED_EVENT]: DEPOSIT_RECONCILED_EVENT,
   [REQUEST_COLLATERAL_EVENT]: REQUEST_COLLATERAL_EVENT,
   [RESTORE_STATE_EVENT]: RESTORE_STATE_EVENT,
@@ -128,6 +139,7 @@ export interface EngineEventMap extends ChainServiceEventMap {
   [SETUP_EVENT]: SetupPayload;
   [CONDITIONAL_TRANSFER_CREATED_EVENT]: ConditionalTransferCreatedPayload;
   [CONDITIONAL_TRANSFER_RESOLVED_EVENT]: ConditionalTransferResolvedPayload;
+  [CONDITIONAL_TRANSFER_ROUTING_COMPLETE_EVENT]: ConditionalTransferRoutingCompletePayload;
   [DEPOSIT_RECONCILED_EVENT]: DepositReconciledPayload;
   [REQUEST_COLLATERAL_EVENT]: RequestCollateralPayload;
   [RESTORE_STATE_EVENT]: RestoreStatePayload;
