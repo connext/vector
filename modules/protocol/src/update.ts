@@ -3,6 +3,7 @@ import {
   hashTransferState,
   getTransferId,
   generateMerkleRoot,
+  encodeCoreTransferState,
 } from "@connext/vector-utils";
 import {
   UpdateType,
@@ -19,6 +20,7 @@ import {
   CreateUpdateDetails,
   ResolveUpdateDetails,
   jsonifyError,
+  CoreTransferState,
 } from "@connext/vector-types";
 import { getAddress } from "@ethersproject/address";
 import { HashZero, AddressZero } from "@ethersproject/constants";
@@ -153,21 +155,25 @@ export function applyUpdate<T extends UpdateType>(
         latestUpdate: update,
       };
       const initiator = getSignerAddressFromPublicIdentifier(update.fromIdentifier);
-      const createdTransfer = {
-        balance: transferBalance,
-        assetId,
-        transferId,
+      const core: CoreTransferState = {
         channelAddress,
+        transferId,
         transferDefinition,
-        transferEncodings,
+        initiator,
+        responder: initiator === previousState!.alice ? previousState!.bob : previousState!.alice,
+        assetId,
+        balance: transferBalance,
         transferTimeout,
         initialStateHash: hashTransferState(transferInitialState, transferEncodings[0]),
+      };
+      const createdTransfer: FullTransferState = {
+        ...core,
         transferState: { balance: transferBalance, ...transferInitialState },
         channelFactoryAddress: previousState!.networkContext.channelFactoryAddress,
         chainId: previousState!.networkContext.chainId,
+        transferEncodings,
+        encodedCoreState: encodeCoreTransferState(core),
         transferResolver: undefined,
-        initiator,
-        responder: initiator === previousState!.alice ? previousState!.bob : previousState!.alice,
         meta: { ...(meta ?? {}), createdAt: Date.now() },
         inDispute: false,
         channelNonce: previousState!.nonce,
@@ -477,21 +483,25 @@ async function generateCreateUpdate(
   const initialStateHash = hashTransferState(transferInitialState, stateEncoding);
   const counterpartyId = signer.address === state.alice ? state.bobIdentifier : state.aliceIdentifier;
   const counterpartyAddr = signer.address === state.alice ? state.bob : state.alice;
-  const transferState: FullTransferState = {
-    balance,
-    assetId,
-    transferId: getTransferId(state.channelAddress, state.nonce.toString(), transferDefinition, timeout),
+  const core: CoreTransferState = {
     channelAddress: state.channelAddress,
+    transferId: getTransferId(state.channelAddress, state.nonce.toString(), transferDefinition, timeout),
     transferDefinition,
-    transferEncodings: [stateEncoding, resolverEncoding],
-    transferTimeout: timeout,
-    initialStateHash,
-    transferState: transferInitialState,
-    channelFactoryAddress: state.networkContext.channelFactoryAddress,
-    chainId: state.networkContext.chainId,
-    transferResolver: undefined,
     initiator: getSignerAddressFromPublicIdentifier(initiatorIdentifier),
     responder: signer.publicIdentifier === initiatorIdentifier ? counterpartyAddr : signer.address,
+    assetId,
+    balance,
+    transferTimeout: timeout,
+    initialStateHash,
+  };
+  const transferState: FullTransferState = {
+    ...core,
+    channelFactoryAddress: state.networkContext.channelFactoryAddress,
+    chainId: state.networkContext.chainId,
+    transferEncodings: [stateEncoding, resolverEncoding],
+    transferState: transferInitialState,
+    encodedCoreState: encodeCoreTransferState(core),
+    transferResolver: undefined,
     meta: { ...(meta ?? {}), createdAt: Date.now() },
     inDispute: false,
     channelNonce: state.nonce,
