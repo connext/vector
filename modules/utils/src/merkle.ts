@@ -1,18 +1,18 @@
 import * as merkle from "@connext/vector-merkle-tree";
-import { FullTransferState, CoreTransferState } from "@connext/vector-types";
+import { CoreTransferState } from "@connext/vector-types";
 import { keccak256 } from "ethereumjs-util";
 import { MerkleTree } from "merkletreejs";
 
-import { hashCoreTransferState } from "./transfers";
+import { encodeCoreTransferState, hashCoreTransferState } from "./transfers";
 
-export const generateMerkleRoot = (transfers: FullTransferState[]): string => {
+export const generateMerkleRoot = (transfers: CoreTransferState[]): string => {
   // Create leaves
   const tree = new merkle.Tree();
 
   let root: string;
   try {
     transfers.forEach((transfer) => {
-      tree.insertHex(transfer.encodedCoreState);
+      tree.insertHex(encodeCoreTransferState(transfer));
     });
     root = tree.root();
   } finally {

@@ -15,7 +15,6 @@ import {
   UpdateType,
   WithdrawCommitmentJson,
 } from "@connext/vector-types";
-import { encodeCoreTransferState } from "@connext/vector-utils";
 import { TransactionResponse, TransactionReceipt } from "@ethersproject/providers";
 import Dexie, { DexieOptions } from "dexie";
 import { BaseLogger } from "pino";
@@ -28,22 +27,7 @@ type StoredTransfer = FullTransferState & {
 };
 
 const storedTransferToTransferState = (stored: StoredTransfer): FullTransferState => {
-  const transfer: any = {
-    ...stored,
-    encodedCoreState:
-      stored.encodedCoreState ??
-      encodeCoreTransferState({
-        channelAddress: stored.channelAddress,
-        transferId: stored.transferId,
-        transferDefinition: stored.transferDefinition,
-        initiator: stored.initiator,
-        responder: stored.responder,
-        assetId: stored.assetId,
-        balance: stored.balance,
-        transferTimeout: stored.transferTimeout,
-        initialStateHash: stored.initialStateHash,
-      }),
-  };
+  const transfer: any = stored;
   delete transfer.createUpdateNonce;
   delete transfer.resolveUpdateNonce;
   delete transfer.routingId;

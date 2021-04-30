@@ -16,14 +16,8 @@ import {
   ChannelDispute,
   TransferDispute,
   GetTransfersFilterOpts,
-  CoreTransferState,
 } from "@connext/vector-types";
-import {
-  encodeCoreTransferState,
-  getRandomBytes32,
-  getSignerAddressFromPublicIdentifier,
-  mkSig,
-} from "@connext/vector-utils";
+import { getRandomBytes32, getSignerAddressFromPublicIdentifier, mkSig } from "@connext/vector-utils";
 import { BigNumber } from "@ethersproject/bignumber";
 import { TransactionResponse, TransactionReceipt } from "@ethersproject/providers";
 
@@ -198,10 +192,16 @@ const convertTransferEntityToFullTransferState = (
     dispute: TransferDisputeEntity | null;
   },
 ) => {
-  const coreTransfer: CoreTransferState = {
+  const fullTransfer: FullTransferState = {
+    inDispute: !!transfer.dispute,
+    channelFactoryAddress: transfer.channel!.channelFactoryAddress,
+    assetId: transfer.createUpdate!.assetId,
+    chainId: BigNumber.from(transfer.channel!.chainId).toNumber(),
     channelAddress: transfer.channel!.channelAddress!,
-    transferId: transfer.createUpdate!.transferId!,
-    transferDefinition: transfer.createUpdate!.transferDefinition!,
+    balance: {
+      amount: [transfer.amountA, transfer.amountB],
+      to: [transfer.toA, transfer.toB],
+    },
     initiator:
       transfer.createUpdate!.fromIdentifier === transfer.channel?.publicIdentifierA
         ? transfer.channel!.participantA
@@ -210,23 +210,13 @@ const convertTransferEntityToFullTransferState = (
       transfer.createUpdate!.toIdentifier === transfer.channel?.publicIdentifierA
         ? transfer.channel!.participantA
         : transfer.channel!.participantB,
-    assetId: transfer.createUpdate!.assetId,
-    balance: {
-      amount: [transfer.amountA, transfer.amountB],
-      to: [transfer.toA, transfer.toB],
-    },
-    transferTimeout: transfer.createUpdate!.transferTimeout!,
     initialStateHash: transfer.initialStateHash,
-  };
-  const fullTransfer: FullTransferState = {
-    ...coreTransfer,
-    inDispute: !!transfer.dispute,
-    channelFactoryAddress: transfer.channel!.channelFactoryAddress,
-    chainId: BigNumber.from(transfer.channel!.chainId).toNumber(),
+    transferDefinition: transfer.createUpdate!.transferDefinition!,
     initiatorIdentifier: transfer.createUpdate!.fromIdentifier,
     responderIdentifier: transfer.createUpdate!.toIdentifier,
     channelNonce: transfer!.channelNonce,
     transferEncodings: transfer.createUpdate!.transferEncodings!.split("$"),
+    transferId: transfer.createUpdate!.transferId!,
     transferState: {
       balance: {
         amount: [transfer.createUpdate!.transferAmountA!, transfer.createUpdate!.transferAmountB],
@@ -234,7 +224,7 @@ const convertTransferEntityToFullTransferState = (
       },
       ...JSON.parse(transfer.createUpdate!.transferInitialState!),
     },
-    encodedCoreState: transfer.encodedCoreState ?? encodeCoreTransferState(coreTransfer),
+    transferTimeout: transfer.createUpdate!.transferTimeout!,
     meta: transfer.createUpdate!.meta ? JSON.parse(transfer.createUpdate!.meta) : undefined,
     transferResolver: transfer.resolveUpdate?.transferResolver
       ? JSON.parse(transfer.resolveUpdate?.transferResolver)
@@ -633,7 +623,6 @@ export class PrismaStore implements IServerNodeStore {
             toB: transfer!.balance.to[1],
             initialStateHash: transfer!.initialStateHash,
             channelNonce: transfer!.channelNonce,
-            encodedCoreState: transfer!.encodedCoreState,
           }
         : undefined;
 
@@ -966,7 +955,6 @@ export class PrismaStore implements IServerNodeStore {
         toB: transfer.balance.to[1],
         initialStateHash: transfer!.initialStateHash,
         channelNonce: transfer.channelNonce,
-        encodedCoreState: transfer.encodedCoreState,
       };
     });
 

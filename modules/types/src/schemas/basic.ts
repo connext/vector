@@ -100,7 +100,6 @@ export const TFullTransferState = Type.Object({
   channelNonce: Type.Integer({ minimum: 1 }),
   initiatorIdentifier: TPublicIdentifier,
   responderIdentifier: TPublicIdentifier,
-  encodedCoreState: Type.String(),
 });
 
 ////////////////////////////////////////

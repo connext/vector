@@ -22,7 +22,12 @@ import {
 } from "@connext/vector-types";
 import { getAddress } from "@ethersproject/address";
 import { BigNumber } from "@ethersproject/bignumber";
-import { hashChannelCommitment, validateChannelUpdateSignatures } from "@connext/vector-utils";
+import {
+  getSignerAddressFromPublicIdentifier,
+  hashChannelCommitment,
+  hashTransferState,
+  validateChannelUpdateSignatures,
+} from "@connext/vector-utils";
 import Ajv from "ajv";
 import { BaseLogger, Level } from "pino";
 import { QueuedUpdateError } from "./errors";
@@ -187,6 +192,33 @@ export function getParamsFromUpdate<T extends UpdateType = any>(
     type,
     details: paramDetails as UpdateParamsMap[T],
   });
+}
+
+export function getTransferFromUpdate(
+  update: ChannelUpdate<typeof UpdateType.create>,
+  channel: FullChannelState,
+): FullTransferState {
+  return {
+    balance: update.details.balance,
+    assetId: update.assetId,
+    transferId: update.details.transferId,
+    channelAddress: update.channelAddress,
+    transferDefinition: update.details.transferDefinition,
+    transferEncodings: update.details.transferEncodings,
+    transferTimeout: update.details.transferTimeout,
+    initialStateHash: hashTransferState(update.details.transferInitialState, update.details.transferEncodings[0]),
+    transferState: update.details.transferInitialState,
+    channelFactoryAddress: channel.networkContext.channelFactoryAddress,
+    chainId: channel.networkContext.chainId,
+    transferResolver: undefined,
+    initiator: getSignerAddressFromPublicIdentifier(update.fromIdentifier),
+    responder: getSignerAddressFromPublicIdentifier(update.toIdentifier),
+    meta: { ...(update.details.meta ?? {}), createdAt: Date.now() },
+    inDispute: false,
+    channelNonce: update.nonce,
+    initiatorIdentifier: update.fromIdentifier,
+    responderIdentifier: update.toIdentifier,
+  };
 }
 
 // This function signs the state after the update is applied,
