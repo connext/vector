@@ -326,14 +326,23 @@ export async function setupListeners(
           return;
         }
         const profile = profileRes.getValue();
+        let participant: "alice" | "bob" | undefined;
+        if (data.aliceIdentifier === routerSigner.publicIdentifier) {
+          participant = "alice";
+        } else if (data.bobIdentifier === routerSigner.publicIdentifier) {
+          participant = "bob";
+        } else {
+          logger.error({ data }, "Router not in channel, this should never happen");
+          return;
+        }
 
-        if (BigNumber.from(data.channelBalance).gt(profile.reclaimThreshold)) {
+        if (BigNumber.from(data.channelBalance.amount[participant === "alice" ? 0 : 1]).gt(profile.reclaimThreshold)) {
           logger.info(
             {
               method,
               methodId,
               profile,
-              requestedAmount: data.channelBalance,
+              channelBalance: data.channelBalance,
               assetId: data.transfer.assetId,
               channelAddress: data.channelAddress,
             },
