@@ -16,7 +16,6 @@ import {
   hashTransferState,
   signChannelMessage,
   getMerkleProof,
-  encodeCoreTransferState,
 } from "@connext/vector-utils";
 import { BigNumber, BigNumberish } from "@ethersproject/bignumber";
 import { AddressZero, HashZero, Zero } from "@ethersproject/constants";
@@ -224,7 +223,6 @@ describe("CMCAdjudicator.sol", async function () {
       transferTimeout: "3",
       initialStateHash: hashTransferState(state, HashlockTransferStateEncoding),
     });
-    transferState.encodedCoreState = encodeCoreTransferState(transferState);
     const root = generateMerkleRoot([transferState]);
     channelState = createTestChannelStateWithSigners([aliceSigner, bobSigner], "create", {
       channelAddress: channel.address,
