@@ -288,7 +288,7 @@ export async function setupListeners(
         return;
       }
 
-      // Adjust collateral in channel
+      // Adjust collateral in Sender channel
       const response = await adjustCollateral(
         transferSenderResolutionChannelAddress,
         transferSenderResolutionAssetId,
@@ -300,10 +300,67 @@ export async function setupListeners(
       if (response.isError) {
         return logger.error(
           { method: "adjustCollateral", error: jsonifyError(response.getError()!) },
-          "Error adjusting collateral",
+          "Error adjusting collateral for Sender Channel",
         );
       }
-      logger.info({ method: "adjustCollateral", result: response.getValue() }, "Successfully adjusted collateral");
+      logger.info(
+        { method: "adjustCollateral", result: response.getValue() },
+        "Successfully adjusted collateral for Sender Channel",
+      );
+
+      if (data.channelBalance && data.transfer) {
+        // Adjust collateral in Receiver
+        // iff channel balance > reclaim threshold
+        const profileRes = getRebalanceProfile(data.transfer.chainId, data.transfer.assetId);
+        if (profileRes.isError) {
+          logger.error(
+            {
+              method,
+              methodId,
+              error: jsonifyError(profileRes.getError()!),
+              assetId: data.transfer.assetId,
+              channelAddress: data.channelAddress,
+            },
+            "Could not get rebalance profile",
+          );
+          return;
+        }
+        const profile = profileRes.getValue();
+
+        if (BigNumber.from(data.channelBalance).gt(profile.reclaimThreshold)) {
+          logger.info(
+            {
+              method,
+              methodId,
+              profile,
+              requestedAmount: data.channelBalance,
+              assetId: data.transfer.assetId,
+              channelAddress: data.channelAddress,
+            },
+            "receiver channel balance gt reclaim threshold",
+          );
+          return;
+        }
+
+        const responseReceiverChannel = await adjustCollateral(
+          data.channelAddress,
+          data.transfer.assetId,
+          data.bobIdentifier,
+          nodeService,
+          chainReader,
+          logger,
+        );
+        if (responseReceiverChannel.isError) {
+          return logger.error(
+            { method: "adjustCollateral", error: jsonifyError(responseReceiverChannel.getError()!) },
+            "Error adjusting collateral for Receiver Channel",
+          );
+        }
+        logger.info(
+          { method: "adjustCollateral", result: responseReceiverChannel.getValue() },
+          "Successfully adjusted collateral for Receiver Channel",
+        );
+      }
     },
     (data: ConditionalTransferCreatedPayload) => {
       // Only forward transfers with valid routing metas
