@@ -356,6 +356,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
                   gasPrice = gasPrice.add(gasPrice.mul(GAS_BUMP_PERCENT));
 
                   // TODO: resend exact same tx with the same nonce, overwrite the response in the DB
+                  // make sure new gasPrice is being saved
                 } else {
                   // If we get any other error here, we classify this event as a tx failure and break out of the loop.
                   this.log.error({ method: "sendTxAndParseResponse", error: jsonifyError(e) }, "Transaction reverted.");
