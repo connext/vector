@@ -76,6 +76,7 @@ export class ChainError extends VectorError {
     UnderpricedReplacement: "replacement transaction underpriced",
     AncientBlockSync: "Block information is incomplete while ancient",
     UnableToRent: "Unable to rent an instance of IEthModule",
+    ConfirmationTimeout: "Timed out waiting for confirmation.",
   };
 
   readonly canRetry: boolean;
