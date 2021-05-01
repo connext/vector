@@ -283,109 +283,105 @@ export class EthereumChainService extends EthereumChainReader implements IVector
       // Queue up the execution of the transaction.
       const response = await this.queue.add(async () => {
         let response: TransactionResponse | undefined;
+
         // We will raise gas price if the confirmation of the tx "times out" essentially.
         // Default timeout should be around ~15 sec. (GAS_BUMP_THRESHOLD)
         // We raise our gas price for subsuquent attempts if this is the case.
-        while (gasPrice < BIG_GAS_LIMIT) {
-          // Send transaction using the passed in callback.
-          response = await txFn(gasPrice);
 
-          this.log.info({ channelAddress, reason, response }, "Tx response:");
-          // If response returns undefined, we assume the tx was not sent / reverted.
-          if (!response) {
-            this.log.warn({ channelAddress, reason }, "Did not attempt tx");
-            return response;
-          }
-
-          // save to store
-          await this.store.saveTransactionResponse(channelAddress, reason, response);
-          this.evts[ChainServiceEvents.TRANSACTION_SUBMITTED].post({
-            response: Object.fromEntries(
-              Object.entries(response).map(([key, value]) => {
-                return [key, BigNumber.isBigNumber(value) ? value.toString() : value];
-              }),
-            ) as StringifiedTransactionResponse,
-            channelAddress,
-            reason,
-          });
-
-          try {
-            // Wait for confirmation.
-            const receipt = await this.waitForConfirmation(chainId, response);
-            // Handle receipt / store updates to complete tx.
-            if (receipt.status === 0) {
-              this.log.error({ method: "sendTxAndParseResponse", receipt }, "Transaction reverted.");
-              await this.store.saveTransactionFailure(channelAddress, response.hash, "Tx reverted");
-              this.evts[ChainServiceEvents.TRANSACTION_FAILED].post({
-                receipt: Object.fromEntries(
-                  Object.entries(receipt).map(([key, value]) => {
-                    return [key, BigNumber.isBigNumber(value) ? value.toString() : value];
-                  }),
-                ) as StringifiedTransactionReceipt,
-                channelAddress,
-                reason,
-              });
-            } else {
-              await this.store.saveTransactionReceipt(channelAddress, receipt);
-              this.evts[ChainServiceEvents.TRANSACTION_MINED].post({
-                receipt: Object.fromEntries(
-                  Object.entries(receipt).map(([key, value]) => {
-                    return [key, BigNumber.isBigNumber(value) ? value.toString() : value];
-                  }),
-                ) as StringifiedTransactionReceipt,
-                channelAddress,
-                reason,
-              });
-            }
-            // Break out of the loop here, as the tx has been completed.
-            break;
-          } catch (e) {
-            // TODO: Maybe it would be more robust to have waitForConfirmation return undefined or something
-            // specific in the event of timeout, as opposed to using error comparison?
-
-            // Check if the error was a confirmation timeout.
-            if (e.message === ChainError.retryableTxErrors.ConfirmationTimeout) {
-              // Scale up gas by percentage as specified by GAS_BUMP_PERCENT.
-              this.log.info(
-                { channelAddress, reason },
-                "Tx timed out waiting for confirmation. Bumping gas price and reattempting.",
-              );
-              gasPrice = gasPrice.add(gasPrice.mul(GAS_BUMP_PERCENT));
-            } else {
-              // If we get any other error here, we classify this event as a tx failure and break out of the loop.
-              this.log.error({ method: "sendTxAndParseResponse", error: jsonifyError(e) }, "Transaction reverted.");
-              await this.store.saveTransactionFailure(channelAddress, response.hash, e.message);
-              this.evts[ChainServiceEvents.TRANSACTION_FAILED].post({
-                error: e,
-                channelAddress,
-                reason,
-              });
-              break;
-            }
-          }
+        // Send transaction using the passed in callback.
+        response = await txFn(gasPrice);
+        this.log.info({ channelAddress, reason, response }, "Tx response:");
+        // If response returns undefined, we assume the tx was not sent / reverted.
+        if (!response) {
+          this.log.warn({ channelAddress, reason }, "Did not attempt tx");
+          return response;
         }
-        return response;
-      });
 
+        // save to store
+        await this.store.saveTransactionResponse(channelAddress, reason, response);
+        this.evts[ChainServiceEvents.TRANSACTION_SUBMITTED].post({
+          response: Object.fromEntries(
+            Object.entries(response).map(([key, value]) => {
+              return [key, BigNumber.isBigNumber(value) ? value.toString() : value];
+            }),
+          ) as StringifiedTransactionResponse,
+          channelAddress,
+          reason,
+        });
+
+        const completed = (): Promise<Result<TransactionReceipt, ChainError>> => {
+          return new Promise(async (resolve, reject) => {
+            while (gasPrice < BIG_GAS_LIMIT) {
+              try {
+                // Wait for confirmation.
+                const receipt = await this.waitForConfirmation(chainId, response!);
+                // Handle receipt / store updates to complete tx.
+                if (receipt.status === 0) {
+                  this.log.error({ method: "sendTxAndParseResponse", receipt }, "Transaction reverted.");
+                  await this.store.saveTransactionFailure(channelAddress, response!.hash, "Tx reverted");
+                  this.evts[ChainServiceEvents.TRANSACTION_FAILED].post({
+                    receipt: Object.fromEntries(
+                      Object.entries(receipt).map(([key, value]) => {
+                        return [key, BigNumber.isBigNumber(value) ? value.toString() : value];
+                      }),
+                    ) as StringifiedTransactionReceipt,
+                    channelAddress,
+                    reason,
+                  });
+                } else {
+                  await this.store.saveTransactionReceipt(channelAddress, receipt);
+                  this.evts[ChainServiceEvents.TRANSACTION_MINED].post({
+                    receipt: Object.fromEntries(
+                      Object.entries(receipt).map(([key, value]) => {
+                        return [key, BigNumber.isBigNumber(value) ? value.toString() : value];
+                      }),
+                    ) as StringifiedTransactionReceipt,
+                    channelAddress,
+                    reason,
+                  });
+                }
+                // Break out of the loop here, as the tx has been completed.
+                resolve(Result.ok(receipt));
+              } catch (e) {
+                // TODO: Maybe it would be more robust to have waitForConfirmation return undefined or something
+                // specific in the event of timeout, as opposed to using error comparison?
+
+                // Check if the error was a confirmation timeout.
+                if (e.message === ChainError.retryableTxErrors.ConfirmationTimeout) {
+                  // Scale up gas by percentage as specified by GAS_BUMP_PERCENT.
+                  this.log.info(
+                    { channelAddress, reason },
+                    "Tx timed out waiting for confirmation. Bumping gas price and reattempting.",
+                  );
+                  gasPrice = gasPrice.add(gasPrice.mul(GAS_BUMP_PERCENT));
+
+                  // TODO: resend exact same tx with the same nonce, overwrite the response in the DB
+                } else {
+                  // If we get any other error here, we classify this event as a tx failure and break out of the loop.
+                  this.log.error({ method: "sendTxAndParseResponse", error: jsonifyError(e) }, "Transaction reverted.");
+                  await this.store.saveTransactionFailure(channelAddress, response!.hash, e.message);
+                  this.evts[ChainServiceEvents.TRANSACTION_FAILED].post({
+                    error: e,
+                    channelAddress,
+                    reason,
+                  });
+                  reject(Result.fail(e));
+                }
+              }
+            }
+          });
+        };
+
+        // add completed function
+        return Result.ok({
+          ...response,
+          completed,
+        });
+      });
       if (!response) {
         return Result.ok(response);
       }
-
-      // add completed function
-      return Result.ok({
-        ...response,
-        completed: async (confirmations?: number) => {
-          try {
-            const receipt = await response.wait(confirmations);
-            if (receipt.status === 0) {
-              return Result.fail(new ChainError(ChainError.reasons.TxReverted, { receipt }));
-            }
-            return Result.ok(receipt);
-          } catch (e) {
-            return Result.fail(new ChainError(e.message, { stack: e.stack, channelAddress, reason }));
-          }
-        },
-      });
+      return response;
     } catch (e) {
       // Don't save tx if it failed to submit, only if it fails to mine
       let error = e;
