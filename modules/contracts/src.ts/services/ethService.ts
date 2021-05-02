@@ -269,6 +269,12 @@ export class EthereumChainService extends EthereumChainReader implements IVector
     txFn: (gasPrice: BigNumber) => Promise<undefined | TransactionResponse>,
     presetGasPrice?: BigNumber,
   ): Promise<Result<TransactionResponseWithResult | undefined, ChainError>> {
+    const method = "sendTxAndParseResponse";
+    const methodId = getRandomBytes32();
+    const signer = this.signers.get(chainId);
+    if (!signer) {
+      return Result.fail(new ChainError(ChainError.reasons.SignerNotFound));
+    }
     try {
       // Get gas price if there is not a preset amount passed into this method.
       let gasPrice: BigNumber =
@@ -317,7 +323,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
                 const receipt = await this.waitForConfirmation(chainId, response!);
                 // Handle receipt / store updates to complete tx.
                 if (receipt.status === 0) {
-                  this.log.error({ method: "sendTxAndParseResponse", receipt }, "Transaction reverted.");
+                  this.log.error({ method, methodId, receipt }, "Transaction reverted.");
                   await this.store.saveTransactionFailure(channelAddress, response!.hash, "Tx reverted");
                   this.evts[ChainServiceEvents.TRANSACTION_FAILED].post({
                     receipt: Object.fromEntries(
@@ -350,16 +356,29 @@ export class EthereumChainService extends EthereumChainReader implements IVector
                 if (e.message === ChainError.retryableTxErrors.ConfirmationTimeout) {
                   // Scale up gas by percentage as specified by GAS_BUMP_PERCENT.
                   this.log.info(
-                    { channelAddress, reason },
+                    { channelAddress, reason, method, methodId },
                     "Tx timed out waiting for confirmation. Bumping gas price and reattempting.",
                   );
                   gasPrice = gasPrice.add(gasPrice.mul(GAS_BUMP_PERCENT));
 
-                  // TODO: resend exact same tx with the same nonce, overwrite the response in the DB
                   // make sure new gasPrice is being saved
+                  response = await signer.sendTransaction({
+                    to: response!.to,
+                    data: response!.data,
+                    value: response!.value,
+                    nonce: response!.nonce,
+                    gasPrice,
+                    gasLimit: response!.gasLimit,
+                  });
+                  await this.store.saveTransactionResponse(channelAddress, reason, response);
+                  this.log.info(
+                    { response, method, methodId },
+                    "Tx timed out waiting for confirmation. Bumping gas price and reattempting.",
+                  );
+                  // loop will continue monitoring new tx
                 } else {
                   // If we get any other error here, we classify this event as a tx failure and break out of the loop.
-                  this.log.error({ method: "sendTxAndParseResponse", error: jsonifyError(e) }, "Transaction reverted.");
+                  this.log.error({ method, methodId, error: jsonifyError(e) }, "Transaction reverted.");
                   await this.store.saveTransactionFailure(channelAddress, response!.hash, e.message);
                   this.evts[ChainServiceEvents.TRANSACTION_FAILED].post({
                     error: e,
@@ -389,7 +408,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
       if (e.message.includes("sender doesn't have enough funds")) {
         error = new ChainError(ChainError.reasons.NotEnoughFunds);
       } else {
-        this.log.error({ channelAddress, reason, error: jsonifyError(e) }, "Failed to do tx");
+        this.log.error({ method, methodId, channelAddress, reason, error: jsonifyError(e) }, "Failed to send tx");
       }
       return Result.fail(error);
     }
