@@ -149,6 +149,10 @@ export interface INodeService {
 
   syncDisputes(params: {}): Promise<Result<void, NodeError>>;
 
+  runAuction(
+    params: OptionalPublicIdentifier<NodeParams.RunAuction>,
+  ): Promise<Result<NodeResponses.RunAuction, NodeError>>;
+
   once<T extends EngineEvent>(
     event: T,
     callback: (payload: EngineEventMap[T]) => void | Promise<void>,

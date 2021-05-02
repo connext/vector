@@ -1,4 +1,12 @@
-import { IBasicMessaging, Result, RouterError, MessagingError, NodeResponses, NodeParams } from "@connext/vector-types";
+import {
+  IBasicMessaging,
+  Result,
+  RouterError,
+  MessagingError,
+  NodeResponses,
+  NodeParams,
+  EngineParams,
+} from "@connext/vector-types";
 import { NatsBasicMessagingService, MessagingConfig } from "@connext/vector-utils";
 import pino, { BaseLogger } from "pino";
 export interface IRouterMessagingService extends IBasicMessaging {
@@ -23,6 +31,16 @@ export interface IRouterMessagingService extends IBasicMessaging {
   respondToTransferQuoteMessage(
     inbox: string,
     response: Result<NodeResponses.TransferQuote, RouterError | MessagingError>,
+  ): Promise<void>;
+
+  onReceiveStartAuction(
+    publicIdentifier: string,
+    callback: (runAuction: Result<EngineParams.RunAuction, RouterError>, from: string, inbox: string) => void,
+  ): Promise<void>;
+
+  respondToAuctionMessage(
+    inbox: string,
+    response: Result<NodeResponses.RunAuction, RouterError | MessagingError>,
   ): Promise<void>;
 
   broadcastMetrics(publicIdentifier: string, metrics: string): Promise<void>;
@@ -68,6 +86,21 @@ export class NatsRouterMessagingService extends NatsBasicMessagingService implem
     ) => void,
   ): Promise<void> {
     await this.registerCallback(`${publicIdentifier}.*.transfer-quote`, callback, "onReceiveTransferQuoteMessage");
+  }
+  // Respond to Node Auctions
+
+  async onReceiveStartAuction(
+    publicIdentifier: string,
+    callback: (runAuction: Result<EngineParams.RunAuction, RouterError>, from: string, inbox: string) => void,
+  ): Promise<void> {
+    await this.registerCallback(`${publicIdentifier}.start-auction`, callback, "onReceiveStartAuction");
+  }
+
+  respondToAuctionMessage(
+    inbox: string,
+    response: Result<NodeResponses.RunAuction, RouterError | MessagingError>,
+  ): Promise<void> {
+    return this.respondToMessage(inbox, response, "respondToAuctionMessage");
   }
 
   async broadcastMetrics(publicIdentifier: string, metrics: string): Promise<void> {

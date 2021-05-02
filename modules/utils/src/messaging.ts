@@ -20,6 +20,7 @@ import {
   NATS_WS_URL,
   ConditionalTransferCreatedPayload,
   ConditionalTransferRoutingCompletePayload,
+  RunAuctionPayload,
 } from "@connext/vector-types";
 import axios, { AxiosResponse } from "axios";
 import pino, { BaseLogger } from "pino";
@@ -168,6 +169,13 @@ export class NatsBasicMessagingService implements IBasicMessaging {
     const toPublish = safeJsonStringify(data);
     this.log.debug({ subject, data }, `Publishing`);
     await this.connection!.publish(subject, toPublish);
+  }
+
+  public async publishUniqueInbox(subject: string, data: any, inbox: string): Promise<void> {
+    this.assertConnected();
+    const toPublish = safeJsonStringify(data);
+    this.log.debug({ subject, data, inbox }, `Publishing`);
+    await this.connection!.publish(subject, toPublish, inbox);
   }
 
   public async request(subject: string, timeout: number, data: any): Promise<any> {
@@ -640,4 +648,17 @@ export class NatsMessagingService extends NatsBasicMessagingService implements I
     );
   }
   ////////////
+  // AUCTION METHODS // placeholder
+
+  publishStartAuction(data: Result<EngineParams.RunAuction, NodeError>, from: string, inbox: string): Promise<void> {
+    return this.publishUniqueInbox(`${from}.start-auction`, safeJsonStringify(data.toJson()), inbox);
+  }
+
+  onReceiveAuctionMessage(
+    myPublicIdentifier: string,
+    callback: (runAuction: Result<NodeResponses.RunAuction, NodeError>, from: string, inbox: string) => void,
+  ): Promise<void> {
+    console.log("onReceiveAuctionMessage ======> ", `*.start-auction`);
+    return this.registerCallback(`${myPublicIdentifier}.start-auction`, callback, "onReceiveAuctionMessage");
+  }
 }

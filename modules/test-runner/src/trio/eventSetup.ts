@@ -12,6 +12,7 @@ import {
   ChannelDisputedPayload,
   ChannelDefundedPayload,
   ConditionalTransferRoutingCompletePayload,
+  RunAuctionPayload,
 } from "@connext/vector-types";
 
 import { env } from "../utils";
@@ -26,6 +27,7 @@ const withdrawalResolvedPath = "/withdrawal-resolved";
 const withdrawalReconciledPath = "/withdrawal-reconciled";
 const channelDisputedPath = "/channel-disputed";
 const channelDefundedPath = "/channel-defunded";
+const runAuctionPath = "/run-auction";
 export const carolEvts = {
   [EngineEvents.IS_ALIVE]: {},
   [EngineEvents.SETUP]: {},
@@ -58,6 +60,10 @@ export const carolEvts = {
   [EngineEvents.DEPOSIT_RECONCILED]: {
     evt: Evt.create<DepositReconciledPayload>(),
     url: `${serverBase}${depositReconciledPath}-carol`,
+  },
+  [EngineEvents.RUN_AUCTION_EVENT]: {
+    evt: Evt.create<RunAuctionPayload>(),
+    url: `${serverBase}${runAuctionPath}-carol`,
   },
   [ChainServiceEvents.TRANSACTION_SUBMITTED]: {},
   [ChainServiceEvents.TRANSACTION_MINED]: {},
@@ -106,6 +112,10 @@ export const daveEvts = {
   [EngineEvents.DEPOSIT_RECONCILED]: {
     evt: Evt.create<DepositReconciledPayload>(),
     url: `${serverBase}${depositReconciledPath}-dave`,
+  },
+  [EngineEvents.RUN_AUCTION_EVENT]: {
+    evt: Evt.create<RunAuctionPayload>(),
+    url: `${serverBase}${runAuctionPath}-dave`,
   },
   [ChainServiceEvents.TRANSACTION_SUBMITTED]: {},
   [ChainServiceEvents.TRANSACTION_MINED]: {},

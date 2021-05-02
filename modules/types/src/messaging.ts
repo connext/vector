@@ -1,5 +1,9 @@
 import { ChannelUpdate, FullChannelState, FullTransferState } from "./channel";
-import { ConditionalTransferCreatedPayload, ConditionalTransferRoutingCompletePayload } from "./engine";
+import {
+  ConditionalTransferCreatedPayload,
+  ConditionalTransferRoutingCompletePayload,
+  RunAuctionPayload,
+} from "./engine";
 import { EngineError, NodeError, MessagingError, ProtocolError, Result, RouterError, VectorError } from "./error";
 import { LockInformation } from "./lock";
 import { EngineParams, NodeResponses } from "./schemas";
@@ -183,5 +187,12 @@ export interface IMessagingService extends IBasicMessaging {
       from: string,
       inbox: string,
     ) => void,
+  ): Promise<void>;
+
+  publishStartAuction(data: Result<EngineParams.RunAuction, NodeError>, from: string, inbox: string): Promise<void>;
+
+  onReceiveAuctionMessage(
+    myPublicIdentifier: string,
+    callback: (runAuction: Result<NodeResponses.RunAuction, NodeError>, from: string, inbox: string) => void,
   ): Promise<void>;
 }
