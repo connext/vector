@@ -23,7 +23,7 @@ import { advanceBlocktime, getContract, createChannel } from "../../utils";
 
 import { EthereumChainService } from "../../services/ethService";
 
-describe("EthereumChainService", function () {
+describe("ethService integration", function () {
   this.timeout(120_000);
   const aliceSigner = new ChannelSigner(alice.privateKey);
   const bobSigner = new ChannelSigner(bob.privateKey);

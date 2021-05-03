@@ -87,7 +87,7 @@ const txReceipt: TransactionReceipt = {
 };
 
 const { log } = getTestLoggers("ethService");
-describe.only("ethService unit test", () => {
+describe("ethService unit test", () => {
   beforeEach(() => {
     // eth service deps
     storeMock = createStubInstance(MemoryStoreService);
