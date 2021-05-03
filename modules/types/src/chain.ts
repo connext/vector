@@ -65,6 +65,7 @@ export class ChainError extends VectorError {
     TxAlreadyMined: "Tranasction already mined",
     TxNotFound: "Transaction not found",
     TxReverted: "Transaction reverted on chain",
+    MaxGasPriceReached: "Max gas price reached",
   };
 
   // Errors you would see from trying to send a transaction, and
