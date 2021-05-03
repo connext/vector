@@ -420,7 +420,7 @@ describe.only("ethService unit test", () => {
     });
 
     it("errors if transaction is confirmed", async () => {
-      provider1337.getTransaction.resolves({ confirmations: 1 } as any);
+      stub(ethService, "getTxResponseFromHash").resolves(Result.ok({ response: txResponse, receipt: txReceipt }));
       const result = await ethService.speedUpTx(1337, minTx);
       assertResult(result, true, ChainError.reasons.TxAlreadyMined);
     });
