@@ -40,6 +40,7 @@ import { ChannelFactory, ChannelMastercopy, TransferDefinition, TransferRegistry
 import { Evt } from "evt";
 
 export const MinGasPrice = parseUnits("5", "gwei");
+export const BumpGasPrice = 30; // 30% bump gas price
 
 // https://github.com/rustwasm/wasm-bindgen/issues/700#issuecomment-419708471
 const execEvmBytecode = (bytecode: string, payload: string): Uint8Array =>
@@ -497,7 +498,7 @@ export class EthereumChainReader implements IVectorChainReader {
       if (!gasPrice) {
         try {
           gasPrice = await provider.getGasPrice();
-          gasPrice = gasPrice.add(gasPrice.mul(30).div(100))
+          gasPrice = gasPrice.add(gasPrice.mul(BumpGasPrice).div(100));
         } catch (e) {
           return Result.fail(e);
         }
