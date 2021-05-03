@@ -34,7 +34,7 @@ import { Wallet } from "@ethersproject/wallet";
 import { BaseLogger } from "pino";
 import PriorityQueue from "p-queue";
 import { AddressZero, HashZero } from "@ethersproject/constants";
-import { Evt } from "evt";
+import { Evt, throttleTime } from "evt";
 
 import { ChannelFactory, VectorChannel } from "../artifacts";
 
@@ -110,81 +110,92 @@ export class EthereumChainService extends EthereumChainReader implements IVector
 
   /// Check to see if any txs were left in an unfinished state. This should only execute on
   /// contructor / init.
-  private async revitalizeTxs() {
+  public async revitalizeTxs() {
     // Get all tx's from store that were left in submitted state. Resubmit them.
     const storedTransactions: StoredTransaction[] = await this.store.getActiveTransactions();
     // TODO: Should we filter out "stale" tx's (older than a specified elapsed time)?
     // RS: probably not
     for (const tx of storedTransactions) {
-      try {
-        const txResponse = await this.getTxResponseFromHash(tx.chainId, {
-          to: tx.to,
-          data: tx.data,
-          value: tx.value,
-          transactionHash: tx.transactionHash,
-          nonce: tx.nonce,
-        });
-        if (!txResponse) {
-          continue;
-        }
-        this.sendTxWithRetries(tx.to, tx.chainId, tx.reason, async () => {
-          const signer = this.getSigner(tx.chainId);
-          return signer.sendTransaction({
-            to: tx.to,
-            data: tx.data,
-            chainId: tx.chainId,
-            gasPrice: tx.gasPrice,
-            nonce: tx.nonce,
-            value: BigNumber.from(tx.value),
-          });
-        });
-      } catch (e) {
-        this.log.error({ method: "revitalizeTxs", e: jsonifyError(e), tx }, "Error revitalizing tx");
+      const txResponseRes = await this.getTxResponseFromHash(tx.chainId, {
+        to: tx.to,
+        data: tx.data,
+        value: tx.value,
+        transactionHash: tx.transactionHash,
+        nonce: tx.nonce,
+      });
+      if (txResponseRes.isError) {
+        this.log.error({ error: txResponseRes.getError(), tx }, "Error in getTxResponseFromHash");
         continue;
       }
+      const txResponse = txResponseRes.getValue();
+      if (txResponse.receipt) {
+        this.log.info({ txHash: txResponse.receipt.transactionHash }, "Tx mined, saving to db");
+        // receipt should be available
+        await this.store.saveTransactionReceipt(tx.channelAddress, txResponse.receipt);
+        continue;
+      }
+      this.sendTxWithRetries(tx.to, tx.chainId, tx.reason, async () => {
+        const signer = this.getSigner(tx.chainId);
+        if (!signer) {
+          throw new ChainError(ChainError.reasons.SignerNotFound, { chainId: tx.chainId });
+        }
+        return signer.sendTransaction({
+          to: tx.to,
+          data: tx.data,
+          chainId: tx.chainId,
+          gasPrice: tx.gasPrice,
+          nonce: tx.nonce,
+          value: BigNumber.from(tx.value),
+        });
+      });
     }
   }
 
   /// Helper method to grab signer from chain ID and check provider for a transaction.
   /// Returns the transaction if found.
   /// Throws ChainError if signer not found, tx not found, or tx already mined.
-  private async getTxResponseFromHash(
+  public async getTxResponseFromHash(
     chainId: number,
     tx: MinimalTransaction & { transactionHash: string; nonce: number },
-  ): Promise<TransactionResponse | null> {
-    const signer = this.getSigner(chainId);
+  ): Promise<Result<{ response?: TransactionResponse; receipt?: TransactionReceipt }, ChainError>> {
+    const provider = this.chainProviders[chainId];
+    if (!provider) {
+      return Result.fail(new ChainError(ChainError.reasons.ProviderNotFound, { chainId }));
+    }
 
-    let receipt: TransactionResponse | null;
     try {
-      receipt = await signer.provider!.getTransaction(tx.transactionHash);
+      const response = await provider.getTransaction(tx.transactionHash);
+      let receipt: TransactionReceipt | undefined;
+      if (response?.confirmations > 0) {
+        receipt = await provider.send("eth_getTransactionReceipt", [tx.transactionHash]);
+      }
+      return Result.ok({ response, receipt });
     } catch (e) {
-      throw new ChainError(ChainError.reasons.TxNotFound, { error: e.message, transactionHash: tx.transactionHash });
+      return Result.fail(
+        new ChainError(ChainError.reasons.TxNotFound, { error: e, transactionHash: tx.transactionHash }),
+      );
     }
-    if (receipt && receipt.confirmations > 0) {
-      throw new ChainError(ChainError.reasons.TxAlreadyMined, {
-        transactionHash: tx.transactionHash,
-        confirmations: receipt.confirmations,
-        blockNumber: receipt.blockNumber,
-      });
-    }
-    return receipt;
   }
 
-  async speedUpTx(
+  public async speedUpTx(
     chainId: number,
     tx: MinimalTransaction & { transactionHash: string; nonce: number },
   ): Promise<Result<TransactionReceipt, ChainError>> {
     const method = "speedUpTx";
     const methodId = getRandomBytes32();
     this.log.info({ method, methodId, transactionHash: tx.transactionHash }, "Method started");
-    let signer: Signer;
     let receipt: TransactionResponse | null;
-    try {
-      signer = this.getSigner(chainId);
-      // Make sure tx is not mined already
-      receipt = await this.getTxResponseFromHash(chainId, tx);
-    } catch (e) {
-      return Result.fail(e);
+    const signer = this.getSigner(chainId);
+    if (!signer) {
+      return Result.fail(new ChainError(ChainError.reasons.SignerNotFound, { chainId }));
+    }
+    // Make sure tx is not mined already
+    const getTxRes = await this.getTxResponseFromHash(chainId, tx);
+    if (getTxRes.isError) {
+      return Result.fail(getTxRes.getError()!);
+    }
+    if (getTxRes.getValue().receipt) {
+      return Result.fail(new ChainError(ChainError.reasons.TxAlreadyMined));
     }
 
     // Safe to retry sending
