@@ -159,8 +159,4 @@ describe("ethService integration", function () {
     const res = await bobChainService.sendDefundTransferTx(transferState);
     expect(res.getValue()).to.be.ok;
   });
-
-  describe("revitalizeTxs", () => {
-    it("should start monitoring active txs", async () => {});
-  });
 });
