@@ -1,4 +1,3 @@
-import * as merkle from "@connext/vector-merkle-tree";
 import {
   ChannelUpdate,
   ChannelUpdateEvent,
@@ -20,11 +19,8 @@ import {
   ProtocolError,
   jsonifyError,
   Values,
-  ResolveUpdateDetails,
-  CreateUpdateDetails,
 } from "@connext/vector-types";
-import { encodeCoreTransferState, getTransferId } from "@connext/vector-utils";
-import { generateMerkleRoot, getCreate2MultisigAddress, getRandomBytes32 } from "@connext/vector-utils";
+import { getCreate2MultisigAddress, getRandomBytes32 } from "@connext/vector-utils";
 import { Evt } from "evt";
 import pino from "pino";
 
