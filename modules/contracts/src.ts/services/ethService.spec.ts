@@ -5,6 +5,7 @@ import {
   IChannelSigner,
   MinimalTransaction,
   Result,
+  StoredTransaction,
   TransactionReason,
   TransactionResponseWithResult,
 } from "@connext/vector-types";
@@ -672,6 +673,33 @@ describe.only("ethService unit test", () => {
   });
 
   describe("revitalizeTxs", () => {
-    it("should start monitoring active txs", async () => {});
+    it("should resubmit and monitor active txs", async () => {
+      const storedTx: StoredTransaction = {
+        ...txResponse,
+        channelAddress: mkAddress("0xa"),
+        reason: "allowance",
+        status: "submitted",
+        to: mkAddress(),
+        transactionHash: txResponse.hash,
+        value: txResponse.value.toString(),
+        gasLimit: txResponse.gasLimit.toString(),
+        gasPrice: txResponse.gasPrice.toString(),
+      };
+
+      const storedTxs = [storedTx, storedTx, storedTx, storedTx];
+      storeMock.getActiveTransactions.resolves(storedTxs);
+
+      const getTxResponseFromHash = stub(ethService, "getTxResponseFromHash");
+      getTxResponseFromHash.onFirstCall().resolves(Result.fail(new ChainError(ChainError.reasons.TxNotFound))); // first one errors, should be skipped
+      getTxResponseFromHash.onSecondCall().resolves(Result.ok({ response: txResponse, receipt: txReceipt })); // second one has a receipt, needs to be saved
+      getTxResponseFromHash.onThirdCall().resolves(Result.ok({ response: txResponse })); // 3rd and 4th need to be resubmitted
+      getTxResponseFromHash.resolves(Result.ok({ response: txResponse }));
+
+      const sendTxWithRetries = stub(ethService, "sendTxWithRetries").resolves(Result.ok(txReceipt));
+
+      await ethService.revitalizeTxs();
+      expect(storeMock.saveTransactionReceipt.callCount).to.eq(1);
+      expect(sendTxWithRetries.callCount).to.eq(2);
+    });
   });
 });
