@@ -5,10 +5,8 @@ import {
   NodeResponses,
   IVectorChainReader,
   jsonifyError,
-  getConfirmationsForChain,
 } from "@connext/vector-types";
 import { getBalanceForAssetId, getRandomBytes32, getParticipant } from "@connext/vector-utils";
-import { waitForTransaction } from "@connext/vector-contracts";
 import { getAddress } from "@ethersproject/address";
 import { BigNumber } from "@ethersproject/bignumber";
 import { BaseLogger } from "pino";
@@ -16,7 +14,6 @@ import { BaseLogger } from "pino";
 import { CollateralError } from "../errors";
 
 import { getRebalanceProfile } from "./config";
-import { Zero } from "@ethersproject/constants";
 
 /**
  * This function should be called before a transfer is created/forwarded.
