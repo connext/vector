@@ -136,10 +136,6 @@ export class BrowserStore implements IEngineStore, IChainServiceStore {
     this.db = new VectorIndexedDBDatabase(dbName, indexedDB, idbKeyRange);
   }
 
-  getActiveTransactions(): Promise<StoredTransaction[]> {
-    throw new Error("Method not implemented.");
-  }
-
   public static async create(
     publicIdentifer: string,
     log: BaseLogger,
@@ -311,6 +307,13 @@ export class BrowserStore implements IEngineStore, IChainServiceStore {
 
     const transfers = await collection.toArray();
     return transfers.map(storedTransferToTransferState);
+  }
+
+  async getActiveTransactions(): Promise<StoredTransaction[]> {
+    const tx = await this.db.transactions.filter(tx => {
+      return !!tx.transactionHash && !tx.blockHash && !tx.gasUsed
+    }).toArray();
+    return tx;
   }
 
   async saveTransactionResponse(
