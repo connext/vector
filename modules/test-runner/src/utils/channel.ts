@@ -413,13 +413,10 @@ export const disputeChannel = async (
 
   const disputeRes = await disputer.sendDisputeChannelTx({ channelAddress });
   expect(disputeRes.isError).to.be.false;
-  const [transaction] = await Promise.all([
-    waitForTransaction(provider, disputeRes.getValue().transactionHash),
-    delay(8_000),
-  ]);
 
   // Verify stored disputes
-  const block = await provider.getBlock(transaction.getValue().blockNumber);
+  const tx = await provider.getTransactionReceipt(disputeRes.getValue().transactionHash);
+  const block = await provider.getBlock(tx.blockNumber);
   const [disputerRecord, counterpartyRecord] = await Promise.all([
     disputer.getChannelDispute({ channelAddress }),
     counterparty.getChannelDispute({ channelAddress }),
@@ -447,24 +444,15 @@ export const disputeChannel = async (
   // expect(counterpartyChannel.getValue()?.inDispute).to.be.true;
 };
 
-export const defundChannel = async (
-  defunder: INodeService,
-  channelAddress: string,
-  provider: providers.JsonRpcProvider,
-) => {
+export const defundChannel = async (defunder: INodeService, channelAddress: string) => {
   const defundRes = await defunder.sendDefundChannelTx({ channelAddress });
   expect(defundRes.isError).to.be.false;
-  const [transaction] = await Promise.all([
-    waitForTransaction(provider, defundRes.getValue().transactionHash),
-    delay(5_000),
-  ]);
 
   // Verify event payload
   const channel = (await defunder.getStateChannel({ channelAddress })).getValue()!;
   expect(channel).to.be.ok;
   const dispute = await defunder.getChannelDispute({ channelAddress });
   expect(dispute.getValue()).to.be.ok;
-  expect(transaction.isError).to.be.false;
 };
 
 export const exitAssets = async (
@@ -500,10 +488,6 @@ export const exitAssets = async (
     expect(result.transactionHash).to.be.ok;
     expect(result.assetId).to.be.eq(assetIds[idx]);
     expect(result.error).to.be.undefined;
-  });
-  const txs = await Promise.all(results.map((r) => waitForTransaction(provider, r.transactionHash!)));
-  txs.map((tx) => {
-    expect(tx.isError).to.be.false;
   });
 
   const recipientPostExit = await Promise.all(
