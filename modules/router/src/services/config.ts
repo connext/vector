@@ -164,10 +164,21 @@ export const onSwapGivenIn = async (
   const fromMappedAssets = getMappedAssets(fromAssetId, fromChainId);
   const toMappedAssets = getMappedAssets(toAssetId, toChainId);
   const mappedAssets = fromMappedAssets.concat(toMappedAssets);
-  const uniqueMappedAssets = Array.from(new Set(mappedAssets));
+  const uniqueMappedAssets = Array.from(new Set(mappedAssets.map((s) => `${s.assetId}:${s.chainId}`))).map((x) => {
+    return mappedAssets.find((z) => z.assetId === x.split(":")[0] && z.chainId === Number(x.split(":")[1])!);
+  });
+  logger.info(
+    {
+      stableAmmAddress,
+      stableAmmChainId: getConfig().stableAmmChainId,
+      transferAmount: transferAmount.toString(),
+      uniqueMappedAssets,
+    },
+    "Get Mapped Assets",
+  );
 
   let balances = [];
-  for (var val of uniqueMappedAssets) {
+  for (const val of uniqueMappedAssets) {
     let assetId = val.assetId;
     let chainId = val.chainId;
     let onChainRouterBalance = await chainReader.getOnchainBalance(assetId, routerSignerAddress, chainId);
@@ -186,10 +197,10 @@ export const onSwapGivenIn = async (
 
   try {
     const fromAssetIdx = uniqueMappedAssets.findIndex(
-      (asset) => asset.assetId === fromAssetId && asset.chainId === fromChainId,
+      (s) => s.assetId === fromAssetId && s.chainId === fromChainId,
     );
     const toAssetIdx = uniqueMappedAssets.findIndex(
-      (asset) => asset.assetId === toAssetId && asset.chainId === toChainId,
+      (s) => s.assetId === toAssetId && s.chainId === toChainId,
     );
     const stableSwap = new Contract(stableAmmAddress, StableSwap.abi, stableAmmProvider);
     logger.info(
