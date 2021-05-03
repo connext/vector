@@ -358,6 +358,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
             try {
               // Wait for confirmation.
               this.log.info({ tryNumber }, "Waiting for tx");
+              tryNumber += 1;
               const receipt = await this.waitForConfirmation(chainId, response!);
               // Handle receipt / store updates to complete tx.
               if (receipt.status === 0) {
