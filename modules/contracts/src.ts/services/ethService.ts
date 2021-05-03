@@ -341,6 +341,8 @@ export class EthereumChainService extends EthereumChainReader implements IVector
         });
 
         // completed callback should always return a receipt and abstract the waiting and bumping of gas prices
+
+        // use a promise here so that the whole confirmation is not held up in the queue
         const completed = new Promise<TransactionReceipt>(async (resolve, reject) => {
           while (gasPrice < BIG_GAS_LIMIT) {
             try {
@@ -373,6 +375,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
               }
               // Break out of the loop here, as the tx has been completed.
               resolve(receipt);
+              break;
             } catch (e) {
               // TODO: Maybe it would be more robust to have waitForConfirmation return undefined or something
               // specific in the event of timeout, as opposed to using error comparison?
@@ -411,6 +414,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
                   reason,
                 });
                 reject(e);
+                break;
               }
             }
           }
@@ -424,6 +428,10 @@ export class EthereumChainService extends EthereumChainReader implements IVector
       }
 
       const receipt = await queuedResponse.completed;
+      console.log("queuedResponse.completed receipt: ", receipt);
+      if (receipt.status === 0) {
+        return Result.fail(new ChainError(ChainError.reasons.TxReverted, { receipt, method, methodId }));
+      }
       return Result.ok(receipt);
     } catch (e) {
       // Don't save tx if it failed to submit, only if it fails to mine
@@ -437,7 +445,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
     }
   }
 
-  private async waitForConfirmation(chainId: number, response: TransactionResponse): Promise<TransactionReceipt> {
+  public async waitForConfirmation(chainId: number, response: TransactionResponse): Promise<TransactionReceipt> {
     const provider: JsonRpcProvider = this.chainProviders[chainId];
     if (!provider) {
       throw new ChainError(ChainError.reasons.ProviderNotFound);

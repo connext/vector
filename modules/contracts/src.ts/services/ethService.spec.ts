@@ -19,7 +19,7 @@ import {
   mkHash,
 } from "@connext/vector-utils";
 import { AddressZero, One, Zero } from "@ethersproject/constants";
-import { JsonRpcProvider, TransactionReceipt } from "@ethersproject/providers";
+import { JsonRpcProvider, TransactionReceipt, TransactionResponse } from "@ethersproject/providers";
 import { BigNumber } from "ethers";
 import { restore, reset, createStubInstance, SinonStubbedInstance, stub, SinonStub } from "sinon";
 
@@ -35,6 +35,7 @@ let sendTxWithRetriesMock: SinonStub;
 let approveMock: SinonStub;
 let getCodeMock: SinonStub;
 let getOnchainBalanceMock: SinonStub;
+let waitForConfirmation: SinonStub<[chainId: number, response: TransactionResponse], Promise<TransactionReceipt>>;
 
 let channelState: FullChannelState;
 
@@ -72,19 +73,14 @@ const txReceipt: TransactionReceipt = {
   confirmations: 1,
   contractAddress: mkAddress("0xa"),
   cumulativeGasUsed: BigNumber.from(21000),
-  from: mkAddress("0xaaa"),
+  from: _txResponse.from,
   gasUsed: BigNumber.from(21000),
   logs: [],
   logsBloom: "0x",
   to: mkAddress("0xbbb"),
-  transactionHash: mkHash("0xaaa"),
+  transactionHash: _txResponse.hash,
   transactionIndex: 1,
   status: 1,
-};
-
-const txResponse: TransactionResponseWithResult = {
-  ..._txResponse,
-  completed: () => Promise.resolve(Result.ok({} as any)),
 };
 
 const { log } = getTestLoggers("ethService");
@@ -118,6 +114,7 @@ describe.only("ethService unit test", () => {
     getCodeMock = stub(ethService, "getCode").resolves(Result.ok("0x"));
     approveMock = stub(ethService, "approveTokens").resolves(Result.ok(txReceipt));
     getOnchainBalanceMock = stub(ethService, "getOnchainBalance").resolves(Result.ok(BigNumber.from("100")));
+    stub(ethService, "getGasPrice").resolves(Result.ok(One));
 
     // channel state
     const test = createTestChannelState("create");
@@ -204,7 +201,7 @@ describe.only("ethService unit test", () => {
 
     it("happy: alice can deploy channel without deposit", async () => {
       const result = await ethService.sendDeployChannelTx(channelState);
-      assertResult(result, false, txResponse);
+      assertResult(result, false, txReceipt);
       const call = sendTxWithRetriesMock.getCall(0);
       expect(call.args[0]).to.eq(channelState.channelAddress);
       expect(call.args[1]).to.eq(channelState.networkContext.chainId);
@@ -214,7 +211,7 @@ describe.only("ethService unit test", () => {
     it("happy: bob can deploy channel without deposit", async () => {
       signer.getAddress.resolves(channelState.bob);
       const result = await ethService.sendDeployChannelTx(channelState);
-      assertResult(result, false, txResponse);
+      assertResult(result, false, txReceipt);
       const call = sendTxWithRetriesMock.getCall(0);
       expect(call.args[0]).to.eq(channelState.channelAddress);
       expect(call.args[1]).to.eq(channelState.networkContext.chainId);
@@ -226,7 +223,7 @@ describe.only("ethService unit test", () => {
         amount: "1",
         assetId: AddressZero,
       });
-      assertResult(result, false, txResponse);
+      assertResult(result, false, txReceipt);
       const call = sendTxWithRetriesMock.getCall(0);
       expect(call.args[0]).to.eq(channelState.channelAddress);
       expect(call.args[1]).to.eq(channelState.networkContext.chainId);
@@ -284,14 +281,8 @@ describe.only("ethService unit test", () => {
       assertResult(result, true, ChainError.reasons.FailedToDeploy);
     });
 
-    it("errors if deploy tx receipt is status = 0", async () => {
-      sendDeployChannelTxMock.resolves(Result.ok({ ...txResponse, wait: () => Promise.resolve({ status: 0 }) }));
-      const result = await ethService.sendWithdrawTx(channelState, minTx);
-      assertResult(result, true, ChainError.reasons.TxReverted);
-    });
-
     it("errors if deploy tx throws an error", async () => {
-      sendDeployChannelTxMock.resolves(Result.ok({ ...txResponse, wait: () => Promise.reject("Booo") }));
+      sendDeployChannelTxMock.resolves(Result.fail(new ChainError(ChainError.reasons.TxReverted)));
       const result = await ethService.sendWithdrawTx(channelState, minTx);
       assertResult(result, true, ChainError.reasons.FailedToDeploy);
     });
@@ -300,14 +291,14 @@ describe.only("ethService unit test", () => {
       getCodeMock.resolves(Result.ok(mkHash("0xabc")));
       const result = await ethService.sendWithdrawTx(channelState, minTx);
       expect(sendDeployChannelTxMock.callCount).to.eq(0);
-      assertResult(result, false, txResponse);
+      assertResult(result, false, txReceipt);
     });
 
     it("happy: if channel is not deployed, deploy channel then send withdrawal tx", async () => {
       const result = await ethService.sendWithdrawTx(channelState, minTx);
       expect(sendDeployChannelTxMock.callCount).to.eq(1);
       expect(sendDeployChannelTxMock.getCall(0).firstArg).to.deep.eq(channelState);
-      assertResult(result, false, txResponse);
+      assertResult(result, false, txReceipt);
     });
   });
 
@@ -361,7 +352,7 @@ describe.only("ethService unit test", () => {
 
     it("happy: alice deploys channel with deposit if not deployed", async () => {
       const result = await ethService.sendDepositTx(channelState, channelState.alice, "1", AddressZero);
-      assertResult(result, false, txResponse);
+      assertResult(result, false, txReceipt);
       expect(sendDeployChannelTxMock.callCount).to.eq(1);
       const call = sendDeployChannelTxMock.getCall(0);
       expect(call.args[0]).to.deep.eq(channelState);
@@ -371,7 +362,7 @@ describe.only("ethService unit test", () => {
     it("happy: alice calls sendDepositATx if multisig is deployed", async () => {
       getCodeMock.resolves(Result.ok(mkHash("0xabc")));
       const result = await ethService.sendDepositTx(channelState, channelState.alice, "1", AddressZero);
-      assertResult(result, false, txResponse);
+      assertResult(result, false, txReceipt);
       expect(sendDepositATxMock.callCount).to.eq(1);
       const call = sendDepositATxMock.getCall(0);
       expect(call.args[0]).to.deep.eq(channelState);
@@ -382,7 +373,7 @@ describe.only("ethService unit test", () => {
     it("happy: bob calls sendDepositBTx if multisig is deployed", async () => {
       getCodeMock.resolves(Result.ok(mkHash("0xabc")));
       const result = await ethService.sendDepositTx(channelState, channelState.bob, "1", AddressZero);
-      assertResult(result, false, txResponse);
+      assertResult(result, false, txReceipt);
       expect(sendDepositBTxMock.callCount).to.eq(1);
       const call = sendDepositBTxMock.getCall(0);
       expect(call.args[0]).to.deep.eq(channelState);
@@ -392,7 +383,7 @@ describe.only("ethService unit test", () => {
 
     it("happy: bob calls sendDepositBTx if multisig is not deployed", async () => {
       const result = await ethService.sendDepositTx(channelState, channelState.bob, "1", AddressZero);
-      assertResult(result, false, txResponse);
+      assertResult(result, false, txReceipt);
       expect(sendDepositBTxMock.callCount).to.eq(1);
       const call = sendDepositBTxMock.getCall(0);
       expect(call.args[0]).to.deep.eq(channelState);
@@ -434,7 +425,7 @@ describe.only("ethService unit test", () => {
     it("happy: speeds up tx", async () => {
       provider1337.getTransaction.resolves({ confirmations: 0 } as any);
       const result = await ethService.speedUpTx(1337, minTx);
-      assertResult(result, false, txResponse);
+      assertResult(result, false, txReceipt);
       expect(sendTxWithRetriesMock.callCount).to.eq(1);
       const call = sendTxWithRetriesMock.getCall(0);
       expect(call.args[0]).to.eq(minTx.to);
@@ -444,14 +435,14 @@ describe.only("ethService unit test", () => {
   });
 
   describe("sendTxWithRetries", () => {
-    let sendTxAndParseResponseMock: SinonStub;
+    let sendAndConfirmTx: SinonStub;
 
     beforeEach(() => {
-      sendTxAndParseResponseMock = stub(ethService, "sendAndConfirmTx").resolves(Result.ok(txReceipt));
+      sendAndConfirmTx = stub(ethService, "sendAndConfirmTx").resolves(Result.ok(txReceipt));
     });
 
     it("errors if sendTxAndParseResponse errors", async () => {
-      sendTxAndParseResponseMock.resolves(Result.fail(new ChainError(ChainError.reasons.NotEnoughFunds)));
+      sendAndConfirmTx.resolves(Result.fail(new ChainError(ChainError.reasons.NotEnoughFunds)));
       const result = await ethService.sendTxWithRetries(
         channelState.channelAddress,
         channelState.networkContext.chainId,
@@ -464,7 +455,7 @@ describe.only("ethService unit test", () => {
     });
 
     it("retries if it's a retryable error", async () => {
-      sendTxAndParseResponseMock
+      sendAndConfirmTx
         .onFirstCall()
         .resolves(
           Result.fail(
@@ -474,7 +465,7 @@ describe.only("ethService unit test", () => {
           ),
         );
 
-      sendTxAndParseResponseMock.resolves(Result.ok(txResponse));
+      sendAndConfirmTx.resolves(Result.ok(txReceipt));
       const result = await ethService.sendTxWithRetries(
         channelState.channelAddress,
         channelState.networkContext.chainId,
@@ -483,7 +474,7 @@ describe.only("ethService unit test", () => {
           return Promise.resolve(_txResponse);
         },
       );
-      assertResult(result, false, txResponse);
+      assertResult(result, false, txReceipt);
     });
 
     it("happy: should work when sendTxAndParseResponse works on the first try", async () => {
@@ -495,28 +486,32 @@ describe.only("ethService unit test", () => {
           return Promise.resolve(_txResponse);
         },
       );
-      assertResult(result, false, txResponse);
+      assertResult(result, false, txReceipt);
     });
   });
 
-  describe("sendAndConfirmTx", () => {
+  describe.only("sendAndConfirmTx", () => {
+    beforeEach(() => {
+      waitForConfirmation = stub(ethService, "waitForConfirmation");
+    });
     it("if txFn returns undefined, returns undefined", async () => {
       const result = await ethService.sendAndConfirmTx(
         AddressZero,
-        111,
+        1337,
         "allowance",
         async () => {
           return undefined;
         },
         BigNumber.from(10_000),
       );
+      console.log("result: ", result);
       assertResult(result, false, undefined);
     });
 
     it("if txFn errors, returns error", async () => {
       const result = await ethService.sendAndConfirmTx(
         AddressZero,
-        111,
+        1337,
         "allowance",
         async () => {
           throw new Error("Boooo");
@@ -529,7 +524,7 @@ describe.only("ethService unit test", () => {
     it("if txFn errors, with not enough funds, return special error", async () => {
       const result = await ethService.sendAndConfirmTx(
         AddressZero,
-        111,
+        1337,
         "allowance",
         async () => {
           throw new Error("sender doesn't have enough funds");
@@ -540,52 +535,42 @@ describe.only("ethService unit test", () => {
     });
 
     it("if receipt status == 0, saves response with error", async () => {
-      const t = {
-        ..._txResponse,
-        wait: async () => {
-          return { status: 0 };
-        },
-      } as any;
-      const result = await ethService.sendAndConfirmTx(AddressZero, 111, "allowance", async () => {
-        return t;
+      waitForConfirmation.resolves({ ...txReceipt, status: 0 });
+      const result = await ethService.sendAndConfirmTx(AddressZero, 1337, "allowance", async () => {
+        return _txResponse;
       });
       expect(storeMock.saveTransactionResponse.callCount).eq(1);
       const saveTransactionResponseCall = storeMock.saveTransactionResponse.getCall(0);
       expect(saveTransactionResponseCall.args[0]).eq(AddressZero);
       expect(saveTransactionResponseCall.args[1]).eq("allowance");
-      expect(saveTransactionResponseCall.args[2]).deep.eq(t);
+      expect(saveTransactionResponseCall.args[2]).deep.eq(_txResponse);
 
       expect(storeMock.saveTransactionFailure.callCount).eq(1);
       const saveTransactionFailureCall = storeMock.saveTransactionFailure.getCall(0);
       expect(saveTransactionFailureCall.args[0]).eq(AddressZero);
-      expect(saveTransactionFailureCall.args[1]).eq(t.hash);
+      expect(saveTransactionFailureCall.args[1]).eq(_txResponse.hash);
       expect(saveTransactionFailureCall.args[2]).eq("Tx reverted");
-      assertResult(result, false);
+      assertResult(result, true, ChainError.reasons.TxReverted);
     });
 
     it("if receipt wait fn errors, saves response with error", async () => {
-      const t = {
-        ..._txResponse,
-        wait: async () => {
-          throw new Error("Booooo");
-        },
-      } as any;
-      const result = await ethService.sendAndConfirmTx(AddressZero, 111, "allowance", async () => {
-        return t;
+      const error = new Error("Booooo");
+      waitForConfirmation.rejects(error);
+      const result = await ethService.sendAndConfirmTx(AddressZero, 1337, "allowance", async () => {
+        return _txResponse;
       });
       expect(storeMock.saveTransactionResponse.callCount).eq(1);
       const saveTransactionResponseCall = storeMock.saveTransactionResponse.getCall(0);
       expect(saveTransactionResponseCall.args[0]).eq(AddressZero);
       expect(saveTransactionResponseCall.args[1]).eq("allowance");
-      expect(saveTransactionResponseCall.args[2]).deep.eq(t);
-      assertResult(result, false);
+      expect(saveTransactionResponseCall.args[2]).deep.eq(_txResponse);
 
       expect(storeMock.saveTransactionFailure.callCount).eq(1);
       const saveTransactionFailureCall = storeMock.saveTransactionFailure.getCall(0);
       expect(saveTransactionFailureCall.args[0]).eq(AddressZero);
-      expect(saveTransactionFailureCall.args[1]).eq(t.hash);
+      expect(saveTransactionFailureCall.args[1]).eq(_txResponse.hash);
       expect(saveTransactionFailureCall.args[2]).eq("Booooo");
-      assertResult(result, false);
+      assertResult(result, true, "Booooo");
     });
 
     it("happy: saves responses", async () => {
