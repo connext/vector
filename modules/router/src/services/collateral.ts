@@ -376,33 +376,8 @@ export const requestCollateral = async (
         ),
       );
     }
-
-    const tx = txRes.getValue();
-    logger.info({ method, methodId, txHash: tx.txHash }, "Submitted deposit tx");
-    const receipt = await waitForTransaction(
-      provider,
-      tx.txHash,
-      getConfirmationsForChain(channel.networkContext.chainId),
-      // IFF non-mainnet, shouldnt take longer than 5min
-      channel.networkContext.chainId === 1 ? undefined : 600_000,
-    );
-    if (receipt.isError) {
-      return Result.fail(
-        new CollateralError(
-          CollateralError.reasons.UnableToCollateralize,
-          channel.channelAddress,
-          assetId,
-          profile,
-          requestedAmount,
-          {
-            error: jsonifyError(receipt.getError()!),
-            transactionHash: tx.txHash,
-          },
-        ),
-      );
-    }
-    logger.info({ method, methodId, txHash: tx.txHash }, "Tx mined");
-    logger.debug({ method, methodId, txHash: tx.txHash, logs: receipt.getValue().logs }, "Tx mined");
+    const receipt = txRes.getValue();
+    logger.info({ method, methodId, txHash: receipt.txHash }, "Tx mined");
   } else {
     logger.info(
       {
