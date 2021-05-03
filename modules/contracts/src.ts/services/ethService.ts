@@ -100,11 +100,8 @@ export class EthereumChainService extends EthereumChainReader implements IVector
     this.revitalizeTxs();
   }
 
-  private getSigner(chainId: number): Signer {
+  private getSigner(chainId: number): Signer | undefined {
     const signer = this.signers.get(chainId);
-    if (!signer?._isSigner) {
-      throw new ChainError(ChainError.reasons.SignerNotFound);
-    }
     return signer;
   }
 
