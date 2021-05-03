@@ -39,8 +39,8 @@ import pino from "pino";
 import { ChannelFactory, ChannelMastercopy, TransferDefinition, TransferRegistry, VectorChannel } from "../artifacts";
 import { Evt } from "evt";
 
-export const MinGasPrice = parseUnits("5", "gwei");
-export const BumpGasPrice = 30; // 30% bump gas price
+export const MIN_GAS_PRICE = parseUnits("5", "gwei");
+export const BUMP_GAS_PRICE = 30; // 30% bump gas price
 
 // https://github.com/rustwasm/wasm-bindgen/issues/700#issuecomment-419708471
 const execEvmBytecode = (bytecode: string, payload: string): Uint8Array =>
@@ -498,13 +498,13 @@ export class EthereumChainReader implements IVectorChainReader {
       if (!gasPrice) {
         try {
           gasPrice = await provider.getGasPrice();
-          gasPrice = gasPrice.add(gasPrice.mul(BumpGasPrice).div(100));
+          gasPrice = gasPrice.add(gasPrice.mul(BUMP_GAS_PRICE).div(100));
         } catch (e) {
           return Result.fail(e);
         }
       }
-      if (gasPrice.lt(MinGasPrice)) {
-        gasPrice = BigNumber.from(MinGasPrice);
+      if (gasPrice.lt(MIN_GAS_PRICE)) {
+        gasPrice = BigNumber.from(MIN_GAS_PRICE);
       }
       return Result.ok(gasPrice);
     });

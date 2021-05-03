@@ -5,7 +5,7 @@ import { AddressZero, One, Zero } from "@ethersproject/constants";
 import { parseUnits } from "@ethersproject/units";
 import { restore, reset, createStubInstance, SinonStubbedInstance } from "sinon";
 
-import { EthereumChainReader, MinGasPrice, BumpGasPrice } from "./ethReader";
+import { EthereumChainReader, MIN_GAS_PRICE, BUMP_GAS_PRICE } from "./ethReader";
 
 let ethReader: EthereumChainReader;
 let channelState: FullChannelState;
@@ -245,7 +245,7 @@ describe("ethReader", () => {
 
       console.log(res.getValue().toString());
       assertResult(res, false);
-      expect(res.getValue()).to.be.eq(MinGasPrice);
+      expect(res.getValue()).to.be.eq(MIN_GAS_PRICE);
     });
 
     it("happy: getGasPrice, gasPrice > minGasPrice", async () => {
@@ -255,8 +255,8 @@ describe("ethReader", () => {
 
       console.log(res.getValue().toString());
       assertResult(res, false);
-      expect(res.getValue()).to.be.gt(MinGasPrice);
-      expect(res.getValue()).to.be.eq(_gasPrice.add(_gasPrice.mul(BumpGasPrice).div(100)));
+      expect(res.getValue()).to.be.gt(MIN_GAS_PRICE);
+      expect(res.getValue()).to.be.eq(_gasPrice.add(_gasPrice.mul(BUMP_GAS_PRICE).div(100)));
     });
   });
   describe("estimateGas", () => {});
