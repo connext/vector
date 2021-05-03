@@ -21,9 +21,10 @@ import {
 import { AddressZero, One, Zero } from "@ethersproject/constants";
 import { JsonRpcProvider, TransactionReceipt, TransactionResponse } from "@ethersproject/providers";
 import { BigNumber } from "ethers";
+import { parseUnits } from "ethers/lib/utils";
 import { restore, reset, createStubInstance, SinonStubbedInstance, stub, SinonStub } from "sinon";
 
-import { EthereumChainService } from "./ethService";
+import { BIG_GAS_PRICE, EthereumChainService } from "./ethService";
 
 let storeMock: SinonStubbedInstance<IChainServiceStore>;
 let signer: SinonStubbedInstance<IChannelSigner>;
@@ -36,6 +37,7 @@ let approveMock: SinonStub;
 let getCodeMock: SinonStub;
 let getOnchainBalanceMock: SinonStub;
 let waitForConfirmation: SinonStub<[chainId: number, response: TransactionResponse], Promise<TransactionReceipt>>;
+let getGasPrice: SinonStub<[chainId: number], Promise<Result<BigNumber, ChainError>>>;
 
 let channelState: FullChannelState;
 
@@ -114,7 +116,7 @@ describe.only("ethService unit test", () => {
     getCodeMock = stub(ethService, "getCode").resolves(Result.ok("0x"));
     approveMock = stub(ethService, "approveTokens").resolves(Result.ok(txReceipt));
     getOnchainBalanceMock = stub(ethService, "getOnchainBalance").resolves(Result.ok(BigNumber.from("100")));
-    stub(ethService, "getGasPrice").resolves(Result.ok(One));
+    getGasPrice = stub(ethService, "getGasPrice").resolves(Result.ok(parseUnits("1", "gwei")));
 
     // channel state
     const test = createTestChannelState("create");
@@ -494,6 +496,7 @@ describe.only("ethService unit test", () => {
     beforeEach(() => {
       waitForConfirmation = stub(ethService, "waitForConfirmation");
     });
+
     it("if txFn returns undefined, returns undefined", async () => {
       const result = await ethService.sendAndConfirmTx(
         AddressZero,
@@ -573,6 +576,60 @@ describe.only("ethService unit test", () => {
       assertResult(result, true, "Booooo");
     });
 
+    it("retries transaction with higher gas price", async () => {
+      const newTx = { ..._txResponse, hash: mkHash("0xddd") }; // change hash to simulate higher gas and new hash
+      const newReceipt = { ...txReceipt, transactionHash: newTx.hash };
+      waitForConfirmation.onFirstCall().rejects(new ChainError(ChainError.retryableTxErrors.ConfirmationTimeout));
+      signer.sendTransaction.resolves(newTx); // new tx with higher gas
+      waitForConfirmation.onSecondCall().resolves(newReceipt);
+
+      const result = await ethService.sendAndConfirmTx(AddressZero, 1337, "allowance", async () => {
+        return _txResponse;
+      });
+
+      expect(storeMock.saveTransactionResponse.callCount).eq(2);
+      const saveTransactionResponseCall = storeMock.saveTransactionResponse.getCall(0);
+      expect(saveTransactionResponseCall.args[0]).eq(AddressZero);
+      expect(saveTransactionResponseCall.args[1]).eq("allowance");
+      expect(saveTransactionResponseCall.args[2]).deep.eq(_txResponse);
+
+      const saveTransactionResponseCall2 = storeMock.saveTransactionResponse.getCall(1);
+      expect(saveTransactionResponseCall2.args[0]).eq(AddressZero);
+      expect(saveTransactionResponseCall2.args[1]).eq("allowance");
+      expect(saveTransactionResponseCall2.args[2]).deep.eq(newTx);
+
+      expect(storeMock.saveTransactionReceipt.callCount).eq(1);
+      const saveTransactionReceiptCall = storeMock.saveTransactionReceipt.getCall(0);
+      expect(saveTransactionReceiptCall.args[0]).eq(AddressZero);
+
+      assertResult(result, false, newReceipt);
+    });
+
+    it("stops trying to send if at max gas price", async () => {
+      getGasPrice.resolves(Result.ok(BIG_GAS_PRICE.sub(1)));
+      waitForConfirmation.onFirstCall().rejects(new ChainError(ChainError.retryableTxErrors.ConfirmationTimeout));
+
+      const result = await ethService.sendAndConfirmTx(AddressZero, 1337, "allowance", async () => {
+        return _txResponse;
+      });
+
+      console.log("storeMock.saveTransactionResponse.callCount: ", storeMock.saveTransactionResponse.callCount);
+      expect(storeMock.saveTransactionResponse.callCount).eq(1);
+      const saveTransactionResponseCall = storeMock.saveTransactionResponse.getCall(0);
+      expect(saveTransactionResponseCall.args[0]).eq(AddressZero);
+      expect(saveTransactionResponseCall.args[1]).eq("allowance");
+      expect(saveTransactionResponseCall.args[2]).deep.eq(_txResponse);
+
+      console.log("storeMock.saveTransactionFailure.callCount: ", storeMock.saveTransactionFailure.callCount);
+      expect(storeMock.saveTransactionFailure.callCount).eq(1);
+      const saveTransactionFailureCall = storeMock.saveTransactionFailure.getCall(0);
+      expect(saveTransactionFailureCall.args[0]).eq(AddressZero);
+      expect(saveTransactionFailureCall.args[1]).eq(_txResponse.hash);
+      expect(saveTransactionFailureCall.args[2]).eq(ChainError.reasons.MaxGasPriceReached);
+
+      assertResult(result, true, ChainError.reasons.MaxGasPriceReached);
+    });
+
     it("happy: saves responses if confirmation happens on first loop", async () => {
       waitForConfirmation.resolves(txReceipt);
       const result = await ethService.sendAndConfirmTx(AddressZero, 1337, "allowance", async () => {
@@ -583,7 +640,6 @@ describe.only("ethService unit test", () => {
       expect(saveTransactionResponseCall.args[0]).eq(AddressZero);
       expect(saveTransactionResponseCall.args[1]).eq("allowance");
       expect(saveTransactionResponseCall.args[2]).deep.eq(_txResponse);
-      assertResult(result, false);
 
       expect(storeMock.saveTransactionReceipt.callCount).eq(1);
       const saveTransactionReceiptCall = storeMock.saveTransactionReceipt.getCall(0);

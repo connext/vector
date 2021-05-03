@@ -44,11 +44,13 @@ import { parseUnits } from "ethers/lib/utils";
 export const EXTRA_GAS = 50_000;
 // The amount of time (ms) to wait before a confirmation polling period times out,
 // indiciating we should resubmit tx with higher gas if the tx is not confirmed.
-export const CONFIRMATION_TIMEOUT = 15000;
+export const CONFIRMATION_TIMEOUT = 15_000;
 // The min percentage to bump gas.
-export const GAS_BUMP_PERCENT = 0.2;
+export const GAS_BUMP_PERCENT = 20;
 // 1M gas should cover all Connext txs. Gas won't exceed this amount.
 export const BIG_GAS_LIMIT = BigNumber.from(1_000_000);
+// nothing should ever be this expensive... _should_
+export const BIG_GAS_PRICE = parseUnits("1500", "gwei");
 
 export const waitForTransaction = async (
   provider: JsonRpcProvider,
@@ -310,9 +312,8 @@ export class EthereumChainService extends EthereumChainReader implements IVector
         })());
 
       // Queue up the execution of the transaction.
+      let response: TransactionResponse | undefined;
       const queuedResponse = await this.queue.add(async () => {
-        let response: TransactionResponse | undefined;
-
         // We will raise gas price if the confirmation of the tx "times out" essentially.
         // Default timeout should be around ~15 sec. (GAS_BUMP_THRESHOLD)
         // We raise our gas price for subsuquent attempts if this is the case.
@@ -343,10 +344,12 @@ export class EthereumChainService extends EthereumChainReader implements IVector
         // completed callback should always return a receipt and abstract the waiting and bumping of gas prices
 
         // use a promise here so that the whole confirmation is not held up in the queue
+        let tryNumber = 0;
         const completed = new Promise<TransactionReceipt>(async (resolve, reject) => {
-          while (gasPrice < BIG_GAS_LIMIT) {
+          while (true) {
             try {
               // Wait for confirmation.
+              this.log.info({ tryNumber }, "Waiting for tx");
               const receipt = await this.waitForConfirmation(chainId, response!);
               // Handle receipt / store updates to complete tx.
               if (receipt.status === 0) {
@@ -377,9 +380,6 @@ export class EthereumChainService extends EthereumChainReader implements IVector
               resolve(receipt);
               break;
             } catch (e) {
-              // TODO: Maybe it would be more robust to have waitForConfirmation return undefined or something
-              // specific in the event of timeout, as opposed to using error comparison?
-
               // Check if the error was a confirmation timeout.
               if (e.message === ChainError.retryableTxErrors.ConfirmationTimeout) {
                 // Scale up gas by percentage as specified by GAS_BUMP_PERCENT.
@@ -387,7 +387,25 @@ export class EthereumChainService extends EthereumChainReader implements IVector
                   { channelAddress, reason, method, methodId },
                   "Tx timed out waiting for confirmation. Bumping gas price and reattempting.",
                 );
-                gasPrice = gasPrice.add(gasPrice.mul(GAS_BUMP_PERCENT));
+                gasPrice = gasPrice.add(gasPrice.mul(GAS_BUMP_PERCENT).div(100));
+                // if the gas price is past the max, break out of the loop here
+                if (gasPrice.gt(BIG_GAS_PRICE)) {
+                  const error = new ChainError(ChainError.reasons.MaxGasPriceReached, {
+                    gasPrice: gasPrice.toString(),
+                    methodId,
+                    method,
+                    max: BIG_GAS_PRICE,
+                  });
+                  this.log.error({ method, methodId, error: jsonifyError(error) }, "Max gas price reached");
+                  await this.store.saveTransactionFailure(channelAddress, response!.hash, error.message);
+                  this.evts[ChainServiceEvents.TRANSACTION_FAILED].post({
+                    error,
+                    channelAddress,
+                    reason,
+                  });
+                  reject(error);
+                  break;
+                }
 
                 // make sure new gasPrice is being saved
                 response = await signer.sendTransaction({
@@ -404,6 +422,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
                   "Tx timed out waiting for confirmation. Bumping gas price and reattempting.",
                 );
                 // loop will continue monitoring new tx
+                continue;
               } else {
                 // If we get any other error here, we classify this event as a tx failure and break out of the loop.
                 this.log.error({ method, methodId, error: jsonifyError(e) }, "Transaction reverted.");
