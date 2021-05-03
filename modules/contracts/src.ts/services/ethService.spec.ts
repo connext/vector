@@ -65,13 +65,30 @@ const _txResponse = {
   wait: () => Promise.resolve({} as TransactionReceipt),
 };
 
+const txReceipt: TransactionReceipt = {
+  blockHash: mkHash("0xabc"),
+  blockNumber: 123,
+  byzantium: true,
+  confirmations: 1,
+  contractAddress: mkAddress("0xa"),
+  cumulativeGasUsed: BigNumber.from(21000),
+  from: mkAddress("0xaaa"),
+  gasUsed: BigNumber.from(21000),
+  logs: [],
+  logsBloom: "0x",
+  to: mkAddress("0xbbb"),
+  transactionHash: mkHash("0xaaa"),
+  transactionIndex: 1,
+  status: 1,
+};
+
 const txResponse: TransactionResponseWithResult = {
   ..._txResponse,
   completed: () => Promise.resolve(Result.ok({} as any)),
 };
 
 const { log } = getTestLoggers("ethService");
-describe("ethService", () => {
+describe.only("ethService unit test", () => {
   beforeEach(() => {
     // eth service deps
     storeMock = createStubInstance(MemoryStoreService);
@@ -99,7 +116,7 @@ describe("ethService", () => {
 
     // stubs with default friendly behavior
     getCodeMock = stub(ethService, "getCode").resolves(Result.ok("0x"));
-    approveMock = stub(ethService, "approveTokens").resolves(Result.ok(txResponse));
+    approveMock = stub(ethService, "approveTokens").resolves(Result.ok(txReceipt));
     getOnchainBalanceMock = stub(ethService, "getOnchainBalance").resolves(Result.ok(BigNumber.from("100")));
 
     // channel state
@@ -116,7 +133,7 @@ describe("ethService", () => {
 
   describe("sendDeployChannelTx", () => {
     beforeEach(() => {
-      sendTxWithRetriesMock = stub(ethService, "sendTxWithRetries").resolves(Result.ok(txResponse));
+      sendTxWithRetriesMock = stub(ethService, "sendTxWithRetries").resolves(Result.ok(txReceipt));
     });
 
     it("errors if cannot get a signer", async () => {
@@ -245,8 +262,8 @@ describe("ethService", () => {
     let sendDeployChannelTxMock: SinonStub;
 
     beforeEach(() => {
-      sendDeployChannelTxMock = stub(ethService, "sendDeployChannelTx").resolves(Result.ok(txResponse));
-      sendTxWithRetriesMock = stub(ethService, "sendTxWithRetries").resolves(Result.ok(txResponse));
+      sendDeployChannelTxMock = stub(ethService, "sendDeployChannelTx").resolves(Result.ok(txReceipt));
+      sendTxWithRetriesMock = stub(ethService, "sendTxWithRetries").resolves(Result.ok(txReceipt));
     });
 
     it("errors if cannot get a signer", async () => {
@@ -300,10 +317,10 @@ describe("ethService", () => {
     let sendDepositBTxMock: SinonStub;
 
     beforeEach(() => {
-      sendDeployChannelTxMock = stub(ethService, "sendDeployChannelTx").resolves(Result.ok(txResponse));
-      sendDepositATxMock = stub(ethService, "sendDepositATx").resolves(Result.ok(txResponse));
-      sendDepositBTxMock = stub(ethService, "sendDepositBTx").resolves(Result.ok(txResponse));
-      sendTxWithRetriesMock = stub(ethService, "sendTxWithRetries").resolves(Result.ok(txResponse));
+      sendDeployChannelTxMock = stub(ethService, "sendDeployChannelTx").resolves(Result.ok(txReceipt));
+      sendDepositATxMock = stub(ethService, "sendDepositATx").resolves(Result.ok(txReceipt));
+      sendDepositBTxMock = stub(ethService, "sendDepositBTx").resolves(Result.ok(txReceipt));
+      sendTxWithRetriesMock = stub(ethService, "sendTxWithRetries").resolves(Result.ok(txReceipt));
     });
 
     it("errors if cannot get a signer", async () => {
@@ -394,7 +411,7 @@ describe("ethService", () => {
     };
 
     beforeEach(() => {
-      sendTxWithRetriesMock = stub(ethService, "sendTxWithRetries").resolves(Result.ok(txResponse));
+      sendTxWithRetriesMock = stub(ethService, "sendTxWithRetries").resolves(Result.ok(txReceipt));
     });
 
     it("errors if cannot get a signer", async () => {
@@ -430,7 +447,7 @@ describe("ethService", () => {
     let sendTxAndParseResponseMock: SinonStub;
 
     beforeEach(() => {
-      sendTxAndParseResponseMock = stub(ethService, "sendTxAndParseResponse").resolves(Result.ok(txResponse));
+      sendTxAndParseResponseMock = stub(ethService, "sendAndConfirmTx").resolves(Result.ok(txReceipt));
     });
 
     it("errors if sendTxAndParseResponse errors", async () => {
@@ -482,25 +499,43 @@ describe("ethService", () => {
     });
   });
 
-  describe("sendTxAndParseResponse", () => {
+  describe("sendAndConfirmTx", () => {
     it("if txFn returns undefined, returns undefined", async () => {
-      const result = await ethService.sendTxAndParseResponse(AddressZero, 111, "allowance", async () => {
-        return undefined;
-      }, BigNumber.from(10_000));
+      const result = await ethService.sendAndConfirmTx(
+        AddressZero,
+        111,
+        "allowance",
+        async () => {
+          return undefined;
+        },
+        BigNumber.from(10_000),
+      );
       assertResult(result, false, undefined);
     });
 
     it("if txFn errors, returns error", async () => {
-      const result = await ethService.sendTxAndParseResponse(AddressZero, 111, "allowance", async () => {
-        throw new Error("Boooo");
-      }, BigNumber.from(10_000));
+      const result = await ethService.sendAndConfirmTx(
+        AddressZero,
+        111,
+        "allowance",
+        async () => {
+          throw new Error("Boooo");
+        },
+        BigNumber.from(10_000),
+      );
       assertResult(result, true, "Boooo");
     });
 
     it("if txFn errors, with not enough funds, return special error", async () => {
-      const result = await ethService.sendTxAndParseResponse(AddressZero, 111, "allowance", async () => {
-        throw new Error("sender doesn't have enough funds");
-      }, BigNumber.from(10_000));
+      const result = await ethService.sendAndConfirmTx(
+        AddressZero,
+        111,
+        "allowance",
+        async () => {
+          throw new Error("sender doesn't have enough funds");
+        },
+        BigNumber.from(10_000),
+      );
       assertResult(result, true, ChainError.reasons.NotEnoughFunds);
     });
 
@@ -511,7 +546,7 @@ describe("ethService", () => {
           return { status: 0 };
         },
       } as any;
-      const result = await ethService.sendTxAndParseResponse(AddressZero, 111, "allowance", async () => {
+      const result = await ethService.sendAndConfirmTx(AddressZero, 111, "allowance", async () => {
         return t;
       });
       expect(storeMock.saveTransactionResponse.callCount).eq(1);
@@ -535,7 +570,7 @@ describe("ethService", () => {
           throw new Error("Booooo");
         },
       } as any;
-      const result = await ethService.sendTxAndParseResponse(AddressZero, 111, "allowance", async () => {
+      const result = await ethService.sendAndConfirmTx(AddressZero, 111, "allowance", async () => {
         return t;
       });
       expect(storeMock.saveTransactionResponse.callCount).eq(1);
@@ -554,7 +589,7 @@ describe("ethService", () => {
     });
 
     it("happy: saves responses", async () => {
-      const result = await ethService.sendTxAndParseResponse(AddressZero, 111, "allowance", async () => {
+      const result = await ethService.sendAndConfirmTx(AddressZero, 111, "allowance", async () => {
         return _txResponse;
       });
       expect(storeMock.saveTransactionResponse.callCount).eq(1);
