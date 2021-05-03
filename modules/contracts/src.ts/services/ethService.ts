@@ -114,32 +114,32 @@ export class EthereumChainService extends EthereumChainReader implements IVector
     // Get all tx's from store that were left in submitted state. Resubmit them.
     const storedTransactions: StoredTransaction[] = await this.store.getActiveTransactions();
     // TODO: Should we filter out "stale" tx's (older than a specified elapsed time)?
-    for (let i = 0; i < storedTransactions.length; i++) {
-      let tx: StoredTransaction = storedTransactions[i];
+    // RS: probably not
+    for (const tx of storedTransactions) {
       try {
-        const receipt = await this.getTxReceiptFromHash(tx.chainId, {
+        const txResponse = await this.getTxResponseFromHash(tx.chainId, {
           to: tx.to,
           data: tx.data,
           value: tx.value,
           transactionHash: tx.transactionHash,
           nonce: tx.nonce,
         });
-        if (!receipt) {
+        if (!txResponse) {
           continue;
         }
-        this.sendTxWithRetries(tx.to, tx.chainId, tx.reason, async (gasPrice: BigNumber) => {
+        this.sendTxWithRetries(tx.to, tx.chainId, tx.reason, async () => {
           const signer = this.getSigner(tx.chainId);
           return signer.sendTransaction({
             to: tx.to,
             data: tx.data,
             chainId: tx.chainId,
-            gasPrice,
+            gasPrice: tx.gasPrice,
             nonce: tx.nonce,
             value: BigNumber.from(tx.value),
           });
         });
       } catch (e) {
-        // TODO: Log?
+        this.log.error({ method: "revitalizeTxs", e: jsonifyError(e), tx }, "Error revitalizing tx");
         continue;
       }
     }
@@ -148,7 +148,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
   /// Helper method to grab signer from chain ID and check provider for a transaction.
   /// Returns the transaction if found.
   /// Throws ChainError if signer not found, tx not found, or tx already mined.
-  private async getTxReceiptFromHash(
+  private async getTxResponseFromHash(
     chainId: number,
     tx: MinimalTransaction & { transactionHash: string; nonce: number },
   ): Promise<TransactionResponse | null> {
@@ -182,7 +182,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
     try {
       signer = this.getSigner(chainId);
       // Make sure tx is not mined already
-      receipt = await this.getTxReceiptFromHash(chainId, tx);
+      receipt = await this.getTxResponseFromHash(chainId, tx);
     } catch (e) {
       return Result.fail(e);
     }
