@@ -428,7 +428,6 @@ export class EthereumChainService extends EthereumChainReader implements IVector
       }
 
       const receipt = await queuedResponse.completed;
-      console.log("queuedResponse.completed receipt: ", receipt);
       if (receipt.status === 0) {
         return Result.fail(new ChainError(ChainError.reasons.TxReverted, { receipt, method, methodId }));
       }
