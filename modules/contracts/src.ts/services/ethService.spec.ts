@@ -490,7 +490,7 @@ describe.only("ethService unit test", () => {
     });
   });
 
-  describe.only("sendAndConfirmTx", () => {
+  describe("sendAndConfirmTx", () => {
     beforeEach(() => {
       waitForConfirmation = stub(ethService, "waitForConfirmation");
     });
@@ -573,8 +573,9 @@ describe.only("ethService unit test", () => {
       assertResult(result, true, "Booooo");
     });
 
-    it("happy: saves responses", async () => {
-      const result = await ethService.sendAndConfirmTx(AddressZero, 111, "allowance", async () => {
+    it("happy: saves responses if confirmation happens on first loop", async () => {
+      waitForConfirmation.resolves(txReceipt);
+      const result = await ethService.sendAndConfirmTx(AddressZero, 1337, "allowance", async () => {
         return _txResponse;
       });
       expect(storeMock.saveTransactionResponse.callCount).eq(1);
