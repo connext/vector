@@ -336,7 +336,7 @@ export class NatsMessagingService extends NatsBasicMessagingService implements I
   async sendProtocolMessage(
     channelUpdate: ChannelUpdate<any>,
     previousUpdate?: ChannelUpdate<any>,
-    timeout = 180_000,
+    timeout = 60_000,
     numRetries = 0,
   ): Promise<Result<{ update: ChannelUpdate<any>; previousUpdate: ChannelUpdate<any> }, ProtocolError>> {
     return this.sendMessageWithRetries(
