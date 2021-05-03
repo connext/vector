@@ -613,14 +613,12 @@ describe.only("ethService unit test", () => {
         return _txResponse;
       });
 
-      console.log("storeMock.saveTransactionResponse.callCount: ", storeMock.saveTransactionResponse.callCount);
       expect(storeMock.saveTransactionResponse.callCount).eq(1);
       const saveTransactionResponseCall = storeMock.saveTransactionResponse.getCall(0);
       expect(saveTransactionResponseCall.args[0]).eq(AddressZero);
       expect(saveTransactionResponseCall.args[1]).eq("allowance");
       expect(saveTransactionResponseCall.args[2]).deep.eq(_txResponse);
 
-      console.log("storeMock.saveTransactionFailure.callCount: ", storeMock.saveTransactionFailure.callCount);
       expect(storeMock.saveTransactionFailure.callCount).eq(1);
       const saveTransactionFailureCall = storeMock.saveTransactionFailure.getCall(0);
       expect(saveTransactionFailureCall.args[0]).eq(AddressZero);
