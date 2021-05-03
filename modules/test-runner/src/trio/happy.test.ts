@@ -120,7 +120,7 @@ describe(testName, () => {
     expect(cancelled.length).to.be.eq(0);
   });
 
-  it.only("ETH: should be able to dispute a channel", async () => {
+  it("ETH: should be able to dispute a channel", async () => {
     const assetId = constants.AddressZero;
     const depositAmt = utils.parseEther("0.1");
     const carolRogerPostSetup = await setup(carolService, rogerService, chainId1);
