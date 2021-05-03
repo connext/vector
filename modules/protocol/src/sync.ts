@@ -195,10 +195,13 @@ export async function outbound(
     logger,
   );
   if (sigRes.isError) {
+    logger.error(
+      { method, update, counterpartyUpdate, error: jsonifyError(sigRes.getError()!) },
+      "Failed to recover signer",
+    );
     const error = new QueuedUpdateError(QueuedUpdateError.reasons.BadSignatures, params, previousState, {
       recoveryError: sigRes.getError()?.message,
     });
-    logger.error({ method, error: jsonifyError(error) }, "Failed to recover signer");
     return Result.fail(error);
   }
 
