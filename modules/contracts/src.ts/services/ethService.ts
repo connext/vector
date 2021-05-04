@@ -142,7 +142,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
           chainId: tx.chainId,
           gasPrice: tx.gasPrice,
           nonce: tx.nonce,
-          value: BigNumber.from(tx.value),
+          value: BigNumber.from(tx.value || 0),
         });
       });
     }
@@ -420,7 +420,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
                 response = await signer.sendTransaction({
                   to: response!.to,
                   data: response!.data,
-                  value: response!.value,
+                  value: response!.value || 0,
                   nonce: response!.nonce,
                   gasPrice,
                   gasLimit: response!.gasLimit,
