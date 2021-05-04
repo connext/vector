@@ -990,7 +990,7 @@ export async function handleWithdrawalTransferResolution(
     return;
   }
   const tx = withdrawalResponse.getValue();
-  commitment!.addTransaction(tx.hash);
+  commitment!.addTransaction(tx.transactionHash);
   await store.saveWithdrawalCommitment(transferId, commitment!.toJson());
 
   // alice submitted her own withdrawal, post to evt
@@ -999,15 +999,9 @@ export async function handleWithdrawalTransferResolution(
     bobIdentifier,
     channelAddress,
     transferId,
-    transactionHash: tx.hash,
+    transactionHash: tx.transactionHash,
   });
-  logger.info({ transactionHash: tx.hash }, "Submitted withdraw tx");
-  const receipt = await tx.completed();
-  if (receipt.isError) {
-    logger.error({ method, receipt: receipt.getError()! }, "Withdraw tx reverted");
-  } else {
-    logger.info({ method, transactionHash: receipt.getValue().transactionHash }, "Withdraw tx mined, completed");
-  }
+  logger.info({ transactionHash: tx.transactionHash }, "Submitted withdraw tx");
 }
 
 export const isWithdrawTransfer = async (
@@ -1132,7 +1126,7 @@ export const resolveWithdrawal = async (
     // IFF the withdrawal was successfully submitted, resolve the transfer
     // with the transactionHash in the meta
     if (!withdrawalResponse.isError) {
-      transactionHash = withdrawalResponse.getValue()!.hash;
+      transactionHash = withdrawalResponse.getValue()!.transactionHash;
       logger.info({ method, transactionHash }, "Submitted tx");
       // Post to reconciliation evt on submission
       evts[WITHDRAWAL_RECONCILED_EVENT].post({

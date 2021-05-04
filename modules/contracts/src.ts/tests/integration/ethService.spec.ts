@@ -8,25 +8,22 @@ import {
   expect,
   getRandomAddress,
   getRandomBytes32,
-  hashCoreTransferState,
   hashTransferState,
   MemoryStoreService,
   generateMerkleTreeData,
 } from "@connext/vector-utils";
 import { AddressZero } from "@ethersproject/constants";
 import { Contract } from "@ethersproject/contracts";
-import { keccak256 } from "@ethersproject/keccak256";
 import { parseEther } from "@ethersproject/units";
 import { BigNumber } from "@ethersproject/bignumber";
 import { deployments } from "hardhat";
-import { MerkleTree } from "merkletreejs";
 
 import { alice, bob, chainIdReq, logger, provider, rando } from "../../constants";
 import { advanceBlocktime, getContract, createChannel } from "../../utils";
 
 import { EthereumChainService } from "../../services/ethService";
 
-describe("EthereumChainService", function () {
+describe("ethService integration", function () {
   this.timeout(120_000);
   const aliceSigner = new ChannelSigner(alice.privateKey);
   const bobSigner = new ChannelSigner(bob.privateKey);

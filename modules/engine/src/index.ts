@@ -669,13 +669,8 @@ export class VectorEngine implements IVectorEngine {
       );
       return setupRes;
     }
-    const tx = deployRes.getValue();
-    this.logger.info({ chainId: channel.networkContext.chainId, hash: tx.hash }, "Deploy tx broadcast");
-    const receipt = await tx.completed();
-    if (receipt.isError) {
-      return Result.fail(receipt.getError()!);
-    }
-    this.logger.debug({ chainId: channel.networkContext.chainId, hash: tx.hash }, "Deploy tx mined");
+    const receipt = deployRes.getValue();
+    this.logger.debug({ chainId: channel.networkContext.chainId, hash: receipt.transactionHash }, "Deploy tx mined");
     this.logger.info(
       { result: setupRes.isError ? jsonifyError(setupRes.getError()!) : setupRes.getValue(), method, methodId },
       "Method complete",
@@ -1313,27 +1308,17 @@ export class VectorEngine implements IVectorEngine {
       return Result.fail(disputeRes.getError()!);
     }
 
-    // register saving callback
-    disputeRes
-      .getValue()
-      .completed(getConfirmationsForChain(state.networkContext.chainId))
-      .then(async (receipt) => {
-        if (receipt.isError) {
-          return;
-        }
-        // save the dispute
-        // TODO: make this event driven
-        const dispute = await this.chainService.getChannelDispute(state.channelAddress, state.networkContext.chainId);
-        if (!dispute.isError && !!dispute.getValue()) {
-          try {
-            await this.store.saveChannelDispute(state.channelAddress, dispute.getValue()!);
-          } catch (e) {
-            this.logger.error({ ...jsonifyError(e) }, "Failed to save channel dispute");
-          }
-        }
-      });
+    // save the dispute
+    const dispute = await this.chainService.getChannelDispute(state.channelAddress, state.networkContext.chainId);
+    if (!dispute.isError && !!dispute.getValue()) {
+      try {
+        await this.store.saveChannelDispute(state.channelAddress, dispute.getValue()!);
+      } catch (e) {
+        this.logger.error({ ...jsonifyError(e) }, "Failed to save channel dispute");
+      }
+    }
 
-    return Result.ok({ transactionHash: disputeRes.getValue().hash });
+    return Result.ok({ transactionHash: disputeRes.getValue().transactionHash });
   }
 
   private async defund(
@@ -1369,7 +1354,7 @@ export class VectorEngine implements IVectorEngine {
       return Result.fail(disputeRes.getError()!);
     }
 
-    return Result.ok({ transactionHash: disputeRes.getValue().hash });
+    return Result.ok({ transactionHash: disputeRes.getValue().transactionHash });
   }
 
   private async getTransferDispute(
@@ -1428,7 +1413,7 @@ export class VectorEngine implements IVectorEngine {
     if (disputeRes.isError) {
       return Result.fail(disputeRes.getError()!);
     }
-    return Result.ok({ transactionHash: disputeRes.getValue().hash });
+    return Result.ok({ transactionHash: disputeRes.getValue().transactionHash });
   }
 
   private async defundTransfer(
@@ -1470,7 +1455,7 @@ export class VectorEngine implements IVectorEngine {
     if (defundRes.isError) {
       return Result.fail(defundRes.getError()!);
     }
-    return Result.ok({ transactionHash: defundRes.getValue().hash });
+    return Result.ok({ transactionHash: defundRes.getValue().transactionHash });
   }
 
   private async exit(
@@ -1516,7 +1501,7 @@ export class VectorEngine implements IVectorEngine {
       );
       results.push({
         assetId,
-        transactionHash: result.isError ? undefined : result.getValue().hash,
+        transactionHash: result.isError ? undefined : result.getValue().transactionHash,
         error: result.isError ? jsonifyError(result.getError()!) : undefined,
       });
     }
