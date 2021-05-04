@@ -2,6 +2,8 @@
 
 ## Next Release
 
+- \[all\] upgrade prisma
+
 ## 0.2.5-beta.1
 
 - \[contracts\] tx service hotfixes
