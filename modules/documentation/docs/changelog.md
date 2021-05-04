@@ -4,6 +4,9 @@
 
 ## 0.2.5-beta.0
 
+- \[contracts\] tx service hotfixes
+## 0.2.5-beta.0
+
 - \[contracts\] robust tx service
 
 ## 0.2.5-alpha.4
