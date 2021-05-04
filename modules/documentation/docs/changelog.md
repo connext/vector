@@ -2,9 +2,10 @@
 
 ## Next Release
 
-## 0.2.5-beta.0
+## 0.2.5-beta.1
 
 - \[contracts\] tx service hotfixes
+
 ## 0.2.5-beta.0
 
 - \[contracts\] robust tx service
