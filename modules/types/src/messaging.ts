@@ -189,7 +189,13 @@ export interface IMessagingService extends IBasicMessaging {
     ) => void,
   ): Promise<void>;
 
-  publishStartAuction(data: Result<EngineParams.RunAuction, NodeError>, from: string, inbox: string): Promise<void>;
+  publishStartAuction(
+    data: Result<EngineParams.RunAuction, NodeError>,
+    to: string,
+    from: string,
+    timeout?: 30_000,
+    numRetries?: number,
+  ): Promise<Result<NodeResponses.RunAuction, NodeError | MessagingError>>;
 
   onReceiveAuctionMessage(
     myPublicIdentifier: string,

@@ -120,6 +120,5 @@ Content-Type: application/json
   "chainId": 1337,
   "recipient": "{{recipientPublicIdentifier}}",
   "recipientAssetId": "0x0000000000000000000000000000000000000000",
-  "recipientChainId": 1338,
-  "routerPublicIdentifier": "{{rogerPublicIdentifier}}"
+  "recipientChainId": 1337
 }

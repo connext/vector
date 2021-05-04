@@ -93,7 +93,7 @@ export class NatsRouterMessagingService extends NatsBasicMessagingService implem
     publicIdentifier: string,
     callback: (runAuction: Result<EngineParams.RunAuction, RouterError>, from: string, inbox: string) => void,
   ): Promise<void> {
-    await this.registerCallback(`${publicIdentifier}.start-auction`, callback, "onReceiveStartAuction");
+    await this.registerCallback(`*.*.start-auction`, callback, "onReceiveStartAuction");
   }
 
   respondToAuctionMessage(

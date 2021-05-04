@@ -650,8 +650,14 @@ export class NatsMessagingService extends NatsBasicMessagingService implements I
   ////////////
   // AUCTION METHODS // placeholder
 
-  publishStartAuction(data: Result<EngineParams.RunAuction, NodeError>, from: string, inbox: string): Promise<void> {
-    return this.publishUniqueInbox(`${from}.start-auction`, safeJsonStringify(data.toJson()), inbox);
+  publishStartAuction(
+    data: Result<EngineParams.RunAuction, NodeError>,
+    to: string,
+    from: string,
+    timeout?: 30_000,
+    numRetries?: number,
+  ): Promise<Result<NodeResponses.RunAuction, NodeError | MessagingError>> {
+    return this.sendMessageWithRetries(data, "start-auction", to, from, timeout, numRetries, "publishStartAuction");
   }
 
   onReceiveAuctionMessage(

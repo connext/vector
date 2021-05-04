@@ -1019,7 +1019,7 @@ export async function setupListeners(
         inbox,
         Result.ok({
           routerPublicIdentifier: quote.routerIdentifier,
-          swapRate: "",
+          swapRate: "1",
           totalFee: quote.fee,
         }),
       );

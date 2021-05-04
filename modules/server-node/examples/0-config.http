@@ -71,3 +71,11 @@ Content-Type: application/json
 {
   "index": 0
 }
+
+### CREATE DAVE
+POST {{daveUrl}}/node
+Content-Type: application/json
+
+{
+  "index": 0
+}
