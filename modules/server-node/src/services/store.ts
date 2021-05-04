@@ -300,14 +300,10 @@ export class PrismaStore implements IServerNodeStore {
   async getActiveTransactions(): Promise<StoredTransaction[]> {
     const activeTransactions = await this.prisma.onchainTransaction.findMany({
       where: {
-        transactionHash: {
-          not: undefined,
-        },
         // TODO: Any other key fields that we know HAVE to be defined for receipts that we should include here?
         // If these key receipt fields are undefined, then we know we never got
         // a valid receipt for this transaction.
-        blockHash: undefined,
-        gasUsed: undefined,
+        status: StoredTransactionStatus.submitted,
       },
     });
     return activeTransactions.map(
