@@ -1308,6 +1308,16 @@ export class VectorEngine implements IVectorEngine {
       return Result.fail(disputeRes.getError()!);
     }
 
+    // save the dispute
+    const dispute = await this.chainService.getChannelDispute(state.channelAddress, state.networkContext.chainId);
+    if (!dispute.isError && !!dispute.getValue()) {
+      try {
+        await this.store.saveChannelDispute(state.channelAddress, dispute.getValue()!);
+      } catch (e) {
+        this.logger.error({ ...jsonifyError(e) }, "Failed to save channel dispute");
+      }
+    }
+
     return Result.ok({ transactionHash: disputeRes.getValue().transactionHash });
   }
 
