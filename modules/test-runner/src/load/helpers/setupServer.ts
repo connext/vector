@@ -44,6 +44,7 @@ export const carolEvts = {
   [EngineEvents.CHANNEL_DEFUNDED]: {},
   [EngineEvents.TRANSFER_DISPUTED]: {},
   [EngineEvents.TRANSFER_DEFUNDED]: {},
+  [EngineEvents.RUN_AUCTION_EVENT]: {},
 };
 
 export const logger = pino({ level: "info" });

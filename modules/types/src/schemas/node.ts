@@ -580,6 +580,20 @@ const PostSendIsAliveResponseSchema = {
   }),
 };
 
+// POST RUN AUCTION
+const PostRunAuctionBodySchema = Type.Intersect([
+  EngineParams.RunAuctionSchema,
+  Type.Object({ publicIdentifier: TPublicIdentifier }),
+]);
+
+const PostRunAuctionResponseSchema = {
+  200: Type.Object({
+    routerPublicIdentifier: TPublicIdentifier,
+    swapRate: TIntegerString,
+    totalFee: TIntegerString,
+  }),
+};
+
 // Namespace exports
 // eslint-disable-next-line @typescript-eslint/no-namespace
 export namespace NodeParams {
@@ -708,6 +722,9 @@ export namespace NodeParams {
 
   export const SubmitWithdrawalsSchema = PostAdminSubmitWithdrawalsBodySchema;
   export type SubmitWithdrawals = Static<typeof SubmitWithdrawalsSchema>;
+
+  export const RunAuctionSchema = PostRunAuctionBodySchema;
+  export type RunAuction = Static<typeof RunAuctionSchema>;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-namespace
@@ -841,4 +858,7 @@ export namespace NodeResponses {
 
   export const SubmitWithdrawalsSchema = PostAdminSubmitWithdrawalsResponseSchema;
   export type SubmitWithdrawals = Static<typeof PostAdminSubmitWithdrawalsResponseSchema["200"]>;
+
+  export const RunAuctionSchema = PostRunAuctionResponseSchema;
+  export type RunAuction = Static<typeof RunAuctionSchema["200"]>;
 }

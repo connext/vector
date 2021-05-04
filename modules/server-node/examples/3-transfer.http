@@ -21,10 +21,10 @@
 @lockHash = 0x7783846bebe64b2dbf16ca981d27a73ada4bc6976e5be3ef92f0057af8368ce1
 
 @routingId = 0x5e7af61c2bd4243ea005c3e450dbee3faec55fda230e47db2cfa4e5394bd6942
-@transferId = 0x
+@transferId = 0xb2f0f283d9f76948cbb26a7811f6fb0a6967593f5a20e2dd406f050112ad5adf
 
-@nodeUrl = {{carolUrl}}
-@nodePublicIdentifier = {{carolPublicIdentifier}}
+@nodeUrl = {{rogerUrl}}
+@nodePublicIdentifier = {{rogerPublicIdentifier}}
 @recipientPublicIdentifier = {{davePublicIdentifier}}
 @channel = {{carolRogerChannel}}
 
@@ -53,13 +53,13 @@ Content-Type: application/json
 
 ##############
 ### Resolve Transfer
-POST {{nodeUrl}}/transfers/resolve
+POST {{daveUrl}}/transfers/resolve
 Content-Type: application/json
 
 {
-  "publicIdentifier": "{{nodePublicIdentifier}}",
-  "channelAddress": "{{channel}}",
-  "transferId": "{{transferId}}",
+  "publicIdentifier": "{{davePublicIdentifier}}",
+  "channelAddress": "{{daveRogerChannel}}",
+  "transferId": "0x7b961e480f1585265dd069987954ad38d18cf59290176c475f2cc580026a3776",
   "transferResolver": {
     "preImage": "{{preImage}}"
   }
@@ -106,3 +106,19 @@ GET {{nodeUrl}}/{{nodePublicIdentifier}}/channels/{{channel}}/active-transfers
 ##############
 ### Get Transfer By Routing Id
 GET {{nodeUrl}}/{{nodePublicIdentifier}}/{{channel}}/transfers/routing-id/{{routingId}}
+
+##############
+### Start Auction
+
+POST {{carolUrl}}/run-auction
+Content-Type: application/json
+
+{
+  "amount": "1000000",
+  "publicIdentifier": "{{carolPublicIdentifier}}",
+  "assetId": "0x0000000000000000000000000000000000000000",
+  "chainId": 1337,
+  "recipient": "{{recipientPublicIdentifier}}",
+  "recipientAssetId": "0x0000000000000000000000000000000000000000",
+  "recipientChainId": 1337
+}

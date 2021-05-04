@@ -491,6 +491,17 @@ export class RestServerNodeService implements INodeService {
     return this.executeHttpRequest<NodeResponses.SendIsAlive>(`is-alive`, "post", params, NodeParams.SendIsAliveSchema);
   }
 
+  async runAuction(
+    params: OptionalPublicIdentifier<NodeParams.RunAuction>,
+  ): Promise<Result<NodeResponses.RunAuction, ServerNodeServiceError>> {
+    return this.executeHttpRequest<NodeResponses.RunAuction>(
+      `run-auction`,
+      "post",
+      params,
+      NodeParams.RunAuctionSchema,
+    );
+  }
+
   public once<T extends EngineEvent>(
     event: T,
     callback: (payload: EngineEventMap[T]) => void | Promise<void>,

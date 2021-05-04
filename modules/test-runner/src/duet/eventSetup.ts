@@ -10,6 +10,7 @@ import {
   WithdrawalReconciledPayload,
   WithdrawalResolvedPayload,
   ConditionalTransferRoutingCompletePayload,
+  RunAuctionPayload,
 } from "@connext/vector-types";
 
 import { env } from "../utils";
@@ -22,6 +23,7 @@ const depositReconciledPath = "/deposit-reconciled";
 const withdrawalCreatedPath = "/withdrawal-created";
 const withdrawalResolvedPath = "/withdrawal-resolved";
 const withdrawalReconciledPath = "/withdrawal-reconciled";
+const runAuctionPath = "/run-auction";
 export const aliceEvts = {
   [EngineEvents.IS_ALIVE]: {},
   [EngineEvents.SETUP]: {},
@@ -54,6 +56,10 @@ export const aliceEvts = {
   [EngineEvents.DEPOSIT_RECONCILED]: {
     evt: Evt.create<DepositReconciledPayload>(),
     url: `${serverBase}${depositReconciledPath}-alice`,
+  },
+  [EngineEvents.RUN_AUCTION_EVENT]: {
+    evt: Evt.create<RunAuctionPayload>(),
+    url: `${serverBase}${runAuctionPath}-alice`,
   },
   [ChainServiceEvents.TRANSACTION_SUBMITTED]: {},
   [ChainServiceEvents.TRANSACTION_MINED]: {},
@@ -96,6 +102,10 @@ export const bobEvts = {
   [EngineEvents.DEPOSIT_RECONCILED]: {
     evt: Evt.create<DepositReconciledPayload>(),
     url: `${serverBase}${depositReconciledPath}-bob`,
+  },
+  [EngineEvents.RUN_AUCTION_EVENT]: {
+    evt: Evt.create<RunAuctionPayload>(),
+    url: `${serverBase}${runAuctionPath}-bob`,
   },
   [ChainServiceEvents.TRANSACTION_SUBMITTED]: {},
   [ChainServiceEvents.TRANSACTION_MINED]: {},

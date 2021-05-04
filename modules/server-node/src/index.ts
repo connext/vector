@@ -858,6 +858,41 @@ server.post<{ Body: NodeParams.SendIsAlive }>(
   },
 );
 
+server.post<{ Body: NodeParams.RunAuction }>(
+  "/run-auction",
+  { schema: { body: NodeParams.RunAuctionSchema, response: NodeResponses.RunAuctionSchema } },
+  async (request, reply) => {
+    const engine = getNode(request.body.publicIdentifier);
+    if (!engine) {
+      return reply
+        .status(400)
+        .send(
+          jsonifyError(
+            new ServerNodeError(ServerNodeError.reasons.NodeNotFound, request.body.publicIdentifier, request.body),
+          ),
+        );
+    }
+    const rpc = constructRpcRequest(ChannelRpcMethods.chan_runAuction, request.body);
+    try {
+      const mock_response = {
+        routerPublicIdentifier: "mock_id",
+        swapRate: "mock_swapRate",
+        totalFee: "mock_totalFee",
+      };
+      const result = await engine.request<typeof ChannelRpcMethods.chan_runAuction>(rpc);
+      const { routerPublicIdentifier, swapRate, totalFee } = result ? result : mock_response;
+      // const routerPublicIdentifier = "prueba";
+      // const swapRate = "mock_swapRate";
+      // const totalFee = "mock_totalFee";
+      logger.info(result);
+      return reply.status(200).send({ routerPublicIdentifier, swapRate, totalFee } as NodeResponses.RunAuction);
+    } catch (e) {
+      logger.error({ error: jsonifyError(e) });
+      return reply.status(500).send(jsonifyError(e));
+    }
+  },
+);
+
 server.post<{ Body: NodeParams.RegisterListener }>(
   "/event/subscribe",
   {

@@ -822,6 +822,226 @@ export async function setupListeners(
       );
     }
   });
+  // TODO Refactoring, repeated code
+  await messagingService.onReceiveStartAuction(routerSigner.publicIdentifier, async (request, from, inbox) => {
+    const method = "onReceiveStartAuction";
+    const methodId = getRandomBytes32();
+    logger.debug({ method, methodId }, "Method started");
+    if (request.isError) {
+      logger.error(
+        { error: request.getError()!.toJson(), from, method, methodId },
+        "Received error, shouldn't happen!",
+      );
+      return;
+    }
+    const {
+      amount,
+      assetId,
+      chainId,
+      recipient: _recipient,
+      recipientChainId: _recipientChainId,
+      recipientAssetId: _recipientAssetId,
+      // receiveExactAmount: _receiveExactAmount,
+    } = request.getValue();
+
+    const recipient = _recipient ?? routerSigner.publicIdentifier;
+    const recipientChainId = _recipientChainId ?? chainId;
+    const recipientAssetId = _recipientAssetId ?? assetId;
+    // const receiveExactAmount = _receiveExactAmount ?? false;
+
+    const isSwap = recipientChainId !== chainId || recipientAssetId !== assetId;
+    const supported = isSwap
+      ? getMatchingSwap(assetId, chainId, recipientAssetId, recipientChainId)
+      : getRebalanceProfile(recipientChainId, recipientAssetId);
+
+    const supportedChains = Object.keys(config.chainProviders);
+    if (!supportedChains.includes(chainId.toString()) || !supportedChains.includes(recipientChainId.toString())) {
+      // recipient or sender chain not supported
+      await messagingService.respondToAuctionMessage(
+        inbox,
+        Result.fail(
+          new QuoteError(QuoteError.reasons.ChainNotSupported, {
+            supportedChains,
+            recipient,
+            recipientChainId,
+            recipientAssetId,
+            assetId,
+            chainId,
+            sender: from,
+          }),
+        ),
+      );
+      return;
+    }
+
+    const [senderChannelRes, recipientChannelRes] = await Promise.all([
+      nodeService.getStateChannelByParticipants({ counterparty: from, chainId }),
+      nodeService.getStateChannelByParticipants({
+        chainId: recipientChainId,
+        counterparty: recipient === routerSigner.publicIdentifier ? from : recipient,
+      }),
+    ]);
+
+    if (senderChannelRes.isError || recipientChannelRes.isError) {
+      // return error to counterparty
+      await messagingService.respondToAuctionMessage(
+        inbox,
+        Result.fail(
+          new QuoteError(QuoteError.reasons.CouldNotGetChannel, {
+            senderChannelError: senderChannelRes.isError ? jsonifyError(senderChannelRes.getError()!) : undefined,
+            recipientChannelError: recipientChannelRes.isError
+              ? jsonifyError(recipientChannelRes.getError()!)
+              : undefined,
+            recipient,
+            recipientChainId,
+            recipientAssetId,
+            assetId,
+            chainId,
+            sender: from,
+          }),
+        ),
+      );
+      return;
+    }
+
+    const getEmptyChannel = async (
+      counterparty: string,
+      chainId: number,
+    ): Promise<Result<FullChannelState, QuoteError>> => {
+      const alice = getSignerAddressFromPublicIdentifier(routerSigner.publicIdentifier);
+      const bob = getSignerAddressFromPublicIdentifier(counterparty);
+      const channelAddress = await chainReader.getChannelAddress(
+        alice,
+        bob,
+        chainAddresses[chainId].channelFactoryAddress,
+        chainId,
+      );
+      if (channelAddress.isError) {
+        return Result.fail(
+          new QuoteError(QuoteError.reasons.CouldNotGetChannelAddress, {
+            chainServiceError: jsonifyError(channelAddress.getError()!),
+            recipient,
+            recipientChainId,
+            recipientAssetId,
+            assetId,
+            chainId,
+            sender: from,
+          }),
+        );
+      }
+      return Result.ok({
+        nonce: 1,
+        channelAddress: channelAddress.getValue(),
+        timeout: DEFAULT_CHANNEL_TIMEOUT.toString(),
+        alice,
+        bob,
+        balances: [],
+        processedDepositsA: [],
+        processedDepositsB: [],
+        assetIds: [],
+        defundNonces: [],
+        merkleRoot: HashZero,
+        latestUpdate: {} as any,
+        networkContext: {
+          chainId,
+          channelFactoryAddress: chainAddresses[chainId].channelFactoryAddress,
+          transferRegistryAddress: chainAddresses[chainId].transferRegistryAddress,
+        },
+        aliceIdentifier: routerSigner.publicIdentifier,
+        bobIdentifier: counterparty,
+        inDispute: false,
+      });
+    };
+
+    let senderChannel = senderChannelRes.getValue() as FullChannelState | undefined;
+    if (!senderChannel) {
+      const placeholder = await getEmptyChannel(from, chainId);
+      if (placeholder.isError) {
+        await messagingService.respondToAuctionMessage(inbox, Result.fail(placeholder.getError()!));
+        return;
+      }
+      senderChannel = placeholder.getValue();
+    }
+    let recipientChannel = recipientChannelRes.getValue() as FullChannelState | undefined;
+    if (!recipientChannel) {
+      const placeholder = await getEmptyChannel(recipient, chainId);
+      if (placeholder.isError) {
+        await messagingService.respondToAuctionMessage(inbox, Result.fail(placeholder.getError()!));
+        return;
+      }
+      recipientChannel = placeholder.getValue();
+    }
+    const feeRes = await calculateFeeAmount(
+      BigNumber.from(amount),
+      true, // receive exact amount, to be reviewed
+      assetId,
+      senderChannel,
+      recipientAssetId,
+      recipientChannel,
+      chainReader,
+      routerSigner.publicIdentifier,
+      logger,
+    );
+    if (feeRes.isError) {
+      logger.error({ error: feeRes.getError() }, "Error in calculateFeeAmount");
+      await messagingService.respondToAuctionMessage(
+        inbox,
+        Result.fail(
+          new QuoteError(QuoteError.reasons.CouldNotGetFee, {
+            feeError: jsonifyError(feeRes.getError()!),
+            recipient,
+            recipientChainId,
+            recipientAssetId,
+            assetId,
+            chainId,
+            sender: from,
+          }),
+        ),
+      );
+      return;
+    }
+    const { fee, amount: quoteAmount } = feeRes.getValue();
+    const quote = {
+      assetId,
+      amount: quoteAmount.toString(),
+      chainId,
+      routerIdentifier: routerSigner.publicIdentifier,
+      recipient,
+      recipientChainId,
+      recipientAssetId,
+      fee: fee.toString(),
+      expiry: (Date.now() + (getConfig().feeQuoteExpiry ?? DEFAULT_FEE_EXPIRY)).toString(), // valid for next 2 blocks
+    };
+    const toSign = hashTransferQuote(quote);
+    try {
+      const signature = await routerSigner.signMessage(toSign);
+      await messagingService.respondToAuctionMessage(
+        inbox,
+        Result.ok({
+          routerPublicIdentifier: quote.routerIdentifier,
+          swapRate: "1",
+          totalFee: quote.fee,
+        }),
+      );
+    } catch (e) {
+      await messagingService.respondToAuctionMessage(
+        inbox,
+        Result.fail(
+          new QuoteError(QuoteError.reasons.CouldNotSignQuote, {
+            error: jsonifyError(e),
+            recipient,
+            recipientChainId,
+            recipientAssetId,
+            assetId,
+            chainId,
+            sender: from,
+            fee: quote.fee,
+            expiry: quote.expiry,
+          }),
+        ),
+      );
+    }
+  });
 
   logger.debug({ method, methodId }, "Method complete");
 }

@@ -21,6 +21,7 @@ import {
   TransferDisputedPayload,
   TransferDefundedPayload,
   ConditionalTransferRoutingCompletePayload,
+  RunAuctionPayload,
 } from "@connext/vector-types";
 import { FeeCalculationError, normalizeFee } from "@connext/vector-utils";
 import { BigNumber } from "@ethersproject/bignumber";
@@ -42,6 +43,7 @@ export const getEngineEvtContainer = (): EngineEvtContainer => {
     [EngineEvents.WITHDRAWAL_CREATED]: Evt.create<WithdrawalCreatedPayload>(),
     [EngineEvents.WITHDRAWAL_RESOLVED]: Evt.create<WithdrawalResolvedPayload>(),
     [EngineEvents.WITHDRAWAL_RECONCILED]: Evt.create<WithdrawalReconciledPayload>(),
+    [EngineEvents.RUN_AUCTION_EVENT]: Evt.create<RunAuctionPayload>(),
     [ChainServiceEvents.TRANSACTION_SUBMITTED]: Evt.create<
       TransactionSubmittedPayload & { publicIdentifier: string }
     >(),

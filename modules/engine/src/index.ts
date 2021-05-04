@@ -39,7 +39,7 @@ import {
   hashWithdrawalQuote,
   delay,
 } from "@connext/vector-utils";
-import pino from "pino";
+import pino, { BaseLogger } from "pino";
 import Ajv from "ajv";
 import { Evt } from "evt";
 
@@ -1536,6 +1536,44 @@ export class VectorEngine implements IVectorEngine {
         }),
       );
     }
+  }
+
+  private async runAuction(
+    params: EngineParams.RunAuction,
+  ): Promise<Result<ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_runAuction], EngineError>> {
+    const validate = ajv.compile(EngineParams.RunAuctionSchema);
+    const valid = validate(params);
+    if (!valid) {
+      return Result.fail(
+        new RpcError(RpcError.reasons.InvalidParams, "", this.publicIdentifier, {
+          invalidParamsError: validate.errors?.map((e) => e.message).join(","),
+          invalidParams: params,
+        }),
+      );
+    }
+
+    const from = this.signer.publicIdentifier;
+
+    //Call publishStartAuction with provided data.
+    this.messaging.publishStartAuction(Result.ok(params), from, from);
+
+    // Call onReceiveAuctionMessage to listen on unique INBOX and collect responses for 5 seconds (will tweak and tune this number).
+    // Maybe something like wait for 5 responses or 5 seconds? Watch out for race conditions of setting listener after message is already sent.
+    let timeout = false;
+    setTimeout(() => (timeout = true), 5000);
+    let res;
+
+    await this.messaging.onReceiveAuctionMessage(this.publicIdentifier, async (runAuction, from, inbox) => {
+      const method = "onReceiveReceiveAuctionMessage";
+      const methodId = getRandomBytes32();
+      if (runAuction.isError) {
+        this.logger.error({ error: runAuction.getError()?.message, method, methodId }, "Error received");
+        return;
+      }
+      const res = runAuction.getValue();
+    });
+
+    return Result.ok(res);
   }
 
   // JSON RPC interface -- this will accept:

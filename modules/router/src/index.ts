@@ -26,6 +26,7 @@ import {
   ChannelDefundedPayload,
   ChannelDisputedPayload,
   ConditionalTransferRoutingCompletePayload,
+  RunAuctionPayload,
 } from "@connext/vector-types";
 import { collectDefaultMetrics, register } from "prom-client";
 import { Wallet } from "ethers";
@@ -60,6 +61,7 @@ const channelDisputedPath = "/channel-disputed";
 const channelDefundedPath = "/channel-defunded";
 const transferDisputedPath = "/transfer-disputed";
 const transferDefundedPath = "/transfer-defunded";
+const runAuctionPath = "/run-auction";
 const evts: EventCallbackConfig = {
   [EngineEvents.IS_ALIVE]: {
     evt: Evt.create<IsAlivePayload>(),
@@ -132,6 +134,10 @@ const evts: EventCallbackConfig = {
   [EngineEvents.TRANSFER_DEFUNDED]: {
     evt: Evt.create<TransferDefundedPayload & { publicIdentifier: string }>(),
     url: `${routerBase}${transferDefundedPath}`,
+  },
+  [EngineEvents.RUN_AUCTION_EVENT]: {
+    evt: Evt.create<RunAuctionPayload>(),
+    url: `${routerBase}${runAuctionPath}`,
   },
 };
 
@@ -318,6 +324,11 @@ server.post(transferDefundedPath, async (request, response) => {
   evts[EngineEvents.TRANSFER_DEFUNDED].evt!.post(
     request.body as TransferDefundedPayload & { publicIdentifier: string },
   );
+  return response.status(200).send({ message: "success" });
+});
+
+server.post(runAuctionPath, async (request, response) => {
+  evts[EngineEvents.RUN_AUCTION_EVENT].evt!.post(request.body as RunAuctionPayload & { publicIdentifier: string });
   return response.status(200).send({ message: "success" });
 });
 
