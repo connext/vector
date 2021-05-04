@@ -352,13 +352,13 @@ export class EthereumChainService extends EthereumChainReader implements IVector
         // completed callback should always return a receipt and abstract the waiting and bumping of gas prices
 
         // use a promise here so that the whole confirmation is not held up in the queue
-        let tryNumber = 0;
         const completed = new Promise<TransactionReceipt>(async (resolve, reject) => {
+          let tryNumber = 0;
           while (true) {
             try {
-              // Wait for confirmation.
-              this.log.info({ tryNumber }, "Waiting for tx");
               tryNumber += 1;
+              this.log.info({ tryNumber }, "Waiting for tx");
+              // Wait for confirmation.
               const receipt = await this.waitForConfirmation(chainId, response!);
               // Handle receipt / store updates to complete tx.
               if (receipt.status === 0) {
