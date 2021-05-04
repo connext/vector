@@ -122,8 +122,7 @@ describe(testName, () => {
     chainService = Sinon.createStubInstance(VectorChainService, {
       sendWithdrawTx: Promise.resolve(
         Result.ok({
-          hash: withdrawTransactionHash,
-          wait: () => Promise.resolve({ transactionHash: withdrawTransactionHash }),
+          transactionHash: withdrawTransactionHash,
         }),
       ) as any,
       getRegisteredTransferByName: Promise.resolve(Result.ok(withdrawRegisteredInfo)),

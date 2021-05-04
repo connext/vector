@@ -1,6 +1,6 @@
 {
   "name": "@connext/vector-utils",
-  "version": "0.2.5-alpha.2",
+  "version": "0.2.5-beta.1",
   "description": "Crypto & other utils for vector state channels",
   "main": "dist/index.js",
   "files": [

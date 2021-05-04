@@ -185,10 +185,10 @@ export const submitWithdrawalToChain = async (
 
   // submission was successful, update commitment with hash
   logger.info(
-    { transactionHash: response.getValue().hash, channelAddress: channel.channelAddress },
+    { transactionHash: response.getValue().transactionHash, channelAddress: channel.channelAddress },
     "Submitted withdrawal to chain",
   );
-  commitment.addTransaction(response.getValue().hash);
+  commitment.addTransaction(response.getValue().transactionHash);
   try {
     await store.saveWithdrawalCommitment(transfer.transferId, commitment.toJson());
   } catch (e) {
@@ -205,7 +205,7 @@ export const submitWithdrawalToChain = async (
 
   logger.debug({ method, methodId }, "Method complete");
   return Result.ok({
-    transactionHash: response.getValue().hash,
+    transactionHash: response.getValue().transactionHash,
     transferId: transfer.transferId,
     channelAddress: channel.channelAddress,
   });

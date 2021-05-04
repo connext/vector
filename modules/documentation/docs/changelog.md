@@ -2,6 +2,26 @@
 
 ## Next Release
 
+- \[all\] upgrade prisma
+
+## 0.2.5-beta.1
+
+- \[contracts\] tx service hotfixes
+
+## 0.2.5-beta.0
+
+- \[contracts\] robust tx service
+
+## 0.2.5-alpha.4
+
+- \[router\] fix adjustCollateral for receiver channel.
+
+## 0.2.5-alpha.3
+
+- \[router\] add adjustCollateral for receiver channel.
+- \[contracts\] Add `ethReader` tests, Add min gas price, 
+- \[utils\] use static json provider
+
 ## 0.2.5-alpha.2
 
 - \[router\] fix router build error.
