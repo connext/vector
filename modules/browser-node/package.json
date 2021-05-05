@@ -12,7 +12,7 @@
     "types"
   ],
   "scripts": {
-    "build": "rm -rf dist && tsc",
+    "build": "rm -rf dist && tsc && webpack --config ops/webpack.config.js",
     "start": "node dist/index.js",
     "test": "nyc ts-mocha --bail --check-leaks --exit --timeout 60000 'src/**/*.spec.ts'"
   },

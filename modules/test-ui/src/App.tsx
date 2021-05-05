@@ -1,23 +1,28 @@
-import { BrowserNode, NonEIP712Message } from "@connext/vector-browser-node";
-import {
-  getPublicKeyFromPublicIdentifier,
-  encrypt,
-  createlockHash,
-  getBalanceForAssetId,
-  getRandomBytes32,
-  constructRpcRequest,
-} from "@connext/vector-utils";
-import React, { useState } from "react";
-import { constants, providers } from "ethers";
+// import { BrowserNode } from "@connext/vector-browser-node";
+// import {
+//   getPublicKeyFromPublicIdentifier,
+//   encrypt,
+//   createlockHash,
+//   getBalanceForAssetId,
+//   getRandomBytes32,
+//   constructRpcRequest,
+// } from "@connext/vector-utils";
+import React, { useState, useEffect } from "react";
+import { constants } from "ethers";
 import { Col, Divider, Row, Statistic, Input, Typography, Table, Form, Button, List, Select, Tabs, Radio } from "antd";
 import { CopyToClipboard } from "react-copy-to-clipboard";
-import { EngineEvents, FullChannelState, jsonifyError, TransferNames } from "@connext/vector-types";
+import { EngineEvents, FullChannelState, INodeService, jsonifyError, TransferNames } from "@connext/vector-types";
 
 import "./App.css";
 import { config } from "./config";
 
+let BrowserNode: any;
+import("@connext/vector-browser-node").then((pkg) => {
+  BrowserNode = pkg.BrowserNode;
+});
+
 function App() {
-  const [node, setNode] = useState<BrowserNode>();
+  const [node, setNode] = useState<INodeService>();
   const [routerPublicIdentifier, setRouterPublicIdentifier] = useState<string>();
   const [channels, setChannels] = useState<FullChannelState[]>([]);
   const [selectedChannel, setSelectedChannel] = useState<FullChannelState>();
@@ -38,12 +43,26 @@ function App() {
   const [transferForm] = Form.useForm();
   const [signMessageForm] = Form.useForm();
 
+  const [browserNodePkg, setBrowserNodePkg] = useState<any>();
+  const [utilsPkg, setUtilsPkg] = useState<any>();
+
+  const loadWasmLibs = async () => {
+    const browser = await import("@connext/vector-browser-node");
+    setBrowserNodePkg(browser);
+    const utils = await import("@connext/vector-utils");
+    setUtilsPkg(utils);
+  };
+
+  useEffect(() => {
+    loadWasmLibs();
+  }, []);
+
   const connectNode = async (
     iframeSrc: string,
     supportedChains: number[],
     _routerPublicIdentifier: string,
     loginProvider: "none" | "metamask" | "magic",
-  ): Promise<BrowserNode> => {
+  ): Promise<any> => {
     try {
       setConnectLoading(true);
       setRouterPublicIdentifier(_routerPublicIdentifier);
@@ -51,7 +70,7 @@ function App() {
       supportedChains.forEach((chain) => {
         chainProviders[chain] = config.chainProviders[chain];
       });
-      const client = new BrowserNode({
+      const client = new browserNodePkg.BrowserNode({
         supportedChains,
         iframeSrc,
         routerPublicIdentifier: _routerPublicIdentifier,
@@ -109,8 +128,8 @@ function App() {
         return;
       }
       const channelAddresses = channelsRes.getValue();
-      const _channels = (
-        await Promise.all(
+      const _channels: FullChannelState[] = (
+        await Promise.all<FullChannelState>(
           channelAddresses.map(async (c) => {
             const channelRes = await client.getStateChannel({ channelAddress: c });
             console.log("Channel found in store:", channelRes.getValue());
@@ -118,7 +137,7 @@ function App() {
             return channelVal;
           }),
         )
-      ).filter((chan) => supportedChains.includes(chan.networkContext.chainId));
+      ).filter((chan: FullChannelState) => supportedChains.includes(chan.networkContext.chainId));
       if (_channels.length > 0) {
         setChannels(_channels);
         setSelectedChannel(_channels[0]);
@@ -139,7 +158,7 @@ function App() {
           console.log("No encrypted preImage attached", data.transfer);
           return;
         }
-        const rpc = constructRpcRequest<"chan_decrypt">("chan_decrypt", data.transfer.meta.encryptedPreImage);
+        const rpc = utilsPkg.constructRpcRequest("chan_decrypt", data.transfer.meta.encryptedPreImage);
         const decryptedPreImage = await client.send(rpc);
 
         const requestRes = await client.resolveTransfer({
@@ -176,7 +195,7 @@ function App() {
         chainProviders[chainId.toString()] = config.chainProviders[chainId.toString()];
       });
       console.error("creating new browser node on", supportedChains, "with providers", chainProviders);
-      const client = new BrowserNode({
+      const client = new browserNodePkg.BrowserNode({
         supportedChains,
         iframeSrc,
         routerPublicIdentifier: _routerPublicIdentifier,
@@ -190,7 +209,7 @@ function App() {
     setConnectLoading(false);
   };
 
-  const updateChannel = async (node: BrowserNode, channelAddress: string) => {
+  const updateChannel = async (node: INodeService, channelAddress: string) => {
     const res = await node.getStateChannel({ channelAddress });
     if (res.isError) {
       console.error("Error getting state channel", res.getError());
@@ -247,8 +266,8 @@ function App() {
 
     const submittedMeta: { encryptedPreImage?: string } = {};
     if (recipient) {
-      const recipientPublicKey = getPublicKeyFromPublicIdentifier(recipient);
-      const encryptedPreImage = await encrypt(preImage, recipientPublicKey);
+      const recipientPublicKey = utilsPkg.getPublicKeyFromPublicIdentifier(recipient);
+      const encryptedPreImage = await utilsPkg.encrypt(preImage, recipientPublicKey);
       submittedMeta.encryptedPreImage = encryptedPreImage;
     }
 
@@ -259,7 +278,7 @@ function App() {
       amount,
       recipient,
       details: {
-        lockHash: createlockHash(preImage),
+        lockHash: utilsPkg.createlockHash(preImage),
         expiry: "0",
       },
       meta: submittedMeta,
@@ -603,7 +622,7 @@ function App() {
                     name="transfer"
                     initialValues={{
                       assetId: selectedChannel?.assetIds && selectedChannel?.assetIds[0],
-                      preImage: getRandomBytes32(),
+                      preImage: utilsPkg.getRandomBytes32(),
                       numLoops: 1,
                     }}
                     onFinish={(values) => transfer(values.assetId, values.amount, values.recipient, values.preImage)}
@@ -642,7 +661,7 @@ function App() {
                         enterButton="MAX"
                         onSearch={() => {
                           const assetId = transferForm.getFieldValue("assetId");
-                          const amount = getBalanceForAssetId(selectedChannel, assetId, "bob");
+                          const amount = utilsPkg.getBalanceForAssetId(selectedChannel, assetId, "bob");
                           transferForm.setFieldsValue({ amount });
                         }}
                       />
@@ -656,7 +675,7 @@ function App() {
                       <Input.Search
                         enterButton="Random"
                         onSearch={() => {
-                          const preImage = getRandomBytes32();
+                          const preImage = utilsPkg.getRandomBytes32();
                           transferForm.setFieldsValue({ preImage });
                         }}
                       />
@@ -775,7 +794,7 @@ function App() {
                     enterButton="MAX"
                     onSearch={() => {
                       const assetId = withdrawForm.getFieldValue("assetId");
-                      const amount = getBalanceForAssetId(selectedChannel, assetId, "bob");
+                      const amount = utilsPkg.getBalanceForAssetId(selectedChannel, assetId, "bob");
                       withdrawForm.setFieldsValue({ amount });
                     }}
                   />
