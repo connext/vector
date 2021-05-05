@@ -16,11 +16,6 @@ import { ConfigServiceError } from "../errors";
 import { BaseLogger } from "pino";
 import { AddressZero } from "@ethersproject/constants";
 
-const stableAmmAddress = getConfig().stableAmmAddress;
-const stableAmmProvider: JsonRpcProvider = new JsonRpcProvider(
-  getConfig().chainProviders[getConfig().stableAmmChainId!],
-);
-
 export const getRebalanceProfile = (chainId: number, assetId: string): Result<RebalanceProfile, ConfigServiceError> => {
   const asset = getAddress(assetId);
   const rebalanceProfile = getConfig().rebalanceProfiles.find(
@@ -136,6 +131,9 @@ export const onSwapGivenIn = async (
   chainReader: IVectorChainReader,
   logger: BaseLogger,
 ): Promise<Result<{ priceImpact: string; amountOut: BigNumber }, ConfigServiceError>> => {
+  const { stableAmmChainId, stableAmmAddress } = getConfig();
+  const stableAmmProvider: JsonRpcProvider = new JsonRpcProvider(getConfig().chainProviders[stableAmmChainId!]);
+
   // if there's no swap, rate is 1:1
   if (fromAssetId === toAssetId && fromChainId === toChainId) {
     return Result.ok({
