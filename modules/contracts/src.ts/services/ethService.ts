@@ -1171,7 +1171,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
           method,
           methodId,
           channelAddress: channelState.channelAddress,
-          transactionHash: deploy.getValue().transactionHash,
+          transactionHash: deploy.getValue()!.transactionHash,
         },
         "Channel deployed",
       );
