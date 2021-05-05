@@ -82,6 +82,7 @@ common=(
   "--env=VECTOR_ROUTER_URL=http://router:8000"
   "--env=SUGAR_DADDY=$SUGAR_DADDY"
   "--env=VECTOR_TESTER_NAME=$tester_name"
+  "--env=VECTOR_CONFIG=$config"
   "--name=$tester_name"
   "--network=$project"
   "--rm"

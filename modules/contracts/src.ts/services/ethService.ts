@@ -96,7 +96,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
     });
 
     // TODO: Check to see which tx's are still active / unresolved, and resolve them.
-    this.revitalizeTxs();
+    // this.revitalizeTxs();
   }
 
   private getSigner(chainId: number): Signer | undefined {

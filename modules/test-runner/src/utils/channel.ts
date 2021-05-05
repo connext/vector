@@ -19,8 +19,6 @@ import { BigNumber, constants, providers, utils, Wallet } from "ethers";
 
 import { env } from "./env";
 import { getOnchainBalance } from "./ethereum";
-import { waitForTransaction } from "@connext/vector-contracts";
-import { carolEvts } from "../trio/eventSetup";
 
 export const chainId1 = parseInt(Object.keys(env.chainProviders)[0]);
 export const provider1 = new providers.JsonRpcProvider(env.chainProviders[chainId1]);
@@ -114,7 +112,21 @@ export const requestCollateral = async (
 
   const counterpartyAfter = getBalanceForAssetId(requesterChannel, assetId, counterpartyAliceOrBob);
   expect(requesterChannel).to.deep.eq(counterpartyChannel);
+
   if (requestedAmount && requestedAmount.lte(counterpartyBefore)) {
+    // should not collateralize
+    expect(BigNumber.from(counterpartyAfter).eq(counterpartyBefore)).to.be.true;
+    return requesterChannel;
+  }
+  const profile = env.config.rebalanceProfiles.find(
+    (prof) => prof.assetId === assetId && prof.chainId === requesterChannel.networkContext.chainId,
+  );
+  if (!profile) {
+    // should not collateralize
+    expect(BigNumber.from(counterpartyAfter).eq(counterpartyBefore)).to.be.true;
+    return requesterChannel;
+  }
+  if (profile && requestedAmount && requestedAmount.gt(profile.reclaimThreshold)) {
     // should not collateralize
     expect(BigNumber.from(counterpartyAfter).eq(counterpartyBefore)).to.be.true;
     return requesterChannel;
@@ -386,8 +398,9 @@ export const withdraw = async (
 
   // Verify balance changes
   expect(BigNumber.from(preWithdrawCarol).sub(amount)).to.be.eq(postWithdrawBalance);
-  // using gte here because roger could collateralize
-  expect(postWithdrawMultisig.gte(BigNumber.from(preWithdrawMultisig).sub(amountWithdrawn))).to.be.true;
+  // using gte here because roger could (de)collateralize
+  const diff = preWithdrawMultisig.sub(postWithdrawMultisig);
+  expect(diff.gte(amountWithdrawn)).to.be.true;
   if (
     withdrawerAliceOrBob === "alice" &&
     withdrawRecipient.toLowerCase() === preWithdrawChannel.alice.toLowerCase() &&
