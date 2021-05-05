@@ -1125,7 +1125,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
       if (res.isError) {
         return Result.fail(res.getError()!);
       }
-      return Result.ok(res.getValue());
+      return Result.ok(res.getValue()!);
     } else {
       const erc20 = new Contract(channelState.networkContext.channelFactoryAddress, ERC20Abi, signer);
       const res = await this.sendTxWithRetries(
@@ -1179,7 +1179,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
           method,
           methodId,
           channelAddress: channelState.channelAddress,
-          transactionHash: deploy.getValue()!.transactionHash,
+          transactionHash: deploy.getValue().transactionHash,
         },
         "Channel deployed",
       );
