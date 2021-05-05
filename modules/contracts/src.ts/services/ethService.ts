@@ -126,7 +126,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
     });
   }
 
-  /// Save the tx receipt in the store and fire tx mined event. 
+  /// Save the tx receipt in the store and fire tx mined event.
   private async handleTxMined(
     method: string,
     methodId: string,
@@ -164,13 +164,15 @@ export class EthereumChainService extends EthereumChainReader implements IVector
       error,
       channelAddress,
       reason,
-      ...(receipt ? {
-        receipt: Object.fromEntries(
-          Object.entries(receipt).map(([key, value]) => {
-            return [key, BigNumber.isBigNumber(value) ? value.toString() : value];
-          }),
-        ) as StringifiedTransactionReceipt,
-      } : {})
+      ...(receipt
+        ? {
+            receipt: Object.fromEntries(
+              Object.entries(receipt).map(([key, value]) => {
+                return [key, BigNumber.isBigNumber(value) ? value.toString() : value];
+              }),
+            ) as StringifiedTransactionReceipt,
+          }
+        : {}),
     });
   }
 
@@ -181,15 +183,17 @@ export class EthereumChainService extends EthereumChainReader implements IVector
     nonce?: number,
   ): Promise<Result<TransactionResponse | undefined, Error>> {
     // Queue up the execution of the transaction.
-    return await this.queue.add(async (): Promise<Result<TransactionResponse | undefined, Error>> => {
-      try {
-        // Send transaction using the passed in callback.
-        const response: TransactionResponse | undefined = await txFn(gasPrice, nonce);
-        return Result.ok(response);
-      } catch (e) {
-        return Result.fail(e);
-      }
-    });
+    return await this.queue.add(
+      async (): Promise<Result<TransactionResponse | undefined, Error>> => {
+        try {
+          // Send transaction using the passed in callback.
+          const response: TransactionResponse | undefined = await txFn(gasPrice, nonce);
+          return Result.ok(response);
+        } catch (e) {
+          return Result.fail(e);
+        }
+      },
+    );
   }
 
   /// Check to see if any txs were left in an unfinished state. This should only execute on
@@ -402,14 +406,15 @@ export class EthereumChainService extends EthereumChainReader implements IVector
     let gasPrice: BigNumber;
     try {
       // Get (initial) gas price if there is not a preset amount passed into this method.
-      gasPrice = presetGasPrice ??
-      await (async (): Promise<BigNumber> => {
-        const price = await this.getGasPrice(chainId);
-        if (price.isError) {
-          throw price.getError()!;
-        }
-        return price.getValue();
-      })();
+      gasPrice =
+        presetGasPrice ??
+        (await (async (): Promise<BigNumber> => {
+          const price = await this.getGasPrice(chainId);
+          if (price.isError) {
+            throw price.getError()!;
+          }
+          return price.getValue();
+        })());
     } catch (e) {
       return Result.fail(e);
     }
@@ -434,7 +439,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
             // A more robust comparison is desirable here either way.
             this.log.info(
               { method, methodId, channelAddress, reason },
-              "Nonce already used: proceeding to check for confirmation."
+              "Nonce already used: proceeding to check for confirmation.",
             );
           } else {
             throw error;
@@ -492,7 +497,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
               response!,
               receipt,
               error,
-              "Max gas price reached"
+              "Max gas price reached",
             );
             return Result.fail(error);
           }
@@ -509,7 +514,10 @@ export class EthereumChainService extends EthereumChainReader implements IVector
             // If we get any other error here, we classify this event as a tx failure.
             await this.handleTxFail(method, methodId, channelAddress, reason, response, receipt, e, "Tx reverted");
           } else {
-            this.log.error({ method, methodId, channelAddress, reason, error: jsonifyError(error) }, "Failed to send tx");
+            this.log.error(
+              { method, methodId, channelAddress, reason, error: jsonifyError(error) },
+              "Failed to send tx",
+            );
           }
           return Result.fail(error);
         }
@@ -777,7 +785,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
       channelState.networkContext.chainId,
       TransactionReason.withdraw,
       async (gasPrice: BigNumber, nonce?: number) => {
-        return signer.sendTransaction({ ...minTx, gasPrice, gasLimit: BIG_GAS_LIMIT, from: sender });
+        return signer.sendTransaction({ ...minTx, gasPrice, gasLimit: BIG_GAS_LIMIT, from: sender, nonce });
       },
     );
     if (res.isError) {
@@ -1189,12 +1197,16 @@ export class EthereumChainService extends EthereumChainReader implements IVector
       channelState.channelAddress,
       channelState.networkContext.chainId,
       TransactionReason.disputeChannel,
-      () => {
+      (gasPrice, nonce) => {
         const channel = new Contract(channelState.channelAddress, VectorChannel.abi, signer);
         return channel.disputeChannel(
           channelState,
           channelState.latestUpdate.aliceSignature,
           channelState.latestUpdate.bobSignature,
+          {
+            gasPrice,
+            nonce,
+          },
         );
       },
     );
@@ -1221,12 +1233,13 @@ export class EthereumChainService extends EthereumChainReader implements IVector
       channelState.channelAddress,
       channelState.networkContext.chainId,
       TransactionReason.defundChannel,
-      () => {
+      (gasPrice, nonce) => {
         const channel = new Contract(channelState.channelAddress, VectorChannel.abi, signer);
         return channel.defundChannel(
           channelState,
           assetsToDefund,
           indices.length > 0 ? indices : assetsToDefund.map((_asset, idx) => idx),
+          { gasPrice, nonce },
         );
       },
     );
@@ -1264,9 +1277,12 @@ export class EthereumChainService extends EthereumChainReader implements IVector
       transferState.channelAddress,
       transferState.chainId,
       TransactionReason.disputeTransfer,
-      () => {
+      (gasPrice, nonce) => {
         const channel = new Contract(transferState.channelAddress, VectorChannel.abi, signer);
-        return channel.disputeTransfer(transferState, tree.getHexProof(hashCoreTransferState(transferState)));
+        return channel.disputeTransfer(transferState, tree.getHexProof(hashCoreTransferState(transferState)), {
+          gasPrice,
+          nonce,
+        });
       },
     );
     if (res.isError) {
@@ -1295,9 +1311,12 @@ export class EthereumChainService extends EthereumChainReader implements IVector
       transferState.channelAddress,
       transferState.chainId,
       TransactionReason.defundTransfer,
-      () => {
+      (gasPrice, nonce) => {
         const channel = new Contract(transferState.channelAddress, VectorChannel.abi, signer);
-        return channel.defundTransfer(transferState, encodedState, encodedResolver, responderSignature);
+        return channel.defundTransfer(transferState, encodedState, encodedResolver, responderSignature, {
+          gasPrice,
+          nonce,
+        });
       },
     );
     if (res.isError) {
@@ -1319,10 +1338,15 @@ export class EthereumChainService extends EthereumChainReader implements IVector
     }
     this.log.info({ channelAddress, chainId, assetId, owner, recipient }, "Defunding channel");
 
-    const res = await this.sendTxWithRetries(channelAddress, chainId, TransactionReason.exitChannel, () => {
-      const channel = new Contract(channelAddress, VectorChannel.abi, signer);
-      return channel.exit(assetId, owner, recipient);
-    });
+    const res = await this.sendTxWithRetries(
+      channelAddress,
+      chainId,
+      TransactionReason.exitChannel,
+      (gasPrice, nonce) => {
+        const channel = new Contract(channelAddress, VectorChannel.abi, signer);
+        return channel.exit(assetId, owner, recipient, { gasPrice, nonce });
+      },
+    );
     if (res.isError) {
       return Result.fail(res.getError()!);
     }
