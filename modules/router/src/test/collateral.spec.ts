@@ -30,7 +30,13 @@ describe(testName, () => {
   let chainReader: Sinon.SinonStubbedInstance<VectorChainReader>;
   let getRebalanceProfile: Sinon.SinonStub;
 
-  const ethProfile = config.rebalanceProfiles.find((p) => p.chainId === chainId && p.assetId === AddressZero)!;
+  const ethProfile = {
+    chainId,
+    assetId: "0x0000000000000000000000000000000000000000",
+    reclaimThreshold: "200000000000000000",
+    target: "100000000000000000",
+    collateralizeThreshold: "50000000000000000",
+  };
   const routerPublicIdentifier = mkPublicIdentifier("vectorRRR");
 
   beforeEach(async () => {
