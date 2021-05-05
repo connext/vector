@@ -264,7 +264,7 @@ export interface IVectorChainService extends IVectorChainReader {
   sendDeployChannelTx(
     channelState: FullChannelState,
     deposit?: { amount: string; assetId: string }, // Included IFF createChannelAndDepositAlice
-  ): Promise<Result<TransactionReceipt | undefined, ChainError>>;
+  ): Promise<Result<TransactionReceipt, ChainError>>;
 
   // Dispute methods
   sendDisputeChannelTx(channelState: FullChannelState): Promise<Result<TransactionReceipt, ChainError>>;

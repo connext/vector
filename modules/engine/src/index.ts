@@ -669,7 +669,7 @@ export class VectorEngine implements IVectorEngine {
       );
       return setupRes;
     }
-    const receipt = deployRes.getValue()!;
+    const receipt = deployRes.getValue();
     this.logger.debug({ chainId: channel.networkContext.chainId, hash: receipt.transactionHash }, "Deploy tx mined");
     this.logger.info(
       { result: setupRes.isError ? jsonifyError(setupRes.getError()!) : setupRes.getValue(), method, methodId },

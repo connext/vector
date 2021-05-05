@@ -560,7 +560,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
   public async sendDeployChannelTx(
     channelState: FullChannelState,
     deposit?: { amount: string; assetId: string }, // Included IFF createChannelAndDepositAlice
-  ): Promise<Result<TransactionReceipt | undefined, ChainError>> {
+  ): Promise<Result<TransactionReceipt, ChainError>> {
     const method = "sendDeployChannelTx";
     const methodId = getRandomBytes32();
     const signer = this.signers.get(channelState.networkContext.chainId);
@@ -678,7 +678,10 @@ export class EthereumChainService extends EthereumChainReader implements IVector
       if (res.isError) {
         return Result.fail(res.getError()!);
       }
-      return Result.ok(res.getValue());
+      if (!res.getValue()) {
+        return Result.fail(new ChainError(ChainError.reasons.MultisigDeployed));
+      }
+      return Result.ok(res.getValue()!);
     }
 
     // Must be token deposit, first approve the token transfer
@@ -724,7 +727,10 @@ export class EthereumChainService extends EthereumChainReader implements IVector
     if (res.isError) {
       return Result.fail(res.getError()!);
     }
-    return Result.ok(res.getValue());
+    if (!res.getValue()) {
+      return Result.fail(new ChainError(ChainError.reasons.MultisigDeployed));
+    }
+    return Result.ok(res.getValue()!);
   }
 
   public async sendWithdrawTx(
@@ -825,14 +831,16 @@ export class EthereumChainService extends EthereumChainReader implements IVector
       );
       const deployResult = await this.sendDeployChannelTx(channelState, { amount, assetId });
       if (deployResult.isError) {
-        return Result.fail(deployResult.getError()!);
-      } else if (deployResult.getValue()) {
+        const error = deployResult.getError()!;
+        if (!(error.message === ChainError.reasons.MultisigDeployed)) {
+          return Result.fail(deployResult.getError()!);
+        }
+        // NOTE: If the multisig is already deployed, then our tx to deploy must have been reverted.
+        // We can proceed to making the deposit here ourselves in the code below.
+      } else {
         // Deploy and deposit succeeded.
         return Result.ok(deployResult.getValue()!);
       }
-      // NOTE: If the deployResult value is undefined, then the tx reverted since the channel
-      // is already deployed. In this case, we'll proceed to making the deposit here ourselves
-      // in the code below.
     }
 
     const balanceRes = await this.getOnchainBalance(assetId, sender, channelState.networkContext.chainId);
@@ -1117,7 +1125,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
       if (res.isError) {
         return Result.fail(res.getError()!);
       }
-      return Result.ok(res.getValue()!);
+      return Result.ok(res.getValue());
     } else {
       const erc20 = new Contract(channelState.networkContext.channelFactoryAddress, ERC20Abi, signer);
       const res = await this.sendTxWithRetries(
