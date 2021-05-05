@@ -2,6 +2,8 @@
 
 ## Next Release
 
+## 0.2.5-beta.2
+
 - \[all\] upgrade prisma
 - \[router\] Fix router reclaim
 
