@@ -2,6 +2,11 @@
 
 ## Next Release
 
+## 0.2.5-beta.3
+
+- \[contracts\] Don't revitalize tx
+- \[tests\] Fix integration tests with new default configs
+
 ## 0.2.5-beta.2
 
 - \[all\] upgrade prisma
