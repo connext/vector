@@ -553,7 +553,7 @@ describe("ethService unit test", () => {
       const saveTransactionFailureCall = storeMock.saveTransactionFailure.getCall(0);
       expect(saveTransactionFailureCall.args[0]).eq(AddressZero);
       expect(saveTransactionFailureCall.args[1]).eq(txResponse.hash);
-      expect(saveTransactionFailureCall.args[2]).eq("Tx reverted");
+      expect(saveTransactionFailureCall.args[2]).eq(ChainError.reasons.TxReverted);
       assertResult(result, true, ChainError.reasons.TxReverted);
     });
 
