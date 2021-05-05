@@ -105,6 +105,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
     return signer;
   }
 
+  /// Upsert tx submission to store, fire tx submit event.
   private async handleTxSubmit(
     method: string,
     methodId: string,
@@ -125,6 +126,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
     });
   }
 
+  /// Save the tx receipt in the store and fire tx mined event. 
   private async handleTxMined(
     method: string,
     methodId: string,
@@ -145,6 +147,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
     });
   }
 
+  /// Save tx failure in store and fire tx failed event.
   private async handleTxFail(
     method: string,
     methodId: string,
@@ -411,7 +414,10 @@ export class EthereumChainService extends EthereumChainReader implements IVector
       return Result.fail(e);
     }
 
-    while (true) {
+    // This is the gas bump loop.
+    // We will raise gas price for a tx if the confirmation of the tx times out.
+    // (Default timeout should be around ~15 sec, i.e. GAS_BUMP_THRESHOLD)
+    while (!receipt) {
       tryNumber += 1;
       try {
         /// SUBMIT
@@ -461,14 +467,9 @@ export class EthereumChainService extends EthereumChainReader implements IVector
         if (receipt.status === 0) {
           throw new ChainError(ChainError.reasons.TxReverted, { receipt, method, methodId });
         }
-        // Success! Save mined tx receipt.
-        await this.handleTxMined(method, methodId, channelAddress, reason, receipt);
-        return Result.ok(receipt);
       } catch (e) {
         // Check if the error was a confirmation timeout.
         if (e.message === ChainError.retryableTxErrors.ConfirmationTimeout) {
-          // We will raise gas price if the confirmation of the tx "times out" essentially.
-          // Default timeout should be around ~15 sec. (GAS_BUMP_THRESHOLD)
           // Scale up gas by percentage as specified by GAS_BUMP_PERCENT.
           this.log.info(
             { channelAddress, reason, method, methodId },
@@ -514,6 +515,10 @@ export class EthereumChainService extends EthereumChainReader implements IVector
         }
       }
     }
+
+    // Success! Save mined tx receipt.
+    await this.handleTxMined(method, methodId, channelAddress, reason, receipt);
+    return Result.ok(receipt);
   }
 
   public async waitForConfirmation(chainId: number, response: TransactionResponse): Promise<TransactionReceipt> {
