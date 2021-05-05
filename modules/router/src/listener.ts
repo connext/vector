@@ -354,7 +354,7 @@ export async function setupListeners(
           const responseReceiverChannel = await adjustCollateral(
             data.channelAddress,
             data.transfer.assetId,
-            data.bobIdentifier,
+            routerSigner.publicIdentifier,
             nodeService,
             chainReader,
             logger,
