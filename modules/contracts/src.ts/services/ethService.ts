@@ -34,7 +34,7 @@ import { Wallet } from "@ethersproject/wallet";
 import { BaseLogger } from "pino";
 import PriorityQueue from "p-queue";
 import { AddressZero, HashZero } from "@ethersproject/constants";
-import { Evt, throttleTime } from "evt";
+import { Evt } from "evt";
 
 import { ChannelFactory, VectorChannel } from "../artifacts";
 
