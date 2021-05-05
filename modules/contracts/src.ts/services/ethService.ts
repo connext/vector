@@ -560,7 +560,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
   public async sendDeployChannelTx(
     channelState: FullChannelState,
     deposit?: { amount: string; assetId: string }, // Included IFF createChannelAndDepositAlice
-  ): Promise<Result<TransactionReceipt, ChainError>> {
+  ): Promise<Result<TransactionReceipt | undefined, ChainError>> {
     const method = "sendDeployChannelTx";
     const methodId = getRandomBytes32();
     const signer = this.signers.get(channelState.networkContext.chainId);
@@ -664,7 +664,6 @@ export class EthereumChainService extends EthereumChainReader implements IVector
           }
           if (multisigRes.getValue() !== `0x`) {
             // multisig deployed, just send deposit
-            this.sendDepositATx(channelState, amount, AddressZero);
             return undefined;
           }
           // otherwise deploy with deposit
@@ -679,7 +678,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
       if (res.isError) {
         return Result.fail(res.getError()!);
       }
-      return Result.ok(res.getValue()!);
+      return Result.ok(res.getValue());
     }
 
     // Must be token deposit, first approve the token transfer
@@ -713,7 +712,6 @@ export class EthereumChainService extends EthereumChainReader implements IVector
         }
         if (multisigRes.getValue() !== `0x`) {
           // multisig deployed, just send deposit (will check allowance)
-          this.sendDepositATx(channelState, amount, assetId);
           return undefined;
         }
         return channelFactory.createChannelAndDepositAlice(channelState.alice, channelState.bob, assetId, amount, {
@@ -726,7 +724,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
     if (res.isError) {
       return Result.fail(res.getError()!);
     }
-    return Result.ok(res.getValue()!);
+    return Result.ok(res.getValue());
   }
 
   public async sendWithdrawTx(
@@ -825,7 +823,16 @@ export class EthereumChainService extends EthereumChainReader implements IVector
         },
         `Deploying channel with deposit`,
       );
-      return this.sendDeployChannelTx(channelState, { amount, assetId });
+      const deployResult = await this.sendDeployChannelTx(channelState, { amount, assetId });
+      if (deployResult.isError) {
+        return Result.fail(deployResult.getError()!);
+      } else if (deployResult.getValue()) {
+        // Deploy and deposit succeeded.
+        return Result.ok(deployResult.getValue()!);
+      }
+      // NOTE: If the deployResult value is undefined, then the tx reverted since the channel
+      // is already deployed. In this case, we'll proceed to making the deposit here ourselves
+      // in the code below.
     }
 
     const balanceRes = await this.getOnchainBalance(assetId, sender, channelState.networkContext.chainId);
