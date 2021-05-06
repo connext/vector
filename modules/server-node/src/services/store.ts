@@ -347,29 +347,35 @@ export class PrismaStore implements IServerNodeStore {
     return convertOnchainTransactionEntityToTransaction(entity);
   }
 
-  async saveTransactionResponse(
+  async saveTransactionAttempt(
     channelAddress: string,
     reason: TransactionReason,
     response: TransactionResponse,
-  ): Promise<void> {
-    await this.prisma.onchainTransaction.upsert({
-      where: { transactionHash: response.hash },
+    onchainTransactionId?: string,
+  ): Promise<{ onchainTransactionId: string }> {
+    const tx = await this.prisma.onchainTransaction.upsert({
+      where: { id: onchainTransactionId },
       create: {
         status: StoredTransactionStatus.submitted,
         reason,
-        transactionHash: response.hash,
-        to: response.to!,
-        from: response.from,
-        data: response.data,
-        value: response.value.toString(),
-        chainId: response.chainId.toString(),
-        nonce: response.nonce,
-        gasLimit: response.gasLimit.toString(),
-        gasPrice: response.gasPrice.toString(),
-        timestamp: response.timestamp?.toString(),
-        raw: response.raw,
-        blockHash: response.blockHash,
-        blockNumber: response.blockNumber,
+        onchainTransactionAttempts: {
+          connectOrCreate: {
+            where: {
+              transactionHash: response.hash,
+            },
+            create: {
+              chainId: response.chainId.toString(),
+              data: response.data,
+              from: response.from,
+              gasLimit: (response.gasLimit ?? BigNumber.from(0)).toString(),
+              gasPrice: (response.gasPrice ?? BigNumber.from(0)).toString(),
+              nonce: response.nonce,
+              to: response.to ?? "",
+              value: (response.value ?? BigNumber.from(0)).toString(),
+              transactionHash: response.hash,
+            },
+          },
+        },
         channel: {
           connect: {
             channelAddress,
@@ -379,19 +385,24 @@ export class PrismaStore implements IServerNodeStore {
       update: {
         status: StoredTransactionStatus.submitted,
         reason,
-        transactionHash: response.hash,
-        to: response.to!,
-        from: response.from,
-        data: response.data,
-        value: response.value.toString(),
-        chainId: response.chainId.toString(),
-        nonce: response.nonce,
-        gasLimit: response.gasLimit.toString(),
-        gasPrice: response.gasPrice.toString(),
-        timestamp: response.timestamp?.toString(),
-        raw: response.raw,
-        blockHash: response.blockHash,
-        blockNumber: response.blockNumber,
+        onchainTransactionAttempts: {
+          connectOrCreate: {
+            where: {
+              transactionHash: response.hash,
+            },
+            create: {
+              chainId: response.chainId.toString(),
+              data: response.data,
+              from: response.from,
+              gasLimit: (response.gasLimit ?? BigNumber.from(0)).toString(),
+              gasPrice: (response.gasPrice ?? BigNumber.from(0)).toString(),
+              nonce: response.nonce,
+              to: response.to ?? "",
+              value: (response.value ?? BigNumber.from(0)).toString(),
+              transactionHash: response.hash,
+            },
+          },
+        },
         channel: {
           connect: {
             channelAddress,
@@ -400,45 +411,92 @@ export class PrismaStore implements IServerNodeStore {
       },
       include: { channel: true },
     });
+    return { onchainTransactionId: tx.id };
   }
 
-  async saveTransactionReceipt(channelAddress: string, transaction: TransactionReceipt): Promise<void> {
+  async saveTransactionReceipt(onchainTransactionId: string, transaction: TransactionReceipt): Promise<void> {
     await this.prisma.onchainTransaction.update({
-      where: { transactionHash: transaction.transactionHash },
+      where: {
+        id: onchainTransactionId,
+      },
       data: {
         status: StoredTransactionStatus.mined,
-        to: transaction.to,
-        from: transaction.from,
-        blockHash: transaction.blockHash,
-        blockNumber: BigNumber.from(transaction.blockNumber || 0).toNumber(),
-        contractAddress: transaction.contractAddress,
-        transactionIndex: BigNumber.from(transaction.transactionIndex || 0).toNumber(),
-        root: transaction.root,
-        gasUsed: transaction.gasUsed.toString(),
-        logsBloom: transaction.logsBloom,
-        logs: JSON.stringify(transaction.logs),
-        cumulativeGasUsed: transaction.cumulativeGasUsed.toString(),
-        byzantium: transaction.byzantium,
-        channel: {
-          connect: {
-            channelAddress,
+        onchainTransactionAttempts: {
+          update: {
+            where: { transactionHash: transaction.transactionHash },
+            data: {
+              receipt: {
+                connectOrCreate: {
+                  where: {
+                    transactionHash: transaction.transactionHash,
+                  },
+                  create: {
+                    transactionHash: transaction.transactionHash,
+                    blockHash: transaction.blockHash,
+                    blockNumber: transaction.blockNumber,
+                    byzantium: transaction.byzantium,
+                    contractAddress: transaction.contractAddress,
+                    cumulativeGasUsed: (transaction.cumulativeGasUsed ?? BigNumber.from(0)).toString(),
+                    gasUsed: (transaction.gasUsed ?? BigNumber.from(0)).toString(),
+                    logs: transaction.logs.join(",").toString(),
+                    logsBloom: transaction.logsBloom,
+                    root: transaction.root,
+                    status: transaction.status,
+                    transactionIndex: transaction.transactionIndex,
+                  },
+                },
+              },
+            },
           },
         },
       },
     });
   }
 
-  async saveTransactionFailure(channelAddress: string, transactionHash: string, error: string): Promise<void> {
+  async saveTransactionFailure(
+    onchainTransactionId: string,
+    transactionHash: string,
+    error: string,
+    transaction?: TransactionReceipt,
+  ): Promise<void> {
     await this.prisma.onchainTransaction.update({
-      where: { transactionHash },
+      where: {
+        id: onchainTransactionId,
+      },
       data: {
-        status: StoredTransactionStatus.failed,
         error,
-        channel: {
-          connect: { channelAddress },
+        status: StoredTransactionStatus.mined,
+        onchainTransactionAttempts: {
+          update: {
+            where: { transactionHash },
+            data: {
+              receipt: {
+                connectOrCreate: transaction
+                  ? {
+                      where: {
+                        transactionHash,
+                      },
+                      create: {
+                        transactionHash,
+                        blockHash: transaction.blockHash,
+                        blockNumber: transaction.blockNumber,
+                        byzantium: transaction.byzantium,
+                        contractAddress: transaction.contractAddress,
+                        cumulativeGasUsed: (transaction.cumulativeGasUsed ?? BigNumber.from(0)).toString(),
+                        gasUsed: (transaction.gasUsed ?? BigNumber.from(0)).toString(),
+                        logs: transaction.logs.join(",").toString(),
+                        logsBloom: transaction.logsBloom,
+                        root: transaction.root,
+                        status: transaction.status,
+                        transactionIndex: transaction.transactionIndex,
+                      },
+                    }
+                  : undefined,
+              },
+            },
+          },
         },
       },
-      include: { channel: true },
     });
   }
 
@@ -495,8 +553,8 @@ export class PrismaStore implements IServerNodeStore {
     if (!withdrawCommitment.transactionHash) {
       return;
     }
-    const record = await this.prisma.onchainTransaction.findUnique({
-      where: { transactionHash: withdrawCommitment.transactionHash },
+    const record = await this.prisma.onchainTransaction.findFirst({
+      where: { onchainTransactionAttempts: { some: { transactionHash: withdrawCommitment.transactionHash } } },
     });
     if (!record) {
       // Did not submit transaction ourselves, no record to connect
