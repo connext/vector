@@ -61,7 +61,7 @@ export default class ConnextManager {
       throw new Error("localStorage not available in this window, please enable cross-site cookies and try again.");
     }
 
-    const recovered = verifyMessage(this.utilsPkg.NonEIP712Message, signature);
+    const recovered = verifyMessage(this.browserPkg.NonEIP712Message, signature);
     if (getAddress(recovered) !== getAddress(signerAddress)) {
       throw new Error(
         `Signature not properly recovered. expected ${signerAddress}, got ${recovered}, signature: ${signature}`,
