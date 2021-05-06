@@ -16,10 +16,10 @@ import { EngineEvents, FullChannelState, INodeService, jsonifyError, TransferNam
 import "./App.css";
 import { config } from "./config";
 
-let BrowserNode: any;
-import("@connext/vector-browser-node").then((pkg) => {
-  BrowserNode = pkg.BrowserNode;
-});
+// let BrowserNode: any;
+// import("@connext/vector-browser-node").then((pkg) => {
+//   BrowserNode = pkg.BrowserNode;
+// });
 
 function App() {
   const [node, setNode] = useState<INodeService>();
@@ -37,10 +37,13 @@ function App() {
 
   const [connectError, setConnectError] = useState<string>();
   const [copied, setCopied] = useState<boolean>(false);
-  const [activeTab, setActiveTab] = useState<"HashlockTransfer" | "CrossChainTransfer">("HashlockTransfer");
+  const [activeTab, setActiveTab] = useState<"HashlockTransfer" | "CrossChainTransfer" | "MultiTransfer">(
+    "HashlockTransfer",
+  );
 
   const [withdrawForm] = Form.useForm();
   const [transferForm] = Form.useForm();
+  const [multiTransferForm] = Form.useForm();
   const [signMessageForm] = Form.useForm();
 
   const [browserNodePkg, setBrowserNodePkg] = useState<any>();
@@ -259,6 +262,78 @@ function App() {
       console.error("Error depositing", requestRes.getError());
     }
     setRequestCollateralLoading(false);
+  };
+
+  const multiTransfer = async (numberOfTransfers: number) => {
+    const transfers = Array(numberOfTransfers)
+      .fill(0)
+      .map((_) => {
+        return utilsPkg.createCoreTransferState({ transferId: utilsPkg.getRandomBytes32() });
+      });
+
+    console.warn("ui::generating root");
+    const root = utilsPkg.generateMerkleRoot(transfers);
+    console.log("ui::root", root);
+    console.warn("ui::generated");
+    const recipientChannel = channels.find((c) => c.channelAddress !== selectedChannel.channelAddress);
+    if (!recipientChannel) {
+      console.error("No recipient channel");
+      return;
+    }
+
+    if (
+      recipientChannel.networkContext.chainId === selectedChannel.networkContext.chainId &&
+      recipientChannel.bobIdentifier === selectedChannel.bobIdentifier
+    ) {
+      console.error("Will not properly route");
+      return;
+    }
+
+    let recievedTransfers = 0;
+    node.on(EngineEvents.CONDITIONAL_TRANSFER_CREATED, (data) => {
+      if (data.channelAddress === recipientChannel.channelAddress) {
+        recievedTransfers++;
+      }
+    });
+
+    let requests = 0;
+    const completed = new Promise(async (resolve) => {
+      while (recievedTransfers < numberOfTransfers) {
+        if (requests !== numberOfTransfers) {
+          await utilsPkg.delay(35_000);
+          continue;
+        } else {
+          console.log(`recipient has ${recievedTransfers + 1} / ${numberOfTransfers}`);
+          await utilsPkg.delay(1_000);
+        }
+      }
+      resolve(undefined);
+    });
+
+    for (const _ of Array(numberOfTransfers).fill(0)) {
+      (requests + 1) % 10 === 0 && console.log(`request ${requests + 1} / ${numberOfTransfers}`);
+      const preImage = utilsPkg.getRandomBytes32();
+      const params = {
+        publicIdentifier: selectedChannel.bobIdentifier,
+        amount: "1",
+        assetId: constants.AddressZero,
+        channelAddress: selectedChannel.channelAddress,
+        type: TransferNames.HashlockTransfer,
+        details: {
+          lockHash: utilsPkg.createlockHash(preImage),
+          expiry: "0",
+        },
+        recipient: recipientChannel.bobIdentifier,
+        recipientChainId: recipientChannel.networkContext.chainId,
+      };
+      const create = await node.conditionalTransfer(params);
+      if (create.isError) {
+        throw create.getError();
+      }
+      requests++;
+    }
+    await completed;
+    console.log("transfers completed");
   };
 
   const transfer = async (assetId: string, amount: string, recipient: string, preImage: string) => {
@@ -744,6 +819,31 @@ function App() {
                     </Form.Item>
                   </Form>
                 </Tabs.TabPane>
+
+                <Tabs.TabPane tab="Multiple Transfers" key="MultiTransfer">
+                  <Form
+                    layout="horizontal"
+                    labelCol={{ span: 6 }}
+                    wrapperCol={{ span: 18 }}
+                    name="multitransfer"
+                    initialValues={{
+                      numOfTransfers: 10,
+                    }}
+                    onFinish={(values) => multiTransfer(values.numOfTransfers)}
+                    onFinishFailed={onFinishFailed}
+                    form={multiTransferForm}
+                  >
+                    <Form.Item label="Number of transfers" name="numOfTransfers">
+                      <Input />
+                    </Form.Item>
+
+                    <Form.Item wrapperCol={{ offset: 6, span: 16 }}>
+                      <Button type="primary" htmlType="submit" loading={transferLoading}>
+                        Begin Transfers
+                      </Button>
+                    </Form.Item>
+                  </Form>
+                </Tabs.TabPane>
               </Tabs>
             </Col>
           </Row>
@@ -808,7 +908,7 @@ function App() {
               </Form>
             </Col>
           </Row>
-          <Divider orientation="left">Withdraw</Divider>
+          <Divider orientation="left">Sign Message</Divider>
           <Row gutter={16}>
             <Col span={24}>
               <Form

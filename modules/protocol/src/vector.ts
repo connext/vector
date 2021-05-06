@@ -271,6 +271,7 @@ export class Vector implements IVectorProtocol {
           );
           return resolve({ cancelled: false, value: ret });
         } catch (e) {
+          console.error("****** error", e);
           return resolve({
             cancelled: false,
             value: Result.fail(

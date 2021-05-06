@@ -1,11 +1,14 @@
-// WASM support inspired by https://stackoverflow.com/a/59720645
+// Goal: add wasm support to a create-react-app
+// Solution derived from: https://stackoverflow.com/a/61722010
+
+const path = require("path");
 
 module.exports = function override(config, env) {
   const wasmExtensionRegExp = /\.wasm$/;
 
   config.resolve.extensions.push(".wasm");
 
-  // make file-loader ignore WASM files
+  // make sure the file-loader ignores WASM files
   config.module.rules.forEach((rule) => {
     (rule.oneOf || []).forEach((oneOf) => {
       if (oneOf.loader && oneOf.loader.indexOf("file-loader") >= 0) {
@@ -14,14 +17,11 @@ module.exports = function override(config, env) {
     });
   });
 
-  // add a dedicated loader for WASM
+  // add new loader to handle WASM files
   config.module.rules.push({
+    include: path.resolve(__dirname, "src"),
     test: wasmExtensionRegExp,
-
-    // necessary to avoid "Module parse failed: magic header not detected" errors;
-    // see https://github.com/pine/arraybuffer-loader/issues/12#issuecomment-390834140
-    type: "javascript/auto",
-
+    type: "webassembly/experimental",
     use: [{ loader: require.resolve("wasm-loader"), options: {} }],
   });
 

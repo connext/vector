@@ -28,8 +28,8 @@
   },
   "scripts": {
     "start": "BROWSER=none PORT=3030 react-app-rewired start",
-    "build": "REACT_APP_VECTOR_CONFIG=$(cat \"../../ops/config/browser.default.json\") SKIP_PREFLIGHT_CHECK=true react-app-rewired build",
-    "build-prod": "SKIP_PREFLIGHT_CHECK=true react-app-rewired build",
+    "build": "REACT_APP_VECTOR_CONFIG=$(cat \"../../ops/config/browser.default.json\") SKIP_PREFLIGHT_CHECK=true react-app-rewired --max_old_space_size=4096 build",
+    "build-prod": "SKIP_PREFLIGHT_CHECK=true react-app-rewired --max_old_space_size=4096 build",
     "test": "react-app-rewired test",
     "eject": "react-app-rewired eject"
   },
@@ -60,5 +60,6 @@
     "pino-pretty": "4.6.0",
     "chai": "4.3.1",
     "sinon": "10.0.0"
-  }
+  },
+  "config-overrides-path": "ops/config-overrides"
 }
