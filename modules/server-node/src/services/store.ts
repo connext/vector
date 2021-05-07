@@ -364,12 +364,12 @@ export class PrismaStore implements IServerNodeStore {
   }
 
   async saveTransactionAttempt(
+    onchainTransactionId: string,
     channelAddress: string,
     reason: TransactionReason,
     response: TransactionResponse,
-    onchainTransactionId?: string,
-  ): Promise<{ onchainTransactionId: string }> {
-    const tx = await this.prisma.onchainTransaction.upsert({
+  ): Promise<void> {
+    await this.prisma.onchainTransaction.upsert({
       where: { id: onchainTransactionId },
       create: {
         status: StoredTransactionStatus.submitted,
@@ -411,7 +411,6 @@ export class PrismaStore implements IServerNodeStore {
       },
       include: { channel: true },
     });
-    return { onchainTransactionId: tx.id };
   }
 
   async saveTransactionReceipt(onchainTransactionId: string, transaction: TransactionReceipt): Promise<void> {

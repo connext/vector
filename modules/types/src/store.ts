@@ -136,11 +136,11 @@ export interface IChainServiceStore {
 
   // Setters
   saveTransactionAttempt(
+    onchainTransactionId: string,
     channelAddress: string,
     reason: TransactionReason,
     response: TransactionResponse,
-    onchainTransactionId?: string,
-  ): Promise<{ onchainTransactionId: string }>;
+  ): Promise<void>;
   saveTransactionReceipt(onchainTransactionId: string, transaction: TransactionReceipt): Promise<void>;
   saveTransactionFailure(onchainTransactionId: string, error: string, receipt?: TransactionReceipt): Promise<void>;
 }
