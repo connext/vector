@@ -35,6 +35,7 @@ import { BaseLogger } from "pino";
 import PriorityQueue from "p-queue";
 import { AddressZero, HashZero } from "@ethersproject/constants";
 import { Evt } from "evt";
+import { v4 as uuidV4 } from "uuid";
 
 import { ChannelFactory, VectorChannel } from "../artifacts";
 
@@ -112,9 +113,10 @@ export class EthereumChainService extends EthereumChainReader implements IVector
     channelAddress: string,
     reason: TransactionReason,
     response: TransactionResponse,
-  ) {
+    onchainTransactionId?: string,
+  ): Promise<{ onchainTransactionId: string }> {
     this.log.info({ method, methodId, channelAddress, reason, response }, "Tx submitted.");
-    await this.store.saveTransactionResponse(channelAddress, reason, response);
+    const res = await this.store.saveTransactionAttempt(channelAddress, reason, response, onchainTransactionId);
     this.evts[ChainServiceEvents.TRANSACTION_SUBMITTED].post({
       response: Object.fromEntries(
         Object.entries(response).map(([key, value]) => {
@@ -124,18 +126,20 @@ export class EthereumChainService extends EthereumChainReader implements IVector
       channelAddress,
       reason,
     });
+    return { onchainTransactionId: res.onchainTransactionId };
   }
 
   /// Save the tx receipt in the store and fire tx mined event.
   private async handleTxMined(
+    onchainTransactionId: string,
     method: string,
     methodId: string,
     channelAddress: string,
     reason: TransactionReason,
     receipt: TransactionReceipt,
   ) {
-    this.log.info({ method, methodId, channelAddress, reason, receipt }, "Tx mined.");
-    await this.store.saveTransactionReceipt(channelAddress, receipt);
+    this.log.info({ method, methodId, onchainTransactionId, reason, receipt }, "Tx mined.");
+    await this.store.saveTransactionReceipt(onchainTransactionId, receipt);
     this.evts[ChainServiceEvents.TRANSACTION_MINED].post({
       receipt: Object.fromEntries(
         Object.entries(receipt).map(([key, value]) => {
@@ -149,6 +153,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
 
   /// Save tx failure in store and fire tx failed event.
   private async handleTxFail(
+    onchainTransactionId: string,
     method: string,
     methodId: string,
     channelAddress: string,
@@ -159,7 +164,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
     message: string = "Tx reverted",
   ) {
     this.log.error({ method, methodId, error: error ? jsonifyError(error) : message }, message);
-    await this.store.saveTransactionFailure(channelAddress, response.hash, error?.message ?? message);
+    await this.store.saveTransactionFailure(onchainTransactionId, error?.message ?? message, receipt);
     this.evts[ChainServiceEvents.TRANSACTION_FAILED].post({
       error,
       channelAddress,
@@ -422,6 +427,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
     // This is the gas bump loop.
     // We will raise gas price for a tx if the confirmation of the tx times out.
     // (Default timeout should be around ~15 sec, i.e. GAS_BUMP_THRESHOLD)
+    let onchainTransactionId = uuidV4();
     while (!receipt) {
       tryNumber += 1;
       try {
@@ -462,7 +468,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
           // we would have returned in prev block, and if it was undefined on this iteration we would not overwrite
           // that value.
           // Tx was submitted: handle saving to store.
-          await this.handleTxSubmit(method, methodId, channelAddress, reason, response!);
+          await this.handleTxSubmit(method, methodId, channelAddress, reason, response!, onchainTransactionId);
         }
 
         /// CONFIRM
@@ -490,6 +496,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
               max: BIG_GAS_PRICE,
             });
             await this.handleTxFail(
+              onchainTransactionId,
               method,
               methodId,
               channelAddress,
@@ -512,7 +519,17 @@ export class EthereumChainService extends EthereumChainReader implements IVector
           // Don't save tx if it failed to submit (i.e. no response), only if it fails to mine.
           if (response) {
             // If we get any other error here, we classify this event as a tx failure.
-            await this.handleTxFail(method, methodId, channelAddress, reason, response, receipt, e, "Tx reverted");
+            await this.handleTxFail(
+              onchainTransactionId,
+              method,
+              methodId,
+              channelAddress,
+              reason,
+              response,
+              receipt,
+              e,
+              "Tx reverted",
+            );
           } else {
             this.log.error(
               { method, methodId, channelAddress, reason, error: jsonifyError(error) },
@@ -525,7 +542,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
     }
 
     // Success! Save mined tx receipt.
-    await this.handleTxMined(method, methodId, channelAddress, reason, receipt);
+    await this.handleTxMined(onchainTransactionId, method, methodId, channelAddress, reason, receipt);
     return Result.ok(receipt);
   }
 
