@@ -143,7 +143,7 @@ export interface IChainServiceStore {
     onchainTransactionId?: string,
   ): Promise<{ onchainTransactionId: string }>;
   saveTransactionReceipt(onchainTransactionId: string, transaction: TransactionReceipt): Promise<void>;
-  saveTransactionFailure(onchainTransactionId: string, error: string): Promise<void>;
+  saveTransactionFailure(onchainTransactionId: string, error: string, receipt?: TransactionReceipt): Promise<void>;
 }
 
 export interface IEngineStore extends IVectorStore, IChainServiceStore {

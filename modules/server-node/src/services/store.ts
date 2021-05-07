@@ -413,16 +413,11 @@ export class PrismaStore implements IServerNodeStore {
         reason,
         onchainTransactionAttempts: {
           create: {
-            where: {
-              transactionHash: response.hash,
-            },
-            create: {
-              data: response.data,
-              gasLimit: (response.gasLimit ?? BigNumber.from(0)).toString(),
-              gasPrice: (response.gasPrice ?? BigNumber.from(0)).toString(),
-              value: (response.value ?? BigNumber.from(0)).toString(),
-              transactionHash: response.hash,
-            },
+            data: response.data,
+            gasLimit: (response.gasLimit ?? BigNumber.from(0)).toString(),
+            gasPrice: (response.gasPrice ?? BigNumber.from(0)).toString(),
+            value: (response.value ?? BigNumber.from(0)).toString(),
+            transactionHash: response.hash,
           },
         },
         channel: {
@@ -446,24 +441,19 @@ export class PrismaStore implements IServerNodeStore {
         // TODO: Is this needed? Or will prisma schema handle defining this for us?
         // confirmedTransactionHash: transaction.transactionHash,
         receipt: {
-          connectOrCreate: {
-            where: {
-              transactionHash: transaction.transactionHash,
-            },
-            create: {
-              transactionHash: transaction.transactionHash,
-              blockHash: transaction.blockHash,
-              blockNumber: transaction.blockNumber,
-              byzantium: transaction.byzantium,
-              contractAddress: transaction.contractAddress,
-              cumulativeGasUsed: (transaction.cumulativeGasUsed ?? BigNumber.from(0)).toString(),
-              gasUsed: (transaction.gasUsed ?? BigNumber.from(0)).toString(),
-              logs: transaction.logs.join(",").toString(),
-              logsBloom: transaction.logsBloom,
-              root: transaction.root,
-              status: transaction.status,
-              transactionIndex: transaction.transactionIndex,
-            },
+          create: {
+            transactionHash: transaction.transactionHash,
+            blockHash: transaction.blockHash,
+            blockNumber: transaction.blockNumber,
+            byzantium: transaction.byzantium,
+            contractAddress: transaction.contractAddress,
+            cumulativeGasUsed: (transaction.cumulativeGasUsed ?? BigNumber.from(0)).toString(),
+            gasUsed: (transaction.gasUsed ?? BigNumber.from(0)).toString(),
+            logs: transaction.logs.join(",").toString(),
+            logsBloom: transaction.logsBloom,
+            root: transaction.root,
+            status: transaction.status,
+            transactionIndex: transaction.transactionIndex,
           },
         },
       },
@@ -473,6 +463,7 @@ export class PrismaStore implements IServerNodeStore {
   async saveTransactionFailure(
     onchainTransactionId: string,
     error: string,
+    receipt?: TransactionReceipt,
   ): Promise<void> {
     await this.prisma.onchainTransaction.update({
       where: {
@@ -481,6 +472,22 @@ export class PrismaStore implements IServerNodeStore {
       data: {
         error,
         status: StoredTransactionStatus.failed,
+        receipt: receipt ? ({
+          create: {
+            transactionHash: receipt.transactionHash,
+            blockHash: receipt.blockHash,
+            blockNumber: receipt.blockNumber,
+            byzantium: receipt.byzantium,
+            contractAddress: receipt.contractAddress,
+            cumulativeGasUsed: (receipt.cumulativeGasUsed ?? BigNumber.from(0)).toString(),
+            gasUsed: (receipt.gasUsed ?? BigNumber.from(0)).toString(),
+            logs: receipt.logs.join(",").toString(),
+            logsBloom: receipt.logsBloom,
+            root: receipt.root,
+            status: receipt.status,
+            transactionIndex: receipt.transactionIndex,
+          },
+        }) : undefined,
       },
     });
   }

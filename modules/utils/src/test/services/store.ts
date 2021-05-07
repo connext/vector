@@ -22,10 +22,6 @@ export class MemoryStoreService implements IEngineStore {
     throw new Error("Method not implemented.");
   }
 
-  getActiveTransactions(): Promise<StoredTransaction[]> {
-    throw new Error("Method not implemented.");
-  }
-
   getWithdrawalCommitmentByTransactionHash(transactionHash: string): Promise<WithdrawCommitmentJson> {
     throw new Error("Method not implemented.");
   }
@@ -70,20 +66,27 @@ export class MemoryStoreService implements IEngineStore {
     return Promise.resolve(this.transferDisputes.get(transferId));
   }
 
+  getTransactionById(onchainTransactionId: string): Promise<StoredTransaction> {
+    throw new Error("Method not implemented.");
+  }
   getTransactionByHash(transactionHash: string): Promise<StoredTransaction | undefined> {
     return Promise.resolve(undefined);
   }
-  saveTransactionFailure(channelAddress: string, transactionHash: string, error: string): Promise<void> {
+  getActiveTransactions(): Promise<StoredTransaction[]> {
+    throw new Error("Method not implemented.");
+  }
+  saveTransactionFailure(onchainTransactionId: string, error: string): Promise<void> {
     return Promise.resolve(undefined);
   }
-  saveTransactionReceipt(channelAddress: string, transaction: TransactionReceipt): Promise<void> {
+  saveTransactionReceipt(onchainTransactionId: string, transaction: TransactionReceipt): Promise<void> {
     return Promise.resolve(undefined);
   }
-  saveTransactionResponse(
+  saveTransactionAttempt(
     channelAddress: string,
-    transactionReason: TransactionReason,
+    reason: TransactionReason,
     response: TransactionResponse,
-  ): Promise<void> {
+    onchainTransactionId?: string,
+  ): Promise<{ onchainTransactionId: string }> {
     return Promise.resolve(undefined);
   }
   // Map<channelAddress, transferId[]>
