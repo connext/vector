@@ -108,15 +108,15 @@ export class EthereumChainService extends EthereumChainReader implements IVector
 
   /// Upsert tx submission to store, fire tx submit event.
   private async handleTxSubmit(
+    onchainTransactionId: string,
     method: string,
     methodId: string,
     channelAddress: string,
     reason: TransactionReason,
     response: TransactionResponse,
-    onchainTransactionId?: string,
-  ): Promise<{ onchainTransactionId: string }> {
+  ): Promise<void> {
     this.log.info({ method, methodId, channelAddress, reason, response }, "Tx submitted.");
-    const res = await this.store.saveTransactionAttempt(channelAddress, reason, response, onchainTransactionId);
+    const res = await this.store.saveTransactionAttempt(onchainTransactionId, channelAddress, reason, response);
     this.evts[ChainServiceEvents.TRANSACTION_SUBMITTED].post({
       response: Object.fromEntries(
         Object.entries(response).map(([key, value]) => {
@@ -126,7 +126,6 @@ export class EthereumChainService extends EthereumChainReader implements IVector
       channelAddress,
       reason,
     });
-    return { onchainTransactionId: res.onchainTransactionId };
   }
 
   /// Save the tx receipt in the store and fire tx mined event.
@@ -468,7 +467,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
           // we would have returned in prev block, and if it was undefined on this iteration we would not overwrite
           // that value.
           // Tx was submitted: handle saving to store.
-          await this.handleTxSubmit(method, methodId, channelAddress, reason, response!, onchainTransactionId);
+          await this.handleTxSubmit(onchainTransactionId, method, methodId, channelAddress, reason, response!);
         }
 
         /// CONFIRM
