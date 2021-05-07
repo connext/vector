@@ -586,19 +586,24 @@ describe("ethService unit test", () => {
       let receivedNonce: number = -1;
       let firstGasPrice: BigNumber = BigNumber.from(-1);
       let secondGasPrice: BigNumber = BigNumber.from(-1);
-      const result = await ethService.sendAndConfirmTx(AddressZero, 1337, "allowance", async (gasPrice: BigNumber, nonce?: number) => {
-        if (nonce) {
-          // If the nonce was passed in, we are on the second call of this callback.
-          receivedNonce = nonce;
-          secondGasPrice = gasPrice;
-          return newTx;
-        }
-        firstGasPrice = gasPrice;
-        return txResponse;
-      });
+      const result = await ethService.sendAndConfirmTx(
+        AddressZero,
+        1337,
+        "allowance",
+        async (gasPrice: BigNumber, nonce?: number) => {
+          if (nonce) {
+            // If the nonce was passed in, we are on the second call of this callback.
+            receivedNonce = nonce;
+            secondGasPrice = gasPrice;
+            return newTx;
+          }
+          firstGasPrice = gasPrice;
+          return txResponse;
+        },
+      );
 
-      expect(receivedNonce === txResponse.nonce, "nonce passed into callback was not the same as original tx nonce")
-      expect(secondGasPrice > firstGasPrice, "second gas price should be larger than first")
+      expect(receivedNonce === txResponse.nonce, "nonce passed into callback was not the same as original tx nonce");
+      expect(secondGasPrice > firstGasPrice, "second gas price should be larger than first");
 
       expect(storeMock.saveTransactionResponse.callCount).eq(2);
       const saveTransactionResponseCall = storeMock.saveTransactionResponse.getCall(0);

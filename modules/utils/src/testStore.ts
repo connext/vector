@@ -583,7 +583,11 @@ export const testStore = <T extends IEngineStore>(
         const response = createTestTxResponse();
 
         // save response
-        const { onchainTransactionId } = await store.saveTransactionAttempt(setupState.channelAddress, TransactionReason.depositA, response);
+        const { onchainTransactionId } = await store.saveTransactionAttempt(
+          setupState.channelAddress,
+          TransactionReason.depositA,
+          response,
+        );
 
         // verify response
         const storedResponse = await store.getTransactionById(onchainTransactionId);
@@ -627,7 +631,7 @@ export const testStore = <T extends IEngineStore>(
         await store.saveTransactionFailure(onchainTransactionId, "failed to send");
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const { wait: fWait, confirmations: fConf, hash: fHash, ...sanitizedFailure } = failed;
-        const storedFailure = await store.getTransactionByHash(fHash);
+        const storedFailure = await store.getTransactionById(onchainTransactionId);
         expect(storedFailure).to.containSubset({
           ...sanitizedFailure,
           transactionHash: fHash,
