@@ -183,67 +183,67 @@ model EventSubscription {
 }
 
 model OnchainTransaction {
-  id                          String @id @default(uuid())
-  createdAt                   DateTime @default(now())
-  transfer                    Transfer?
+  id        String    @id @default(uuid())
+  createdAt DateTime  @default(now())
+  transfer  Transfer?
 
   // Response fields : should be saved upon receiving first response
-  chainId                     String?
-  nonce                       Int?
-  to                          String?
-  from                        String?
+  chainId String?
+  nonce   Int?
+  to      String?
+  from    String?
+  data    String?
+  value   String?
 
   // Channel fields
-  status                      String  @default("submitted") // no enums
-  reason                      String // no enums
-  error                       String?
-  channelAddress              String
-  channel                     Channel @relation(fields: [channelAddress], references: [channelAddress])
+  status         String  @default("submitted") // no enums
+  reason         String // no enums
+  error          String?
+  channelAddress String
+  channel        Channel @relation(fields: [channelAddress], references: [channelAddress])
 
   // Tx fields
-  attempts                    OnchainTransactionAttempt[] // 1-n
-  receipt                     OnchainTransactionReceipt? @relation(fields: [confirmedTransactionHash], references: [transactionHash]) // 1-1
-  confirmedTransactionHash    String?
+  attempts                 OnchainTransactionAttempt[] // 1-n
+  receipt                  OnchainTransactionReceipt?  @relation(fields: [confirmedTransactionHash], references: [transactionHash]) // 1-1
+  confirmedTransactionHash String?
 
   @@map(name: "onchain_transaction")
 }
 
 model OnchainTransactionAttempt {
-  createdAt                   DateTime @default(now())
-  onchainTransaction          OnchainTransaction? @relation(fields: [onchainTransactionId], references: [id])
-  onchainTransactionId        String
+  createdAt            DateTime            @default(now())
+  onchainTransaction   OnchainTransaction? @relation(fields: [onchainTransactionId], references: [id])
+  onchainTransactionId String
 
   // Response fields
-  transactionHash             String @id
-  data                        String
-  value                       String
-  gasLimit                    String
-  gasPrice                    String
+  transactionHash String @id
+  gasLimit        String
+  gasPrice        String
 
   @@map(name: "onchain_transaction_attempt")
 }
 
 model OnchainTransactionReceipt {
-  createdAt                   DateTime @default(now())
-  onchainTransaction          OnchainTransaction?
+  createdAt          DateTime            @default(now())
+  onchainTransaction OnchainTransaction?
 
   // Response fields
-  transactionHash             String   @id
+  transactionHash String @id
 
   // Receipt fields
-  timestamp                   String?
-  raw                         String?
-  blockHash                   String?
-  blockNumber                 Int?
-  contractAddress             String?
-  transactionIndex            Int?
-  root                        String?
-  gasUsed                     String?
-  logsBloom                   String?
-  logs                        String?
-  cumulativeGasUsed           String?
-  byzantium                   Boolean?
-  status                      Int?
+  timestamp         String?
+  raw               String?
+  blockHash         String?
+  blockNumber       Int?
+  contractAddress   String?
+  transactionIndex  Int?
+  root              String?
+  gasUsed           String?
+  logsBloom         String?
+  logs              String?
+  cumulativeGasUsed String?
+  byzantium         Boolean?
+  status            Int?
 
   @@map(name: "onchain_transaction_receipt")
 }
