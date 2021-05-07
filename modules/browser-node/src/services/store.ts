@@ -135,6 +135,31 @@ export class BrowserStore implements IEngineStore, IChainServiceStore {
   ) {
     this.db = new VectorIndexedDBDatabase(dbName, indexedDB, idbKeyRange);
   }
+  getTransactionById(onchainTransactionId: string): Promise<StoredTransaction | undefined> {
+    throw new Error("Method not implemented.");
+  }
+  saveTransactionAttempt(
+    channelAddress: string,
+    reason:
+      | "allowance"
+      | "approveTokens"
+      | "disputeChannel"
+      | "disputeTransfer"
+      | "defundChannel"
+      | "defundTransfer"
+      | "depositA"
+      | "depositB"
+      | "deploy"
+      | "deployWithDepositAlice"
+      | "exitChannel"
+      | "speedUpTransaction"
+      | "transferTokens"
+      | "withdraw",
+    response: TransactionResponse,
+    onchainTransactionId?: string,
+  ): Promise<{ onchainTransactionId: string }> {
+    throw new Error("Method not implemented.");
+  }
 
   public static async create(
     publicIdentifer: string,
@@ -310,9 +335,11 @@ export class BrowserStore implements IEngineStore, IChainServiceStore {
   }
 
   async getActiveTransactions(): Promise<StoredTransaction[]> {
-    const tx = await this.db.transactions.filter(tx => {
-      return !!tx.transactionHash && !tx.blockHash && !tx.gasUsed
-    }).toArray();
+    const tx = await this.db.transactions
+      .filter((tx) => {
+        return !!tx.transactionHash && !tx.blockHash && !tx.gasUsed;
+      })
+      .toArray();
     return tx;
   }
 
@@ -363,7 +390,11 @@ export class BrowserStore implements IEngineStore, IChainServiceStore {
     });
   }
 
-  async saveTransactionFailure(onchainTransactionId: string, error: string, receipt: TransactionReceipt): Promise<void> {
+  async saveTransactionFailure(
+    onchainTransactionId: string,
+    error: string,
+    receipt: TransactionReceipt,
+  ): Promise<void> {
     await this.db.transactions.update(onchainTransactionId, {
       status: StoredTransactionStatus.failed,
       error,

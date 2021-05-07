@@ -32,42 +32,46 @@ import {
   OnchainTransaction,
   ChannelDispute as ChannelDisputeEntity,
   TransferDispute as TransferDisputeEntity,
+  OnchainTransactionReceipt,
+  OnchainTransactionAttempt,
 } from "../generated/db-client";
 
 const convertOnchainTransactionEntityToTransaction = (
   onchainEntity: OnchainTransaction & {
     channel: Channel;
+    receipt: OnchainTransactionReceipt | null;
+    attempts: OnchainTransactionAttempt[];
   },
 ): StoredTransaction => {
   // NOTE: There will always be a 'latestAttempt' in the OnchainTransaction, as it is created only when
   // the first attempt is made.
   const latestAttempt = onchainEntity.attempts[onchainEntity.attempts.length - 1];
+  const receipt = onchainEntity.receipt;
   return {
     status: onchainEntity.status as StoredTransactionStatus,
     reason: onchainEntity.reason as TransactionReason,
     error: onchainEntity.error ?? undefined,
     channelAddress: onchainEntity.channelAddress,
-    to: onchainEntity.to,
-    from: onchainEntity.from,
-    data: latestAttempt.data,
-    value: latestAttempt.value,
+    to: onchainEntity.to || "",
+    from: onchainEntity.from || "",
+    data: onchainEntity.data || "",
+    value: onchainEntity.value || "",
     chainId: BigNumber.from(onchainEntity.chainId).toNumber(),
-    nonce: onchainEntity.nonce,
-    gasLimit: onchainEntity.gasLimit,
-    gasPrice: onchainEntity.gasPrice,
-    transactionHash: onchainEntity.transactionHash,
-    timestamp: onchainEntity.timestamp ? BigNumber.from(onchainEntity.timestamp).toNumber() : undefined,
-    raw: onchainEntity.raw ?? undefined,
-    blockHash: onchainEntity.blockHash ?? undefined,
-    blockNumber: onchainEntity.blockNumber ?? undefined,
-    contractAddress: onchainEntity.contractAddress ?? undefined,
-    transactionIndex: onchainEntity.transactionIndex ?? undefined,
-    root: onchainEntity.root ?? undefined,
-    gasUsed: onchainEntity.gasUsed ?? undefined,
-    logsBloom: onchainEntity.logsBloom ?? undefined,
-    cumulativeGasUsed: onchainEntity.cumulativeGasUsed ?? undefined,
-    byzantium: onchainEntity.byzantium ?? undefined,
-    logs: onchainEntity.logs ? JSON.parse(onchainEntity.logs) : undefined,
+    nonce: onchainEntity.nonce || 0,
+    gasLimit: latestAttempt.gasLimit,
+    gasPrice: latestAttempt.gasPrice,
+    transactionHash: receipt?.transactionHash ?? latestAttempt.transactionHash,
+    timestamp: receipt?.timestamp ? BigNumber.from(receipt.timestamp).toNumber() : undefined,
+    blockHash: receipt?.blockHash ?? undefined,
+    blockNumber: receipt?.blockNumber ?? undefined,
+    contractAddress: receipt?.contractAddress ?? undefined,
+    transactionIndex: receipt?.transactionIndex ?? undefined,
+    root: receipt?.root ?? undefined,
+    gasUsed: receipt?.gasUsed ?? undefined,
+    logsBloom: receipt?.logsBloom ?? undefined,
+    cumulativeGasUsed: receipt?.cumulativeGasUsed ?? undefined,
+    byzantium: receipt?.byzantium ?? undefined,
+    logs: receipt?.logs ? JSON.parse(receipt?.logs) : undefined,
   };
 };
 
@@ -238,10 +242,10 @@ const convertTransferEntityToFullTransferState = (
 };
 
 const convertEntitiesToWithdrawalCommitment = (
-  transferEntity: Transfer,
   resolveEntity: Update | null,
   createEntity: Update,
   channel: Channel,
+  transactionHash?: string,
 ): WithdrawCommitmentJson => {
   const initialState = JSON.parse(createEntity.transferInitialState ?? "{}");
   const resolver = JSON.parse(resolveEntity?.transferResolver ?? "{}");
@@ -263,7 +267,7 @@ const convertEntitiesToWithdrawalCommitment = (
     nonce: initialState.nonce,
     callData: initialState.callData,
     callTo: initialState.callTo,
-    transactionHash: transferEntity.transactionHash ?? resolveMeta.transactionHash ?? undefined,
+    transactionHash: transactionHash ?? resolveMeta.transactionHash ?? undefined,
   };
 };
 
@@ -307,9 +311,9 @@ export class PrismaStore implements IServerNodeStore {
         receipt: true,
         attempts: {
           orderBy: {
-            createdAt: 'asc'
-          }
-        }
+            createdAt: "asc",
+          },
+        },
       },
     });
     if (!entity) {
@@ -378,14 +382,9 @@ export class PrismaStore implements IServerNodeStore {
         reason,
         attempts: {
           create: {
-            where: {
-              transactionHash: response.hash,
-            },
-            create: {
-              gasLimit: (response.gasLimit ?? BigNumber.from(0)).toString(),
-              gasPrice: (response.gasPrice ?? BigNumber.from(0)).toString(),
-              transactionHash: response.hash,
-            },
+            gasLimit: (response.gasLimit ?? BigNumber.from(0)).toString(),
+            gasPrice: (response.gasPrice ?? BigNumber.from(0)).toString(),
+            transactionHash: response.hash,
           },
         },
         channel: {
@@ -397,12 +396,10 @@ export class PrismaStore implements IServerNodeStore {
       update: {
         status: StoredTransactionStatus.submitted,
         reason,
-        onchainTransactionAttempts: {
+        attempts: {
           create: {
-            data: response.data,
             gasLimit: (response.gasLimit ?? BigNumber.from(0)).toString(),
             gasPrice: (response.gasPrice ?? BigNumber.from(0)).toString(),
-            value: (response.value ?? BigNumber.from(0)).toString(),
             transactionHash: response.hash,
           },
         },
@@ -458,22 +455,24 @@ export class PrismaStore implements IServerNodeStore {
       data: {
         error,
         status: StoredTransactionStatus.failed,
-        receipt: receipt ? ({
-          create: {
-            transactionHash: receipt.transactionHash,
-            blockHash: receipt.blockHash,
-            blockNumber: receipt.blockNumber,
-            byzantium: receipt.byzantium,
-            contractAddress: receipt.contractAddress,
-            cumulativeGasUsed: (receipt.cumulativeGasUsed ?? BigNumber.from(0)).toString(),
-            gasUsed: (receipt.gasUsed ?? BigNumber.from(0)).toString(),
-            logs: receipt.logs.join(",").toString(),
-            logsBloom: receipt.logsBloom,
-            root: receipt.root,
-            status: receipt.status,
-            transactionIndex: receipt.transactionIndex,
-          },
-        }) : undefined,
+        receipt: receipt
+          ? {
+              create: {
+                transactionHash: receipt.transactionHash,
+                blockHash: receipt.blockHash,
+                blockNumber: receipt.blockNumber,
+                byzantium: receipt.byzantium,
+                contractAddress: receipt.contractAddress,
+                cumulativeGasUsed: (receipt.cumulativeGasUsed ?? BigNumber.from(0)).toString(),
+                gasUsed: (receipt.gasUsed ?? BigNumber.from(0)).toString(),
+                logs: receipt.logs.join(",").toString(),
+                logsBloom: receipt.logsBloom,
+                root: receipt.root,
+                status: receipt.status,
+                transactionIndex: receipt.transactionIndex,
+              },
+            }
+          : undefined,
       },
     });
   }
@@ -483,8 +482,8 @@ export class PrismaStore implements IServerNodeStore {
     // HashZero is used if the transaction was already submitted and we
     // have no record
     const entity = await this.prisma.transfer.findFirst({
-      where: { onchainTransactionId: transactionHash },
-      include: { channel: true, createUpdate: true, resolveUpdate: true },
+      where: { onchainTransaction: { confirmedTransactionHash: transactionHash } },
+      include: { channel: true, createUpdate: true, resolveUpdate: true, onchainTransaction: true },
     });
     if (!entity) {
       return undefined;
@@ -500,13 +499,13 @@ export class PrismaStore implements IServerNodeStore {
       throw new Error("Could not retrieve channel for withdraw commitment");
     }
 
-    return convertEntitiesToWithdrawalCommitment(entity, entity.resolveUpdate!, entity.createUpdate!, channel);
+    return convertEntitiesToWithdrawalCommitment(entity.resolveUpdate!, entity.createUpdate!, channel, transactionHash);
   }
 
   async getWithdrawalCommitment(transferId: string): Promise<WithdrawCommitmentJson | undefined> {
     const entity = await this.prisma.transfer.findUnique({
       where: { transferId },
-      include: { channel: true, createUpdate: true, resolveUpdate: true },
+      include: { channel: true, createUpdate: true, resolveUpdate: true, onchainTransaction: true },
     });
     if (!entity) {
       return undefined;
@@ -524,7 +523,12 @@ export class PrismaStore implements IServerNodeStore {
       throw new Error("Could not retrieve channel for withdraw commitment");
     }
 
-    return convertEntitiesToWithdrawalCommitment(entity, entity.resolveUpdate!, entity.createUpdate!, channel);
+    return convertEntitiesToWithdrawalCommitment(
+      entity.resolveUpdate!,
+      entity.createUpdate!,
+      channel,
+      entity.onchainTransaction?.confirmedTransactionHash || undefined,
+    );
   }
 
   async saveWithdrawalCommitment(transferId: string, withdrawCommitment: WithdrawCommitmentJson): Promise<void> {
@@ -532,25 +536,23 @@ export class PrismaStore implements IServerNodeStore {
       return;
     }
     const record = await this.prisma.onchainTransaction.findFirst({
-      where: { onchainTransactionAttempts: { some: { transactionHash: withdrawCommitment.transactionHash } } },
+      where: { confirmedTransactionHash: withdrawCommitment.transactionHash },
     });
     if (!record) {
       // Did not submit transaction ourselves, no record to connect
       // This is the case for server-node bobs
       await this.prisma.transfer.update({
         where: { transferId },
-        data: { onchainTransactionId: withdrawCommitment.transactionHash },
+        data: { transactionHash: withdrawCommitment.transactionHash },
       });
-      return;
+    } else {
+      await this.prisma.transfer.update({
+        where: { transferId },
+        data: {
+          onchainTransaction: { connect: { id: record.id } },
+        },
+      });
     }
-    await this.prisma.transfer.update({
-      where: { transferId },
-      data: {
-        onchainTransactionId: withdrawCommitment.transactionHash,
-        onchainTransaction: { connect: { transactionHash: withdrawCommitment.transactionHash } },
-      },
-    });
-    return;
   }
 
   // NOTE: this does not exist on the browser node, only on the server node
@@ -581,7 +583,7 @@ export class PrismaStore implements IServerNodeStore {
       entities
         .map((e) => {
           return {
-            commitment: convertEntitiesToWithdrawalCommitment(e, e.resolveUpdate, e.createUpdate!, e.channel!),
+            commitment: convertEntitiesToWithdrawalCommitment(e.resolveUpdate, e.createUpdate!, e.channel!),
             transfer: convertTransferEntityToFullTransferState(e),
           };
         })
