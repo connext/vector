@@ -44,8 +44,10 @@ const convertOnchainTransactionEntityToTransaction = (
   },
 ): StoredTransaction => {
   // NOTE: There will always be a 'latestAttempt' in the OnchainTransaction, as it is created only when
-  // the first attempt is made.
+  // the first attempt is made. This array here will also have been sorted by createdBy Date.
   const latestAttempt = onchainEntity.attempts[onchainEntity.attempts.length - 1];
+  console.log("ATTEMPTS:", onchainEntity.attempts.length - 1, "\n", onchainEntity.attempts, "\nSELECTED", onchainEntity.attempts[onchainEntity.attempts.length - 1])
+  console.log("RECEIPT", onchainEntity.receipt);
   const receipt = onchainEntity.receipt;
   return {
     status: onchainEntity.status as StoredTransactionStatus,
@@ -58,9 +60,13 @@ const convertOnchainTransactionEntityToTransaction = (
     value: onchainEntity.value || "",
     chainId: BigNumber.from(onchainEntity.chainId).toNumber(),
     nonce: onchainEntity.nonce || 0,
+
+    // Response fields.
     gasLimit: latestAttempt.gasLimit,
     gasPrice: latestAttempt.gasPrice,
     transactionHash: receipt?.transactionHash ?? latestAttempt.transactionHash,
+
+    // Receipt fields.
     timestamp: receipt?.timestamp ? BigNumber.from(receipt.timestamp).toNumber() : undefined,
     blockHash: receipt?.blockHash ?? undefined,
     blockNumber: receipt?.blockNumber ?? undefined,
@@ -71,7 +77,7 @@ const convertOnchainTransactionEntityToTransaction = (
     logsBloom: receipt?.logsBloom ?? undefined,
     cumulativeGasUsed: receipt?.cumulativeGasUsed ?? undefined,
     byzantium: receipt?.byzantium ?? undefined,
-    logs: receipt?.logs ? JSON.parse(receipt?.logs) : undefined,
+    logs: receipt?.logs ? JSON.parse(receipt?.logs) : receipt? [] : undefined,
   };
 };
 
