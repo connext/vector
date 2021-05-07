@@ -32,6 +32,7 @@ model ChannelDispute {
   defundExpiry     String
 
   channel Channel @relation("OffchainChannel", fields: [channelAddress], references: [channelAddress])
+  @@map(name: "channel_dispute")
 }
 
 model TransferDispute {
@@ -41,6 +42,7 @@ model TransferDispute {
   isDefunded            Boolean
 
   transfer Transfer @relation("OffchainTransfer", fields: [transferId], references: [transferId])
+  @@map(name: "transfer_dispute")
 }
 
 model Channel {
