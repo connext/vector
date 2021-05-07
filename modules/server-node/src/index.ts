@@ -874,17 +874,10 @@ server.post<{ Body: NodeParams.RunAuction }>(
     }
     const rpc = constructRpcRequest(ChannelRpcMethods.chan_runAuction, request.body);
     try {
-      const mock_response = {
-        routerPublicIdentifier: "mock_id",
-        swapRate: "mock_swapRate",
-        totalFee: "mock_totalFee",
-      };
-      const result = await engine.request<typeof ChannelRpcMethods.chan_runAuction>(rpc);
-      const { routerPublicIdentifier, swapRate, totalFee } = result ? result : mock_response;
-      // const routerPublicIdentifier = "prueba";
-      // const swapRate = "mock_swapRate";
-      // const totalFee = "mock_totalFee";
-      logger.info(result);
+      const { routerPublicIdentifier, swapRate, totalFee } = await engine.request<
+        typeof ChannelRpcMethods.chan_runAuction
+      >(rpc);
+
       return reply.status(200).send({ routerPublicIdentifier, swapRate, totalFee } as NodeResponses.RunAuction);
     } catch (e) {
       logger.error({ error: jsonifyError(e) });

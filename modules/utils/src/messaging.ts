@@ -260,6 +260,23 @@ export class NatsBasicMessagingService implements IBasicMessaging {
     this.log.debug({ method, subject: subscriptionSubject }, `Subscription created`);
   }
 
+  // protected async collectAuctionMessage<T = any>(subscriptionSubject: string, method: string): Promise<Result<any>> {
+  //   let mes;
+
+  //   await this.subscribe(subscriptionSubject, (msg, err) => {
+  //     this.log.debug({ method, msg }, "Received message");
+  //     const from = msg.subject.split(".")[1];
+  //     if (err) {
+  //       return Result.fail(new MessagingError(err));
+  //     }
+  //     const { result } = this.parseIncomingMessage<T>(msg);
+
+  //     return Result.ok(result);
+  //   });
+  //   this.log.debug({ method, subject: subscriptionSubject }, `Subscription created`);
+  //   return mes;
+  // }
+
   private async sendMessage<T = any, R = any>(
     data: Result<T, any>,
     subjectSuffix: string,
@@ -651,20 +668,41 @@ export class NatsMessagingService extends NatsBasicMessagingService implements I
   // AUCTION METHODS // placeholder
 
   publishStartAuction(
-    data: Result<EngineParams.RunAuction, NodeError>,
     to: string,
     from: string,
-    timeout?: 30_000,
-    numRetries?: number,
-  ): Promise<Result<NodeResponses.RunAuction, NodeError | MessagingError>> {
-    return this.sendMessageWithRetries(data, "start-auction", to, from, timeout, numRetries, "publishStartAuction");
+    data: Result<EngineParams.RunAuction, NodeError>,
+    inbox: string,
+  ): Promise<void> {
+    console.log("publishStartAuctionMessage ======> ", `${to}.${from}.start-auction`);
+    return this.publishUniqueInbox(`${from}.${to}.start-auction`, data, inbox);
   }
 
-  onReceiveAuctionMessage(
+  // async onReceiveAuctionMessage(
+  //   myPublicIdentifier: string,
+  //   callback: (runAuction: Result<NodeResponses.RunAuction, NodeError>, from: string, inbox: string) => void,
+  // ): Promise<void> {
+  //   console.log("onReceiveAuctionMessage ======> ", `*.start-auction`);
+  //   return this.registerCallback(
+  //     `${myPublicIdentifier}.${myPublicIdentifier}.start-auction`,
+  //     callback,
+  //     "onReceiveAuctionMessage",
+  //   );
+  async onReceiveAuctionMessage(
     myPublicIdentifier: string,
-    callback: (runAuction: Result<NodeResponses.RunAuction, NodeError>, from: string, inbox: string) => void,
-  ): Promise<void> {
+    inbox,
+    callback: (runAuction: Result<NodeResponses.RunAuction, NodeError>, from: string, inbox: string) => void | any,
+  ): Promise<void | any> {
     console.log("onReceiveAuctionMessage ======> ", `*.start-auction`);
-    return this.registerCallback(`${myPublicIdentifier}.start-auction`, callback, "onReceiveAuctionMessage");
+    return this.registerCallback(inbox, callback, "onReceiveAuctionMessage");
   }
+  // async onReceiveAuctionMessage(
+  //   myPublicIdentifier: string,
+  //   callback: (runAuction: Result<NodeResponses.RunAuction, NodeError>, from: string, inbox: string) => void,
+  // ): Promise<Result<any>> {
+  //   console.log("onReceiveAuctionMessage ======> ", `*.start-auction`);
+  //   return this.collectAuctionMessage(
+  //     `${myPublicIdentifier}.${myPublicIdentifier}.start-auction`,
+  //     "onReceiveAuctionMessage",
+  //   );
+  // }
 }

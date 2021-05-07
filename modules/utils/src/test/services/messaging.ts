@@ -284,22 +284,24 @@ export class MemoryMessagingService implements IMessagingService {
     throw new Error("Method not implemented.");
   }
 
-  publishStartAuction(
-    data: Result<EngineParams.RunAuction, NodeError>,
-    to: string,
-    from: string,
-    timeout?: 30_000,
-    numRetries?: number,
-  ): Promise<Result<NodeResponses.RunAuction, NodeError | MessagingError>> {
+  publishStartAuction(to: string, from: string, data: Result<EngineParams.RunAuction, NodeError>): Promise<void> {
     throw new Error("Method not implemented.");
   }
 
   onReceiveAuctionMessage(
     myPublicIdentifier: string,
+    inbox,
     callback: (runAuction: Result<NodeResponses.RunAuction, NodeError>, from: string, inbox: string) => void,
   ): Promise<void> {
     throw new Error("Method not implemented.");
   }
+
+  // onReceiveAuctionMessage(
+  //   myPublicIdentifier: string,
+  //   // callback: (runAuction: Result<NodeResponses.RunAuction, NodeError>, from: string, inbox: string) => void,
+  // ): Promise<Result<any>> {
+  //   throw new Error("Method not implemented.");
+  // }
 
   async subscribe(subject: string, callback: (data: any) => void): Promise<void> {
     throw new Error("Method not implemented.");
