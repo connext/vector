@@ -576,7 +576,7 @@ export const testStore = <T extends IEngineStore>(
       }
 
       // Shared tests.
-      it("should save transaction responses and receipts", async () => {
+      it("should save transaction responses and receipts for successful tx", async () => {
         // Load store with channel
         const setupState = createTestChannelState("setup").channel;
         await store.saveChannelState(setupState);
@@ -593,10 +593,10 @@ export const testStore = <T extends IEngineStore>(
         );
 
         // verify response
-        const storedResponse = await store.getTransactionById(onchainTransactionId);
+        let storedTransaction = await store.getTransactionById(onchainTransactionId);
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const { wait, confirmations, hash, ...sanitizedResponse } = response;
-        expect(storedResponse).to.containSubset({
+        expect(storedTransaction).to.containSubset({
           ...sanitizedResponse,
           status: StoredTransactionStatus.submitted,
           channelAddress: setupState.channelAddress,
@@ -607,14 +607,16 @@ export const testStore = <T extends IEngineStore>(
         });
 
         // save receipt
+        // NOTE: While we don't use wait() in our actual prod code anymore, this will continue
+        // to be used here as it is only a test utility, and not the thing actually being tested.
         const receipt = await response.wait();
         await store.saveTransactionReceipt(onchainTransactionId, receipt);
 
         // verify receipt
-        const storedReceipt = await store.getTransactionById(onchainTransactionId);
+        storedTransaction = await store.getTransactionById(onchainTransactionId);
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const { confirmations: receiptConfs, ...sanitizedReceipt } = receipt;
-        expect(storedReceipt).to.containSubset({
+        expect(storedTransaction).to.containSubset({
           ...sanitizedResponse,
           ...sanitizedReceipt,
           channelAddress: setupState.channelAddress,
@@ -626,6 +628,18 @@ export const testStore = <T extends IEngineStore>(
           gasUsed: receipt.gasUsed.toString(),
           status: StoredTransactionStatus.mined,
         });
+      });
+
+      // Shared tests.
+      it("should save transaction responses and receipts for failed tx", async () => {
+        // Load store with channel
+        const setupState = createTestChannelState("setup").channel;
+        await store.saveChannelState(setupState);
+
+        const response = createTestTxResponse();
+
+        // save response
+        const onchainTransactionId = uuidV4();
 
         // save failing response
         const failed = createTestTxResponse({ hash: mkHash("0x13754"), nonce: 65 });
@@ -636,6 +650,7 @@ export const testStore = <T extends IEngineStore>(
           TransactionReason.depositB,
           failed,
         );
+
         // save error
         await store.saveTransactionFailure(onchainTransactionId, "failed to send");
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -847,7 +862,6 @@ export const testStore = <T extends IEngineStore>(
         });
 
         const dispute = await store.getChannelDispute(channel.channelAddress);
-        console.log("dispute: ", dispute);
       });
     });
   });
