@@ -82,11 +82,11 @@ export class MemoryStoreService implements IEngineStore {
     return Promise.resolve(undefined);
   }
   saveTransactionAttempt(
+    onchainTransactionId: string,
     channelAddress: string,
     reason: TransactionReason,
     response: TransactionResponse,
-    onchainTransactionId?: string,
-  ): Promise<{ onchainTransactionId: string }> {
+  ): Promise<void> {
     return Promise.resolve(undefined);
   }
   // Map<channelAddress, transferId[]>

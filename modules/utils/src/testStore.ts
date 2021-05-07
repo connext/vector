@@ -12,6 +12,7 @@ import {
   IServerNodeStore,
 } from "@connext/vector-types";
 import { HashZero } from "@ethersproject/constants";
+import { v4 as uuidV4 } from "uuid";
 import {
   createTestChannelState,
   mkBytes32,
@@ -583,7 +584,9 @@ export const testStore = <T extends IEngineStore>(
         const response = createTestTxResponse();
 
         // save response
-        const { onchainTransactionId } = await store.saveTransactionAttempt(
+        const onchainTransactionId = uuidV4();
+        await store.saveTransactionAttempt(
+          onchainTransactionId,
           setupState.channelAddress,
           TransactionReason.depositA,
           response,
@@ -626,7 +629,13 @@ export const testStore = <T extends IEngineStore>(
 
         // save failing response
         const failed = createTestTxResponse({ hash: mkHash("0x13754"), nonce: 65 });
-        await store.saveTransactionAttempt(setupState.channelAddress, TransactionReason.depositB, failed);
+
+        await store.saveTransactionAttempt(
+          onchainTransactionId,
+          setupState.channelAddress,
+          TransactionReason.depositB,
+          failed,
+        );
         // save error
         await store.saveTransactionFailure(onchainTransactionId, "failed to send");
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
