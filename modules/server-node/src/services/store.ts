@@ -302,7 +302,15 @@ export class PrismaStore implements IServerNodeStore {
   async getTransactionById(onchainTransactionId: string): Promise<StoredTransaction | undefined> {
     const entity = await this.prisma.onchainTransaction.findUnique({
       where: { id: onchainTransactionId },
-      include: { channel: true },
+      include: {
+        channel: true,
+        receipt: true,
+        attempts: {
+          orderBy: {
+            createdAt: 'asc'
+          }
+        }
+      },
     });
     if (!entity) {
       return undefined;
@@ -313,21 +321,15 @@ export class PrismaStore implements IServerNodeStore {
   /// Retrieve transaction by hash, first sifting through tx attempts and then returning the corresponding
   /// OnchainTransaction, assuming it exists.
   async getTransactionByHash(transactionHash: string): Promise<StoredTransaction | undefined> {
-    const attempt = await this.prisma.onchainTranactionAttempt.findUnique({
+    // TODO: Possible to condense into 1 call?
+    const attempt = await this.prisma.onchainTransactionAttempt.findUnique({
       where: { transactionHash }
     });
     if (!attempt) {
       return undefined;
     }
 
-    const entity = await this.prisma.onchainTransaction.findUnique({
-      where: { id: attempt.onchainTransactionId },
-      include: { channel: true },
-    });
-    if (!entity) {
-      return undefined;
-    }
-    return convertOnchainTransactionEntityToTransaction(entity);
+    return this.getTransactionById(attempt.onchainTransactionId);
   }
 
   /// Retrieve all tx's that have been submitted, but were not confirmed/mined
@@ -385,17 +387,17 @@ export class PrismaStore implements IServerNodeStore {
         nonce: response.nonce,
         to: response.to ?? "",
         from: response.from,
+        data: response.data,
+        value: (response.value ?? BigNumber.from(0)).toString(),
         reason,
         attempts: {
-          connectOrCreate: {
+          create: {
             where: {
               transactionHash: response.hash,
             },
             create: {
-              data: response.data,
               gasLimit: (response.gasLimit ?? BigNumber.from(0)).toString(),
               gasPrice: (response.gasPrice ?? BigNumber.from(0)).toString(),
-              value: (response.value ?? BigNumber.from(0)).toString(),
               transactionHash: response.hash,
             },
           },
@@ -410,7 +412,7 @@ export class PrismaStore implements IServerNodeStore {
         status: StoredTransactionStatus.submitted,
         reason,
         onchainTransactionAttempts: {
-          connectOrCreate: {
+          create: {
             where: {
               transactionHash: response.hash,
             },
