@@ -372,6 +372,7 @@ export class PrismaStore implements IServerNodeStore {
     await this.prisma.onchainTransaction.upsert({
       where: { id: onchainTransactionId },
       create: {
+        id: onchainTransactionId,
         status: StoredTransactionStatus.submitted,
         chainId: response.chainId.toString(),
         nonce: response.nonce,
