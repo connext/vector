@@ -363,8 +363,8 @@ export class BrowserStore implements IEngineStore, IChainServiceStore {
     });
   }
 
-  async saveTransactionFailure(channelAddress: string, transactionHash: string, error: string): Promise<void> {
-    await this.db.transactions.update(transactionHash, {
+  async saveTransactionFailure(onchainTransactionId: string, error: string, receipt: TransactionReceipt): Promise<void> {
+    await this.db.transactions.update(onchainTransactionId, {
       status: StoredTransactionStatus.failed,
       error,
     });

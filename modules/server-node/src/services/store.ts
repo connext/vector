@@ -318,20 +318,6 @@ export class PrismaStore implements IServerNodeStore {
     return convertOnchainTransactionEntityToTransaction(entity);
   }
 
-  /// Retrieve transaction by hash, first sifting through tx attempts and then returning the corresponding
-  /// OnchainTransaction, assuming it exists.
-  async getTransactionByHash(transactionHash: string): Promise<StoredTransaction | undefined> {
-    // TODO: Possible to condense into 1 call?
-    const attempt = await this.prisma.onchainTransactionAttempt.findUnique({
-      where: { transactionHash }
-    });
-    if (!attempt) {
-      return undefined;
-    }
-
-    return this.getTransactionById(attempt.onchainTransactionId);
-  }
-
   /// Retrieve all tx's that have been submitted, but were not confirmed/mined
   /// (and did not fail).
   async getActiveTransactions(): Promise<StoredTransaction[]> {

@@ -131,7 +131,6 @@ export interface IChainServiceStore {
   clear(): Promise<void>;
 
   // Getters
-  getTransactionByHash(transactionHash: string): Promise<StoredTransaction | undefined>;
   getTransactionById(onchainTransactionId: string): Promise<StoredTransaction | undefined>;
   getActiveTransactions(): Promise<StoredTransaction[]>;
 
