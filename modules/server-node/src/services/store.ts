@@ -470,9 +470,7 @@ export class PrismaStore implements IServerNodeStore {
 
   async saveTransactionFailure(
     onchainTransactionId: string,
-    transactionHash: string,
     error: string,
-    transaction?: TransactionReceipt,
   ): Promise<void> {
     await this.prisma.onchainTransaction.update({
       where: {
@@ -480,37 +478,7 @@ export class PrismaStore implements IServerNodeStore {
       },
       data: {
         error,
-        status: StoredTransactionStatus.mined,
-        onchainTransactionAttempts: {
-          update: {
-            where: { transactionHash },
-            data: {
-              receipt: {
-                connectOrCreate: transaction
-                  ? {
-                      where: {
-                        transactionHash,
-                      },
-                      create: {
-                        transactionHash,
-                        blockHash: transaction.blockHash,
-                        blockNumber: transaction.blockNumber,
-                        byzantium: transaction.byzantium,
-                        contractAddress: transaction.contractAddress,
-                        cumulativeGasUsed: (transaction.cumulativeGasUsed ?? BigNumber.from(0)).toString(),
-                        gasUsed: (transaction.gasUsed ?? BigNumber.from(0)).toString(),
-                        logs: transaction.logs.join(",").toString(),
-                        logsBloom: transaction.logsBloom,
-                        root: transaction.root,
-                        status: transaction.status,
-                        transactionIndex: transaction.transactionIndex,
-                      },
-                    }
-                  : undefined,
-              },
-            },
-          },
-        },
+        status: StoredTransactionStatus.failed,
       },
     });
   }
