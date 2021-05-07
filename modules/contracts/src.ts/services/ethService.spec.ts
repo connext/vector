@@ -543,11 +543,11 @@ describe("ethService unit test", () => {
       const result = await ethService.sendAndConfirmTx(AddressZero, 1337, "allowance", async () => {
         return txResponse;
       });
-      expect(storeMock.saveTransactionResponse.callCount).eq(1);
-      const saveTransactionResponseCall = storeMock.saveTransactionResponse.getCall(0);
-      expect(saveTransactionResponseCall.args[0]).eq(AddressZero);
-      expect(saveTransactionResponseCall.args[1]).eq("allowance");
-      expect(saveTransactionResponseCall.args[2]).deep.eq(txResponse);
+      expect(storeMock.saveTransactionAttempt.callCount).eq(1);
+      const saveTransactionAttemptCall = storeMock.saveTransactionAttempt.getCall(0);
+      expect(saveTransactionAttemptCall.args[0]).eq(AddressZero);
+      expect(saveTransactionAttemptCall.args[1]).eq("allowance");
+      expect(saveTransactionAttemptCall.args[2]).deep.eq(txResponse);
 
       expect(storeMock.saveTransactionFailure.callCount).eq(1);
       const saveTransactionFailureCall = storeMock.saveTransactionFailure.getCall(0);
@@ -563,11 +563,11 @@ describe("ethService unit test", () => {
       const result = await ethService.sendAndConfirmTx(AddressZero, 1337, "allowance", async () => {
         return txResponse;
       });
-      expect(storeMock.saveTransactionResponse.callCount).eq(1);
-      const saveTransactionResponseCall = storeMock.saveTransactionResponse.getCall(0);
-      expect(saveTransactionResponseCall.args[0]).eq(AddressZero);
-      expect(saveTransactionResponseCall.args[1]).eq("allowance");
-      expect(saveTransactionResponseCall.args[2]).deep.eq(txResponse);
+      expect(storeMock.saveTransactionAttempt.callCount).eq(1);
+      const saveTransactionAttemptCall = storeMock.saveTransactionAttempt.getCall(0);
+      expect(saveTransactionAttemptCall.args[0]).eq(AddressZero);
+      expect(saveTransactionAttemptCall.args[1]).eq("allowance");
+      expect(saveTransactionAttemptCall.args[2]).deep.eq(txResponse);
 
       expect(storeMock.saveTransactionFailure.callCount).eq(1);
       const saveTransactionFailureCall = storeMock.saveTransactionFailure.getCall(0);
@@ -605,16 +605,16 @@ describe("ethService unit test", () => {
       expect(receivedNonce === txResponse.nonce, "nonce passed into callback was not the same as original tx nonce");
       expect(secondGasPrice > firstGasPrice, "second gas price should be larger than first");
 
-      expect(storeMock.saveTransactionResponse.callCount).eq(2);
-      const saveTransactionResponseCall = storeMock.saveTransactionResponse.getCall(0);
-      expect(saveTransactionResponseCall.args[0]).eq(AddressZero);
-      expect(saveTransactionResponseCall.args[1]).eq("allowance");
-      expect(saveTransactionResponseCall.args[2]).deep.eq(txResponse);
+      expect(storeMock.saveTransactionAttempt.callCount).eq(2);
+      const saveTransactionAttemptCall = storeMock.saveTransactionAttempt.getCall(0);
+      expect(saveTransactionAttemptCall.args[0]).eq(AddressZero);
+      expect(saveTransactionAttemptCall.args[1]).eq("allowance");
+      expect(saveTransactionAttemptCall.args[2]).deep.eq(txResponse);
 
-      const saveTransactionResponseCall2 = storeMock.saveTransactionResponse.getCall(1);
-      expect(saveTransactionResponseCall2.args[0]).eq(AddressZero);
-      expect(saveTransactionResponseCall2.args[1]).eq("allowance");
-      expect(saveTransactionResponseCall2.args[2]).deep.eq(newTx);
+      const saveTransactionAttemptCall2 = storeMock.saveTransactionAttempt.getCall(1);
+      expect(saveTransactionAttemptCall2.args[0]).eq(AddressZero);
+      expect(saveTransactionAttemptCall2.args[1]).eq("allowance");
+      expect(saveTransactionAttemptCall2.args[2]).deep.eq(newTx);
 
       expect(storeMock.saveTransactionReceipt.callCount).eq(1);
       const saveTransactionReceiptCall = storeMock.saveTransactionReceipt.getCall(0);
@@ -631,11 +631,11 @@ describe("ethService unit test", () => {
         return txResponse;
       });
 
-      expect(storeMock.saveTransactionResponse.callCount).eq(1);
-      const saveTransactionResponseCall = storeMock.saveTransactionResponse.getCall(0);
-      expect(saveTransactionResponseCall.args[0]).eq(AddressZero);
-      expect(saveTransactionResponseCall.args[1]).eq("allowance");
-      expect(saveTransactionResponseCall.args[2]).deep.eq(txResponse);
+      expect(storeMock.saveTransactionAttempt.callCount).eq(1);
+      const saveTransactionAttemptCall = storeMock.saveTransactionAttempt.getCall(0);
+      expect(saveTransactionAttemptCall.args[0]).eq(AddressZero);
+      expect(saveTransactionAttemptCall.args[1]).eq("allowance");
+      expect(saveTransactionAttemptCall.args[2]).deep.eq(txResponse);
 
       expect(storeMock.saveTransactionFailure.callCount).eq(1);
       const saveTransactionFailureCall = storeMock.saveTransactionFailure.getCall(0);
@@ -651,11 +651,11 @@ describe("ethService unit test", () => {
       const result = await ethService.sendAndConfirmTx(AddressZero, 1337, "allowance", async () => {
         return txResponse;
       });
-      expect(storeMock.saveTransactionResponse.callCount).eq(1);
-      const saveTransactionResponseCall = storeMock.saveTransactionResponse.getCall(0);
-      expect(saveTransactionResponseCall.args[0]).eq(AddressZero);
-      expect(saveTransactionResponseCall.args[1]).eq("allowance");
-      expect(saveTransactionResponseCall.args[2]).deep.eq(txResponse);
+      expect(storeMock.saveTransactionAttempt.callCount).eq(1);
+      const saveTransactionAttemptCall = storeMock.saveTransactionAttempt.getCall(0);
+      expect(saveTransactionAttemptCall.args[0]).eq(AddressZero);
+      expect(saveTransactionAttemptCall.args[1]).eq("allowance");
+      expect(saveTransactionAttemptCall.args[2]).deep.eq(txResponse);
 
       expect(storeMock.saveTransactionReceipt.callCount).eq(1);
       const saveTransactionReceiptCall = storeMock.saveTransactionReceipt.getCall(0);
