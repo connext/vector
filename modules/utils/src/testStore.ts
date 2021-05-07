@@ -583,10 +583,10 @@ export const testStore = <T extends IEngineStore>(
         const response = createTestTxResponse();
 
         // save response
-        await store.saveTransactionResponse(setupState.channelAddress, TransactionReason.depositA, response);
+        const { onchainTransactionId } = await store.saveTransactionAttempt(setupState.channelAddress, TransactionReason.depositA, response);
 
         // verify response
-        const storedResponse = await store.getTransactionByHash(response.hash);
+        const storedResponse = await store.getTransactionById(onchainTransactionId);
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const { wait, confirmations, hash, ...sanitizedResponse } = response;
         expect(storedResponse).to.containSubset({
@@ -601,10 +601,10 @@ export const testStore = <T extends IEngineStore>(
 
         // save receipt
         const receipt = await response.wait();
-        await store.saveTransactionReceipt(setupState.channelAddress, receipt);
+        await store.saveTransactionReceipt(onchainTransactionId, receipt);
 
         // verify receipt
-        const storedReceipt = await store.getTransactionByHash(response.hash);
+        const storedReceipt = await store.getTransactionById(onchainTransactionId);
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const { confirmations: receiptConfs, ...sanitizedReceipt } = receipt;
         expect(storedReceipt).to.containSubset({
@@ -622,9 +622,9 @@ export const testStore = <T extends IEngineStore>(
 
         // save failing response
         const failed = createTestTxResponse({ hash: mkHash("0x13754"), nonce: 65 });
-        await store.saveTransactionResponse(setupState.channelAddress, TransactionReason.depositB, failed);
+        await store.saveTransactionAttempt(setupState.channelAddress, TransactionReason.depositB, failed);
         // save error
-        await store.saveTransactionFailure(setupState.channelAddress, failed.hash, "failed to send");
+        await store.saveTransactionFailure(onchainTransactionId, "failed to send");
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const { wait: fWait, confirmations: fConf, hash: fHash, ...sanitizedFailure } = failed;
         const storedFailure = await store.getTransactionByHash(fHash);
