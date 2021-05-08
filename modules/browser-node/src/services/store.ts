@@ -310,7 +310,7 @@ export class BrowserStore implements IEngineStore, IChainServiceStore {
   }
 
   async getTransactionById(onchainTransactionId: string): Promise<StoredTransaction | undefined> {
-    throw new Error("Method not implemented.");
+    return await this.db.transactions.get({ id: onchainTransactionId })
   }
 
   async getActiveTransactions(): Promise<StoredTransaction[]> {
@@ -328,15 +328,9 @@ export class BrowserStore implements IEngineStore, IChainServiceStore {
     reason: TransactionReason,
     response: TransactionResponse,
   ): Promise<void> {
-    throw new Error("Method not implemented.");
-  }
-
-  async saveTransactionResponse(
-    channelAddress: string,
-    reason: TransactionReason,
-    transaction: TransactionResponse,
-  ): Promise<void> {
     await this.db.transactions.put({
+      id: onchainTransactionId,
+
       //// Helper fields
       channelAddress,
       status: StoredTransactionStatus.submitted,
@@ -344,23 +338,23 @@ export class BrowserStore implements IEngineStore, IChainServiceStore {
 
       //// Provider fields
       // Minimum fields (should always be defined)
-      to: transaction.to!,
-      from: transaction.from,
-      data: transaction.data,
-      value: transaction.value.toString(),
-      chainId: transaction.chainId,
+      to: response.to!,
+      from: response.from,
+      data: response.data,
+      value: response.value.toString(),
+      chainId: response.chainId,
 
       // TransactionRequest fields (defined when tx populated)
-      nonce: transaction.nonce,
-      gasLimit: transaction.gasLimit.toString(),
-      gasPrice: transaction.gasPrice.toString(),
+      nonce: response.nonce,
+      gasLimit: response.gasLimit.toString(),
+      gasPrice: response.gasPrice.toString(),
 
       // TransactionResponse fields (defined when submitted)
-      transactionHash: transaction.hash, // may be edited on mining
-      timestamp: transaction.timestamp,
-      raw: transaction.raw,
-      blockHash: transaction.blockHash,
-      blockNumber: transaction.blockNumber,
+      transactionHash: response.hash, // may be edited on mining
+      timestamp: response.timestamp,
+      raw: response.raw,
+      blockHash: response.blockHash,
+      blockNumber: response.blockNumber,
     });
   }
 

@@ -86,7 +86,34 @@ export const TransactionReason = {
 } as const;
 export type TransactionReason = keyof typeof TransactionReason;
 
+export type StoredTransactionAttempt = {
+  // TransactionResponse fields (defined when submitted)
+  transactionHash: string;
+  gasLimit: string;
+  gasPrice: string;
+  timestamp: number;
+}
+
+export type StoredTransactionReceipt = {
+  // TransactionReceipt fields (defined when mined)
+  transactionHash: string;
+  contractAddress: string;
+  transactionIndex: number;
+  root?: string;
+  gasUsed: string;
+  cumulativeGasUsed: string;
+  logsBloom: string;
+  blockHash: string;
+  blockNumber: number;
+  confirmations: number;
+  logs?: string;
+  byzantium: boolean;
+  status?: number;
+}
+
 export type StoredTransaction = {
+  id: string;
+
   //// Helper fields
   channelAddress: string;
   status: StoredTransactionStatus;
@@ -100,28 +127,12 @@ export type StoredTransaction = {
   data: string;
   value: string;
   chainId: number;
+  nonce: number;
 
   // TransactionRequest fields (defined when tx populated)
-  nonce: number;
-  gasLimit: string;
-  gasPrice: string;
-
-  // TransactionResponse fields (defined when submitted)
-  transactionHash: string; // may be edited on mining
-  timestamp?: number;
-  raw?: string;
-  blockHash?: string; // may be edited on mining
-  blockNumber?: number; // may be edited on mining
-
-  // TransactionReceipt fields (defined when mined)
-  logs?: string;
-  contractAddress?: string;
-  transactionIndex?: number;
-  root?: string;
-  gasUsed?: string;
-  logsBloom?: string;
-  cumulativeGasUsed?: string;
-  byzantium?: boolean;
+  attempts: StoredTransactionAttempt[];
+  receipt: StoredTransactionReceipt;
+  confirmedTransactionHash?: string;
 };
 
 export interface IChainServiceStore {
