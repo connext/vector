@@ -1568,7 +1568,7 @@ export class VectorEngine implements IVectorEngine {
       //   swapRate: "empty",
       //   totalFee: "empty",
       // };
-      function sleep(t) {
+      function waitForRespones(t) {
         return new Promise(function (resolve) {
           setTimeout(resolve, t);
         });
@@ -1586,11 +1586,31 @@ export class VectorEngine implements IVectorEngine {
         this.auctionResponses.push(res);
         console.log("array en la callback", this.auctionResponses);
       });
-      if (this.auctionResponses.length == 0) {
-        await sleep(3000);
+      if (this.auctionResponses.length < 5) {
+        await waitForRespones(5000);
       }
-      console.log(this.auctionResponses);
-      return Result.ok(this.auctionResponses[0]);
+      this.logger.info(this.auctionResponses, "Rotuer Responses");
+      if (this.auctionResponses.length == 0) {
+        // TODO: Define Auction specific Error class
+        Result.fail(
+          new RpcError(RpcError.reasons.EngineMethodFailure, "", this.publicIdentifier, {
+            invalidParamsError: validate.errors?.map((e) => e.message).join(","),
+            invalidParams: params,
+          }),
+        );
+      }
+
+      // compare fees of responses
+      let lowestFee = parseInt(this.auctionResponses[0].totalFee);
+      let lowestFeeIndex = 0;
+      for (const [i, elem] of this.auctionResponses.entries()) {
+        if (parseInt(elem.totalFee) << lowestFee) {
+          lowestFee = parseInt(elem.totalFee);
+          lowestFeeIndex = i;
+        }
+      }
+      this.logger.info(this.auctionResponses[lowestFeeIndex], "Chosen Router");
+      return Result.ok(this.auctionResponses[lowestFeeIndex]);
     } catch (err) {
       return Result.fail(
         new RpcError(RpcError.reasons.InvalidParams, "", this.publicIdentifier, {
@@ -1598,6 +1618,8 @@ export class VectorEngine implements IVectorEngine {
           invalidParams: params,
         }),
       );
+    } finally {
+      this.auctionResponses = [];
     }
   }
 

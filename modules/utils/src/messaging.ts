@@ -260,23 +260,6 @@ export class NatsBasicMessagingService implements IBasicMessaging {
     this.log.debug({ method, subject: subscriptionSubject }, `Subscription created`);
   }
 
-  // protected async collectAuctionMessage<T = any>(subscriptionSubject: string, method: string): Promise<Result<any>> {
-  //   let mes;
-
-  //   await this.subscribe(subscriptionSubject, (msg, err) => {
-  //     this.log.debug({ method, msg }, "Received message");
-  //     const from = msg.subject.split(".")[1];
-  //     if (err) {
-  //       return Result.fail(new MessagingError(err));
-  //     }
-  //     const { result } = this.parseIncomingMessage<T>(msg);
-
-  //     return Result.ok(result);
-  //   });
-  //   this.log.debug({ method, subject: subscriptionSubject }, `Subscription created`);
-  //   return mes;
-  // }
-
   private async sendMessage<T = any, R = any>(
     data: Result<T, any>,
     subjectSuffix: string,
@@ -665,7 +648,7 @@ export class NatsMessagingService extends NatsBasicMessagingService implements I
     );
   }
   ////////////
-  // AUCTION METHODS // placeholder
+  // AUCTION METHODS
 
   publishStartAuction(
     to: string,
@@ -677,32 +660,12 @@ export class NatsMessagingService extends NatsBasicMessagingService implements I
     return this.publishUniqueInbox(`${from}.${to}.start-auction`, data, inbox);
   }
 
-  // async onReceiveAuctionMessage(
-  //   myPublicIdentifier: string,
-  //   callback: (runAuction: Result<NodeResponses.RunAuction, NodeError>, from: string, inbox: string) => void,
-  // ): Promise<void> {
-  //   console.log("onReceiveAuctionMessage ======> ", `*.start-auction`);
-  //   return this.registerCallback(
-  //     `${myPublicIdentifier}.${myPublicIdentifier}.start-auction`,
-  //     callback,
-  //     "onReceiveAuctionMessage",
-  //   );
   async onReceiveAuctionMessage(
     myPublicIdentifier: string,
     inbox,
     callback: (runAuction: Result<NodeResponses.RunAuction, NodeError>, from: string, inbox: string) => void | any,
   ): Promise<void | any> {
-    console.log("onReceiveAuctionMessage ======> ", `*.start-auction`);
+    console.log("onReceiveAuctionMessage ======> ", `waiting for auction responses on inbox ${inbox}`);
     return this.registerCallback(inbox, callback, "onReceiveAuctionMessage");
   }
-  // async onReceiveAuctionMessage(
-  //   myPublicIdentifier: string,
-  //   callback: (runAuction: Result<NodeResponses.RunAuction, NodeError>, from: string, inbox: string) => void,
-  // ): Promise<Result<any>> {
-  //   console.log("onReceiveAuctionMessage ======> ", `*.start-auction`);
-  //   return this.collectAuctionMessage(
-  //     `${myPublicIdentifier}.${myPublicIdentifier}.start-auction`,
-  //     "onReceiveAuctionMessage",
-  //   );
-  // }
 }
