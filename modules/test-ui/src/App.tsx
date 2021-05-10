@@ -1,12 +1,3 @@
-// import { BrowserNode } from "@connext/vector-browser-node";
-// import {
-//   getPublicKeyFromPublicIdentifier,
-//   encrypt,
-//   createlockHash,
-//   getBalanceForAssetId,
-//   getRandomBytes32,
-//   constructRpcRequest,
-// } from "@connext/vector-utils";
 import React, { useState, useEffect } from "react";
 import { constants } from "ethers";
 import { Col, Divider, Row, Statistic, Input, Typography, Table, Form, Button, List, Select, Tabs, Radio } from "antd";
@@ -15,11 +6,6 @@ import { EngineEvents, FullChannelState, INodeService, jsonifyError, TransferNam
 
 import "./App.css";
 import { config } from "./config";
-
-// let BrowserNode: any;
-// import("@connext/vector-browser-node").then((pkg) => {
-//   BrowserNode = pkg.BrowserNode;
-// });
 
 function App() {
   const [node, setNode] = useState<INodeService>();
@@ -265,16 +251,6 @@ function App() {
   };
 
   const multiTransfer = async (numberOfTransfers: number) => {
-    const transfers = Array(numberOfTransfers)
-      .fill(0)
-      .map((_) => {
-        return utilsPkg.createCoreTransferState({ transferId: utilsPkg.getRandomBytes32() });
-      });
-
-    console.warn("ui::generating root");
-    const root = utilsPkg.generateMerkleRoot(transfers);
-    console.log("ui::root", root);
-    console.warn("ui::generated");
     const recipientChannel = channels.find((c) => c.channelAddress !== selectedChannel.channelAddress);
     if (!recipientChannel) {
       console.error("No recipient channel");
