@@ -7,7 +7,6 @@ import {
   Result,
   StoredTransaction,
   TransactionReason,
-  TransactionResponseWithResult,
 } from "@connext/vector-types";
 import {
   ChannelSigner,
@@ -24,6 +23,7 @@ import { JsonRpcProvider, TransactionReceipt, TransactionResponse } from "@ether
 import { BigNumber } from "ethers";
 import { parseUnits } from "ethers/lib/utils";
 import { restore, reset, createStubInstance, SinonStubbedInstance, stub, SinonStub } from "sinon";
+import { v4 as uuidV4 } from "uuid";
 
 import { BIG_GAS_PRICE, EthereumChainService } from "./ethService";
 
@@ -692,15 +692,24 @@ describe("ethService unit test", () => {
   describe("revitalizeTxs", () => {
     it("should resubmit and monitor active txs", async () => {
       const storedTx: StoredTransaction = {
-        ...txResponse,
         channelAddress: mkAddress("0xa"),
         reason: "allowance",
         status: "submitted",
         to: mkAddress(),
-        transactionHash: txResponse.hash,
+        chainId: txResponse.chainId,
+        data: txResponse.data,
+        from: txResponse.from,
+        id: uuidV4(),
+        nonce: txResponse.nonce,
+        attempts: [
+          {
+            transactionHash: txResponse.hash,
+            gasLimit: txResponse.gasLimit.toString(),
+            gasPrice: txResponse.gasPrice.toString(),
+            timestamp: 1,
+          },
+        ],
         value: txResponse.value.toString(),
-        gasLimit: txResponse.gasLimit.toString(),
-        gasPrice: txResponse.gasPrice.toString(),
       };
 
       const storedTxs = [storedTx, storedTx, storedTx, storedTx];
