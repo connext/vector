@@ -91,7 +91,7 @@ export type StoredTransactionAttempt = {
   transactionHash: string;
   gasLimit: string;
   gasPrice: string;
-  timestamp: number;
+  createdAt: Date;
 };
 
 export type StoredTransactionReceipt = {
