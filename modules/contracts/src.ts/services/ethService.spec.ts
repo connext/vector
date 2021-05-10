@@ -706,7 +706,7 @@ describe("ethService unit test", () => {
             transactionHash: txResponse.hash,
             gasLimit: txResponse.gasLimit.toString(),
             gasPrice: txResponse.gasPrice.toString(),
-            timestamp: 1,
+            createdAt: new Date(),
           },
         ],
         value: txResponse.value.toString(),
