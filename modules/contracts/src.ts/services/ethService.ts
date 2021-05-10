@@ -203,18 +203,11 @@ export class EthereumChainService extends EthereumChainReader implements IVector
   /// Check to see if any txs were left in an unfinished state. This should only execute on
   /// contructor / init.
   public async revitalizeTxs() {
-    // Get all tx's from store that were left in submitted state. Resubmit them.
+    // Get all txs from store that were left in submitted state. Resubmit them.
     const storedTransactions: StoredTransaction[] = await this.store.getActiveTransactions();
-    // TODO: Should we filter out "stale" tx's (older than a specified elapsed time)?
-    // RS: probably not
     for (const tx of storedTransactions) {
-      const txResponseRes = await this.getTxResponseFromHash(tx.chainId, {
-        to: tx.to,
-        data: tx.data,
-        value: tx.value,
-        transactionHash: tx.transactionHash,
-        nonce: tx.nonce,
-      });
+      const latestAttempt = tx.attempts[tx.attempts.length - 1];
+      const txResponseRes = await this.getTxResponseFromHash(tx.chainId, latestAttempt.transactionHash);
       if (txResponseRes.isError) {
         this.log.error({ error: txResponseRes.getError(), tx }, "Error in getTxResponseFromHash");
         continue;
@@ -235,7 +228,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
           to: tx.to,
           data: tx.data,
           chainId: tx.chainId,
-          gasPrice: tx.gasPrice,
+          gasPrice: latestAttempt.gasPrice,
           nonce: tx.nonce,
           value: BigNumber.from(tx.value || 0),
         });
@@ -248,7 +241,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
   /// Throws ChainError if signer not found, tx not found, or tx already mined.
   public async getTxResponseFromHash(
     chainId: number,
-    tx: MinimalTransaction & { transactionHash: string; nonce: number },
+    txHash: string,
   ): Promise<Result<{ response?: TransactionResponse; receipt?: TransactionReceipt }, ChainError>> {
     const provider = this.chainProviders[chainId];
     if (!provider) {
@@ -256,16 +249,14 @@ export class EthereumChainService extends EthereumChainReader implements IVector
     }
 
     try {
-      const response = await provider.getTransaction(tx.transactionHash);
+      const response = await provider.getTransaction(txHash);
       let receipt: TransactionReceipt | undefined;
       if (response?.confirmations > 0) {
-        receipt = await provider.send("eth_getTransactionReceipt", [tx.transactionHash]);
+        receipt = await provider.send("eth_getTransactionReceipt", [txHash]);
       }
       return Result.ok({ response, receipt });
     } catch (e) {
-      return Result.fail(
-        new ChainError(ChainError.reasons.TxNotFound, { error: e, transactionHash: tx.transactionHash }),
-      );
+      return Result.fail(new ChainError(ChainError.reasons.TxNotFound, { error: e, transactionHash: txHash }));
     }
   }
 
@@ -282,7 +273,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
       return Result.fail(new ChainError(ChainError.reasons.SignerNotFound, { chainId }));
     }
     // Make sure tx is not mined already
-    const getTxRes = await this.getTxResponseFromHash(chainId, tx);
+    const getTxRes = await this.getTxResponseFromHash(chainId, tx.transactionHash);
     if (getTxRes.isError) {
       return Result.fail(getTxRes.getError()!);
     }
