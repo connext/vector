@@ -309,6 +309,13 @@ export class BrowserStore implements IEngineStore, IChainServiceStore {
     return transfers.map(storedTransferToTransferState);
   }
 
+  async getActiveTransactions(): Promise<StoredTransaction[]> {
+    const tx = await this.db.transactions.filter(tx => {
+      return !!tx.transactionHash && !tx.blockHash && !tx.gasUsed
+    }).toArray();
+    return tx;
+  }
+
   async saveTransactionResponse(
     channelAddress: string,
     reason: TransactionReason,

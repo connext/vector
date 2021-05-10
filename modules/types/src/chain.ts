@@ -65,6 +65,7 @@ export class ChainError extends VectorError {
     TxAlreadyMined: "Tranasction already mined",
     TxNotFound: "Transaction not found",
     TxReverted: "Transaction reverted on chain",
+    MaxGasPriceReached: "Max gas price reached",
   };
 
   // Errors you would see from trying to send a transaction, and
@@ -76,6 +77,7 @@ export class ChainError extends VectorError {
     UnderpricedReplacement: "replacement transaction underpriced",
     AncientBlockSync: "Block information is incomplete while ancient",
     UnableToRent: "Unable to rent an instance of IEthModule",
+    ConfirmationTimeout: "Timed out waiting for confirmation.",
   };
 
   readonly canRetry: boolean;
@@ -254,37 +256,37 @@ export interface IVectorChainService extends IVectorChainReader {
     sender: string,
     amount: string,
     assetId: string,
-  ): Promise<Result<TransactionResponseWithResult, ChainError>>;
+  ): Promise<Result<TransactionReceipt, ChainError>>;
   sendWithdrawTx(
     channelState: FullChannelState,
     minTx: MinimalTransaction,
-  ): Promise<Result<TransactionResponseWithResult, ChainError>>;
+  ): Promise<Result<TransactionReceipt, ChainError>>;
   sendDeployChannelTx(
     channelState: FullChannelState,
     deposit?: { amount: string; assetId: string }, // Included IFF createChannelAndDepositAlice
-  ): Promise<Result<TransactionResponseWithResult, ChainError>>;
+  ): Promise<Result<TransactionReceipt, ChainError>>;
 
   // Dispute methods
-  sendDisputeChannelTx(channelState: FullChannelState): Promise<Result<TransactionResponseWithResult, ChainError>>;
-  sendDefundChannelTx(channelState: FullChannelState): Promise<Result<TransactionResponseWithResult, ChainError>>;
+  sendDisputeChannelTx(channelState: FullChannelState): Promise<Result<TransactionReceipt, ChainError>>;
+  sendDefundChannelTx(channelState: FullChannelState): Promise<Result<TransactionReceipt, ChainError>>;
   sendDisputeTransferTx(
     transferIdToDispute: string,
     activeTransfers: FullTransferState[],
-  ): Promise<Result<TransactionResponseWithResult, ChainError>>;
-  sendDefundTransferTx(transferState: FullTransferState): Promise<Result<TransactionResponseWithResult, ChainError>>;
+  ): Promise<Result<TransactionReceipt, ChainError>>;
+  sendDefundTransferTx(transferState: FullTransferState): Promise<Result<TransactionReceipt, ChainError>>;
   sendExitChannelTx(
     channelAddress: string,
     chainId: number,
     assetId: string,
     owner: string,
     recipient: string,
-  ): Promise<Result<TransactionResponseWithResult, ChainError>>;
+  ): Promise<Result<TransactionReceipt, ChainError>>;
 
   // Resend tx at the same nonce
   speedUpTx(
     chainId: number,
     tx: MinimalTransaction & { transactionHash: string; nonce: number },
-  ): Promise<Result<TransactionResponseWithResult, ChainError>>;
+  ): Promise<Result<TransactionReceipt, ChainError>>;
 
   // Event methods
   on<T extends ChainServiceEvent>(

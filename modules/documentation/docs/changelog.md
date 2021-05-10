@@ -2,6 +2,24 @@
 
 ## Next Release
 
+## 0.2.5-beta.3
+
+- \[contracts\] Don't revitalize tx
+- \[tests\] Fix integration tests with new default configs
+
+## 0.2.5-beta.2
+
+- \[all\] upgrade prisma
+- \[router\] Fix router reclaim
+
+## 0.2.5-beta.1
+
+- \[contracts\] tx service hotfixes
+
+## 0.2.5-beta.0
+
+- \[contracts\] robust tx service
+
 ## 0.2.5-alpha.4
 
 - \[router\] fix adjustCollateral for receiver channel.

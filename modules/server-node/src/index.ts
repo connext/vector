@@ -612,7 +612,7 @@ server.post<{ Body: NodeParams.SendDepositTx }>(
       }
       return reply.status(500).send(jsonifyError(depositRes.getError()!));
     }
-    return reply.status(200).send({ txHash: depositRes.getValue().hash });
+    return reply.status(200).send({ txHash: depositRes.getValue().transactionHash });
   },
 );
 
@@ -1101,10 +1101,10 @@ server.post<{ Body: NodeParams.RetryWithdrawTransaction }>(
       if (tx.isError) {
         return reply.status(500).send(jsonifyError(tx.getError()!));
       }
-      commitment!.addTransaction(tx.getValue().hash);
+      commitment!.addTransaction(tx.getValue().transactionHash);
       await store.saveWithdrawalCommitment(request.body.transferId, commitment!.toJson());
       return reply.status(200).send({
-        transactionHash: tx.getValue().hash,
+        transactionHash: tx.getValue().transactionHash,
         transferId: request.body.transferId,
         channelAddress: channel.channelAddress,
       });
@@ -1419,7 +1419,7 @@ server.post<{ Body: NodeParams.SpeedUpTx }>("/speed-up", async (request, reply) 
   if (result.isError) {
     return reply.status(500).send(jsonifyError(result.getError()!));
   }
-  return reply.status(200).send({ transactionHash: result.getValue().hash });
+  return reply.status(200).send({ transactionHash: result.getValue().transactionHash });
 });
 
 server.post<{ Body: NodeParams.SendExitChannelTx }>("/sync-disputes", async (request, reply) => {
