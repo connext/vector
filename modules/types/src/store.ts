@@ -92,7 +92,7 @@ export type StoredTransactionAttempt = {
   gasLimit: string;
   gasPrice: string;
   timestamp: number;
-}
+};
 
 export type StoredTransactionReceipt = {
   // TransactionReceipt fields (defined when mined)
@@ -109,7 +109,7 @@ export type StoredTransactionReceipt = {
   logs?: string;
   byzantium: boolean;
   status?: number;
-}
+};
 
 export type StoredTransaction = {
   id: string;
@@ -131,7 +131,7 @@ export type StoredTransaction = {
 
   // TransactionRequest fields (defined when tx populated)
   attempts: StoredTransactionAttempt[];
-  receipt: StoredTransactionReceipt;
+  receipt?: StoredTransactionReceipt;
   confirmedTransactionHash?: string;
 };
 
