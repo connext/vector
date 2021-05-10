@@ -105,7 +105,6 @@ export type StoredTransactionReceipt = {
   logsBloom: string;
   blockHash: string;
   blockNumber: number;
-  confirmations: number;
   logs?: string;
   byzantium: boolean;
   status?: number;
