@@ -648,23 +648,24 @@ export class NatsMessagingService extends NatsBasicMessagingService implements I
     );
   }
   ////////////
-  // AUCTION METHODS // placeholder
+  // AUCTION METHODS
 
   publishStartAuction(
-    data: Result<EngineParams.RunAuction, NodeError>,
     to: string,
     from: string,
-    timeout?: 30_000,
-    numRetries?: number,
-  ): Promise<Result<NodeResponses.RunAuction, NodeError | MessagingError>> {
-    return this.sendMessageWithRetries(data, "start-auction", to, from, timeout, numRetries, "publishStartAuction");
+    data: Result<EngineParams.RunAuction, NodeError>,
+    inbox: string,
+  ): Promise<void> {
+    console.log("publishStartAuctionMessage ======> ", `${to}.${from}.start-auction`);
+    return this.publishUniqueInbox(`${from}.${to}.start-auction`, data, inbox);
   }
 
-  onReceiveAuctionMessage(
+  async onReceiveAuctionMessage(
     myPublicIdentifier: string,
-    callback: (runAuction: Result<NodeResponses.RunAuction, NodeError>, from: string, inbox: string) => void,
-  ): Promise<void> {
-    console.log("onReceiveAuctionMessage ======> ", `*.start-auction`);
-    return this.registerCallback(`${myPublicIdentifier}.start-auction`, callback, "onReceiveAuctionMessage");
+    inbox,
+    callback: (runAuction: Result<NodeResponses.RunAuction, NodeError>, from: string, inbox: string) => void | any,
+  ): Promise<void | any> {
+    console.log("onReceiveAuctionMessage ======> ", `waiting for auction responses on inbox ${inbox}`);
+    return this.registerCallback(inbox, callback, "onReceiveAuctionMessage");
   }
 }

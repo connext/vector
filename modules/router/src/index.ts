@@ -272,6 +272,13 @@ server.post(conditionalTransferResolvedPath, async (request, response) => {
   return response.status(200).send({ message: "success" });
 });
 
+server.post(conditionalTransferRoutingCompletePath, async (request, response) => {
+  evts[EngineEvents.CONDITIONAL_TRANSFER_ROUTING_COMPLETE].evt!.post(
+    request.body as ConditionalTransferRoutingCompletePayload,
+  );
+  return response.status(200).send({ message: "success" });
+});
+
 server.post(depositReconciledPath, async (request, response) => {
   evts[EngineEvents.DEPOSIT_RECONCILED].evt!.post(request.body as DepositReconciledPayload);
   return response.status(200).send({ message: "success" });

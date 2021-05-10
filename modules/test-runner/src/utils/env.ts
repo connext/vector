@@ -20,4 +20,5 @@ export const env = {
   sugarDaddy: process.env.SUGAR_DADDY || "candy maple cake sugar pudding cream honey rich smooth crumble sweet treat",
   port: parseInt(process.env.VECTOR_PORT || "8888"),
   testerName: process.env.VECTOR_TESTER_NAME || "vector_trio_test_runner",
+  config: JSON.parse(process.env.VECTOR_CONFIG ?? "{}"),
 };

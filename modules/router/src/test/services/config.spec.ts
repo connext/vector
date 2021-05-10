@@ -3,17 +3,17 @@ import { VectorChainReader } from "@connext/vector-contracts";
 import { expect, mkAddress, getTestLoggers } from "@connext/vector-utils";
 import { Result, IVectorChainReader, ChainError } from "@connext/vector-types";
 import Sinon from "sinon";
-import { getConfig } from "../../config";
+import * as config from "../../config";
 import { ConfigServiceError } from "../../errors";
 import { getRebalanceProfile, getMappedAssets, getPriceImpact, onSwapGivenIn } from "../../services/config";
 
-const config = getConfig();
+const testConfig = config.getConfig();
 
 const testName = "config";
-const { log } = getTestLoggers(testName, config.logLevel ?? ("info" as any));
+const { log } = getTestLoggers(testName, testConfig.logLevel ?? ("info" as any));
 
 describe("config.ts", () => {
-  const chainId = parseInt(Object.keys(config.chainProviders)[0]);
+  const chainId = parseInt(Object.keys(testConfig.chainProviders)[0]);
   const transferAmount = parseEther("1");
   const fromAssetId: string = mkAddress("0xA");
   const fromChainId: number = 1337;
@@ -23,6 +23,7 @@ describe("config.ts", () => {
   let ethReader: Sinon.SinonStubbedInstance<VectorChainReader>;
 
   beforeEach(async () => {
+    Sinon.stub(config, "getConfig").returns({ ...testConfig, stableAmmAddress: mkAddress("0xaaaa") });
     ethReader = Sinon.createStubInstance(VectorChainReader);
   });
 
@@ -39,10 +40,10 @@ describe("config.ts", () => {
     });
 
     it("should return the rebalance profile for given chain/asset", () => {
-      const assetId = config.rebalanceProfiles[0].assetId;
+      const assetId = testConfig.rebalanceProfiles[0].assetId;
       const res = getRebalanceProfile(chainId, assetId);
       expect(res.getError()).to.be.deep.eq(undefined);
-      expect(res.getValue()).to.be.deep.eq(config.rebalanceProfiles[0]);
+      expect(res.getValue()).to.be.deep.eq(testConfig.rebalanceProfiles[0]);
     });
   });
 
@@ -56,11 +57,11 @@ describe("config.ts", () => {
       expect(res).to.deep.equal(
         [
           {
-            assetId: '0xA000000000000000000000000000000000000000',
-            chainId: 1337
-          }
+            assetId: "0xA000000000000000000000000000000000000000",
+            chainId: 1337,
+          },
         ],
-        "Did not return appropriate unique pair(s)."
+        "Did not return appropriate unique pair(s).",
       );
     });
   });

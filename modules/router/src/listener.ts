@@ -354,7 +354,7 @@ export async function setupListeners(
           const responseReceiverChannel = await adjustCollateral(
             data.channelAddress,
             data.transfer.assetId,
-            data.bobIdentifier,
+            routerSigner.publicIdentifier,
             nodeService,
             chainReader,
             logger,
@@ -973,7 +973,7 @@ export async function setupListeners(
     }
     const feeRes = await calculateFeeAmount(
       BigNumber.from(amount),
-      true, // receive exact amount, to be reviewed
+      false, // receive exact amount, to be reviewed
       assetId,
       senderChannel,
       recipientAssetId,

@@ -25,10 +25,12 @@ import {
   Values,
   VectorError,
   jsonifyError,
+  RunAuctionPayload,
   MinimalTransaction,
   WITHDRAWAL_RESOLVED_EVENT,
   VectorErrorJson,
   getConfirmationsForChain,
+  NodeResponses,
 } from "@connext/vector-types";
 import {
   generateMerkleTreeData,
@@ -66,6 +68,8 @@ export class VectorEngine implements IVectorEngine {
   private readonly evts: EngineEvtContainer = getEngineEvtContainer();
 
   private readonly restoreLocks: { [channelAddress: string]: string } = {};
+
+  private auctionResponses: Array<NodeResponses.RunAuction> = [];
 
   private constructor(
     private readonly signer: IChannelSigner,
@@ -669,13 +673,8 @@ export class VectorEngine implements IVectorEngine {
       );
       return setupRes;
     }
-    const tx = deployRes.getValue();
-    this.logger.info({ chainId: channel.networkContext.chainId, hash: tx.hash }, "Deploy tx broadcast");
-    const receipt = await tx.completed();
-    if (receipt.isError) {
-      return Result.fail(receipt.getError()!);
-    }
-    this.logger.debug({ chainId: channel.networkContext.chainId, hash: tx.hash }, "Deploy tx mined");
+    const receipt = deployRes.getValue();
+    this.logger.debug({ chainId: channel.networkContext.chainId, hash: receipt.transactionHash }, "Deploy tx mined");
     this.logger.info(
       { result: setupRes.isError ? jsonifyError(setupRes.getError()!) : setupRes.getValue(), method, methodId },
       "Method complete",
@@ -1313,27 +1312,17 @@ export class VectorEngine implements IVectorEngine {
       return Result.fail(disputeRes.getError()!);
     }
 
-    // register saving callback
-    disputeRes
-      .getValue()
-      .completed(getConfirmationsForChain(state.networkContext.chainId))
-      .then(async (receipt) => {
-        if (receipt.isError) {
-          return;
-        }
-        // save the dispute
-        // TODO: make this event driven
-        const dispute = await this.chainService.getChannelDispute(state.channelAddress, state.networkContext.chainId);
-        if (!dispute.isError && !!dispute.getValue()) {
-          try {
-            await this.store.saveChannelDispute(state.channelAddress, dispute.getValue()!);
-          } catch (e) {
-            this.logger.error({ ...jsonifyError(e) }, "Failed to save channel dispute");
-          }
-        }
-      });
+    // save the dispute
+    const dispute = await this.chainService.getChannelDispute(state.channelAddress, state.networkContext.chainId);
+    if (!dispute.isError && !!dispute.getValue()) {
+      try {
+        await this.store.saveChannelDispute(state.channelAddress, dispute.getValue()!);
+      } catch (e) {
+        this.logger.error({ ...jsonifyError(e) }, "Failed to save channel dispute");
+      }
+    }
 
-    return Result.ok({ transactionHash: disputeRes.getValue().hash });
+    return Result.ok({ transactionHash: disputeRes.getValue().transactionHash });
   }
 
   private async defund(
@@ -1369,7 +1358,7 @@ export class VectorEngine implements IVectorEngine {
       return Result.fail(disputeRes.getError()!);
     }
 
-    return Result.ok({ transactionHash: disputeRes.getValue().hash });
+    return Result.ok({ transactionHash: disputeRes.getValue().transactionHash });
   }
 
   private async getTransferDispute(
@@ -1428,7 +1417,7 @@ export class VectorEngine implements IVectorEngine {
     if (disputeRes.isError) {
       return Result.fail(disputeRes.getError()!);
     }
-    return Result.ok({ transactionHash: disputeRes.getValue().hash });
+    return Result.ok({ transactionHash: disputeRes.getValue().transactionHash });
   }
 
   private async defundTransfer(
@@ -1470,7 +1459,7 @@ export class VectorEngine implements IVectorEngine {
     if (defundRes.isError) {
       return Result.fail(defundRes.getError()!);
     }
-    return Result.ok({ transactionHash: defundRes.getValue().hash });
+    return Result.ok({ transactionHash: defundRes.getValue().transactionHash });
   }
 
   private async exit(
@@ -1516,7 +1505,7 @@ export class VectorEngine implements IVectorEngine {
       );
       results.push({
         assetId,
-        transactionHash: result.isError ? undefined : result.getValue().hash,
+        transactionHash: result.isError ? undefined : result.getValue().transactionHash,
         error: result.isError ? jsonifyError(result.getError()!) : undefined,
       });
     }
@@ -1552,28 +1541,78 @@ export class VectorEngine implements IVectorEngine {
       );
     }
 
-    const from = this.signer.publicIdentifier;
+    const payload: RunAuctionPayload = {
+      amount: params.amount,
+      senderPublicIdentifier: this.publicIdentifier,
+      senderAssetId: params.assetId,
+      senderChainId: params.chainId,
+      receiverPublicIdentifier: params.recipient,
+      receiverAssetId: params.recipientAssetId,
+      receiverChainId: params.recipientChainId,
+    };
+    this.evts[EngineEvents.RUN_AUCTION_EVENT].post(payload);
 
-    //Call publishStartAuction with provided data.
-    this.messaging.publishStartAuction(Result.ok(params), from, from);
+    const inbox = getRandomBytes32();
+    const from = this.signer.publicIdentifier;
 
     // Call onReceiveAuctionMessage to listen on unique INBOX and collect responses for 5 seconds (will tweak and tune this number).
     // Maybe something like wait for 5 responses or 5 seconds? Watch out for race conditions of setting listener after message is already sent.
-    let timeout = false;
-    setTimeout(() => (timeout = true), 5000);
-    let res;
+    try {
+      //Call publishStartAuction with provided data.
+      this.messaging.publishStartAuction(from, from, Result.ok(params), inbox);
 
-    await this.messaging.onReceiveAuctionMessage(this.publicIdentifier, async (runAuction, from, inbox) => {
-      const method = "onReceiveReceiveAuctionMessage";
-      const methodId = getRandomBytes32();
-      if (runAuction.isError) {
-        this.logger.error({ error: runAuction.getError()?.message, method, methodId }, "Error received");
-        return;
+      function waitForRespones(t) {
+        return new Promise(function (resolve) {
+          setTimeout(resolve, t);
+        });
       }
-      const res = runAuction.getValue();
-    });
 
-    return Result.ok(res);
+      await this.messaging.onReceiveAuctionMessage(this.publicIdentifier, inbox, (runAuction, from, inbox) => {
+        const method = "onReceiveReceiveAuctionMessage";
+        const methodId = getRandomBytes32();
+
+        if (runAuction.isError) {
+          this.logger.error({ error: runAuction.getError()?.message, method, methodId }, "Error received");
+          return;
+        }
+        const res = runAuction.getValue();
+        this.auctionResponses.push(res);
+      });
+      if (this.auctionResponses.length < 5) {
+        await waitForRespones(5000);
+      }
+      this.logger.info(this.auctionResponses, "Router Responses");
+      if (this.auctionResponses.length == 0) {
+        // TODO: Define Auction specific Error class
+        Result.fail(
+          new RpcError(RpcError.reasons.EngineMethodFailure, "", this.publicIdentifier, {
+            invalidParamsError: validate.errors?.map((e) => e.message).join(","),
+            invalidParams: params,
+          }),
+        );
+      }
+
+      // compare fees of responses
+      let lowestFee = parseInt(this.auctionResponses[0].totalFee);
+      let lowestFeeIndex = 0;
+      for (const [i, elem] of this.auctionResponses.entries()) {
+        if (parseInt(elem.totalFee) << lowestFee) {
+          lowestFee = parseInt(elem.totalFee);
+          lowestFeeIndex = i;
+        }
+      }
+      this.logger.info(this.auctionResponses[lowestFeeIndex], "Chosen Router");
+      return Result.ok(this.auctionResponses[lowestFeeIndex]);
+    } catch (err) {
+      return Result.fail(
+        new RpcError(RpcError.reasons.InvalidParams, "", this.publicIdentifier, {
+          invalidParamsError: validate.errors?.map((e) => e.message).join(","),
+          invalidParams: params,
+        }),
+      );
+    } finally {
+      this.auctionResponses = [];
+    }
   }
 
   // JSON RPC interface -- this will accept:

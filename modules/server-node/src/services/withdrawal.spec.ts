@@ -75,7 +75,7 @@ describe(testName, () => {
     store = Sinon.createStubInstance(PrismaStore);
 
     // default all mocks to be ok
-    chainService.sendWithdrawTx.resolves(Result.ok({ hash: transactionHash }) as any);
+    chainService.sendWithdrawTx.resolves(Result.ok({ transactionHash }) as any);
     chainService.getRegisteredTransferByName.resolves(Result.ok({ definition: transferDefinition }) as any);
     chainService.getWithdrawalTransactionRecord.resolves(Result.ok(false));
     store.saveWithdrawalCommitment.resolves();
