@@ -16,6 +16,7 @@ import {
   ChannelDispute,
   TransferDispute,
   GetTransfersFilterOpts,
+  StoredTransactionAttempt,
 } from "@connext/vector-types";
 import { getRandomBytes32, getSignerAddressFromPublicIdentifier, mkSig } from "@connext/vector-utils";
 import { BigNumber } from "@ethersproject/bignumber";
@@ -46,7 +47,14 @@ const convertOnchainTransactionEntityToTransaction = (
   // NOTE: There will always be a 'latestAttempt' in the OnchainTransaction, as it is created only when
   // the first attempt is made. This array here will also have been sorted by createdBy Date.
   const latestAttempt = onchainEntity.attempts[onchainEntity.attempts.length - 1];
-  console.log("ATTEMPTS:", onchainEntity.attempts.length - 1, "\n", onchainEntity.attempts, "\nSELECTED", onchainEntity.attempts[onchainEntity.attempts.length - 1])
+  console.log(
+    "ATTEMPTS:",
+    onchainEntity.attempts.length - 1,
+    "\n",
+    onchainEntity.attempts,
+    "\nSELECTED",
+    onchainEntity.attempts[onchainEntity.attempts.length - 1],
+  );
   console.log("RECEIPT", onchainEntity.receipt);
   const receipt = onchainEntity.receipt;
   return {
@@ -77,7 +85,7 @@ const convertOnchainTransactionEntityToTransaction = (
     logsBloom: receipt?.logsBloom ?? undefined,
     cumulativeGasUsed: receipt?.cumulativeGasUsed ?? undefined,
     byzantium: receipt?.byzantium ?? undefined,
-    logs: receipt?.logs ? JSON.parse(receipt?.logs) : receipt? [] : undefined,
+    logs: receipt?.logs ? JSON.parse(receipt?.logs) : receipt ? [] : undefined,
   };
 };
 
@@ -333,40 +341,36 @@ export class PrismaStore implements IServerNodeStore {
   async getActiveTransactions(): Promise<StoredTransaction[]> {
     const activeTransactions = await this.prisma.onchainTransaction.findMany({
       where: {
-        // TODO: Any other key fields that we know HAVE to be defined for receipts that we should include here?
-        // If these key receipt fields are undefined, then we know we never got
-        // a valid receipt for this transaction.
         status: StoredTransactionStatus.submitted,
       },
+      include: {
+        attempts: {
+          orderBy: { createdAt: "asc" },
+        },
+      },
     });
-    return activeTransactions.map(
-      (t: any) =>
-        ({
-          channelAddress: t.channelAddress,
-          status: t.status,
-          reason: t.reason,
-          error: t.error ?? undefined,
-          to: t.to,
-          from: t.from,
-          data: t.data,
-          value: t.value,
-          nonce: t.nonce,
-          gasLimit: t.gasLimit,
-          transactionHash: t.transactionHash,
-          timestamp: t.timestamp ?? undefined,
-          raw: t.raw ?? undefined,
-          blockHash: t.blockHash ?? undefined,
-          blockNumber: t.blockNumber ?? undefined,
-          logs: t.logs ?? undefined,
-          contractAddress: t.contractAddress ?? undefined,
-          transactionIndex: t.transactionIndex ?? undefined,
-          root: t.root ?? undefined,
-          gasUsed: t.gasUsed ?? undefined,
-          logsBloom: t.logsBloom ?? undefined,
-          cumulativeGasUsed: t.cumulativeGasUsed ?? undefined,
-          byzantium: t.byzantium ?? undefined,
-        } as StoredTransaction),
-    );
+    return activeTransactions.map((t) => {
+      return {
+        attempts: t.attempts.map((a) => {
+          return {
+            gasLimit: a.gasLimit,
+            gasPrice: a.gasPrice,
+            createdAt: a.createdAt,
+            transactionHash: a.transactionHash,
+          } as StoredTransactionAttempt;
+        }),
+        chainId: parseInt(t.chainId!),
+        channelAddress: t.channelAddress,
+        data: t.data!,
+        from: t.from!,
+        id: t.id,
+        nonce: t.nonce!,
+        reason: t.reason as any,
+        status: t.status as any,
+        to: t.to!,
+        value: t.value!,
+      };
+    });
   }
 
   async saveTransactionAttempt(
