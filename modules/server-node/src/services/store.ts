@@ -46,46 +46,42 @@ const convertOnchainTransactionEntityToTransaction = (
 ): StoredTransaction => {
   // NOTE: There will always be a 'latestAttempt' in the OnchainTransaction, as it is created only when
   // the first attempt is made. This array here will also have been sorted by createdBy Date.
-  const latestAttempt = onchainEntity.attempts[onchainEntity.attempts.length - 1];
-  console.log(
-    "ATTEMPTS:",
-    onchainEntity.attempts.length - 1,
-    "\n",
-    onchainEntity.attempts,
-    "\nSELECTED",
-    onchainEntity.attempts[onchainEntity.attempts.length - 1],
-  );
-  console.log("RECEIPT", onchainEntity.receipt);
   const receipt = onchainEntity.receipt;
   return {
-    status: onchainEntity.status as StoredTransactionStatus,
-    reason: onchainEntity.reason as TransactionReason,
-    error: onchainEntity.error ?? undefined,
+    attempts: onchainEntity.attempts.map((a) => {
+      return {
+        gasLimit: a.gasLimit,
+        gasPrice: a.gasPrice,
+        createdAt: a.createdAt,
+        transactionHash: a.transactionHash,
+      } as StoredTransactionAttempt;
+    }),
+    chainId: parseInt(onchainEntity.chainId!),
     channelAddress: onchainEntity.channelAddress,
-    to: onchainEntity.to || "",
-    from: onchainEntity.from || "",
-    data: onchainEntity.data || "",
-    value: onchainEntity.value || "",
-    chainId: BigNumber.from(onchainEntity.chainId).toNumber(),
-    nonce: onchainEntity.nonce || 0,
-
-    // Response fields.
-    gasLimit: latestAttempt.gasLimit,
-    gasPrice: latestAttempt.gasPrice,
-    transactionHash: receipt?.transactionHash ?? latestAttempt.transactionHash,
-
-    // Receipt fields.
-    timestamp: receipt?.timestamp ? BigNumber.from(receipt.timestamp).toNumber() : undefined,
-    blockHash: receipt?.blockHash ?? undefined,
-    blockNumber: receipt?.blockNumber ?? undefined,
-    contractAddress: receipt?.contractAddress ?? undefined,
-    transactionIndex: receipt?.transactionIndex ?? undefined,
-    root: receipt?.root ?? undefined,
-    gasUsed: receipt?.gasUsed ?? undefined,
-    logsBloom: receipt?.logsBloom ?? undefined,
-    cumulativeGasUsed: receipt?.cumulativeGasUsed ?? undefined,
-    byzantium: receipt?.byzantium ?? undefined,
-    logs: receipt?.logs ? JSON.parse(receipt?.logs) : receipt ? [] : undefined,
+    data: onchainEntity.data!,
+    from: onchainEntity.from!,
+    id: onchainEntity.id,
+    nonce: onchainEntity.nonce!,
+    reason: onchainEntity.reason as TransactionReason,
+    status: onchainEntity.status as StoredTransactionStatus,
+    to: onchainEntity.to!,
+    value: onchainEntity.value!,
+    receipt: receipt
+      ? {
+          blockHash: receipt.blockHash!,
+          blockNumber: receipt.blockNumber!,
+          byzantium: receipt.byzantium!,
+          contractAddress: receipt.contractAddress!,
+          cumulativeGasUsed: receipt.cumulativeGasUsed!,
+          gasUsed: receipt.gasUsed!,
+          logsBloom: receipt.logsBloom!,
+          transactionHash: receipt.transactionHash,
+          transactionIndex: receipt.transactionIndex!,
+          logs: receipt.logs!,
+          root: receipt.root!,
+          status: receipt.status!,
+        }
+      : undefined,
   };
 };
 
@@ -344,33 +340,14 @@ export class PrismaStore implements IServerNodeStore {
         status: StoredTransactionStatus.submitted,
       },
       include: {
+        receipt: true,
+        channel: true,
         attempts: {
           orderBy: { createdAt: "asc" },
         },
       },
     });
-    return activeTransactions.map((t) => {
-      return {
-        attempts: t.attempts.map((a) => {
-          return {
-            gasLimit: a.gasLimit,
-            gasPrice: a.gasPrice,
-            createdAt: a.createdAt,
-            transactionHash: a.transactionHash,
-          } as StoredTransactionAttempt;
-        }),
-        chainId: parseInt(t.chainId!),
-        channelAddress: t.channelAddress,
-        data: t.data!,
-        from: t.from!,
-        id: t.id,
-        nonce: t.nonce!,
-        reason: t.reason as any,
-        status: t.status as any,
-        to: t.to!,
-        value: t.value!,
-      };
-    });
+    return activeTransactions.map(convertOnchainTransactionEntityToTransaction);
   }
 
   async saveTransactionAttempt(
