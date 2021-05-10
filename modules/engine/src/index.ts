@@ -25,6 +25,7 @@ import {
   Values,
   VectorError,
   jsonifyError,
+  RunAuctionPayload,
   MinimalTransaction,
   WITHDRAWAL_RESOLVED_EVENT,
   VectorErrorJson,
@@ -1554,6 +1555,18 @@ export class VectorEngine implements IVectorEngine {
         }),
       );
     }
+
+    const payload: RunAuctionPayload = {
+      amount: params.amount,
+      senderPublicIdentifier: this.publicIdentifier,
+      senderAssetId: params.assetId,
+      senderChainId: params.chainId,
+      receiverPublicIdentifier: params.recipient,
+      receiverAssetId: params.recipientAssetId,
+      receiverChainId: params.recipientChainId,
+    };
+    this.evts[EngineEvents.RUN_AUCTION_EVENT].post(payload);
+
     const inbox = getRandomBytes32();
     const from = this.signer.publicIdentifier;
 
@@ -1563,11 +1576,6 @@ export class VectorEngine implements IVectorEngine {
       //Call publishStartAuction with provided data.
       this.messaging.publishStartAuction(from, from, Result.ok(params), inbox);
 
-      // const empty = {
-      //   routerPublicIdentifier: "empty",
-      //   swapRate: "empty",
-      //   totalFee: "empty",
-      // };
       function waitForRespones(t) {
         return new Promise(function (resolve) {
           setTimeout(resolve, t);
@@ -1584,12 +1592,11 @@ export class VectorEngine implements IVectorEngine {
         }
         const res = runAuction.getValue();
         this.auctionResponses.push(res);
-        console.log("array en la callback", this.auctionResponses);
       });
       if (this.auctionResponses.length < 5) {
         await waitForRespones(5000);
       }
-      this.logger.info(this.auctionResponses, "Rotuer Responses");
+      this.logger.info(this.auctionResponses, "Router Responses");
       if (this.auctionResponses.length == 0) {
         // TODO: Define Auction specific Error class
         Result.fail(
