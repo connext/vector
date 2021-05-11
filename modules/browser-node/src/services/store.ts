@@ -117,7 +117,6 @@ class VectorIndexedDBDatabase extends Dexie {
     this.channels = this.table("channels");
     this.transfers = this.table("transfers");
     this.transactions = this.table("transactions");
-    console.log("TEST123",this.transactions.schema);
     this.withdrawCommitment = this.table("withdrawCommitment");
     this.channelDisputes = this.table("channelDisputes");
     this.transferDisputes = this.table("transferDisputes");
