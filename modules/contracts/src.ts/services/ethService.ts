@@ -116,7 +116,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
     response: TransactionResponse,
   ): Promise<void> {
     this.log.info({ method, methodId, channelAddress, reason, response }, "Tx submitted.");
-    const res = await this.store.saveTransactionAttempt(onchainTransactionId, channelAddress, reason, response);
+    await this.store.saveTransactionAttempt(onchainTransactionId, channelAddress, reason, response);
     this.evts[ChainServiceEvents.TRANSACTION_SUBMITTED].post({
       response: Object.fromEntries(
         Object.entries(response).map(([key, value]) => {
