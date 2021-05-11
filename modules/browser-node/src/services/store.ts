@@ -342,7 +342,7 @@ export class BrowserStore implements IEngineStore, IChainServiceStore {
   async getActiveTransactions(): Promise<StoredTransaction[]> {
     const tx = await this.db.transactions
       .filter((tx) => {
-        return !tx.receipt && !tx.confirmedTransactionHash && tx.attempts.length > 0;
+        return !tx.receipt && tx.status === StoredTransactionStatus.submitted;
       })
       .toArray();
     return tx;
