@@ -361,7 +361,6 @@ export class BrowserStore implements IEngineStore, IChainServiceStore {
       channelAddress,
       status: StoredTransactionStatus.submitted,
       reason,
-      error: undefined,
 
       //// Provider fields
       // Minimum fields (should always be defined)
@@ -372,8 +371,6 @@ export class BrowserStore implements IEngineStore, IChainServiceStore {
       chainId: response.chainId,
       nonce: response.nonce,
       attempts,
-      receipt: undefined,
-      confirmedTransactionHash: undefined,
     } as StoredTransaction, onchainTransactionId);
   }
 
