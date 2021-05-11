@@ -364,10 +364,6 @@ export class BrowserStore implements IEngineStore, IChainServiceStore {
       gasLimit: response.gasLimit.toString(),
       gasPrice: response.gasPrice.toString(),      
       transactionHash: response.hash,
-      timestamp: response.timestamp,
-      raw: response.raw,
-      blockHash: response.blockHash,
-      blockNumber: response.blockNumber,
 
       createdAt: new Date(),
     } as StoredTransactionAttempt);
@@ -403,12 +399,13 @@ export class BrowserStore implements IEngineStore, IChainServiceStore {
   async saveTransactionFailure(
     onchainTransactionId: string,
     error: string,
-    receipt: TransactionReceipt,
+    receipt?: TransactionReceipt,
   ): Promise<void> {
     await this.db.transactions.update(onchainTransactionId, {
       status: StoredTransactionStatus.failed,
       error,
-      receipt: this.sanitizeReceipt(receipt),
+      confirmedTransactionHash: receipt ? receipt.transactionHash : undefined,
+      receipt: receipt ? this.sanitizeReceipt(receipt) : undefined,
     });
   }
 

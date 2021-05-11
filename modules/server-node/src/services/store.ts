@@ -408,8 +408,6 @@ export class PrismaStore implements IServerNodeStore {
       },
       data: {
         status: StoredTransactionStatus.mined,
-        // TODO: Is this needed? Or will prisma schema handle defining this for us?
-        // confirmedTransactionHash: transaction.transactionHash,
         receipt: {
           create: {
             transactionHash: transaction.transactionHash,
