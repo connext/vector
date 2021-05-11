@@ -1,4 +1,4 @@
-FROM node:14.16.0-alpine3.13
+FROM node:14.16.1-alpine3.13
 LABEL website="Secure Docker Images https://secureimages.dev"
 LABEL description="We secure your business from scratch"
 LABEL maintainer="support@secureimages.dev"
