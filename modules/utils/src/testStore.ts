@@ -38,11 +38,11 @@ import {
 
 /// TODO(@jakekidd): We may want to move these helpers to utils
 /// Sanitize tx response for comparison to stored values.
-const sanitizeResponse = (response: TransactionResponse, channelAddress: string): StoredTransaction => {
+const sanitizeResponse = (response: TransactionResponse, channelAddress: string, reason: TransactionReason): StoredTransaction => {
   return {
     channelAddress,
     status: StoredTransactionStatus.submitted,
-    reason: TransactionReason.depositA,
+    reason,
     to: response.to,
     from: response.from,
     data: response.data,
@@ -643,7 +643,7 @@ export const testStore = <T extends IEngineStore>(
 
         // verify response
         let storedTransaction = await store.getTransactionById(onchainTransactionId);
-        const sanitizedResponse = sanitizeResponse(response, setupState.channelAddress);
+        const sanitizedResponse = sanitizeResponse(response, setupState.channelAddress, TransactionReason.depositA);
         const sanitizedAttempt = sanitizeAttempt(response);
         expect(storedTransaction.attempts[0]).to.containSubset(sanitizedAttempt);
         expect(storedTransaction).to.containSubset(sanitizedResponse);
@@ -685,13 +685,13 @@ export const testStore = <T extends IEngineStore>(
         // save error
         await store.saveTransactionFailure(onchainTransactionId, "failed to send");
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        const sanitizedResponse = sanitizeResponse(failed, setupState.channelAddress);
+        const sanitizedResponse = sanitizeResponse(failed, setupState.channelAddress, TransactionReason.depositB);
         const sanitizedAttempt = sanitizeAttempt(failed);
         const storedFailure = await store.getTransactionById(onchainTransactionId);
         expect(storedFailure.attempts[0]).to.containSubset(sanitizedAttempt);
         expect(storedFailure).to.containSubset({
           ...sanitizedResponse,
-          confirmedTransactionHash: undefined,
+          status: StoredTransactionStatus.failed,
           receipt: undefined,
           error: "failed to send",
         });
