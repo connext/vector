@@ -17,6 +17,7 @@ import {
   TransferDispute,
   GetTransfersFilterOpts,
   StoredTransactionAttempt,
+  StoredTransactionReceipt,
 } from "@connext/vector-types";
 import { getRandomBytes32, getSignerAddressFromPublicIdentifier, mkSig } from "@connext/vector-utils";
 import { BigNumber } from "@ethersproject/bignumber";
@@ -66,21 +67,23 @@ const convertOnchainTransactionEntityToTransaction = (
     status: onchainEntity.status as StoredTransactionStatus,
     to: onchainEntity.to!,
     value: onchainEntity.value!,
+    confirmedTransactionHash: onchainEntity.confirmedTransactionHash ?? undefined,
+    error: onchainEntity.error ?? undefined,
     receipt: receipt
       ? {
           blockHash: receipt.blockHash!,
           blockNumber: receipt.blockNumber!,
-          byzantium: receipt.byzantium!,
           contractAddress: receipt.contractAddress!,
           cumulativeGasUsed: receipt.cumulativeGasUsed!,
           gasUsed: receipt.gasUsed!,
           logsBloom: receipt.logsBloom!,
           transactionHash: receipt.transactionHash,
           transactionIndex: receipt.transactionIndex!,
-          logs: receipt.logs!,
-          root: receipt.root!,
-          status: receipt.status!,
-        }
+          byzantium: receipt.byzantium!,
+          logs: receipt.logs ?? undefined,
+          root: receipt.root ?? undefined,
+          status: receipt.status ?? undefined,
+        } as StoredTransactionReceipt
       : undefined,
   };
 };

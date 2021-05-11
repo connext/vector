@@ -76,7 +76,7 @@ const sanitizeReceipt = (receipt: TransactionReceipt): StoredTransactionReceipt 
     blockNumber: receipt.blockNumber,
     logs: receipt.logs.toString(),
     byzantium: receipt.byzantium,
-    status: receipt.status,
+    status: receipt.status ?? undefined,
   }
 }
 
