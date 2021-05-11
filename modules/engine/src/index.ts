@@ -709,6 +709,7 @@ export class VectorEngine implements IVectorEngine {
     params: EngineParams.Deposit,
   ): Promise<Result<ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_deposit], EngineError>> {
     const method = "deposit";
+    const timeout = 2_000;
     const methodId = getRandomBytes32();
     this.logger.info({ params, method, methodId }, "Method started");
     const validate = ajv.compile(EngineParams.DepositSchema);
@@ -754,6 +755,7 @@ export class VectorEngine implements IVectorEngine {
       this.logger.warn({ attempt: count, channelAddress: params.channelAddress }, "Retrying deposit reconciliation");
       depositRes = await this.vector.deposit(params);
       count++;
+      delay(timeout);
     }
     this.logger.info(
       {
