@@ -10,6 +10,7 @@ import {
   ResolveUpdateDetails,
   StoredTransaction,
   StoredTransactionAttempt,
+  StoredTransactionReceipt,
   StoredTransactionStatus,
   TransactionReason,
   TransferDispute,
@@ -176,6 +177,25 @@ export class BrowserStore implements IEngineStore, IChainServiceStore {
     await this.db.channels.clear();
     await this.db.transfers.clear();
     await this.db.transactions.clear();
+  }
+
+  // TODO (@jakekidd): Does this belong in utils somewhere? I believe it's only use case is here.
+  /// Santitize TransactionReceipt for input as StoredTransactionReceipt.
+  private sanitizeReceipt(receipt: TransactionReceipt): StoredTransactionReceipt {
+    return {
+      transactionHash: receipt.transactionHash,
+      contractAddress: receipt.contractAddress,
+      transactionIndex: receipt.transactionIndex,
+      root: receipt.root,
+      gasUsed: receipt.gasUsed.toString(),
+      cumulativeGasUsed: receipt.cumulativeGasUsed.toString(),
+      logsBloom: receipt.logsBloom,
+      blockHash: receipt.blockHash,
+      blockNumber: receipt.blockNumber,
+      logs: receipt.logs.toString(),
+      byzantium: receipt.byzantium,
+      status: receipt.status,
+    } as StoredTransactionReceipt;
   }
 
   async saveChannelStateAndTransfers(
@@ -376,7 +396,8 @@ export class BrowserStore implements IEngineStore, IChainServiceStore {
   async saveTransactionReceipt(onchainTransactionId: string, receipt: TransactionReceipt): Promise<void> {
     await this.db.transactions.update(onchainTransactionId, {
       status: StoredTransactionStatus.mined,
-      receipt,
+      confirmedTransactionHash: receipt.transactionHash,
+      receipt: this.sanitizeReceipt(receipt),
     });
   }
 
@@ -388,7 +409,7 @@ export class BrowserStore implements IEngineStore, IChainServiceStore {
     await this.db.transactions.update(onchainTransactionId, {
       status: StoredTransactionStatus.failed,
       error,
-      receipt,
+      receipt: this.sanitizeReceipt(receipt),
     });
   }
 

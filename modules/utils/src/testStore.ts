@@ -594,17 +594,24 @@ export const testStore = <T extends IEngineStore>(
 
         // verify response
         let storedTransaction = await store.getTransactionById(onchainTransactionId);
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        const { wait, confirmations, hash, ...sanitizedResponse } = response;
-        expect(storedTransaction).to.containSubset({
-          ...sanitizedResponse,
-          status: StoredTransactionStatus.submitted,
+        const sanitizedResponse = {
           channelAddress: setupState.channelAddress,
-          transactionHash: hash,
+          status: StoredTransactionStatus.submitted,
+          reason: TransactionReason.depositA,
+          to: response.to,
+          from: response.from,
+          data: response.data,
+          value: response.value.toString(),
+          chainId: response.chainId,
+          nonce: response.nonce,
+        };
+        const sanitizedAttempt = {
+          transactionHash: response.hash,
           gasLimit: response.gasLimit.toString(),
           gasPrice: response.gasPrice.toString(),
-          value: response.value.toString(),
-        });
+        };
+        expect(storedTransaction.attempts[0]).to.containSubset(sanitizedAttempt);
+        expect(storedTransaction).to.containSubset(sanitizedResponse);
 
         // save receipt
         // NOTE: While we don't use wait() in our actual prod code anymore, this will continue
@@ -616,17 +623,13 @@ export const testStore = <T extends IEngineStore>(
         storedTransaction = await store.getTransactionById(onchainTransactionId);
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const { confirmations: receiptConfs, ...sanitizedReceipt } = receipt;
+        // Double check that our attempt remains intact, untouched.
+        expect(storedTransaction.attempts[0]).to.containSubset(sanitizedAttempt);
         expect(storedTransaction).to.containSubset({
           ...sanitizedResponse,
           ...sanitizedReceipt,
-          channelAddress: setupState.channelAddress,
-          transactionHash: hash,
-          gasLimit: response.gasLimit.toString(),
-          gasPrice: response.gasPrice.toString(),
-          value: response.value.toString(),
-          cumulativeGasUsed: receipt.cumulativeGasUsed.toString(),
-          gasUsed: receipt.gasUsed.toString(),
-          status: StoredTransactionStatus.mined,
+          confirmedTransactionHash: response.hash,
+          receipt: sanitizedReceipt,
         });
       });
 
