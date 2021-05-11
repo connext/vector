@@ -110,11 +110,13 @@ class VectorIndexedDBDatabase extends Dexie {
 
     this.version(5).stores({
       withdrawCommitment: "transferId,channelAddress,transactionHash",
+      transactions: "&id",
     });
 
     this.channels = this.table("channels");
     this.transfers = this.table("transfers");
     this.transactions = this.table("transactions");
+    console.log("TEST123",this.transactions.schema);
     this.withdrawCommitment = this.table("withdrawCommitment");
     this.channelDisputes = this.table("channelDisputes");
     this.transferDisputes = this.table("transferDisputes");
@@ -335,9 +337,9 @@ export class BrowserStore implements IEngineStore, IChainServiceStore {
   ): Promise<void> {
     // Populate nested attempts array.
     let attempts: StoredTransactionAttempt[] = [];
-    const res = await this.db.transactions.where("id").equals(onchainTransactionId).first();
+    const res = await this.db.transactions.where(":id").equals(onchainTransactionId).first();
     if (res) {
-      attempts = res.attempts;
+      attempts = Array.from(res.attempts);
     }
     attempts.push({
       // TransactionResponse fields (defined when submitted)
@@ -359,6 +361,7 @@ export class BrowserStore implements IEngineStore, IChainServiceStore {
       channelAddress,
       status: StoredTransactionStatus.submitted,
       reason,
+      error: undefined,
 
       //// Provider fields
       // Minimum fields (should always be defined)
@@ -368,8 +371,10 @@ export class BrowserStore implements IEngineStore, IChainServiceStore {
       value: response.value.toString(),
       chainId: response.chainId,
       nonce: response.nonce,
-      attempts,
-    });
+      attempts: [],
+      receipt: undefined,
+      confirmedTransactionHash: undefined,
+    } as StoredTransaction, onchainTransactionId);
   }
 
   async saveTransactionReceipt(onchainTransactionId: string, receipt: TransactionReceipt): Promise<void> {
