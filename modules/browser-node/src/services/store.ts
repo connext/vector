@@ -9,6 +9,7 @@ import {
   IEngineStore,
   ResolveUpdateDetails,
   StoredTransaction,
+  StoredTransactionAttempt,
   StoredTransactionStatus,
   TransactionReason,
   TransferDispute,
@@ -320,7 +321,7 @@ export class BrowserStore implements IEngineStore, IChainServiceStore {
   async getActiveTransactions(): Promise<StoredTransaction[]> {
     const tx = await this.db.transactions
       .filter((tx) => {
-        return !!tx.transactionHash && !tx.blockHash && !tx.gasUsed;
+        return !tx.receipt && !tx.confirmedTransactionHash && tx.attempts.length > 0;
       })
       .toArray();
     return tx;
@@ -332,6 +333,25 @@ export class BrowserStore implements IEngineStore, IChainServiceStore {
     reason: TransactionReason,
     response: TransactionResponse,
   ): Promise<void> {
+    // Populate nested attempts array.
+    let attempts: StoredTransactionAttempt[] = [];
+    const res = await this.db.transactions.where("id").equals(onchainTransactionId).first();
+    if (res) {
+      attempts = res.attempts;
+    }
+    attempts.push({
+      // TransactionResponse fields (defined when submitted)
+      gasLimit: response.gasLimit.toString(),
+      gasPrice: response.gasPrice.toString(),      
+      transactionHash: response.hash,
+      timestamp: response.timestamp,
+      raw: response.raw,
+      blockHash: response.blockHash,
+      blockNumber: response.blockNumber,
+
+      createdAt: new Date(),
+    } as StoredTransactionAttempt);
+
     await this.db.transactions.put({
       id: onchainTransactionId,
 
@@ -347,32 +367,15 @@ export class BrowserStore implements IEngineStore, IChainServiceStore {
       data: response.data,
       value: response.value.toString(),
       chainId: response.chainId,
-
-      // TransactionRequest fields (defined when tx populated)
       nonce: response.nonce,
-      gasLimit: response.gasLimit.toString(),
-      gasPrice: response.gasPrice.toString(),
-
-      // TransactionResponse fields (defined when submitted)
-      transactionHash: response.hash, // may be edited on mining
-      timestamp: response.timestamp,
-      raw: response.raw,
-      blockHash: response.blockHash,
-      blockNumber: response.blockNumber,
+      attempts,
     });
   }
 
-  async saveTransactionReceipt(channelAddress: string, transaction: TransactionReceipt): Promise<void> {
-    await this.db.transactions.update(transaction.transactionHash, {
+  async saveTransactionReceipt(onchainTransactionId: string, receipt: TransactionReceipt): Promise<void> {
+    await this.db.transactions.update(onchainTransactionId, {
       status: StoredTransactionStatus.mined,
-      logs: transaction.logs,
-      contractAddress: transaction.contractAddress,
-      transactionIndex: transaction.transactionIndex,
-      root: transaction.root,
-      gasUsed: transaction.gasUsed.toString(),
-      logsBloom: transaction.logsBloom,
-      cumulativeGasUsed: transaction.cumulativeGasUsed.toString(),
-      byzantium: transaction.byzantium,
+      receipt,
     });
   }
 
@@ -384,6 +387,7 @@ export class BrowserStore implements IEngineStore, IChainServiceStore {
     await this.db.transactions.update(onchainTransactionId, {
       status: StoredTransactionStatus.failed,
       error,
+      receipt,
     });
   }
 
