@@ -508,7 +508,6 @@ describe("ethService unit test", () => {
         },
         BigNumber.from(10_000),
       );
-      console.log("result: ", result);
       assertResult(result, false, undefined);
     });
 
@@ -539,42 +538,45 @@ describe("ethService unit test", () => {
     });
 
     it("if receipt status == 0, saves response with error", async () => {
-      waitForConfirmation.resolves({ ...txReceipt, status: 0 });
+      const badReceipt = { ...txReceipt, status: 0 };
+      waitForConfirmation.resolves(badReceipt);
       const result = await ethService.sendAndConfirmTx(AddressZero, 1337, "allowance", async () => {
         return txResponse;
       });
       expect(storeMock.saveTransactionAttempt.callCount).eq(1);
       const saveTransactionAttemptCall = storeMock.saveTransactionAttempt.getCall(0);
-      expect(saveTransactionAttemptCall.args[0]).eq(AddressZero);
-      expect(saveTransactionAttemptCall.args[1]).eq("allowance");
-      expect(saveTransactionAttemptCall.args[2]).deep.eq(txResponse);
+      const id = saveTransactionAttemptCall.args[0];
+      expect(saveTransactionAttemptCall.args[1]).eq(AddressZero);
+      expect(saveTransactionAttemptCall.args[2]).eq("allowance");
+      expect(saveTransactionAttemptCall.args[3]).deep.eq(txResponse);
 
       expect(storeMock.saveTransactionFailure.callCount).eq(1);
       const saveTransactionFailureCall = storeMock.saveTransactionFailure.getCall(0);
-      expect(saveTransactionFailureCall.args[0]).eq(AddressZero);
-      expect(saveTransactionFailureCall.args[1]).eq(txResponse.hash);
-      expect(saveTransactionFailureCall.args[2]).eq(ChainError.reasons.TxReverted);
+      expect(saveTransactionFailureCall.args[0]).eq(id);
+      expect(saveTransactionFailureCall.args[1]).eq(ChainError.reasons.TxReverted);
+      expect(saveTransactionFailureCall.args[2]).eq(badReceipt);
       assertResult(result, true, ChainError.reasons.TxReverted);
     });
 
     it("if receipt wait fn errors, saves response with error", async () => {
-      const error = new Error("Booooo");
+      const ERROR_MSG = "Booooo";
+      const error = new Error(ERROR_MSG);
       waitForConfirmation.rejects(error);
       const result = await ethService.sendAndConfirmTx(AddressZero, 1337, "allowance", async () => {
         return txResponse;
       });
       expect(storeMock.saveTransactionAttempt.callCount).eq(1);
       const saveTransactionAttemptCall = storeMock.saveTransactionAttempt.getCall(0);
-      expect(saveTransactionAttemptCall.args[0]).eq(AddressZero);
-      expect(saveTransactionAttemptCall.args[1]).eq("allowance");
-      expect(saveTransactionAttemptCall.args[2]).deep.eq(txResponse);
+      const id = saveTransactionAttemptCall.args[0];
+      expect(saveTransactionAttemptCall.args[1]).eq(AddressZero);
+      expect(saveTransactionAttemptCall.args[2]).eq("allowance");
+      expect(saveTransactionAttemptCall.args[3]).deep.eq(txResponse);
 
       expect(storeMock.saveTransactionFailure.callCount).eq(1);
       const saveTransactionFailureCall = storeMock.saveTransactionFailure.getCall(0);
-      expect(saveTransactionFailureCall.args[0]).eq(AddressZero);
-      expect(saveTransactionFailureCall.args[1]).eq(txResponse.hash);
-      expect(saveTransactionFailureCall.args[2]).eq("Booooo");
-      assertResult(result, true, "Booooo");
+      expect(saveTransactionFailureCall.args[0]).eq(id);
+      expect(saveTransactionFailureCall.args[1]).eq(ERROR_MSG);
+      assertResult(result, true, ERROR_MSG);
     });
 
     it("retries transaction with higher gas price", async () => {
@@ -607,18 +609,21 @@ describe("ethService unit test", () => {
 
       expect(storeMock.saveTransactionAttempt.callCount).eq(2);
       const saveTransactionAttemptCall = storeMock.saveTransactionAttempt.getCall(0);
-      expect(saveTransactionAttemptCall.args[0]).eq(AddressZero);
-      expect(saveTransactionAttemptCall.args[1]).eq("allowance");
-      expect(saveTransactionAttemptCall.args[2]).deep.eq(txResponse);
+      const id = saveTransactionAttemptCall.args[0];
+      expect(saveTransactionAttemptCall.args[1]).eq(AddressZero);
+      expect(saveTransactionAttemptCall.args[2]).eq("allowance");
+      expect(saveTransactionAttemptCall.args[3]).deep.eq(txResponse);
 
       const saveTransactionAttemptCall2 = storeMock.saveTransactionAttempt.getCall(1);
-      expect(saveTransactionAttemptCall2.args[0]).eq(AddressZero);
-      expect(saveTransactionAttemptCall2.args[1]).eq("allowance");
-      expect(saveTransactionAttemptCall2.args[2]).deep.eq(newTx);
+      expect(saveTransactionAttemptCall2.args[0]).eq(id);
+      expect(saveTransactionAttemptCall2.args[1]).eq(AddressZero);
+      expect(saveTransactionAttemptCall2.args[2]).eq("allowance");
+      expect(saveTransactionAttemptCall2.args[3]).deep.eq(newTx);
 
       expect(storeMock.saveTransactionReceipt.callCount).eq(1);
       const saveTransactionReceiptCall = storeMock.saveTransactionReceipt.getCall(0);
-      expect(saveTransactionReceiptCall.args[0]).eq(AddressZero);
+      expect(saveTransactionReceiptCall.args[0]).eq(id);
+      expect(saveTransactionReceiptCall.args[1]).eq(newReceipt);
 
       assertResult(result, false, newReceipt);
     });
@@ -633,15 +638,15 @@ describe("ethService unit test", () => {
 
       expect(storeMock.saveTransactionAttempt.callCount).eq(1);
       const saveTransactionAttemptCall = storeMock.saveTransactionAttempt.getCall(0);
-      expect(saveTransactionAttemptCall.args[0]).eq(AddressZero);
-      expect(saveTransactionAttemptCall.args[1]).eq("allowance");
-      expect(saveTransactionAttemptCall.args[2]).deep.eq(txResponse);
+      const id = saveTransactionAttemptCall.args[0];
+      expect(saveTransactionAttemptCall.args[1]).eq(AddressZero);
+      expect(saveTransactionAttemptCall.args[2]).eq("allowance");
+      expect(saveTransactionAttemptCall.args[3]).deep.eq(txResponse);
 
       expect(storeMock.saveTransactionFailure.callCount).eq(1);
       const saveTransactionFailureCall = storeMock.saveTransactionFailure.getCall(0);
-      expect(saveTransactionFailureCall.args[0]).eq(AddressZero);
-      expect(saveTransactionFailureCall.args[1]).eq(txResponse.hash);
-      expect(saveTransactionFailureCall.args[2]).eq(ChainError.reasons.MaxGasPriceReached);
+      expect(saveTransactionFailureCall.args[0]).eq(id);
+      expect(saveTransactionFailureCall.args[1]).eq(ChainError.reasons.MaxGasPriceReached);
 
       assertResult(result, true, ChainError.reasons.MaxGasPriceReached);
     });
@@ -653,13 +658,15 @@ describe("ethService unit test", () => {
       });
       expect(storeMock.saveTransactionAttempt.callCount).eq(1);
       const saveTransactionAttemptCall = storeMock.saveTransactionAttempt.getCall(0);
-      expect(saveTransactionAttemptCall.args[0]).eq(AddressZero);
-      expect(saveTransactionAttemptCall.args[1]).eq("allowance");
-      expect(saveTransactionAttemptCall.args[2]).deep.eq(txResponse);
+      const id = saveTransactionAttemptCall.args[0];
+      expect(saveTransactionAttemptCall.args[1]).eq(AddressZero);
+      expect(saveTransactionAttemptCall.args[2]).eq("allowance");
+      expect(saveTransactionAttemptCall.args[3]).deep.eq(txResponse);
 
       expect(storeMock.saveTransactionReceipt.callCount).eq(1);
       const saveTransactionReceiptCall = storeMock.saveTransactionReceipt.getCall(0);
-      expect(saveTransactionReceiptCall.args[0]).eq(AddressZero);
+      expect(saveTransactionReceiptCall.args[0]).eq(id);
+      expect(saveTransactionReceiptCall.args[1]).eq(txReceipt);
 
       assertResult(result, false, txReceipt);
     });
