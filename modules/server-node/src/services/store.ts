@@ -341,6 +341,7 @@ export class PrismaStore implements IServerNodeStore {
     const activeTransactions = await this.prisma.onchainTransaction.findMany({
       where: {
         status: StoredTransactionStatus.submitted,
+        receipt: undefined,
       },
       include: {
         receipt: true,

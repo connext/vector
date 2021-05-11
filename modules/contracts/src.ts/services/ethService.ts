@@ -399,6 +399,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
     // Nonce will persist across iterations, as soon as it is defined in the first one.
     let nonce: number | undefined = undefined;
     let gasPrice: BigNumber;
+
     try {
       // Get (initial) gas price if there is not a preset amount passed into this method.
       gasPrice =
