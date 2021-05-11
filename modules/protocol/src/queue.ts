@@ -109,9 +109,8 @@ class Waker {
   }
 }
 
-class WakingQueue<I, O> {
+class Queue<I, O> {
   private readonly fifo: FifoQueue<[I, Resolver<O>]> = new FifoQueue();
-  private readonly waker: Waker = new Waker();
 
   peek(): I | undefined {
     return this.fifo.peek()?.[0];
@@ -123,20 +122,7 @@ class WakingQueue<I, O> {
   push(value: I): Promise<O> {
     let resolver = new Resolver<O>();
     this.fifo.push([value, resolver]);
-    this.waker.wake();
     return resolver.promise;
-  }
-
-  // Returns a promise which resolves when there is
-  // an item at the top of the queue.
-  async peekAsync(): Promise<I> {
-    while (true) {
-      let peek = this.peek();
-      if (peek !== undefined) {
-        return peek;
-      }
-      await this.waker.waitAsync();
-    }
   }
 
   // Resolves the top item from the queue (removing it
@@ -152,8 +138,6 @@ class WakingQueue<I, O> {
   }
 }
 
-const NeverCancel: Promise<never> = new Promise((_resolve, _reject) => {});
-
 // If the Promise resolves to undefined it has been cancelled.
 export type Cancellable<I, O> = (value: I, cancel: Promise<unknown>) => Promise<Result<O> | undefined>;
 
@@ -165,7 +149,7 @@ async function processOneUpdate<I, O>(
   f: Cancellable<I, O>,
   value: I,
   cancel: Promise<unknown>,
-  queue: WakingQueue<I, Result<O>>,
+  queue: Queue<I, Result<O>>,
 ): Promise<Result<O> | undefined> {
   let result;
   try {
@@ -183,9 +167,11 @@ async function processOneUpdate<I, O>(
 }
 
 export class SerializedQueue<S = void, O = void> {
-  private readonly incomingSelf: WakingQueue<SelfUpdate, Result<S>> = new WakingQueue();
-  private readonly incomingOther: WakingQueue<OtherUpdate, Result<O>> = new WakingQueue();
+  private readonly incomingSelf: Queue<SelfUpdate, Result<S>> = new Queue();
+  private readonly incomingOther: Queue<OtherUpdate, Result<O>> = new Queue();
+  private readonly waker: Waker = new Waker();
   private readonly selfIsAlice: boolean;
+  private wakeOn: 'self' | 'other' | 'any' | 'none' = 'any';
 
   private readonly selfUpdateAsync: Cancellable<SelfUpdate, S>;
   private readonly otherUpdateAsync: Cancellable<OtherUpdate, O>;
@@ -204,27 +190,48 @@ export class SerializedQueue<S = void, O = void> {
     this.processUpdatesAsync();
   }
 
+  private wake(type: 'self' | 'other') {
+    if (this.wakeOn === 'any' || this.wakeOn === type) {
+      this.waker.wake();
+    }
+  }
+
   executeSelfAsync(update: SelfUpdate): Promise<Result<S>> {
-    return this.incomingSelf.push(update);
+    let promise = this.incomingSelf.push(update);
+    this.wake('self');
+    return promise;
   }
 
   executeOtherAsync(update: OtherUpdate): Promise<Result<O>> {
-    return this.incomingOther.push(update);
+    let promise = this.incomingOther.push(update);
+    this.wake('other');
+    return promise;
   }
 
   private async processUpdatesAsync(): Promise<never> {
     while (true) {
-      // Wait until there is at least one unit of work.
-      let selfPromise = this.incomingSelf.peekAsync();
-      let otherPromise = this.incomingOther.peekAsync();
-      await Promise.race([selfPromise, otherPromise]);
+      // Clear memory from any previous promises.
+      // This is important because if passed to Promise.race
+      // the memory held by that won't clear until the promise
+      // is resolved (which can be indefinite).
+      this.waker.wake();
 
-      // Find out which completed. If both, we want to know that, too.
-      // For this reason we can't use the result of Promise.race from above.
+      // This await has to happen here because we don't want the
+      // waker to be disturbed after it's cleared. Otherwise we
+      // might wake on the wrong types since wakeOn might not
+      // be set correctly.
+      const currentNonce = await this.getCurrentNonce();
+
       const self = this.incomingSelf.peek();
       const other = this.incomingOther.peek();
+      const wake = this.waker.waitAsync();
 
-      const currentNonce = await this.getCurrentNonce();
+      if (self === undefined && other === undefined) {
+        this.wakeOn = 'any';
+        await wake;
+        continue;
+      }
+
       const selfPredictedNonce = getNextNonceForUpdate(currentNonce, this.selfIsAlice);
       const otherPredictedNonce = getNextNonceForUpdate(currentNonce, !this.selfIsAlice);
 
@@ -233,21 +240,25 @@ export class SerializedQueue<S = void, O = void> {
         // execute it without interruption. Otherwise,
         // execute their update with interruption
         if (self !== undefined) {
-          await processOneUpdate(this.selfUpdateAsync, self, NeverCancel, this.incomingSelf);
+          this.wakeOn = 'none';
+          await processOneUpdate(this.selfUpdateAsync, self, wake, this.incomingSelf);
         } else {
           // TODO: In the case that our update cancels theirs, we already know their
           // update will fail because it doesn't include ours (unless they reject our update)
           // So, this may end up falling back to the sync protocol unnecessarily when we
           // try to execute their update after ours. For robustness sake, it's probably
           // best to leave this as-is and optimize that case later.
-          await processOneUpdate(this.otherUpdateAsync, other!, selfPromise, this.incomingOther);
+          this.wakeOn = 'self';
+          await processOneUpdate(this.otherUpdateAsync, other!, wake, this.incomingOther);
         }
       } else {
         // Their update has priority. Vice-versa from above
         if (other !== undefined) {
-          await processOneUpdate(this.otherUpdateAsync, other, NeverCancel, this.incomingOther);
+          this.wakeOn = 'none';
+          await processOneUpdate(this.otherUpdateAsync, other, wake, this.incomingOther);
         } else {
-          await processOneUpdate(this.selfUpdateAsync, self!, otherPromise, this.incomingSelf);
+          this.wakeOn = 'other';
+          await processOneUpdate(this.selfUpdateAsync, self!, wake, this.incomingSelf);
         }
       }
     }
