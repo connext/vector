@@ -1,4 +1,6 @@
 @rogerUrl = http://localhost:8007
+@carolPublicIdentifier = vector8ZaxNSdUM83kLXJSsmj5jrcq17CpZUwBirmboaNPtQMEXjVNrL
+@rogerPublicIdentifier = vector8Uz1BdpA9hV5uTm6QUv5jj1PsUyCH8m8ciA94voCzsxVmrBRor
 
 ##############
 ### Retry Withdrawal
@@ -20,4 +22,17 @@ Content-Type: application/json
   "adminToken": "cxt1234",
   "transactionHash": "0x9ed0c28027a045c2de9fae61e06eade573e9ddfcbab3a6514c5662781c874104",
   "publicIdentifier": "vector7tbbTxQp8ppEQUgPsbGiTrVdapLdU5dH7zTbVuXRf1M4CEBU9Q"
+}
+
+##############
+### Unsafe Withdraw Generate
+POST {{rogerUrl}}/withdraw/generate
+Content-Type: application/json
+
+{
+  "adminToken": "cxt1234",
+  "publicIdentifier": "{{rogerPublicIdentifier}}",
+  "assetId": "0x0000000000000000000000000000000000000000",
+  "chainId": "1337",
+  "counterpartyIdentifier": "{{carolPublicIdentifier}}"
 }

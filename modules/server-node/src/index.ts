@@ -32,6 +32,7 @@ import {
 import { WithdrawCommitment } from "@connext/vector-contracts";
 import { Static, Type } from "@sinclair/typebox";
 import { Wallet } from "@ethersproject/wallet";
+import { BigNumber } from "@ethersproject/bignumber";
 
 import { PrismaStore } from "./services/store";
 import { config } from "./config";
@@ -1136,7 +1137,7 @@ server.post<{ Body: NodeParams.GenerateWithdrawCommitment }>(
           .send(new ServerNodeError(ServerNodeError.reasons.ChannelNotFound, "", request.body).toJson());
       }
 
-      if (request.body.nonce <= channel.nonce) {
+      if (request.body.nonce && request.body.nonce < channel.nonce) {
         return reply.status(400).send(
           new ServerNodeError(ServerNodeError.reasons.CommitmentNotFound, "", {
             ...request.body,
@@ -1144,6 +1145,8 @@ server.post<{ Body: NodeParams.GenerateWithdrawCommitment }>(
           }).toJson(),
         );
       }
+
+      const nonce = request.body.nonce ? request.body.nonce : channel.nonce;
 
       const participant = getParticipant(channel, request.body.publicIdentifier);
       if (!participant) {
@@ -1155,6 +1158,14 @@ server.post<{ Body: NodeParams.GenerateWithdrawCommitment }>(
         );
       }
       const myBalance = getBalanceForAssetId(channel, request.body.assetId, participant);
+      if (BigNumber.from(myBalance).isZero()) {
+        return reply.status(400).send(
+          new ServerNodeError(ServerNodeError.reasons.Unauthorized, "", {
+            ...request.body,
+            message: "Zero balance",
+          }).toJson(),
+        );
+      }
 
       const commitment = new WithdrawCommitment(
         channel.channelAddress,
@@ -1165,8 +1176,7 @@ server.post<{ Body: NodeParams.GenerateWithdrawCommitment }>(
           : getSignerAddressFromPublicIdentifier(request.body.publicIdentifier),
         request.body.assetId,
         myBalance,
-        // Use channel nonce as a way to keep withdraw hashes unique
-        channel.nonce.toString(),
+        nonce.toString(),
         request.body.callTo,
         request.body.callData,
       );

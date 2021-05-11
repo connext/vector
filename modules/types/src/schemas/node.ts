@@ -460,9 +460,9 @@ const PostAdminGenerateWithdrawCommitmentBodySchema = Type.Object({
   publicIdentifier: TPublicIdentifier,
   counterpartyIdentifier: TPublicIdentifier,
   chainId: TChainId,
-  recipient: Type.Optional(TAddress),
   assetId: TAddress,
-  nonce: Type.Number(),
+  recipient: Type.Optional(TAddress),
+  nonce: Type.Optional(Type.Number()),
   callTo: Type.Optional(TAddress),
   callData: Type.Optional(Type.String()),
 });
