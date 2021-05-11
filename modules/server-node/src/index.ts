@@ -19,14 +19,23 @@ import {
   VectorErrorJson,
   StoredTransaction,
 } from "@connext/vector-types";
-import { constructRpcRequest, getPublicIdentifierFromPublicKey, hydrateProviders } from "@connext/vector-utils";
+import {
+  ChannelSigner,
+  constructRpcRequest,
+  getBalanceForAssetId,
+  getParticipant,
+  getPublicIdentifierFromPublicKey,
+  getRandomBytes32,
+  getSignerAddressFromPublicIdentifier,
+  hydrateProviders,
+} from "@connext/vector-utils";
 import { WithdrawCommitment } from "@connext/vector-contracts";
 import { Static, Type } from "@sinclair/typebox";
 import { Wallet } from "@ethersproject/wallet";
 
 import { PrismaStore } from "./services/store";
 import { config } from "./config";
-import { createNode, deleteNodes, getChainService, getNode, getNodes } from "./helpers/nodes";
+import { createNode, deleteNodes, getChainService, getNode, getNodes, getPath, nodes } from "./helpers/nodes";
 import { ServerNodeError } from "./helpers/errors";
 import {
   ResubmitWithdrawalResult,
@@ -1079,6 +1088,108 @@ server.post<{ Body: NodeParams.RetryWithdrawTransaction }>(
         transactionHash: tx.getValue().transactionHash,
         transferId: request.body.transferId,
         channelAddress: channel.channelAddress,
+      });
+    } catch (e) {
+      return reply.status(500).send(jsonifyError(e));
+    }
+  },
+);
+
+server.post<{ Body: NodeParams.GenerateWithdrawCommitment }>(
+  "/withdraw/generate",
+  {
+    schema: {
+      body: NodeParams.GenerateWithdrawCommitmentSchema,
+      response: NodeResponses.GenerateWithdrawCommitmentSchema,
+    },
+  },
+  async (request, reply) => {
+    if (request.body.adminToken !== config.adminToken) {
+      return reply
+        .status(401)
+        .send(new ServerNodeError(ServerNodeError.reasons.Unauthorized, "", request.body).toJson());
+    }
+    try {
+      const engine = getNode(request.body.publicIdentifier);
+      if (!engine) {
+        return reply
+          .status(400)
+          .send(
+            jsonifyError(
+              new ServerNodeError(ServerNodeError.reasons.NodeNotFound, request.body.publicIdentifier, request.body),
+            ),
+          );
+      }
+
+      const index = nodes[request.body.publicIdentifier].index;
+      const pk = Wallet.fromMnemonic(config.mnemonic, getPath(index)).privateKey;
+      const signer = new ChannelSigner(pk);
+
+      const channel = await store.getChannelStateByParticipants(
+        request.body.publicIdentifier,
+        request.body.counterpartyIdentifier,
+        request.body.chainId,
+      );
+      if (!channel) {
+        return reply
+          .status(404)
+          .send(new ServerNodeError(ServerNodeError.reasons.ChannelNotFound, "", request.body).toJson());
+      }
+
+      if (request.body.nonce <= channel.nonce) {
+        return reply.status(400).send(
+          new ServerNodeError(ServerNodeError.reasons.CommitmentNotFound, "", {
+            ...request.body,
+            message: "Channel nonce is >= provided nonce",
+          }).toJson(),
+        );
+      }
+
+      const participant = getParticipant(channel, request.body.publicIdentifier);
+      if (!participant) {
+        return reply.status(400).send(
+          new ServerNodeError(ServerNodeError.reasons.ChannelNotFound, "", {
+            ...request.body,
+            message: "Participant not in channel",
+          }).toJson(),
+        );
+      }
+      const myBalance = getBalanceForAssetId(channel, request.body.assetId, participant);
+
+      const commitment = new WithdrawCommitment(
+        channel.channelAddress,
+        channel.alice,
+        channel.bob,
+        request.body.recipient
+          ? request.body.recipient
+          : getSignerAddressFromPublicIdentifier(request.body.publicIdentifier),
+        request.body.assetId,
+        myBalance,
+        // Use channel nonce as a way to keep withdraw hashes unique
+        channel.nonce.toString(),
+        request.body.callTo,
+        request.body.callData,
+      );
+
+      let initiatorSignature: string;
+      try {
+        initiatorSignature = await signer.signMessage(commitment.hashToSign());
+      } catch (err) {
+        return reply.status(400).send(
+          new ServerNodeError(ServerNodeError.reasons.StoreMethodFailed, "", {
+            ...request.body,
+            message: "Signature error",
+          }).toJson(),
+        );
+      }
+      commitment.addSignatures(initiatorSignature);
+
+      // generate random transferId since this is not part of a real transfer
+      const transferId = getRandomBytes32();
+      await store.saveWithdrawalCommitment(transferId, commitment.toJson());
+      return reply.status(200).send({
+        commitment: commitment.toJson(),
+        transferId,
       });
     } catch (e) {
       return reply.status(500).send(jsonifyError(e));

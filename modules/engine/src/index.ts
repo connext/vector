@@ -28,7 +28,6 @@ import {
   MinimalTransaction,
   WITHDRAWAL_RESOLVED_EVENT,
   VectorErrorJson,
-  getConfirmationsForChain,
 } from "@connext/vector-types";
 import {
   generateMerkleTreeData,
@@ -42,6 +41,7 @@ import {
 import pino from "pino";
 import Ajv from "ajv";
 import { Evt } from "evt";
+import { WithdrawCommitment } from "@connext/vector-contracts";
 
 import { version } from "../package.json";
 
@@ -55,7 +55,8 @@ import {
 import { setupEngineListeners } from "./listeners";
 import { getEngineEvtContainer } from "./utils";
 import { sendIsAlive } from "./isAlive";
-import { WithdrawCommitment } from "@connext/vector-contracts";
+
+export * from "./paramConverter";
 
 export const ajv = new Ajv();
 
