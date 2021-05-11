@@ -755,7 +755,7 @@ export class VectorEngine implements IVectorEngine {
       this.logger.warn({ attempt: count, channelAddress: params.channelAddress }, "Retrying deposit reconciliation");
       depositRes = await this.vector.deposit(params);
       count++;
-      delay(timeout);
+      await delay(timeout);
     }
     this.logger.info(
       {
