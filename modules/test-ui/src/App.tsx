@@ -276,18 +276,20 @@ function App() {
     const completed = new Promise(async (resolve) => {
       while (recievedTransfers < numberOfTransfers) {
         if (requests !== numberOfTransfers) {
+          console.error(`seen ${requests}/${numberOfTransfers}, waiting 35s`);
           await utilsPkg.delay(35_000);
           continue;
         } else {
-          console.log(`recipient has ${recievedTransfers + 1} / ${numberOfTransfers}`);
+          console.error(`recipient has ${recievedTransfers} / ${numberOfTransfers}`);
           await utilsPkg.delay(1_000);
         }
       }
       resolve(undefined);
     });
 
-    for (const _ of Array(numberOfTransfers).fill(0)) {
-      (requests + 1) % 10 === 0 && console.log(`request ${requests + 1} / ${numberOfTransfers}`);
+    console.error(`Beginning transfers`);
+    for (let i = 0; i < numberOfTransfers; i++) {
+      (requests + 1) % 10 === 0 && console.error(`request ${requests + 1} / ${numberOfTransfers}`);
       const preImage = utilsPkg.getRandomBytes32();
       const params = {
         publicIdentifier: selectedChannel.bobIdentifier,
@@ -309,7 +311,7 @@ function App() {
       requests++;
     }
     await completed;
-    console.log("transfers completed");
+    console.error("transfers completed");
   };
 
   const transfer = async (assetId: string, amount: string, recipient: string, preImage: string) => {
