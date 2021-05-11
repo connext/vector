@@ -370,7 +370,7 @@ export class BrowserStore implements IEngineStore, IChainServiceStore {
       value: response.value.toString(),
       chainId: response.chainId,
       nonce: response.nonce,
-      attempts: [],
+      attempts,
       receipt: undefined,
       confirmedTransactionHash: undefined,
     } as StoredTransaction, onchainTransactionId);
