@@ -17,7 +17,7 @@ RUN apk add --no-cache bash curl g++ gcc git jq make python2 &&\
 COPY ops/package.json package.json
 
 RUN npm install
-RUN npm audit --audit-level=moderate
+RUN npm audit --audit-level=critical
 RUN npm outdated || true
 
 COPY build build

@@ -47,7 +47,7 @@ import { Evt } from "evt";
 
 import { version } from "../package.json";
 
-import { DisputeError, IsAliveError, RestoreError, RpcError } from "./errors";
+import { DisputeError, IsAliveError, RestoreError, AuctionError, RpcError } from "./errors";
 import {
   convertConditionalTransferParams,
   convertResolveConditionParams,
@@ -713,6 +713,7 @@ export class VectorEngine implements IVectorEngine {
     params: EngineParams.Deposit,
   ): Promise<Result<ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_deposit], EngineError>> {
     const method = "deposit";
+    const timeout = 500;
     const methodId = getRandomBytes32();
     this.logger.info({ params, method, methodId }, "Method started");
     const validate = ajv.compile(EngineParams.DepositSchema);
@@ -758,6 +759,7 @@ export class VectorEngine implements IVectorEngine {
       this.logger.warn({ attempt: count, channelAddress: params.channelAddress }, "Retrying deposit reconciliation");
       depositRes = await this.vector.deposit(params);
       count++;
+      await delay(timeout);
     }
     this.logger.info(
       {
@@ -1568,7 +1570,7 @@ export class VectorEngine implements IVectorEngine {
       }
 
       await this.messaging.onReceiveAuctionMessage(this.publicIdentifier, inbox, (runAuction, from, inbox) => {
-        const method = "onReceiveReceiveAuctionMessage";
+        const method = "onReceiveAuctionMessage";
         const methodId = getRandomBytes32();
 
         if (runAuction.isError) {
@@ -1578,25 +1580,27 @@ export class VectorEngine implements IVectorEngine {
         const res = runAuction.getValue();
         this.auctionResponses.push(res);
       });
+
+      // wait for 5 responses or 3 secs
       if (this.auctionResponses.length < 5) {
-        await waitForRespones(5000);
-      }
-      this.logger.info(this.auctionResponses, "Router Responses");
-      if (this.auctionResponses.length == 0) {
-        // TODO: Define Auction specific Error class
-        Result.fail(
-          new RpcError(RpcError.reasons.EngineMethodFailure, "", this.publicIdentifier, {
-            invalidParamsError: validate.errors?.map((e) => e.message).join(","),
-            invalidParams: params,
-          }),
-        );
+        await waitForRespones(3000);
       }
 
-      // compare fees of responses
+      this.logger.info(this.auctionResponses, "Router Responses");
+
+      if (this.auctionResponses.length == 0) {
+        // TODO: Add error cases (reasons) to Error Class
+        return Result.fail(new AuctionError(AuctionError.reasons.NoResponses, this.publicIdentifier, params, {}));
+      }
+
+      // compare fees and return cheapest option
+      // TODO: compare swapRates also
       let lowestFee = parseInt(this.auctionResponses[0].totalFee);
       let lowestFeeIndex = 0;
+
       for (const [i, elem] of this.auctionResponses.entries()) {
-        if (parseInt(elem.totalFee) << lowestFee) {
+        // console.log("totalFee elem:", elem.totalFee, "lowestFee:", lowestFee);
+        if (parseInt(elem.totalFee) < lowestFee) {
           lowestFee = parseInt(elem.totalFee);
           lowestFeeIndex = i;
         }
