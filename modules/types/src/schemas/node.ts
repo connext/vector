@@ -21,6 +21,7 @@ import {
   TransferDisputeSchema,
   ChannelDisputeSchema,
   TVectorErrorJson,
+  TDecimalString,
 } from "./basic";
 
 ////////////////////////////////////////
@@ -461,6 +462,7 @@ const PostAdminGenerateWithdrawCommitmentBodySchema = Type.Object({
   counterpartyIdentifier: TPublicIdentifier,
   chainId: TChainId,
   assetId: TAddress,
+  amount: Type.Optional(TDecimalString),
   recipient: Type.Optional(TAddress),
   nonce: Type.Optional(Type.Number()),
   callTo: Type.Optional(TAddress),

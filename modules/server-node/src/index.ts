@@ -1157,8 +1157,9 @@ server.post<{ Body: NodeParams.GenerateWithdrawCommitment }>(
           }).toJson(),
         );
       }
-      const myBalance = getBalanceForAssetId(channel, request.body.assetId, participant);
-      if (BigNumber.from(myBalance).isZero()) {
+
+      const withdrawAmount = request.body.amount ?? getBalanceForAssetId(channel, request.body.assetId, participant);
+      if (BigNumber.from(withdrawAmount).isZero()) {
         return reply.status(400).send(
           new ServerNodeError(ServerNodeError.reasons.Unauthorized, "", {
             ...request.body,
@@ -1175,7 +1176,7 @@ server.post<{ Body: NodeParams.GenerateWithdrawCommitment }>(
           ? request.body.recipient
           : getSignerAddressFromPublicIdentifier(request.body.publicIdentifier),
         request.body.assetId,
-        myBalance,
+        withdrawAmount,
         nonce.toString(),
         request.body.callTo,
         request.body.callData,
