@@ -370,17 +370,24 @@ describe.only("inbound", () => {
       latestUpdate: {} as any,
     });
 
+    const toSyncNonce = vectorUtils.getNextNonceForUpdate(channel.nonce, true);
+    const proposedNonce = vectorUtils.getNextNonceForUpdate(toSyncNonce, true);
+
     // Set update to sync
     const prevUpdate = createTestChannelUpdateWithSigners(signers, UpdateType.deposit, {
-      nonce: 2,
+      nonce: toSyncNonce,
+      fromIdentifier: channel.aliceIdentifier,
     });
-    validationStub.onFirstCall().resolves(Result.ok({ updatedChannel: { nonce: 3, latestUpdate: {} as any } }));
+    validationStub
+      .onFirstCall()
+      .resolves(Result.ok({ updatedChannel: { nonce: toSyncNonce, latestUpdate: {} as any } }));
 
     const update: ChannelUpdate<typeof UpdateType.deposit> = createTestChannelUpdateWithSigners(
       signers,
       UpdateType.deposit,
       {
-        nonce: 3,
+        nonce: proposedNonce,
+        fromIdentifier: channel.aliceIdentifier,
       },
     );
     validationStub
@@ -403,8 +410,8 @@ describe.only("inbound", () => {
     const error = result.getError()!;
     expect(error.message).to.be.eq(QueuedUpdateError.reasons.ExternalValidationFailed);
     expect(validationStub.callCount).to.be.eq(2);
-    expect(validationStub.firstCall.args[3].nonce).to.be.eq(2);
-    expect(validationStub.secondCall.args[3].nonce).to.be.eq(3);
+    expect(validationStub.firstCall.args[3].nonce).to.be.eq(toSyncNonce);
+    expect(validationStub.secondCall.args[3].nonce).to.be.eq(proposedNonce);
   });
 
   it("should work if there is no channel state stored and you are receiving a setup update", async () => {
@@ -432,10 +439,7 @@ describe.only("inbound", () => {
       signers[1],
       logger,
     );
-    expect(result.getError()).to.be.undefined;
-
-    // Make sure the calls were correctly performed
-    expect(validationStub.callCount).to.be.eq(1);
+    expect(result.getError()?.message).to.be.eq(QueuedUpdateError.reasons.CannotSyncSetup);
   });
 });
 
