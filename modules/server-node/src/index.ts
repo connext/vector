@@ -1134,12 +1134,18 @@ server.post<{ Body: NodeParams.GenerateWithdrawCommitment }>(
       if (!channel) {
         return reply
           .status(404)
-          .send(new ServerNodeError(ServerNodeError.reasons.ChannelNotFound, "", request.body).toJson());
+          .send(
+            new ServerNodeError(
+              ServerNodeError.reasons.ChannelNotFound,
+              request.body.publicIdentifier,
+              request.body,
+            ).toJson(),
+          );
       }
 
       if (request.body.nonce && request.body.nonce < channel.nonce) {
         return reply.status(400).send(
-          new ServerNodeError(ServerNodeError.reasons.CommitmentNotFound, "", {
+          new ServerNodeError(ServerNodeError.reasons.BadRequest, request.body.publicIdentifier, {
             ...request.body,
             message: "Channel nonce is >= provided nonce",
           }).toJson(),
@@ -1151,7 +1157,7 @@ server.post<{ Body: NodeParams.GenerateWithdrawCommitment }>(
       const participant = getParticipant(channel, request.body.publicIdentifier);
       if (!participant) {
         return reply.status(400).send(
-          new ServerNodeError(ServerNodeError.reasons.ChannelNotFound, "", {
+          new ServerNodeError(ServerNodeError.reasons.BadRequest, request.body.publicIdentifier, {
             ...request.body,
             message: "Participant not in channel",
           }).toJson(),
@@ -1161,7 +1167,7 @@ server.post<{ Body: NodeParams.GenerateWithdrawCommitment }>(
       const withdrawAmount = request.body.amount ?? getBalanceForAssetId(channel, request.body.assetId, participant);
       if (BigNumber.from(withdrawAmount).isZero()) {
         return reply.status(400).send(
-          new ServerNodeError(ServerNodeError.reasons.Unauthorized, "", {
+          new ServerNodeError(ServerNodeError.reasons.BadRequest, request.body.publicIdentifier, {
             ...request.body,
             message: "Zero balance",
           }).toJson(),
@@ -1187,7 +1193,7 @@ server.post<{ Body: NodeParams.GenerateWithdrawCommitment }>(
         initiatorSignature = await signer.signMessage(commitment.hashToSign());
       } catch (err) {
         return reply.status(400).send(
-          new ServerNodeError(ServerNodeError.reasons.StoreMethodFailed, "", {
+          new ServerNodeError(ServerNodeError.reasons.BadRequest, request.body.publicIdentifier, {
             ...request.body,
             message: "Signature error",
           }).toJson(),
