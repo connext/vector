@@ -30,7 +30,7 @@ import {
   ProtocolError,
 } from "@connext/vector-types";
 import {
-  generateMerkleTreeData,
+  generateMerkleRoot,
   validateChannelUpdateSignatures,
   getSignerAddressFromPublicIdentifier,
   getRandomBytes32,
@@ -1116,7 +1116,7 @@ export class VectorEngine implements IVectorEngine {
     }
 
     // Verify transfers match merkleRoot
-    const { root } = generateMerkleTreeData(activeTransfers);
+    const root = generateMerkleRoot(activeTransfers);
     if (root !== channel.merkleRoot) {
       return generateRestoreError(RestoreError.reasons.InvalidMerkleRoot, {
         calculated: root,

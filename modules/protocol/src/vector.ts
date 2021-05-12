@@ -20,7 +20,7 @@ import {
   jsonifyError,
   Values,
 } from "@connext/vector-types";
-import { getCreate2MultisigAddress, getRandomBytes32 } from "@connext/vector-utils";
+import { getCreate2MultisigAddress, getRandomBytes32, delay } from "@connext/vector-utils";
 import { Evt } from "evt";
 import pino from "pino";
 
@@ -37,7 +37,8 @@ export class Vector implements IVectorProtocol {
   };
 
   // Hold the serialized queue for each channel
-  private queues: Map<string, SerializedQueue<SelfUpdateResult, OtherUpdateResult>> = new Map();
+  // Do not interact with this directly. Always use getQueueAsync()
+  private queues: Map<string, Promise<SerializedQueue<SelfUpdateResult, OtherUpdateResult> | undefined>> = new Map();
 
   // make it private so the only way to create the class is to use `connect`
   private constructor(
@@ -110,25 +111,12 @@ export class Vector implements IVectorProtocol {
       "Executing update",
     );
 
-    // If queue does not exist, create it
-    if (!this.queues.has(params.channelAddress)) {
-      this.logger.debug({ method, methodId }, "Creating queue");
-      // Determine if this is alice
-      let aliceIdentifier: string;
-      if (params.type === UpdateType.setup) {
-        aliceIdentifier = this.publicIdentifier;
-      } else {
-        const channel = await this.storeService.getChannelState(params.channelAddress);
-        if (!channel) {
-          return Result.fail(new QueuedUpdateError(QueuedUpdateError.reasons.ChannelNotFound, params));
-        }
-        aliceIdentifier = channel.aliceIdentifier;
-      }
-      this.createChannelQueue(params.channelAddress, aliceIdentifier);
+    const queue = await this.getQueueAsync(this.publicIdentifier, params);
+    if (queue === undefined) {
+      return Result.fail(new QueuedUpdateError(QueuedUpdateError.reasons.ChannelNotFound, params));
     }
 
     // Add operation to queue
-    const queue = this.queues.get(params.channelAddress)!;
     const selfResult = await queue.executeSelfAsync({ params });
 
     if (selfResult.isError) {
@@ -144,7 +132,10 @@ export class Vector implements IVectorProtocol {
     return Result.ok(updatedChannel);
   }
 
-  private createChannelQueue(channelAddress: string, aliceIdentifier: string): void {
+  private createChannelQueue(
+    channelAddress: string,
+    aliceIdentifier: string,
+  ): SerializedQueue<SelfUpdateResult, OtherUpdateResult> {
     // Create a cancellable outbound function to be used when initiating updates
     const cancellableOutbound: Cancellable<SelfUpdate, SelfUpdateResult> = async (
       initiated: SelfUpdate,
@@ -207,7 +198,6 @@ export class Vector implements IVectorProtocol {
         return res.value as Result<SelfUpdateResult>;
       }
       // Save all information returned from the sync result
-      // Save the newly signed update to your channel
       const { updatedChannel, updatedTransfer, successfullyApplied } = value.getValue();
       const saveRes = await persistChannel(this.storeService, updatedChannel, updatedTransfer);
       if (saveRes.isError) {
@@ -221,6 +211,7 @@ export class Vector implements IVectorProtocol {
       // If the update was not applied, but the channel was synced, return
       // undefined so that the proposed update may be re-queued
       if (!successfullyApplied) {
+        // Merkle root changes are undone *before* syncing
         return undefined;
       }
       // All is well, return value from outbound
@@ -238,21 +229,14 @@ export class Vector implements IVectorProtocol {
         reason: Values<typeof QueuedUpdateError.reasons>,
         state?: FullChannelState,
         context: any = {},
+        error?: QueuedUpdateError,
       ): Promise<Result<never, QueuedUpdateError>> => {
-        const error = new QueuedUpdateError(reason, state?.latestUpdate ?? received.update, state, context);
-        await this.messagingService.respondWithProtocolError(received.inbox, error);
-        return Result.fail(error);
+        const e = error ?? new QueuedUpdateError(reason, received.update, state, context);
+        await this.messagingService.respondWithProtocolError(received.inbox, e);
+        return Result.fail(e);
       };
 
-      // Pull context from store
-      const storeRes = await extractContextFromStore(this.storeService, received.update.channelAddress);
-      if (storeRes.isError) {
-        // Send message with error
-        return returnError(QueuedUpdateError.reasons.StoreFailure, undefined, {
-          storeError: storeRes.getError()?.message,
-        });
-      }
-      const { channelState, activeTransfers } = storeRes.getValue();
+      let channelState: FullChannelState | undefined = undefined;
       const cancelPromise = new Promise(async (resolve) => {
         let ret;
         try {
@@ -264,12 +248,22 @@ export class Vector implements IVectorProtocol {
         return resolve({ cancelled: true, value: ret });
       });
       const inboundPromise = new Promise(async (resolve) => {
+        // Pull context from store
+        const storeRes = await extractContextFromStore(this.storeService, received.update.channelAddress);
+        if (storeRes.isError) {
+          // Send message with error
+          return returnError(QueuedUpdateError.reasons.StoreFailure, undefined, {
+            storeError: storeRes.getError()?.message,
+          });
+        }
+        const stored = storeRes.getValue();
+        channelState = stored.channelState;
         try {
           const ret = await inbound(
             received.update,
             received.previous,
-            activeTransfers,
-            channelState,
+            stored.activeTransfers,
+            stored.channelState,
             this.chainReader,
             this.externalValidationService,
             this.signer,
@@ -277,6 +271,7 @@ export class Vector implements IVectorProtocol {
           );
           return resolve({ cancelled: false, value: ret });
         } catch (e) {
+          console.error("****** error", e);
           return resolve({
             cancelled: false,
             value: Result.fail(
@@ -300,18 +295,22 @@ export class Vector implements IVectorProtocol {
       }
       const value = res.value as Result<OtherUpdateResult>;
       if (value.isError) {
-        return returnError(value.getError().message, channelState);
+        const error = value.getError() as QueuedUpdateError;
+        const { state } = error.context;
+        return returnError(error.message, state ?? channelState, undefined, error);
       }
       // Save the newly signed update to your channel
       const { updatedChannel, updatedTransfer } = value.getValue();
       const saveRes = await persistChannel(this.storeService, updatedChannel, updatedTransfer);
       if (saveRes.isError) {
-        return returnError(QueuedUpdateError.reasons.StoreFailure, updatedChannel);
+        return returnError(QueuedUpdateError.reasons.StoreFailure, updatedChannel, {
+          saveError: saveRes.getError().message,
+        });
       }
       await this.messagingService.respondToProtocolMessage(
         received.inbox,
         updatedChannel.latestUpdate,
-        channelState?.latestUpdate,
+        (channelState as FullChannelState | undefined)?.latestUpdate,
       );
       return value;
     };
@@ -327,7 +326,7 @@ export class Vector implements IVectorProtocol {
       },
     );
 
-    this.queues.set(channelAddress, queue);
+    return queue;
   }
 
   /**
@@ -374,6 +373,49 @@ export class Vector implements IVectorProtocol {
     // offline are properly accounted for
     // TODO: how to account for transfer disputes efficiently?
     await this.syncDisputes();
+  }
+
+  // Returns undefined if getChannelState returns undefined (meaning the channel is not found)
+  private getQueueAsync(
+    setupAliceIdentifier,
+    params: UpdateParams<any>,
+  ): Promise<SerializedQueue<SelfUpdateResult, OtherUpdateResult> | undefined> {
+    const channelAddress = params.channelAddress;
+    const cache = this.queues.get(channelAddress);
+    if (cache !== undefined) {
+      return cache;
+    }
+    this.logger.debug({ channelAddress }, "Creating queue");
+
+    let promise = (async () => {
+      // This is subtle. We use a try/catch and remove the promise from the queue in the
+      // even of an error. But, without this delay the promise may not be in the queue -
+      // so it could get added next in a perpetually failing state.
+      await delay(0);
+
+      let result;
+      try {
+        let aliceIdentifier: string;
+        if (params.type === UpdateType.setup) {
+          aliceIdentifier = setupAliceIdentifier;
+        } else {
+          const channel = await this.storeService.getChannelState(channelAddress);
+          if (!channel) {
+            this.queues.delete(channelAddress);
+            return undefined;
+          }
+          aliceIdentifier = channel.aliceIdentifier;
+        }
+        result = this.createChannelQueue(channelAddress, aliceIdentifier);
+      } catch (e) {
+        this.queues.delete(channelAddress);
+        throw e;
+      }
+      return result;
+    })();
+
+    this.queues.set(channelAddress, promise);
+    return promise;
   }
 
   private async setupServices(): Promise<Vector> {
@@ -443,23 +485,12 @@ export class Vector implements IVectorProtocol {
         // applying the update, make sure it is the highest seen nonce
 
         // If queue does not exist, create it
-        if (!this.queues.has(received.update.channelAddress)) {
-          this.logger.debug({ method, methodId, channelAddress: received.update.channelAddress }, "Creating queue");
-          let aliceIdentifier: string;
-          if (received.update.type === UpdateType.setup) {
-            aliceIdentifier = received.update.fromIdentifier;
-          } else {
-            const channel = await this.storeService.getChannelState(received.update.channelAddress);
-            if (!channel) {
-              return Result.fail(new QueuedUpdateError(QueuedUpdateError.reasons.ChannelNotFound, received.update));
-            }
-            aliceIdentifier = channel.aliceIdentifier;
-          }
-          this.createChannelQueue(received.update.channelAddress, aliceIdentifier);
+        const queue = await this.getQueueAsync(received.update.fromIdentifier, received.update);
+        if (queue === undefined) {
+          return Result.fail(new QueuedUpdateError(QueuedUpdateError.reasons.ChannelNotFound, received.update));
         }
 
         // Add operation to queue
-        const queue = this.queues.get(received.update.channelAddress)!;
         this.logger.debug({ method, methodId }, "Executing other async");
         const result = await queue.executeOtherAsync({
           update: received.update,

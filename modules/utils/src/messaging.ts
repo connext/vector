@@ -336,7 +336,7 @@ export class NatsMessagingService extends NatsBasicMessagingService implements I
   async sendProtocolMessage(
     channelUpdate: ChannelUpdate<any>,
     previousUpdate?: ChannelUpdate<any>,
-    timeout = 30_000,
+    timeout = 60_000,
     numRetries = 0,
   ): Promise<Result<{ update: ChannelUpdate<any>; previousUpdate: ChannelUpdate<any> }, ProtocolError>> {
     return this.sendMessageWithRetries(
@@ -386,6 +386,7 @@ export class NatsMessagingService extends NatsBasicMessagingService implements I
     timeout = 30_000,
     numRetries?: number,
   ): Promise<Result<{ channel: FullChannelState; activeTransfers: FullTransferState[] } | void, EngineError>> {
+    this.logger.warn({ to, from, data: restoreData.toJson() }, "Sending restore message");
     return this.sendMessageWithRetries(
       restoreData,
       "restore",
@@ -401,13 +402,16 @@ export class NatsMessagingService extends NatsBasicMessagingService implements I
     publicIdentifier: string,
     callback: (restoreData: Result<{ chainId: number }, EngineError>, from: string, inbox: string) => void,
   ): Promise<void> {
-    await this.registerCallback(`${publicIdentifier}.*.restore`, callback, "onReceiveRestoreStateMessage");
+    const subject = `${publicIdentifier}.*.restore`;
+    this.logger.warn({ subject }, "Registered restore state callback");
+    await this.registerCallback(subject, callback, "onReceiveRestoreStateMessage");
   }
 
   async respondToRestoreStateMessage(
     inbox: string,
     restoreData: Result<{ channel: FullChannelState; activeTransfers: FullTransferState[] } | void, EngineError>,
   ): Promise<void> {
+    this.logger.warn({ inbox, data: restoreData.toJson() }, "Sending restore state response");
     return this.respondToMessage(inbox, restoreData, "respondToRestoreStateMessage");
   }
   ////////////

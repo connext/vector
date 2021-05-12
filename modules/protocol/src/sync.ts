@@ -50,6 +50,21 @@ export async function outbound(
   const methodId = getRandomBytes32();
   logger.debug({ method, methodId }, "Method start");
 
+  logger.warn(
+    {
+      method,
+      methodId,
+      ourLatestNonce: previousState?.nonce ?? 0,
+      updateNonce: getNextNonceForUpdate(
+        previousState?.nonce ?? 0,
+        signer.publicIdentifier === previousState?.aliceIdentifier ?? true,
+      ),
+      alice: previousState?.aliceIdentifier ?? signer.publicIdentifier,
+      updateInitiator: signer.publicIdentifier,
+    },
+    "Preparing outbound update",
+  );
+
   // Ensure parameters are valid, and action can be taken
   const updateRes = await validateParamsAndApplyUpdate(
     signer,
@@ -92,7 +107,10 @@ export async function outbound(
   let error = counterpartyResult.getError();
   if (error && error.message !== QueuedUpdateError.reasons.StaleUpdate) {
     // Error is something other than sync, fail
-    logger.error({ method, methodId, error: jsonifyError(error) }, "Error receiving response, will not save state!");
+    logger.error(
+      { method, methodId, counterpartyError: jsonifyError(error), previousState, update, params },
+      "Error receiving response, will not save state!",
+    );
     return Result.fail(
       new QueuedUpdateError(
         error.message === MessagingError.reasons.Timeout
@@ -112,15 +130,24 @@ export async function outbound(
       {
         method,
         methodId,
-        proposed: update.nonce,
+        ourLatestNonce: previousState?.nonce ?? 0,
+        updateNonce: update.nonce,
+        alice: previousState?.aliceIdentifier ?? signer.publicIdentifier,
+        updateInitiator: signer.publicIdentifier,
+        toSyncIdentifier: error.context.state.latestUpdate.fromIdentifier,
+        toSyncNonce: error.context.state.latestUpdate.nonce,
         error: jsonifyError(error),
+        expectedNextNonce: getNextNonceForUpdate(
+          previousState?.nonce ?? 0,
+          previousState?.aliceIdentifier === error.context.state.latestUpdate.fromIdentifier,
+        ),
       },
-      `Behind, syncing then cancelling proposed`,
+      "Behind, syncing then cancelling proposed",
     );
 
     // Get the synced state and new update
     const syncedResult = await syncState(
-      error.context.update,
+      error.context.state.latestUpdate,
       previousState!, // safe to do bc will fail if syncing setup (only time state is undefined)
       activeTransfers,
       (message: Values<typeof QueuedUpdateError.reasons>) =>
@@ -142,8 +169,17 @@ export async function outbound(
 
     // Return that proposed update was not successfully applied, but
     // make sure to save state
-    const { updatedChannel, updatedTransfer, updatedActiveTransfers } = syncedResult.getValue()!;
-    return Result.ok({ updatedChannel, updatedActiveTransfers, updatedTransfer, successfullyApplied: false });
+    const {
+      updatedChannel: syncedChannel,
+      updatedTransfer: syncedTransfer,
+      updatedActiveTransfers: syncedActiveTransfers,
+    } = syncedResult.getValue()!;
+    return Result.ok({
+      updatedChannel: syncedChannel,
+      updatedActiveTransfers: syncedActiveTransfers,
+      updatedTransfer: syncedTransfer,
+      successfullyApplied: false,
+    });
   }
 
   logger.debug({ method, methodId, to: update.toIdentifier, type: update.type }, "Received protocol response");
@@ -159,10 +195,13 @@ export async function outbound(
     logger,
   );
   if (sigRes.isError) {
+    logger.error(
+      { method, update, counterpartyUpdate, error: jsonifyError(sigRes.getError()!) },
+      "Failed to recover signer",
+    );
     const error = new QueuedUpdateError(QueuedUpdateError.reasons.BadSignatures, params, previousState, {
       recoveryError: sigRes.getError()?.message,
     });
-    logger.error({ method, error: jsonifyError(error) }, "Error receiving response, will not save state!");
     return Result.fail(error);
   }
 
@@ -225,38 +264,57 @@ export async function inbound(
   // (a,b) update.nonce <= expectedInSync -- restore case handled in syncState
   // (c) update.nonce === expectedInSync -- perform update
   // (d,e) update.nonce > expectedInSync -- restore case handled in syncState
+  logger.warn(
+    {
+      method,
+      methodId,
+      ourLatestNonce: channel?.nonce ?? 0,
+      updateNonce: update.nonce,
+      alice: channel?.aliceIdentifier ?? update.fromIdentifier,
+      updateInitiator: update.fromIdentifier,
+      ourIdentifier: signer.publicIdentifier,
+      expectedNextNonce: getNextNonceForUpdate(channel?.nonce ?? 0, update.fromIdentifier === channel?.aliceIdentifier),
+    },
+    "Handling inbound update",
+  );
 
   // Get the difference between the stored and received nonces
-  const channelNonce = channel?.nonce ?? 0;
   const ourPreviousNonce = channel?.latestUpdate?.nonce ?? -1;
-  const aliceSentUpdate = update.type === UpdateType.setup ? true : update.fromIdentifier === channel?.aliceIdentifier;
 
-  // Get the expected nonce
-  const expectedNonce = getNextNonceForUpdate(channelNonce, aliceSentUpdate);
+  // Get the expected previous update nonce
   const givenPreviousNonce = previousUpdate?.nonce ?? -1;
 
-  // If the delivered nonce is lower than expected, counterparty is
-  // behind. NOTE: in cases where the update nonce increments by 2 and we expect
-  // it to increment by 1, initiator may be out of sync and still satisfy the
-  // first condition
-  if (update.nonce < expectedNonce || givenPreviousNonce < ourPreviousNonce) {
+  if (givenPreviousNonce < ourPreviousNonce) {
     // NOTE: when you are out of sync as a protocol initiator, you will
     // use the information from this error to sync, then retry your update
     return returnError(QueuedUpdateError.reasons.StaleUpdate, channel!.latestUpdate, channel);
   }
 
-  // If the update nonce is greater than what we expected, counterparty
-  // is ahead and we should attempt a sync
-  // NOTE: in cases where the update nonce increments by 2 and we expect
-  // it to increment by 1, initiator may be out of sync and still satisfy the
-  // first condition
   let previousState = channel ? { ...channel } : undefined;
-  if (update.nonce > expectedNonce || givenPreviousNonce > ourPreviousNonce) {
+  if (givenPreviousNonce > ourPreviousNonce) {
     // Create the proper state to play the update on top of using the
     // latest update
     if (!previousUpdate) {
       return returnError(QueuedUpdateError.reasons.StaleChannel, previousUpdate, previousState);
     }
+    logger.warn(
+      {
+        method,
+        methodId,
+        ourLatestNonce: channel?.nonce ?? 0,
+        updateNonce: update.nonce,
+        alice: channel?.aliceIdentifier ?? update.fromIdentifier,
+        updateInitiator: update.fromIdentifier,
+        ourIdentifier: signer.publicIdentifier,
+        toSyncIdentifier: previousUpdate.fromIdentifier,
+        toSyncNonce: givenPreviousNonce,
+        expectedNextNonce: getNextNonceForUpdate(
+          channel?.nonce ?? 0,
+          previousUpdate.fromIdentifier === channel?.aliceIdentifier,
+        ),
+      },
+      "Behind, syncing",
+    );
 
     const syncRes = await syncState(
       previousUpdate,

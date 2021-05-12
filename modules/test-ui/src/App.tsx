@@ -1,23 +1,14 @@
-import { BrowserNode, NonEIP712Message } from "@connext/vector-browser-node";
-import {
-  getPublicKeyFromPublicIdentifier,
-  encrypt,
-  createlockHash,
-  getBalanceForAssetId,
-  getRandomBytes32,
-  constructRpcRequest,
-} from "@connext/vector-utils";
-import React, { useState } from "react";
-import { constants, providers } from "ethers";
+import React, { useState, useEffect } from "react";
+import { constants } from "ethers";
 import { Col, Divider, Row, Statistic, Input, Typography, Table, Form, Button, List, Select, Tabs, Radio } from "antd";
 import { CopyToClipboard } from "react-copy-to-clipboard";
-import { EngineEvents, FullChannelState, jsonifyError, TransferNames } from "@connext/vector-types";
+import { EngineEvents, FullChannelState, INodeService, jsonifyError, TransferNames } from "@connext/vector-types";
 
 import "./App.css";
 import { config } from "./config";
 
 function App() {
-  const [node, setNode] = useState<BrowserNode>();
+  const [node, setNode] = useState<INodeService>();
   const [routerPublicIdentifier, setRouterPublicIdentifier] = useState<string>();
   const [channels, setChannels] = useState<FullChannelState[]>([]);
   const [selectedChannel, setSelectedChannel] = useState<FullChannelState>();
@@ -32,18 +23,35 @@ function App() {
 
   const [connectError, setConnectError] = useState<string>();
   const [copied, setCopied] = useState<boolean>(false);
-  const [activeTab, setActiveTab] = useState<"HashlockTransfer" | "CrossChainTransfer">("HashlockTransfer");
+  const [activeTab, setActiveTab] = useState<"HashlockTransfer" | "CrossChainTransfer" | "MultiTransfer">(
+    "HashlockTransfer",
+  );
 
   const [withdrawForm] = Form.useForm();
   const [transferForm] = Form.useForm();
+  const [multiTransferForm] = Form.useForm();
   const [signMessageForm] = Form.useForm();
+
+  const [browserNodePkg, setBrowserNodePkg] = useState<any>();
+  const [utilsPkg, setUtilsPkg] = useState<any>();
+
+  const loadWasmLibs = async () => {
+    const browser = await import("@connext/vector-browser-node");
+    setBrowserNodePkg(browser);
+    const utils = await import("@connext/vector-utils");
+    setUtilsPkg(utils);
+  };
+
+  useEffect(() => {
+    loadWasmLibs();
+  }, []);
 
   const connectNode = async (
     iframeSrc: string,
     supportedChains: number[],
     _routerPublicIdentifier: string,
     loginProvider: "none" | "metamask" | "magic",
-  ): Promise<BrowserNode> => {
+  ): Promise<any> => {
     try {
       setConnectLoading(true);
       setRouterPublicIdentifier(_routerPublicIdentifier);
@@ -51,7 +59,7 @@ function App() {
       supportedChains.forEach((chain) => {
         chainProviders[chain] = config.chainProviders[chain];
       });
-      const client = new BrowserNode({
+      const client = new browserNodePkg.BrowserNode({
         supportedChains,
         iframeSrc,
         routerPublicIdentifier: _routerPublicIdentifier,
@@ -109,8 +117,8 @@ function App() {
         return;
       }
       const channelAddresses = channelsRes.getValue();
-      const _channels = (
-        await Promise.all(
+      const _channels: FullChannelState[] = (
+        await Promise.all<FullChannelState>(
           channelAddresses.map(async (c) => {
             const channelRes = await client.getStateChannel({ channelAddress: c });
             console.log("Channel found in store:", channelRes.getValue());
@@ -118,7 +126,7 @@ function App() {
             return channelVal;
           }),
         )
-      ).filter((chan) => supportedChains.includes(chan.networkContext.chainId));
+      ).filter((chan: FullChannelState) => supportedChains.includes(chan.networkContext.chainId));
       if (_channels.length > 0) {
         setChannels(_channels);
         setSelectedChannel(_channels[0]);
@@ -139,7 +147,7 @@ function App() {
           console.log("No encrypted preImage attached", data.transfer);
           return;
         }
-        const rpc = constructRpcRequest<"chan_decrypt">("chan_decrypt", data.transfer.meta.encryptedPreImage);
+        const rpc = utilsPkg.constructRpcRequest("chan_decrypt", data.transfer.meta.encryptedPreImage);
         const decryptedPreImage = await client.send(rpc);
 
         const requestRes = await client.resolveTransfer({
@@ -176,7 +184,7 @@ function App() {
         chainProviders[chainId.toString()] = config.chainProviders[chainId.toString()];
       });
       console.error("creating new browser node on", supportedChains, "with providers", chainProviders);
-      const client = new BrowserNode({
+      const client = new browserNodePkg.BrowserNode({
         supportedChains,
         iframeSrc,
         routerPublicIdentifier: _routerPublicIdentifier,
@@ -190,7 +198,7 @@ function App() {
     setConnectLoading(false);
   };
 
-  const updateChannel = async (node: BrowserNode, channelAddress: string) => {
+  const updateChannel = async (node: INodeService, channelAddress: string) => {
     const res = await node.getStateChannel({ channelAddress });
     if (res.isError) {
       console.error("Error getting state channel", res.getError());
@@ -242,13 +250,77 @@ function App() {
     setRequestCollateralLoading(false);
   };
 
+  const multiTransfer = async (numberOfTransfers: number) => {
+    const recipientChannel = channels.find((c) => c.channelAddress !== selectedChannel.channelAddress);
+    if (!recipientChannel) {
+      console.error("No recipient channel");
+      return;
+    }
+
+    if (
+      recipientChannel.networkContext.chainId === selectedChannel.networkContext.chainId &&
+      recipientChannel.bobIdentifier === selectedChannel.bobIdentifier
+    ) {
+      console.error("Will not properly route");
+      return;
+    }
+
+    let recievedTransfers = 0;
+    node.on(EngineEvents.CONDITIONAL_TRANSFER_CREATED, (data) => {
+      if (data.channelAddress === recipientChannel.channelAddress) {
+        recievedTransfers++;
+      }
+    });
+
+    let requests = 0;
+    const completed = new Promise(async (resolve) => {
+      while (recievedTransfers < numberOfTransfers) {
+        if (requests !== numberOfTransfers) {
+          console.error(`seen ${requests}/${numberOfTransfers}, waiting 35s`);
+          await utilsPkg.delay(35_000);
+          continue;
+        } else {
+          console.error(`recipient has ${recievedTransfers} / ${numberOfTransfers}`);
+          await utilsPkg.delay(1_000);
+        }
+      }
+      resolve(undefined);
+    });
+
+    console.error(`Beginning transfers`);
+    for (let i = 0; i < numberOfTransfers; i++) {
+      (requests + 1) % 10 === 0 && console.error(`request ${requests + 1} / ${numberOfTransfers}`);
+      const preImage = utilsPkg.getRandomBytes32();
+      const params = {
+        publicIdentifier: selectedChannel.bobIdentifier,
+        amount: "1",
+        assetId: constants.AddressZero,
+        channelAddress: selectedChannel.channelAddress,
+        type: TransferNames.HashlockTransfer,
+        details: {
+          lockHash: utilsPkg.createlockHash(preImage),
+          expiry: "0",
+        },
+        recipient: recipientChannel.bobIdentifier,
+        recipientChainId: recipientChannel.networkContext.chainId,
+      };
+      const create = await node.conditionalTransfer(params);
+      if (create.isError) {
+        throw create.getError();
+      }
+      requests++;
+    }
+    await completed;
+    console.error("transfers completed");
+  };
+
   const transfer = async (assetId: string, amount: string, recipient: string, preImage: string) => {
     setTransferLoading(true);
 
     const submittedMeta: { encryptedPreImage?: string } = {};
     if (recipient) {
-      const recipientPublicKey = getPublicKeyFromPublicIdentifier(recipient);
-      const encryptedPreImage = await encrypt(preImage, recipientPublicKey);
+      const recipientPublicKey = utilsPkg.getPublicKeyFromPublicIdentifier(recipient);
+      const encryptedPreImage = await utilsPkg.encrypt(preImage, recipientPublicKey);
       submittedMeta.encryptedPreImage = encryptedPreImage;
     }
 
@@ -259,7 +331,7 @@ function App() {
       amount,
       recipient,
       details: {
-        lockHash: createlockHash(preImage),
+        lockHash: utilsPkg.createlockHash(preImage),
         expiry: "0",
       },
       meta: submittedMeta,
@@ -603,7 +675,7 @@ function App() {
                     name="transfer"
                     initialValues={{
                       assetId: selectedChannel?.assetIds && selectedChannel?.assetIds[0],
-                      preImage: getRandomBytes32(),
+                      preImage: utilsPkg.getRandomBytes32(),
                       numLoops: 1,
                     }}
                     onFinish={(values) => transfer(values.assetId, values.amount, values.recipient, values.preImage)}
@@ -642,7 +714,7 @@ function App() {
                         enterButton="MAX"
                         onSearch={() => {
                           const assetId = transferForm.getFieldValue("assetId");
-                          const amount = getBalanceForAssetId(selectedChannel, assetId, "bob");
+                          const amount = utilsPkg.getBalanceForAssetId(selectedChannel, assetId, "bob");
                           transferForm.setFieldsValue({ amount });
                         }}
                       />
@@ -656,7 +728,7 @@ function App() {
                       <Input.Search
                         enterButton="Random"
                         onSearch={() => {
-                          const preImage = getRandomBytes32();
+                          const preImage = utilsPkg.getRandomBytes32();
                           transferForm.setFieldsValue({ preImage });
                         }}
                       />
@@ -725,6 +797,31 @@ function App() {
                     </Form.Item>
                   </Form>
                 </Tabs.TabPane>
+
+                <Tabs.TabPane tab="Multiple Transfers" key="MultiTransfer">
+                  <Form
+                    layout="horizontal"
+                    labelCol={{ span: 6 }}
+                    wrapperCol={{ span: 18 }}
+                    name="multitransfer"
+                    initialValues={{
+                      numOfTransfers: 10,
+                    }}
+                    onFinish={(values) => multiTransfer(values.numOfTransfers)}
+                    onFinishFailed={onFinishFailed}
+                    form={multiTransferForm}
+                  >
+                    <Form.Item label="Number of transfers" name="numOfTransfers">
+                      <Input />
+                    </Form.Item>
+
+                    <Form.Item wrapperCol={{ offset: 6, span: 16 }}>
+                      <Button type="primary" htmlType="submit" loading={transferLoading}>
+                        Begin Transfers
+                      </Button>
+                    </Form.Item>
+                  </Form>
+                </Tabs.TabPane>
               </Tabs>
             </Col>
           </Row>
@@ -775,7 +872,7 @@ function App() {
                     enterButton="MAX"
                     onSearch={() => {
                       const assetId = withdrawForm.getFieldValue("assetId");
-                      const amount = getBalanceForAssetId(selectedChannel, assetId, "bob");
+                      const amount = utilsPkg.getBalanceForAssetId(selectedChannel, assetId, "bob");
                       withdrawForm.setFieldsValue({ amount });
                     }}
                   />
@@ -789,7 +886,7 @@ function App() {
               </Form>
             </Col>
           </Row>
-          <Divider orientation="left">Withdraw</Divider>
+          <Divider orientation="left">Sign Message</Divider>
           <Row gutter={16}>
             <Col span={24}>
               <Form

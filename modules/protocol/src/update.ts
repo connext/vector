@@ -2,8 +2,7 @@ import {
   getSignerAddressFromPublicIdentifier,
   hashTransferState,
   getTransferId,
-  generateMerkleTreeData,
-  hashCoreTransferState,
+  generateMerkleRoot,
 } from "@connext/vector-utils";
 import {
   UpdateType,
@@ -499,7 +498,7 @@ async function generateCreateUpdate(
     initiatorIdentifier,
     responderIdentifier: signer.publicIdentifier === initiatorIdentifier ? counterpartyId : signer.address,
   };
-  const { tree, root } = generateMerkleTreeData([...transfers, transferState]);
+  const merkleRoot = generateMerkleRoot([...transfers, transferState]);
 
   // Create the update from the user provided params
   const channelBalance = getUpdatedChannelBalance(UpdateType.create, assetId, balance, state, transferState.initiator);
@@ -514,7 +513,7 @@ async function generateCreateUpdate(
       balance,
       transferInitialState,
       transferEncodings: [stateEncoding, resolverEncoding],
-      merkleRoot: root,
+      merkleRoot,
       meta: { ...(meta ?? {}), createdAt: Date.now() },
     },
   };
@@ -547,7 +546,7 @@ async function generateResolveUpdate(
       }),
     );
   }
-  const { root } = generateMerkleTreeData(transfers.filter((x) => x.transferId !== transferId));
+  const merkleRoot = generateMerkleRoot(transfers.filter((t) => t.transferId !== transferId));
 
   // Get the final transfer balance from contract
   const transferBalanceResult = await chainService.resolve(
@@ -581,7 +580,7 @@ async function generateResolveUpdate(
       transferId,
       transferDefinition: transferToResolve.transferDefinition,
       transferResolver,
-      merkleRoot: root,
+      merkleRoot,
       meta: { ...(transferToResolve.meta ?? {}), ...(meta ?? {}) },
     },
   };

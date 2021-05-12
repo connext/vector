@@ -526,6 +526,10 @@ export async function validateAndApplyInboundUpdate<T extends UpdateType = any>(
     logger,
   );
   if (sigRes.isError) {
+    logger?.error(
+      { generatedParams: params.getValue(), generatedUpdate: updatedChannel.latestUpdate, update, previousState },
+      "Failed to validate initiator sig",
+    );
     return Result.fail(
       new QueuedUpdateError(QueuedUpdateError.reasons.BadSignatures, update, previousState, {
         signatureError: sigRes.getError()?.message,
