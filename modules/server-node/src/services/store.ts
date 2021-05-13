@@ -1307,6 +1307,11 @@ export class PrismaStore implements IServerNodeStore {
 
   async clear(): Promise<void> {
     await this.prisma.balance.deleteMany({});
+    // NOTE: onchainTransactionAttempt and onchainTransactionReceipt MUST be deleted before onchainTransaction
+    // This essentially is an application-side implementation of a CASCADE delete, since Prisma 2 does not support
+    // CASCADE delete.
+    await this.prisma.onchainTransactionAttempt.deleteMany({});
+    await this.prisma.onchainTransactionReceipt.deleteMany({});
     await this.prisma.onchainTransaction.deleteMany({});
     await this.prisma.transfer.deleteMany({});
     await this.prisma.channelDispute.deleteMany({});
