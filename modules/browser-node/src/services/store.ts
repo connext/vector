@@ -391,7 +391,6 @@ export class BrowserStore implements IEngineStore, IChainServiceStore {
   async saveTransactionReceipt(onchainTransactionId: string, receipt: TransactionReceipt): Promise<void> {
     await this.db.transactions.update(onchainTransactionId, {
       status: StoredTransactionStatus.mined,
-      confirmedTransactionHash: receipt.transactionHash,
       receipt: this.sanitizeReceipt(receipt),
     });
   }
@@ -404,7 +403,6 @@ export class BrowserStore implements IEngineStore, IChainServiceStore {
     await this.db.transactions.update(onchainTransactionId, {
       status: StoredTransactionStatus.failed,
       error,
-      confirmedTransactionHash: receipt ? receipt.transactionHash : undefined,
       receipt: receipt ? this.sanitizeReceipt(receipt) : undefined,
     });
   }

@@ -131,7 +131,6 @@ export type StoredTransaction = {
   // TransactionRequest fields (defined when tx populated)
   attempts: StoredTransactionAttempt[];
   receipt?: StoredTransactionReceipt;
-  confirmedTransactionHash?: string;
 };
 
 export interface IChainServiceStore {
