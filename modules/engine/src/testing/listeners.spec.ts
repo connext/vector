@@ -875,7 +875,7 @@ describe(testName, () => {
   });
 
   describe("submitUnsubmittedWithdrawals", () => {
-    it.only("should work", async () => {
+    it("should work", async () => {
       const alice = getRandomChannelSigner();
       const bob = getRandomChannelSigner();
 
