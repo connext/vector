@@ -103,6 +103,10 @@ class VectorIndexedDBDatabase extends Dexie {
     });
 
     this.version(4).stores({
+      withdrawCommitment: "transferId,channelAddress",
+    });
+
+    this.version(4).stores({
       channelDisputes: "channelAddress",
       transferDisputes: "transferId",
     });
@@ -310,9 +314,11 @@ export class BrowserStore implements IEngineStore, IChainServiceStore {
   }
 
   async getActiveTransactions(): Promise<StoredTransaction[]> {
-    const tx = await this.db.transactions.filter(tx => {
-      return !!tx.transactionHash && !tx.blockHash && !tx.gasUsed
-    }).toArray();
+    const tx = await this.db.transactions
+      .filter((tx) => {
+        return !!tx.transactionHash && !tx.blockHash && !tx.gasUsed;
+      })
+      .toArray();
     return tx;
   }
 
@@ -395,6 +401,21 @@ export class BrowserStore implements IEngineStore, IChainServiceStore {
     }
     const { transferId, ...commitment } = w;
     return commitment;
+  }
+
+  // TOOD: dont really need this yet, but prob will soon
+  getUnsubmittedWithdrawals(
+    channelAddress: string,
+    withdrawalDefinition: string,
+  ): Promise<
+    {
+      commitment: WithdrawCommitmentJson; // function. However, the constructor should *not* be used when creating
+      // function. However, the constructor should *not* be used when creating
+      // an instance of the BrowserStore
+      transfer: FullTransferState<any>;
+    }[]
+  > {
+    throw new Error("Method not implemented.");
   }
 
   async saveTransferDispute(
