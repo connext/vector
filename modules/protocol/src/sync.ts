@@ -247,10 +247,7 @@ export async function inbound(
   };
 
   // Now that you have a valid starting state, you can try to apply the
-  // update, and sync if necessary.
-  // Assume that our stored state has nonce `k`, and the update
-  // has nonce `n`, and `k` is the latest double signed state for you. The
-  // following cases exist:
+  // update, and sync if necessary. The following cases exist:
   // (a) counterparty is behind, and they must restore (>1 transition behind)
   // (b) counterparty is behind, but their state is syncable (1 transition
   //     behind)
@@ -260,10 +257,17 @@ export async function inbound(
   // (e) we are behind, and must restore before applying update (>1
   //     transition behind)
 
-  // Nonce transitions for these cases:
-  // (a,b) update.nonce <= expectedInSync -- restore case handled in syncState
-  // (c) update.nonce === expectedInSync -- perform update
-  // (d,e) update.nonce > expectedInSync -- restore case handled in syncState
+  // Nonce transitions for these cases (given previous update = n, our
+  // previous update = k):
+  // (a,b) n > k -- try to sync, restore case handled in syncState
+  // (c) n === k -- perform update, channels in sync
+  // (d,e) n < k -- counterparty behind, restore handled in their sync
+  // Get the difference between the stored and received nonces
+  const ourPreviousNonce = channel?.latestUpdate?.nonce ?? -1;
+
+  // Get the expected previous update nonce
+  const givenPreviousNonce = previousUpdate?.nonce ?? -1;
+
   logger.warn(
     {
       method,
@@ -274,15 +278,11 @@ export async function inbound(
       updateInitiator: update.fromIdentifier,
       ourIdentifier: signer.publicIdentifier,
       expectedNextNonce: getNextNonceForUpdate(channel?.nonce ?? 0, update.fromIdentifier === channel?.aliceIdentifier),
+      givenPreviousNonce,
+      ourPreviousNonce,
     },
     "Handling inbound update",
   );
-
-  // Get the difference between the stored and received nonces
-  const ourPreviousNonce = channel?.latestUpdate?.nonce ?? -1;
-
-  // Get the expected previous update nonce
-  const givenPreviousNonce = previousUpdate?.nonce ?? -1;
 
   if (givenPreviousNonce < ourPreviousNonce) {
     // NOTE: when you are out of sync as a protocol initiator, you will
