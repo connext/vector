@@ -24,7 +24,7 @@ Contents:
 - [Architecture and Module Breakdown](#architecture-and-module-breakdown)
 - [Development and Running Tests](#development-and-running-tests)
 
-## Quick start
+## Quick Start - Local Development
 
 **Prerequisites:**
 
@@ -42,13 +42,16 @@ cd vector
 To build everything and deploy a Vector node in dev-mode, run the following:
 
 ```bash
-make start
+make start-router
 
 # view the node's logs
 bash ops/logs.sh node
+
+# view the router's logs
+bash ops/logs.sh router
 ```
 
-That's all! But beware: the first time `make start` is run, it will take a very long time (maybe 10 minutes, depends on your internet speed) but have no fear: downloads will be cached & most build steps won't ever need to be repeated again so subsequent `make start` runs will go much more quickly. Get this started asap & browse the rest of the README while the first `make start` runs.
+That's all! But beware: the first time `make start-node` is run, it will take a very long time (maybe 10 minutes, depends on your internet speed) but have no fear: downloads will be cached & most build steps won't ever need to be repeated again so subsequent `make start` runs will go much more quickly. Get this started asap & browse the rest of the README while the first `make start` runs.
 
 By default, Vector will launch using two local chains (ganache with chain id `1337` and `1338`) but you can also run a local Vector stack against a public chain (or multiple chains!) such as Rinkeby. To do so, edit the `chainProviders` and `chainAddresses` fields of `config.json` according to the chain you want to support.
 
@@ -60,13 +63,14 @@ privateKey: "0xc87509a1c067bbde78beb793e6fa76530b6382a4c0241e5e4a9ec0a0f44dc0d3"
 address: "0x627306090abaB3A6e1400e9345bC60c78a8BEf57";
 ```
 
-To apply updates to `config.json`, you'll need to restart your vector node with `make restart`.
+To apply updates to `config.json`, you'll need to restart your vector node with `make restart-node`.
 
-(`make start`/`make restart` are aliases for `make start-node`/`make restart-node`)
+(`make start`/`make restart` are aliases for `make start-router`/`make restart-router`)
 
 Four different Vector stacks are supported:
 
-- `global`: standalone messaging service (+ EVMs in dev-mode)
+- `messaging`: standalone messaging + auth service
+- `chains`: EVMs in dev-mode
 - `node`: vector node + database
 - `router`: vector node + router + database
 - `duet`: 2x node/db pairs, used to test one-on-one node interactions
