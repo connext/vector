@@ -1,18 +1,24 @@
 module.exports = {
   parser: "@typescript-eslint/parser",
-  plugins: ["import"],
+  plugins: [
+    "import",
+    "@typescript-eslint/eslint-plugin",
+    "eslint-plugin-tsdoc",
+  ],
   extends: [
     "plugin:@typescript-eslint/recommended",
-    "prettier/@typescript-eslint",
     "plugin:import/errors",
     "plugin:import/warnings",
     "plugin:import/typescript",
   ],
   parserOptions: {
+    project: "./tsconfig.json",
+    tsconfigRootDir: __dirname,
     ecmaVersion: 2018,
     sourceType: "module",
   },
   rules: {
+    "tsdoc/syntax": "warn",
     "@typescript-eslint/no-empty-interface": ["off"],
     "@typescript-eslint/no-non-null-assertion": ["off"],
     "comma-dangle": ["warn", "always-multiline"],
