@@ -28,7 +28,6 @@ import {
   MinimalTransaction,
   WITHDRAWAL_RESOLVED_EVENT,
   VectorErrorJson,
-  getConfirmationsForChain,
 } from "@connext/vector-types";
 import {
   generateMerkleTreeData,
@@ -709,6 +708,7 @@ export class VectorEngine implements IVectorEngine {
     params: EngineParams.Deposit,
   ): Promise<Result<ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_deposit], EngineError>> {
     const method = "deposit";
+    const timeout = 500;
     const methodId = getRandomBytes32();
     this.logger.info({ params, method, methodId }, "Method started");
     const validate = ajv.compile(EngineParams.DepositSchema);
@@ -754,6 +754,7 @@ export class VectorEngine implements IVectorEngine {
       this.logger.warn({ attempt: count, channelAddress: params.channelAddress }, "Retrying deposit reconciliation");
       depositRes = await this.vector.deposit(params);
       count++;
+      await delay(timeout);
     }
     this.logger.info(
       {
@@ -952,21 +953,22 @@ export class VectorEngine implements IVectorEngine {
 
     // set up event listeners before sending request
     const timeout = 90_000;
-    const resolvedReconciled = Promise.all([
-      // resolved should always happen
-      this.evts[WITHDRAWAL_RESOLVED_EVENT].waitFor(
-        (data) => data.channelAddress === params.channelAddress && data.transfer.transferId === transferId,
-        timeout,
-      ),
-      // reconciling (submission to chain) may not happen (i.e. holding
-      // mainnet withdrawals for lower gas)
-      Promise.race([
-        this.evts[WITHDRAWAL_RECONCILED_EVENT].waitFor(
-          (data) => data.channelAddress === params.channelAddress && data.transferId === transferId,
+    const resolvedReconciled = (_transferId) =>
+      Promise.all([
+        // resolved should always happen
+        this.evts[WITHDRAWAL_RESOLVED_EVENT].waitFor(
+          (data) => data.channelAddress === params.channelAddress && data.transfer.transferId === _transferId,
+          timeout,
         ),
-        delay(timeout),
-      ]),
-    ]);
+        // reconciling (submission to chain) may not happen (i.e. holding
+        // mainnet withdrawals for lower gas)
+        Promise.race([
+          this.evts[WITHDRAWAL_RECONCILED_EVENT].waitFor(
+            (data) => data.channelAddress === params.channelAddress && data.transferId === _transferId,
+          ),
+          delay(timeout),
+        ]),
+      ]);
 
     // create withdrawal transfer
     const protocolRes = await this.vector.create(createParams);
@@ -980,7 +982,7 @@ export class VectorEngine implements IVectorEngine {
     let transactionHash: string | undefined = undefined;
     let transaction: MinimalTransaction | undefined = undefined;
     try {
-      const [resolved, reconciled] = await resolvedReconciled;
+      const [resolved, reconciled] = await resolvedReconciled(transferId);
       transactionHash = typeof reconciled === "object" ? reconciled.transactionHash : undefined;
       transaction = resolved.transaction;
     } catch (e) {
