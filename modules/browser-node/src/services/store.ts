@@ -103,12 +103,12 @@ class VectorIndexedDBDatabase extends Dexie {
     });
 
     this.version(4).stores({
-      withdrawCommitment: "transferId,channelAddress",
-    });
-
-    this.version(4).stores({
       channelDisputes: "channelAddress",
       transferDisputes: "transferId",
+    });
+
+    this.version(5).stores({
+      withdrawCommitment: "transferId,channelAddress,transactionHash",
     });
 
     this.channels = this.table("channels");
