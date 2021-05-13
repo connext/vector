@@ -26,7 +26,6 @@ import {
   MinimalTransaction,
   WITHDRAWAL_RESOLVED_EVENT,
   VectorErrorJson,
-  getConfirmationsForChain,
   ProtocolError,
 } from "@connext/vector-types";
 import {
@@ -881,21 +880,22 @@ export class VectorEngine implements IVectorEngine {
 
     // set up event listeners before sending request
     const timeout = 90_000;
-    const resolvedReconciled = Promise.all([
-      // resolved should always happen
-      this.evts[WITHDRAWAL_RESOLVED_EVENT].waitFor(
-        (data) => data.channelAddress === params.channelAddress && data.transfer.transferId === transferId,
-        timeout,
-      ),
-      // reconciling (submission to chain) may not happen (i.e. holding
-      // mainnet withdrawals for lower gas)
-      Promise.race([
-        this.evts[WITHDRAWAL_RECONCILED_EVENT].waitFor(
-          (data) => data.channelAddress === params.channelAddress && data.transferId === transferId,
+    const resolvedReconciled = (_transferId) =>
+      Promise.all([
+        // resolved should always happen
+        this.evts[WITHDRAWAL_RESOLVED_EVENT].waitFor(
+          (data) => data.channelAddress === params.channelAddress && data.transfer.transferId === _transferId,
+          timeout,
         ),
-        delay(timeout),
-      ]),
-    ]);
+        // reconciling (submission to chain) may not happen (i.e. holding
+        // mainnet withdrawals for lower gas)
+        Promise.race([
+          this.evts[WITHDRAWAL_RECONCILED_EVENT].waitFor(
+            (data) => data.channelAddress === params.channelAddress && data.transferId === _transferId,
+          ),
+          delay(timeout),
+        ]),
+      ]);
 
     // create withdrawal transfer
     const protocolRes = await this.runProtocolMethodWithRetries<FullChannelState>(() =>
@@ -911,7 +911,7 @@ export class VectorEngine implements IVectorEngine {
     let transactionHash: string | undefined = undefined;
     let transaction: MinimalTransaction | undefined = undefined;
     try {
-      const [resolved, reconciled] = await resolvedReconciled;
+      const [resolved, reconciled] = await resolvedReconciled(transferId);
       transactionHash = typeof reconciled === "object" ? reconciled.transactionHash : undefined;
       transaction = resolved.transaction;
     } catch (e) {
@@ -1447,6 +1447,7 @@ export class VectorEngine implements IVectorEngine {
         return result;
       }
       this.logger.warn({ attempt: i, error: result.getError().message }, "Protocol method failed");
+      await delay(500);
     }
     return result as Result<T, ProtocolError>;
   }

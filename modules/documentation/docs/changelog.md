@@ -2,6 +2,14 @@
 
 ## Next Release
 
+## 0.2.5-beta.5
+
+- \[utils\] Add PlotX token
+
+## 0.2.5-beta.4
+
+- \[utils\] Bump non-mainnet confirmations from 3 to 10
+
 ## 0.2.5-beta.3
 
 - \[contracts\] Don't revitalize tx
