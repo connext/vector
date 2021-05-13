@@ -680,16 +680,16 @@ describe("ethService unit test", () => {
     });
 
     it("should wait for the required amount of confirmations", async () => {
-      provider1337.send.onFirstCall().resolves({ ...txReceipt, confirmations: 0 });
-      provider1337.send.onSecondCall().resolves({ ...txReceipt, confirmations: 0 });
-      provider1337.send.onThirdCall().resolves(txReceipt);
+      provider1337.getTransactionReceipt.onFirstCall().resolves({ ...txReceipt, confirmations: 0 });
+      provider1337.getTransactionReceipt.onSecondCall().resolves({ ...txReceipt, confirmations: 0 });
+      provider1337.getTransactionReceipt.onThirdCall().resolves(txReceipt);
       const res = await ethService.waitForConfirmation(1337, txResponse);
       expect(res).to.deep.eq(txReceipt);
-      expect(provider1337.send.callCount).to.eq(3);
+      expect(provider1337.getTransactionReceipt.callCount).to.eq(3);
     });
 
     it("should error with a timeout error if it is past the confirmation time", async () => {
-      provider1337.send.onThirdCall().resolves(undefined);
+      provider1337.getTransactionReceipt.onThirdCall().resolves(undefined);
       await expect(ethService.waitForConfirmation(1337, txResponse)).to.eventually.be.rejectedWith(
         ChainError.retryableTxErrors.ConfirmationTimeout,
       );
