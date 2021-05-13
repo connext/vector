@@ -388,7 +388,6 @@ export const withdraw = async (
   } else {
     const { transactionHash } = withdrawalRes.getValue()!;
     expect(transactionHash).to.be.ok;
-    const receipt = await provider.waitForTransaction(transactionHash!);
   }
 
   const postWithdrawChannel = (await withdrawer.getStateChannel({ channelAddress })).getValue()! as FullChannelState;
