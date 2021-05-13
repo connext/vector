@@ -806,7 +806,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
     sender: string,
     amount: string,
     assetId: string,
-  ): Promise<Result<TransactionReceipt, ChainError>> {);
+  ): Promise<Result<TransactionReceipt, ChainError>> {
     const method = "sendDepositTx";
     const methodId = getRandomBytes32();
     const signer = this.signers.get(channelState.networkContext.chainId);
