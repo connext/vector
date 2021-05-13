@@ -206,9 +206,8 @@ model OnchainTransaction {
   channel        Channel @relation(fields: [channelAddress], references: [channelAddress])
 
   // Tx fields
-  attempts                 OnchainTransactionAttempt[] // 1-n
-  receipt                  OnchainTransactionReceipt?  @relation(fields: [confirmedTransactionHash], references: [transactionHash]) // 1-1
-  confirmedTransactionHash String?
+  attempts OnchainTransactionAttempt[] // 1-n
+  receipt  OnchainTransactionReceipt?
 
   @@map(name: "onchain_transaction")
 }
@@ -227,8 +226,9 @@ model OnchainTransactionAttempt {
 }
 
 model OnchainTransactionReceipt {
-  createdAt          DateTime            @default(now())
-  onchainTransaction OnchainTransaction?
+  createdAt            DateTime           @default(now())
+  onchainTransaction   OnchainTransaction @relation(fields: [onchainTransactionId], references: [id]) // 1-1
+  onchainTransactionId String
 
   // Response fields
   transactionHash String @id

@@ -661,7 +661,6 @@ export const testStore = <T extends IEngineStore>(
         expect(storedTransaction).to.containSubset({
           ...sanitizedResponse,
           status: StoredTransactionStatus.mined,
-          confirmedTransactionHash: response.hash,
           receipt: sanitizeReceipt(receipt),
         });
       });

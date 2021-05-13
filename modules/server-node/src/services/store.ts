@@ -67,7 +67,6 @@ const convertOnchainTransactionEntityToTransaction = (
     status: onchainEntity.status as StoredTransactionStatus,
     to: onchainEntity.to!,
     value: onchainEntity.value!,
-    confirmedTransactionHash: onchainEntity.confirmedTransactionHash ?? undefined,
     error: onchainEntity.error ?? undefined,
     receipt: receipt
       ? {
@@ -372,6 +371,7 @@ export class PrismaStore implements IServerNodeStore {
         data: response.data,
         value: (response.value ?? BigNumber.from(0)).toString(),
         reason,
+        receipt: undefined,
         attempts: {
           create: {
             gasLimit: (response.gasLimit ?? BigNumber.from(0)).toString(),
@@ -405,7 +405,7 @@ export class PrismaStore implements IServerNodeStore {
     });
   }
 
-  async saveTransactionReceipt(onchainTransactionId: string, transaction: TransactionReceipt): Promise<void> {
+  async saveTransactionReceipt(onchainTransactionId: string, receipt: TransactionReceipt): Promise<void> {
     await this.prisma.onchainTransaction.update({
       where: {
         id: onchainTransactionId,
@@ -414,18 +414,18 @@ export class PrismaStore implements IServerNodeStore {
         status: StoredTransactionStatus.mined,
         receipt: {
           create: {
-            transactionHash: transaction.transactionHash,
-            blockHash: transaction.blockHash,
-            blockNumber: transaction.blockNumber,
-            byzantium: transaction.byzantium,
-            contractAddress: transaction.contractAddress,
-            cumulativeGasUsed: (transaction.cumulativeGasUsed ?? BigNumber.from(0)).toString(),
-            gasUsed: (transaction.gasUsed ?? BigNumber.from(0)).toString(),
-            logs: transaction.logs.join(",").toString(),
-            logsBloom: transaction.logsBloom,
-            root: transaction.root,
-            status: transaction.status,
-            transactionIndex: transaction.transactionIndex,
+            transactionHash: receipt.transactionHash,
+            blockHash: receipt.blockHash,
+            blockNumber: receipt.blockNumber,
+            byzantium: receipt.byzantium,
+            contractAddress: receipt.contractAddress,
+            cumulativeGasUsed: (receipt.cumulativeGasUsed ?? BigNumber.from(0)).toString(),
+            gasUsed: (receipt.gasUsed ?? BigNumber.from(0)).toString(),
+            logs: receipt.logs.join(",").toString(),
+            logsBloom: receipt.logsBloom,
+            root: receipt.root,
+            status: receipt.status,
+            transactionIndex: receipt.transactionIndex,
           },
         },
       },
@@ -459,7 +459,7 @@ export class PrismaStore implements IServerNodeStore {
                 root: receipt.root,
                 status: receipt.status,
                 transactionIndex: receipt.transactionIndex,
-              },
+              } as StoredTransactionReceipt,
             }
           : undefined,
       },
@@ -471,7 +471,13 @@ export class PrismaStore implements IServerNodeStore {
     // HashZero is used if the transaction was already submitted and we
     // have no record
     const entity = await this.prisma.transfer.findFirst({
-      where: { onchainTransaction: { confirmedTransactionHash: transactionHash } },
+      where: {
+        onchainTransaction: {
+          receipt: {
+            transactionHash: transactionHash
+          }
+        }
+      },
       include: { channel: true, createUpdate: true, resolveUpdate: true, onchainTransaction: true },
     });
     if (!entity) {
@@ -516,7 +522,7 @@ export class PrismaStore implements IServerNodeStore {
       entity.resolveUpdate!,
       entity.createUpdate!,
       channel,
-      entity.onchainTransaction?.confirmedTransactionHash || undefined,
+      // entity.onchainTransaction?.receipt?.transactionHash || undefined,
     );
   }
 
@@ -525,7 +531,11 @@ export class PrismaStore implements IServerNodeStore {
       return;
     }
     const record = await this.prisma.onchainTransaction.findFirst({
-      where: { confirmedTransactionHash: withdrawCommitment.transactionHash },
+      where: {
+        receipt: {
+          transactionHash: withdrawCommitment.transactionHash
+        }
+      },
     });
     if (!record) {
       // Did not submit transaction ourselves, no record to connect

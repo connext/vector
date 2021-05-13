@@ -396,8 +396,6 @@ export class EthereumChainService extends EthereumChainReader implements IVector
     let tryNumber: number = 0;
     let response: TransactionResponse | undefined;
     let receipt: TransactionReceipt | undefined;
-    // Nonce will persist across iterations, as soon as it is defined in the first one.
-    let nonce: number | undefined = undefined;
     let gasPrice: BigNumber;
 
     try {
@@ -423,6 +421,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
       tryNumber += 1;
       try {
         /// SUBMIT
+        // NOTE: Nonce will persist across iterations, as soon as it is defined in the first one.
         const result = await this.sendTx(txFn, gasPrice, response ? response.nonce : undefined);
         if (result.isError) {
           // If an error occurred, throw it to handle it in the catch block.
@@ -545,7 +544,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
     const numConfirmations = getConfirmationsForChain(chainId);
     // An anon fn to get the tx receipt, as we may require multiple retries with raised gas price.
     const getTransactionReceipt = async (): Promise<TransactionReceipt | undefined> => {
-      const receipt = await provider.send("eth_getTransactionReceipt", [response.hash]);
+      const receipt = await provider.getTransactionReceipt(response.hash);
       if (receipt?.confirmations < numConfirmations) {
         return undefined;
       }
@@ -807,7 +806,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
     sender: string,
     amount: string,
     assetId: string,
-  ): Promise<Result<TransactionReceipt, ChainError>> {
+  ): Promise<Result<TransactionReceipt, ChainError>> {);
     const method = "sendDepositTx";
     const methodId = getRandomBytes32();
     const signer = this.signers.get(channelState.networkContext.chainId);
