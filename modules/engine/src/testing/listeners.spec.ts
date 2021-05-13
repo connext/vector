@@ -59,6 +59,7 @@ import {
   handleWithdrawalTransferResolution,
   resolveExistingWithdrawals,
   setupEngineListeners,
+  submitUnsubmittedWithdrawals,
 } from "../listeners";
 import * as utils from "../utils";
 import * as listeners from "../listeners";
@@ -71,10 +72,10 @@ import { WithdrawQuoteError } from "../errors";
 const testName = "Engine listeners unit";
 const { log } = getTestLoggers(testName, env.logLevel);
 console.log("env.logLevel: ", env.logLevel);
+const chainId = parseInt(Object.keys(env.chainProviders)[0]);
 
 describe(testName, () => {
   // Get env constants
-  const chainId = parseInt(Object.keys(env.chainProviders)[0]);
   const withdrawAddress = mkAddress("0xdefff");
   const chainAddresses: ChainAddresses = {
     [chainId]: {
@@ -870,6 +871,52 @@ describe(testName, () => {
         } as ConditionalTransferRoutingCompletePayload),
       );
       await promise;
+    });
+  });
+
+  describe("submitUnsubmittedWithdrawals", () => {
+    it.only("should work", async () => {
+      const alice = getRandomChannelSigner();
+      const bob = getRandomChannelSigner();
+
+      const channel = createTestChannelState("create", { alice: alice.address, bob: bob.address });
+      channel.channel.networkContext.chainId = chainId;
+
+      const commitment = new WithdrawCommitment(
+        channel.channel.channelAddress,
+        alice.address,
+        bob.address,
+        mkAddress("0xabc"),
+        channel.transfer.assetId,
+        "1",
+        channel.channel.nonce.toString(),
+      );
+      const aliceSig = await alice.signMessage(commitment.hashToSign());
+      const bobSig = await bob.signMessage(commitment.hashToSign());
+
+      await commitment.addSignatures(aliceSig, bobSig);
+      console.log("commitment: ", commitment.toJson());
+
+      store.getUnsubmittedWithdrawals.resolves([
+        {
+          commitment: commitment.toJson(),
+          transfer: channel.transfer,
+        },
+        {
+          commitment: commitment.toJson(),
+          transfer: channel.transfer,
+        },
+      ]);
+      await submitUnsubmittedWithdrawals(
+        channel.channel,
+        store,
+        chainAddresses,
+        chainService as IVectorChainService,
+        log,
+      );
+
+      expect(chainService.sendWithdrawTx.callCount).to.eq(2);
+      expect(store.saveWithdrawalCommitment.callCount).to.eq(2);
     });
   });
 });

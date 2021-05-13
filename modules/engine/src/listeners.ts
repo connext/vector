@@ -343,6 +343,10 @@ export async function setupEngineListeners(
         gasSubsidyPercentage,
       );
 
+      if (channel.networkContext.chainId !== 1) {
+        submitUnsubmittedWithdrawals(channel, store, chainAddresses, chainService, logger);
+      }
+
       // respond if necessary
       if (!needsResponse) {
         return;
@@ -540,6 +544,55 @@ export async function resolveExistingWithdrawals(
       logger.info({ method, methodId, transfer: transfer!.transferId }, "Resolved withdrawal");
     }),
   );
+}
+
+export async function submitUnsubmittedWithdrawals(
+  channel: FullChannelState,
+  store: IEngineStore,
+  chainAddresses: ChainAddresses,
+  chainService: IVectorChainService,
+  logger: BaseLogger,
+): Promise<void> {
+  const method = "submitUnsubmittedWithdrawals";
+  const methodId = getRandomBytes32();
+
+  const withdrawInfo = await chainService.getRegisteredTransferByName(
+    TransferNames.Withdraw,
+    chainAddresses[channel.networkContext.chainId].transferRegistryAddress,
+    channel.networkContext.chainId,
+  );
+  if (withdrawInfo.isError) {
+    logger.error(
+      { method, methodId, error: withdrawInfo.getError()?.toJson() },
+      "Error in chainService.getRegisteredTransferByName",
+    );
+  }
+
+  const unsubmitted = await store.getUnsubmittedWithdrawals(channel.channelAddress, withdrawInfo.getValue().definition);
+  for (const u of unsubmitted) {
+    logger.info({ method, methodId, transferId: u.transfer.transferId }, "Submitting unsubmitted withdrawal");
+    try {
+      const commitment = await WithdrawCommitment.fromJson(u.commitment);
+      const tx = await chainService.sendWithdrawTx(channel, commitment.getSignedTransaction());
+      if (tx.isError) {
+        logger.error(
+          { method, methodId, error: tx.getError()?.toJson(), commitment: u },
+          "Error in chainService.sendWithdrawTx",
+        );
+      }
+      logger.info(
+        { method, methodId, transactionHash: tx.getValue().transactionHash },
+        "Submitted unsubmitted withdrawal",
+      );
+      commitment!.addTransaction(tx.getValue().transactionHash);
+      await store.saveWithdrawalCommitment(u.transfer.transferId, commitment!.toJson());
+    } catch (e) {
+      logger.error(
+        { method, methodId, error: jsonifyError(e), commitment: u },
+        "Error submitting unsubmitted withdrawal",
+      );
+    }
+  }
 }
 
 function handleSetup(
