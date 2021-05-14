@@ -2,6 +2,10 @@
 
 ## Next Release
 
+## 0.2.5-beta.6
+
+- \[utils\] Add FTM chain
+
 ## 0.2.5-beta.5
 
 - \[utils\] Add PlotX token
