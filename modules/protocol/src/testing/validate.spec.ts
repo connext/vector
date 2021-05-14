@@ -40,7 +40,7 @@ import * as vectorUtils from "../utils";
 import * as validation from "../validate";
 import * as vectorUpdate from "../update";
 
-describe.only("validateUpdateParams", () => {
+describe("validateUpdateParams", () => {
   // Test values
   const [initiator, responder] = Array(2)
     .fill(0)
@@ -782,7 +782,7 @@ describe.skip("validateParamsAndApplyUpdate", () => {
   });
 });
 
-describe.only("validateAndApplyInboundUpdate", () => {
+describe("validateAndApplyInboundUpdate", () => {
   // Test values
   let signers: ChannelSigner[];
   let previousState: FullChannelState;
