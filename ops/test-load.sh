@@ -3,7 +3,7 @@ set -e
 
 root=$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." >/dev/null 2>&1 && pwd )
 project=$(grep -m 1 '"name":' "$root/package.json" | cut -d '"' -f 4)
-
+echo $project
 # make sure a network for this project has been created
 docker swarm init 2> /dev/null || true
 docker network create --attachable --driver overlay "$project" 2> /dev/null || true
@@ -69,7 +69,7 @@ bash "$root/ops/start-trio.sh"
 tester_name=${project}_load_test_runner
 common=(
   ${interactive[@]}
-  "--env=NODE_TLS_REJECT_UNAUTHORIZED=0"
+  "--env=NODE_TLS_REJECT_UNAUTHORIZED=1"
   "--env=VECTOR_ADMIN_TOKEN=$VECTOR_ADMIN_TOKEN"
   "--env=VECTOR_CAROL_URL=http://carol:8000"
   "--env=VECTOR_CHAIN_ADDRESSES=$chain_addresses"

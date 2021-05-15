@@ -51,7 +51,7 @@ then
 
 else
   echo "Starting node in dev-mode"
-  exec ./node_modules/.bin/nodemon \
+  exec nodemon \
     --delay 1 \
     --exitcrash \
     --ignore ./**/*.test.ts \

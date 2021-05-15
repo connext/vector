@@ -15,13 +15,14 @@ export const cyclicalTransferTest = async (): Promise<void> => {
     0,
   );
   const manager = await AgentManager.connect(agentService);
+  // console.log(manager)
 
   const killSwitch = await manager.startCyclicalTransfers();
 
   setTimeout(async () => {
     logger.warn({}, "Killing test");
     await killSwitch();
-  }, 90_000);
+  }, 150_000);
 };
 
 // Should create a bunch of transfers in the queue, with an

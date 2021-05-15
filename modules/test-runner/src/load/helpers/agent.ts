@@ -98,8 +98,12 @@ export class Agent {
     // Create node on server at idx
     // NOTE: can safely be called multiple times
     const nodeRes = await nodeService.createNode({ index });
+
     if (nodeRes.isError) {
       throw nodeRes.getError()!;
+    }
+    if( nodeRes == undefined){
+      throw Error("Node res undefined")
     }
     const { publicIdentifier, signerAddress } = nodeRes.getValue();
 
@@ -218,17 +222,20 @@ export class Agent {
     try {
       const channel = await this.getChannel();
       // no error, exists, set + return channel addr
-      this.channelAddress = channel.channelAddress;
-      return channel.channelAddress;
+      if(channel?.channelAddress) {
+        this.channelAddress = channel.channelAddress;
+        return channel.channelAddress;
+      }
     } catch (e) {
       error = e;
     }
 
-    if (error && !error.message.includes("404")) {
+
+    if (error?.message && !error.message.includes("404")) {
       // Unknown error, do not setup
       throw error!;
     }
-
+    if (error){console.log("Unknown Error " + error); throw error!}
     // Setup the channel, did not exist previously
     const setup = await this.nodeService.setup({
       counterpartyIdentifier: this.rogerIdentifier,
