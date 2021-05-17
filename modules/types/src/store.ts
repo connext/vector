@@ -148,6 +148,10 @@ export interface IEngineStore extends IVectorStore, IChainServiceStore {
   // Getters
   getWithdrawalCommitment(transferId: string): Promise<WithdrawCommitmentJson | undefined>;
   getWithdrawalCommitmentByTransactionHash(transactionHash: string): Promise<WithdrawCommitmentJson | undefined>;
+  getUnsubmittedWithdrawals(
+    channelAddress: string,
+    withdrawalDefinition: string,
+  ): Promise<{ commitment: WithdrawCommitmentJson; transfer: FullTransferState }[]>;
 
   // NOTE: The engine does *not* care about the routingId (it is stored
   // in the meta of transfer objects), only the router module does.

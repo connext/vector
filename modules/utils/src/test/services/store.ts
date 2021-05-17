@@ -15,6 +15,13 @@ import {
 import { TransactionReceipt, TransactionResponse } from "@ethersproject/abstract-provider";
 
 export class MemoryStoreService implements IEngineStore {
+  getUnsubmittedWithdrawals(
+    channelAddress: string,
+    withdrawalDefinition: string,
+  ): Promise<{ commitment: WithdrawCommitmentJson; transfer: FullTransferState<any> }[]> {
+    throw new Error("Method not implemented.");
+  }
+
   getActiveTransactions(): Promise<StoredTransaction[]> {
     throw new Error("Method not implemented.");
   }
