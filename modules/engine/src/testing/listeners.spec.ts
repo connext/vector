@@ -876,6 +876,9 @@ describe(testName, () => {
 
   describe("submitUnsubmittedWithdrawals", () => {
     it("should work", async () => {
+      chainService.getWithdrawalTransactionRecord.onFirstCall().resolves(Result.ok(true));
+      chainService.getWithdrawalTransactionRecord.resolves(Result.ok(false));
+
       const alice = getRandomChannelSigner();
       const bob = getRandomChannelSigner();
 
@@ -915,7 +918,7 @@ describe(testName, () => {
         log,
       );
 
-      expect(chainService.sendWithdrawTx.callCount).to.eq(2);
+      expect(chainService.sendWithdrawTx.callCount).to.eq(1);
       expect(store.saveWithdrawalCommitment.callCount).to.eq(2);
     });
   });
