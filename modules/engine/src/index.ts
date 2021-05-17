@@ -1009,6 +1009,75 @@ export class VectorEngine implements IVectorEngine {
     return Result.ok({ channel: res, transactionHash, transaction: transaction! });
   }
 
+  private async withdrawRetry(
+    params: EngineParams.WithdrawRetry,
+  ): Promise<Result<ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_withdrawRetry], EngineError>> {
+    const method = "withdrawRetry";
+    const methodId = getRandomBytes32();
+    this.logger.info({ params, method, methodId }, "Method started");
+    const validate = ajv.compile(EngineParams.WithdrawSchema);
+    const valid = validate(params);
+    if (!valid) {
+      return Result.fail(
+        new RpcError(RpcError.reasons.InvalidParams, params.channelAddress ?? "", this.publicIdentifier, {
+          invalidParamsError: validate.errors?.map((e) => e.message).join(","),
+          invalidParams: params,
+        }),
+      );
+    }
+
+    const json = await this.store.getWithdrawalCommitment(params.transferId);
+    if (!json) {
+      return Result.fail(
+        new RpcError(RpcError.reasons.WithdrawResolutionFailed, params.channelAddress, this.publicIdentifier, {
+          transferId: params.transferId,
+        }),
+      );
+    }
+
+    const commitment = await WithdrawCommitment.fromJson(json);
+
+    const channelRes = await this.getChannelState({ channelAddress: params.channelAddress });
+    if (channelRes.isError) {
+      return Result.fail(channelRes.getError()!);
+    }
+    const channel = channelRes.getValue();
+    if (!channel) {
+      return Result.fail(
+        new RpcError(RpcError.reasons.ChannelNotFound, params.channelAddress, this.publicIdentifier, {
+          transferId: params.transferId,
+        }),
+      );
+    }
+
+    if (!json.bobSignature || !json.aliceSignature) {
+      return Result.fail(
+        new RpcError(RpcError.reasons.CommitmentSingleSigned, params.channelAddress, this.publicIdentifier, {
+          transferId: params.transferId,
+        }),
+      );
+    }
+
+    this.logger.info(
+      { channelAddress: params.channelAddress, transferId: params.transferId },
+      "Withdraw retry initiated",
+    );
+    const transaction = await this.chainService.sendWithdrawTx(channel, commitment.getSignedTransaction());
+    if (transaction.isError) {
+      return Result.fail(transaction.getError()!);
+    }
+    const txHash = transaction.getValue().transactionHash;
+    commitment!.addTransaction(txHash);
+    await this.store.saveWithdrawalCommitment(params.transferId, commitment!.toJson());
+
+    this.logger.info({ channel: channel, method, methodId, txHash, transaction }, "Method complete");
+    return Result.ok({
+      transactionHash: txHash,
+      transferId: params.transferId,
+      channelAddress: channel.channelAddress,
+    });
+  }
+
   private async decrypt(encrypted: string): Promise<Result<string, EngineError>> {
     const method = "decrypt";
     const methodId = getRandomBytes32();
