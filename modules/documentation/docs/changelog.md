@@ -2,6 +2,10 @@
 
 ## Next Release
 
+## 0.2.5-beta.7
+
+- \[contracts\] Tx service schema updates
+
 ## 0.2.5-beta.6
 
 - \[utils\] Add FTM chain
