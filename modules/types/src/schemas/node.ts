@@ -363,6 +363,11 @@ const PostWithdrawTransferBodySchema = Type.Intersect([
   Type.Object({ publicIdentifier: TPublicIdentifier }),
 ]);
 
+const PostWithdrawRetryTransferBodySchema = Type.Intersect([
+  EngineParams.WithdrawSchema,
+  Type.Object({ publicIdentifier: TPublicIdentifier }),
+]);
+
 const PostWithdrawTransferResponseSchema = {
   200: Type.Object({
     channelAddress: TAddress,
@@ -376,6 +381,13 @@ const PostWithdrawTransferResponseSchema = {
   }),
 };
 
+const PostWithdrawRetryTransferResponseSchema = {
+  200: Type.Object({
+    channelAddress: TAddress,
+    transferId: TBytes32,
+    transactionHash: Type.Optional(TBytes32),
+  }),
+};
 // POST SIGN UTILITY MESSAGE
 const PostSignUtilityMessageBodySchema = Type.Intersect([
   EngineParams.SignUtilityMessageSchema,
@@ -661,6 +673,9 @@ export namespace NodeParams {
   export const WithdrawSchema = PostWithdrawTransferBodySchema;
   export type Withdraw = Static<typeof WithdrawSchema>;
 
+  export const WithdrawRetrySchema = PostWithdrawRetryTransferBodySchema;
+  export type WithdrawRetry = Static<typeof WithdrawRetrySchema>;
+
   export const RegisterListenerSchema = PostRegisterListenerBodySchema;
   export type RegisterListener = Static<typeof RegisterListenerSchema>;
 
@@ -793,6 +808,9 @@ export namespace NodeResponses {
 
   export const WithdrawSchema = PostWithdrawTransferResponseSchema;
   export type Withdraw = Static<typeof WithdrawSchema["200"]>;
+
+  export const WithdrawRetrySchema = PostWithdrawRetryTransferResponseSchema;
+  export type WithdrawRetry = Static<typeof WithdrawRetrySchema["200"]>;
 
   export const RegisterListenerSchema = PostRegisterListenerResponseSchema;
   export type RegisterListener = Static<typeof RegisterListenerSchema["200"]>;
