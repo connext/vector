@@ -29,6 +29,7 @@ function App() {
   const [requestCollateralLoading, setRequestCollateralLoading] = useState<boolean>(false);
   const [transferLoading, setTransferLoading] = useState<boolean>(false);
   const [withdrawLoading, setWithdrawLoading] = useState<boolean>(false);
+  const [withdrawRetryLoading, setWithdrawRetryLoading] = useState<boolean>(false);
 
   const [connectError, setConnectError] = useState<string>();
   const [copied, setCopied] = useState<boolean>(false);
@@ -282,6 +283,18 @@ function App() {
       console.error("Error withdrawing", requestRes.getError());
     }
     setWithdrawLoading(false);
+  };
+
+  const withdrawRetry = async (transferId: string) => {
+    setWithdrawRetryLoading(true);
+    const requestRes = await node.withdrawRetry({
+      channelAddress: selectedChannel.channelAddress,
+      transferId: transferId,
+    });
+    if (requestRes.isError) {
+      console.error("Error withdrawing", requestRes.getError());
+    }
+    setWithdrawRetryLoading(false);
   };
 
   const signMessage = async (message: string): Promise<string> => {
@@ -824,6 +837,10 @@ function App() {
               </Form>
             </Col>
           </Row>
+        
+
+          <Divider orientation="left">Withdraw Retry</Divider>
+          
         </>
       )}
     </div>
