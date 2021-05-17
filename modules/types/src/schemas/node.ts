@@ -429,18 +429,6 @@ const PostAdminResponseSchema = {
   }),
 };
 
-// SPEED UP TX
-const PostAdminSpeedUpTxBodySchema = Type.Intersect([
-  PostAdminBodySchema,
-  Type.Object({ transactionHash: Type.String(), publicIdentifier: TPublicIdentifier }),
-]);
-
-const PostAdminSpeedUpTxResponseSchema = {
-  200: Type.Object({
-    transactionHash: Type.String(),
-  }),
-};
-
 // RETRY SUBMITTING WITHDRAWAL TRANSACTION
 const PostAdminRetryWithdrawTransactionBodySchema = Type.Object({
   adminToken: Type.String(),
@@ -673,9 +661,6 @@ export namespace NodeParams {
   export const AdminSchema = PostAdminBodySchema;
   export type Admin = Static<typeof AdminSchema>;
 
-  export const SpeedUpTxSchema = PostAdminSpeedUpTxBodySchema;
-  export type SpeedUpTx = Static<typeof SpeedUpTxSchema>;
-
   export const CreateNodeSchema = PostCreateNodeBodySchema;
   export type CreateNode = Static<typeof CreateNodeSchema>;
 
@@ -805,9 +790,6 @@ export namespace NodeResponses {
 
   export const AdminSchema = PostAdminResponseSchema;
   export type Admin = Static<typeof AdminSchema["200"]>;
-
-  export const SpeedUpTxSchema = PostAdminSpeedUpTxResponseSchema;
-  export type SpeedUpTx = Static<typeof PostAdminSpeedUpTxResponseSchema["200"]>;
 
   export const CreateNodeSchema = PostCreateNodeResponseSchema;
   export type CreateNode = Static<typeof CreateNodeSchema["200"]>;

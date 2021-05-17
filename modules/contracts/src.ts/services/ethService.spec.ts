@@ -395,48 +395,6 @@ describe("ethService unit test", () => {
     });
   });
 
-  describe("speedUpTx", () => {
-    const minTx: MinimalTransaction & { transactionHash: string; nonce: number } = {
-      data: mkBytes32("0xabc"),
-      to: mkAddress("0xbca"),
-      value: 0,
-      transactionHash: mkBytes32("0xfff"),
-      nonce: 8,
-    };
-
-    beforeEach(() => {
-      sendTxWithRetriesMock = stub(ethService, "sendTxWithRetries").resolves(Result.ok(txReceipt));
-    });
-
-    it("errors if cannot get a signer", async () => {
-      const result = await ethService.speedUpTx(1234, minTx);
-      assertResult(result, true, ChainError.reasons.SignerNotFound);
-    });
-
-    it("errors if cannot get transaction", async () => {
-      provider1337.getTransaction.rejects("Boooo");
-      const result = await ethService.speedUpTx(1337, minTx);
-      assertResult(result, true, ChainError.reasons.TxNotFound);
-    });
-
-    it("errors if transaction is confirmed", async () => {
-      stub(ethService, "getTxResponseFromHash").resolves(Result.ok({ response: txResponse, receipt: txReceipt }));
-      const result = await ethService.speedUpTx(1337, minTx);
-      assertResult(result, true, ChainError.reasons.TxAlreadyMined);
-    });
-
-    it("happy: speeds up tx", async () => {
-      provider1337.getTransaction.resolves({ confirmations: 0 } as any);
-      const result = await ethService.speedUpTx(1337, minTx);
-      assertResult(result, false, txReceipt);
-      expect(sendTxWithRetriesMock.callCount).to.eq(1);
-      const call = sendTxWithRetriesMock.getCall(0);
-      expect(call.args[0]).to.eq(minTx.to);
-      expect(call.args[1]).to.eq(1337);
-      expect(call.args[2]).to.eq(TransactionReason.speedUpTransaction);
-    });
-  });
-
   describe("sendTxWithRetries", () => {
     let sendAndConfirmTx: SinonStub;
 
