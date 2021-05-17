@@ -260,60 +260,6 @@ export class EthereumChainService extends EthereumChainReader implements IVector
     }
   }
 
-  public async speedUpTx(
-    chainId: number,
-    tx: MinimalTransaction & { transactionHash: string; nonce: number },
-  ): Promise<Result<TransactionReceipt, ChainError>> {
-    const method = "speedUpTx";
-    const methodId = getRandomBytes32();
-    this.log.info({ method, methodId, transactionHash: tx.transactionHash }, "Method started");
-    let receipt: TransactionResponse | null;
-    const signer = this.getSigner(chainId);
-    if (!signer) {
-      return Result.fail(new ChainError(ChainError.reasons.SignerNotFound, { chainId }));
-    }
-    // Make sure tx is not mined already
-    const getTxRes = await this.getTxResponseFromHash(chainId, tx.transactionHash);
-    if (getTxRes.isError) {
-      return Result.fail(getTxRes.getError()!);
-    }
-    if (getTxRes.getValue().receipt) {
-      return Result.fail(new ChainError(ChainError.reasons.TxAlreadyMined));
-    }
-
-    // Safe to retry sending
-    const txRes = await this.sendTxWithRetries(
-      tx.to,
-      chainId,
-      TransactionReason.speedUpTransaction,
-      async (gasPrice: BigNumber, nonce?: number) => {
-        const price = await this.getGasPrice(chainId);
-        if (price.isError) {
-          throw price.getError()!;
-        }
-        const current = price.getValue().add(parseUnits("20", "gwei"));
-        const increased = current.gt(receipt?.gasPrice ?? 0)
-          ? current
-          : BigNumber.from(receipt?.gasPrice ?? 0).add(parseUnits("20", "gwei"));
-        return signer.sendTransaction({
-          to: tx.to,
-          data: tx.data,
-          chainId,
-          gasPrice: increased,
-          nonce: tx.nonce,
-          value: BigNumber.from(tx.value),
-        });
-      },
-    );
-    if (txRes.isError) {
-      return Result.fail(txRes.getError()!);
-    }
-    if (!txRes.getValue()) {
-      return Result.fail(new ChainError(ChainError.reasons.FailedToSendTx, { message: "Tx response not available" }));
-    }
-    return Result.ok(txRes.getValue()!);
-  }
-
   public async sendTxWithRetries(
     channelAddress: string,
     chainId: number,
