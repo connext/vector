@@ -45,7 +45,7 @@ import { parseUnits } from "ethers/lib/utils";
 export const EXTRA_GAS = 50_000;
 // The amount of time (ms) to wait before a confirmation polling period times out,
 // indiciating we should resubmit tx with higher gas if the tx is not confirmed.
-export const CONFIRMATION_TIMEOUT = 15_000;
+export const CONFIRMATION_TIMEOUT = 45_000;
 // The min percentage to bump gas.
 export const GAS_BUMP_PERCENT = 20;
 // 1M gas should cover all Connext txs. Gas won't exceed this amount.
@@ -361,7 +361,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
 
     // This is the gas bump loop.
     // We will raise gas price for a tx if the confirmation of the tx times out.
-    // (Default timeout should be around ~15 sec, i.e. GAS_BUMP_THRESHOLD)
+    // (Default timeout is GAS_BUMP_THRESHOLD)
     let onchainTransactionId = uuidV4();
     while (!receipt) {
       tryNumber += 1;
