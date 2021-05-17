@@ -364,7 +364,7 @@ const PostWithdrawTransferBodySchema = Type.Intersect([
 ]);
 
 const PostWithdrawRetryTransferBodySchema = Type.Intersect([
-  EngineParams.WithdrawSchema,
+  EngineParams.WithdrawRetrySchema,
   Type.Object({ publicIdentifier: TPublicIdentifier }),
 ]);
 
