@@ -45,12 +45,14 @@ export VECTOR_JWT_SIGNER_PUBLIC_KEY
 
 if [[ "$VECTOR_PROD" == "true" ]]
 then
-  echo "Starting node in prod-mode"
+  echo "listing"
+  exec ls
+  echo "Starting messaging in prod-mode"
   export NODE_ENV=production
   exec node --no-deprecation dist/bundle.js
 
 else
-  echo "Starting node in dev-mode"
+  echo "Starting messaging in dev-mode"
   exec ./node_modules/.bin/nodemon \
     --delay 1 \
     --exitcrash \
