@@ -760,7 +760,7 @@ export async function handleConditionalTransferCreation(
   // if transfer is created and we are the end recipient, emit event now and end
   if (
     transfer.responderIdentifier === signer.publicIdentifier &&
-    (transfer.meta as RouterSchemas.RouterMeta)?.path[0]?.recipient === signer.publicIdentifier
+    ((transfer.meta as RouterSchemas.RouterMeta)?.path ?? [])[0]?.recipient === signer.publicIdentifier
   ) {
     evts.CONDITIONAL_TRANSFER_ROUTING_COMPLETE.post({
       publicIdentifier: signer.publicIdentifier,

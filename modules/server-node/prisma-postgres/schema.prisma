@@ -24,23 +24,25 @@ model Balance {
 }
 
 model ChannelDispute {
-  channelAddress          String    @id  // TODO: better ID?
-  channelStateHash        String
-  nonce                   String
-  merkleRoot              String
-  consensusExpiry         String
-  defundExpiry            String
+  channelAddress   String @id // TODO: better ID?
+  channelStateHash String
+  nonce            String
+  merkleRoot       String
+  consensusExpiry  String
+  defundExpiry     String
 
-  channel                 Channel @relation("OffchainChannel", fields: [channelAddress], references: [channelAddress])
+  channel Channel @relation("OffchainChannel", fields: [channelAddress], references: [channelAddress])
+  @@map(name: "channel_dispute")
 }
 
 model TransferDispute {
-  transferId             String     @id // TODO: better ID?
-  transferStateHash      String
-  transferDisputeExpiry  String
-  isDefunded             Boolean
+  transferId            String  @id // TODO: better ID?
+  transferStateHash     String
+  transferDisputeExpiry String
+  isDefunded            Boolean
 
-  transfer               Transfer @relation("OffchainTransfer", fields: [transferId], references: [transferId])
+  transfer Transfer @relation("OffchainTransfer", fields: [transferId], references: [transferId])
+  @@map(name: "transfer_dispute")
 }
 
 model Channel {
@@ -70,7 +72,7 @@ model Channel {
   // The `*Reference` field links to the offchain transfer representation
   // while the `*Record` field links to the onchain representation that
   // has the transferId suffix `-dispute`
-  dispute                 ChannelDispute? @relation("OffchainChannel")
+  dispute ChannelDispute? @relation("OffchainChannel")
 
   @@unique([publicIdentifierA, publicIdentifierB, chainId])
   @@unique([participantA, participantB, chainId])
@@ -144,8 +146,8 @@ model Transfer {
   // has onchainTransactionId always if withdrawal
   // has OnchainTransaction relation IFF we submitted (and have tx record)
   onchainTransactionId String?
-  transactionHash      String?
-  onchainTransaction   OnchainTransaction? @relation(name: "Transaction", fields: [transactionHash], references: [transactionHash])
+  onchainTransaction   OnchainTransaction? @relation(fields: [onchainTransactionId], references: [id])
+  transactionHash      String? // in case we didn't submit
 
   // balance
   amountA String
@@ -167,7 +169,7 @@ model Transfer {
   resolveUpdateChannelAddressId String?
   resolveUpdateNonce            Int?
 
-  dispute                       TransferDispute? @relation("OffchainTransfer")
+  dispute TransferDispute? @relation("OffchainTransfer")
 
   @@unique([routingId, channelAddressId])
   @@map(name: "transfer")
@@ -184,16 +186,52 @@ model EventSubscription {
 }
 
 model OnchainTransaction {
+  id        String    @id @default(uuid())
+  createdAt DateTime  @default(now())
+  transfer  Transfer?
+
+  // Response fields : should be saved upon receiving first response
+  chainId String?
+  nonce   Int?
+  to      String?
+  from    String?
+  data    String?
+  value   String?
+
+  // Channel fields
+  status         String  @default("submitted") // no enums
+  reason         String // no enums
+  error          String?
+  channelAddress String
+  channel        Channel @relation(fields: [channelAddress], references: [channelAddress])
+
+  // Tx fields
+  attempts OnchainTransactionAttempt[] // 1-n
+  receipt  OnchainTransactionReceipt?
+
+  @@map(name: "onchain_transaction")
+}
+
+model OnchainTransactionAttempt {
+  createdAt            DateTime            @default(now())
+  onchainTransaction   OnchainTransaction? @relation(fields: [onchainTransactionId], references: [id])
+  onchainTransactionId String
+
   // Response fields
   transactionHash String @id
-  to              String
-  from            String
-  data            String
-  value           String
-  chainId         String
-  nonce           Int
   gasLimit        String
   gasPrice        String
+
+  @@map(name: "onchain_transaction_attempt")
+}
+
+model OnchainTransactionReceipt {
+  createdAt            DateTime           @default(now())
+  onchainTransaction   OnchainTransaction @relation(fields: [onchainTransactionId], references: [id]) // 1-1
+  onchainTransactionId String
+
+  // Response fields
+  transactionHash String @id
 
   // Receipt fields
   timestamp         String?
@@ -208,19 +246,9 @@ model OnchainTransaction {
   logs              String?
   cumulativeGasUsed String?
   byzantium         Boolean?
+  status            Int?
 
-  // Channel fields
-  status         String  @default("submitted") // no enums
-  reason         String // no enums
-  error          String?
-  channelAddress String
-  channel        Channel @relation(fields: [channelAddress], references: [channelAddress])
-
-  createdAt DateTime @default(now())
-
-  @@unique([transactionHash, chainId])
-  @@map(name: "onchain_transaction")
-  Transfer Transfer[] @relation("Transaction")
+  @@map(name: "onchain_transaction_receipt")
 }
 
 model Configuration {
