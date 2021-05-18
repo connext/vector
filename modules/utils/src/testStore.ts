@@ -10,8 +10,15 @@ import {
   WithdrawCommitmentJson,
   IEngineStore,
   IServerNodeStore,
+  StoredTransaction,
+  StoredTransactionAttempt,
+  StoredTransactionReceipt,
 } from "@connext/vector-types";
+import { TransactionReceipt, TransactionResponse } from "@ethersproject/abstract-provider";
+import { BigNumber } from "@ethersproject/bignumber";
 import { HashZero } from "@ethersproject/constants";
+import { assert } from "eccrypto-js";
+import { v4 as uuidV4 } from "uuid";
 import {
   createTestChannelState,
   mkBytes32,
@@ -28,6 +35,50 @@ import {
   getRandomChannelSigner,
   mkSig,
 } from ".";
+
+/// TODO(@jakekidd): We may want to move these helpers to utils
+/// Sanitize tx response for comparison to stored values.
+const sanitizeResponse = (response: TransactionResponse, channelAddress: string, reason: TransactionReason): StoredTransaction => {
+  return {
+    channelAddress,
+    status: StoredTransactionStatus.submitted,
+    reason,
+    to: response.to,
+    from: response.from,
+    data: response.data,
+    value: response.value.toString(),
+    chainId: response.chainId,
+    nonce: response.nonce,
+  } as StoredTransaction;
+}
+
+/// Sanitize tx response for comparison to stored value for tx attempts.
+const sanitizeAttempt = (response: TransactionResponse): StoredTransactionAttempt => {
+  return {
+    transactionHash: response.hash,
+    gasLimit: response.gasLimit.toString(),
+    gasPrice: response.gasPrice.toString(),
+  } as StoredTransactionAttempt;
+}
+
+// NOTE: This method exists as a private helper in browser-node. See above TODO.
+/// Sanitize tx receipt for comparison to stored value for tx receipt.
+const sanitizeReceipt = (receipt: TransactionReceipt): StoredTransactionReceipt => {
+  return {
+    transactionHash: receipt.transactionHash,
+    contractAddress: receipt.contractAddress,
+    transactionIndex: receipt.transactionIndex,
+    root: receipt.root,
+    gasUsed: receipt.gasUsed.toString(),
+    cumulativeGasUsed: receipt.cumulativeGasUsed.toString(),
+    logsBloom: receipt.logsBloom,
+    blockHash: receipt.blockHash,
+    blockNumber: receipt.blockNumber,
+    logs: receipt.logs.toString(),
+    byzantium: receipt.byzantium,
+    status: receipt.status ?? undefined,
+  }
+}
 
 export const testStore = <T extends IEngineStore>(
   name: string,
@@ -575,68 +626,105 @@ export const testStore = <T extends IEngineStore>(
       }
 
       // Shared tests.
-      it("should save transaction responses and receipts", async () => {
+      it("should save transaction responses and receipts for successful tx", async () => {
         // Load store with channel
         const setupState = createTestChannelState("setup").channel;
         await store.saveChannelState(setupState);
 
-        const response = createTestTxResponse();
-
         // save response
-        await store.saveTransactionResponse(setupState.channelAddress, TransactionReason.depositA, response);
+        const response = createTestTxResponse();
+        const onchainTransactionId = uuidV4();
+        await store.saveTransactionAttempt(
+          onchainTransactionId,
+          setupState.channelAddress,
+          TransactionReason.depositA,
+          response,
+        );
 
         // verify response
-        const storedResponse = await store.getTransactionByHash(response.hash);
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        const { wait, confirmations, hash, ...sanitizedResponse } = response;
-        expect(storedResponse).to.containSubset({
-          ...sanitizedResponse,
-          status: StoredTransactionStatus.submitted,
-          channelAddress: setupState.channelAddress,
-          transactionHash: hash,
-          gasLimit: response.gasLimit.toString(),
-          gasPrice: response.gasPrice.toString(),
-          value: response.value.toString(),
-        });
+        let storedTransaction = await store.getTransactionById(onchainTransactionId);
+        const sanitizedResponse = sanitizeResponse(response, setupState.channelAddress, TransactionReason.depositA);
+        const sanitizedAttempt = sanitizeAttempt(response);
+        expect(storedTransaction.attempts[0]).to.containSubset(sanitizedAttempt);
+        expect(storedTransaction).to.containSubset(sanitizedResponse);
 
         // save receipt
+        // NOTE: While we don't use wait() in our actual prod code anymore, this will continue
+        // to be used here as it is only a test utility, and not the thing actually being tested.
         const receipt = await response.wait();
-        await store.saveTransactionReceipt(setupState.channelAddress, receipt);
+        await store.saveTransactionReceipt(onchainTransactionId, receipt);
 
         // verify receipt
-        const storedReceipt = await store.getTransactionByHash(response.hash);
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        const { confirmations: receiptConfs, ...sanitizedReceipt } = receipt;
-        expect(storedReceipt).to.containSubset({
+        storedTransaction = await store.getTransactionById(onchainTransactionId);
+        // Double check that our attempt remains intact, untouched.
+        expect(storedTransaction.attempts[0]).to.containSubset(sanitizedAttempt);
+        expect(storedTransaction).to.containSubset({
           ...sanitizedResponse,
-          ...sanitizedReceipt,
-          channelAddress: setupState.channelAddress,
-          transactionHash: hash,
-          gasLimit: response.gasLimit.toString(),
-          gasPrice: response.gasPrice.toString(),
-          value: response.value.toString(),
-          cumulativeGasUsed: receipt.cumulativeGasUsed.toString(),
-          gasUsed: receipt.gasUsed.toString(),
           status: StoredTransactionStatus.mined,
+          receipt: sanitizeReceipt(receipt),
         });
+      });
+
+      // Shared tests.
+      it("should save transaction responses and receipts for failed tx", async () => {
+        // Load store with channel
+        const setupState = createTestChannelState("setup").channel;
+        await store.saveChannelState(setupState);
 
         // save failing response
         const failed = createTestTxResponse({ hash: mkHash("0x13754"), nonce: 65 });
-        await store.saveTransactionResponse(setupState.channelAddress, TransactionReason.depositB, failed);
+        const onchainTransactionId = uuidV4();
+        await store.saveTransactionAttempt(
+          onchainTransactionId,
+          setupState.channelAddress,
+          TransactionReason.depositB,
+          failed,
+        );
+
         // save error
-        await store.saveTransactionFailure(setupState.channelAddress, failed.hash, "failed to send");
+        await store.saveTransactionFailure(onchainTransactionId, "failed to send");
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        const { wait: fWait, confirmations: fConf, hash: fHash, ...sanitizedFailure } = failed;
-        const storedFailure = await store.getTransactionByHash(fHash);
+        const sanitizedResponse = sanitizeResponse(failed, setupState.channelAddress, TransactionReason.depositB);
+        const sanitizedAttempt = sanitizeAttempt(failed);
+        const storedFailure = await store.getTransactionById(onchainTransactionId);
+        expect(storedFailure.attempts[0]).to.containSubset(sanitizedAttempt);
         expect(storedFailure).to.containSubset({
-          ...sanitizedFailure,
-          transactionHash: fHash,
-          gasLimit: failed.gasLimit.toString(),
-          gasPrice: failed.gasPrice.toString(),
-          value: failed.value.toString(),
+          ...sanitizedResponse,
           status: StoredTransactionStatus.failed,
+          receipt: undefined,
           error: "failed to send",
         });
+      });
+
+      // Shared tests.
+      it("should save multiple transaction attempts and retrieve them ordered chronologically", async () => {
+        // Spamming an absurd amount of attempts. Each will have a diff hash, etc - but all the same nonce.
+        const NUM_ATTEMPTS = 50;
+        // Load store with channel
+        const setupState = createTestChannelState("setup").channel;
+        await store.saveChannelState(setupState);
+        const onchainTransactionId = uuidV4();
+
+        let hashes: string[] = [];
+        for (let _ = 0; _ < NUM_ATTEMPTS; _++) {
+          const hash = getRandomBytes32();
+          hashes.push(hash);
+          const response = createTestTxResponse({ hash });
+          await store.saveTransactionAttempt(
+            onchainTransactionId,
+            setupState.channelAddress,
+            TransactionReason.depositA,
+            response,
+          );
+        }
+
+        // verify response
+        let storedTransaction = await store.getTransactionById(onchainTransactionId);
+        expect(storedTransaction.attempts.length).to.equal(NUM_ATTEMPTS);
+        // here's the most important check in this unit test: does the tx order match?
+        assert(storedTransaction.attempts.every((attempt, index) => {
+          return attempt.transactionHash == hashes[index];
+        }), "each transaction attempt stored must be returned in order of execution");
       });
 
       it("should save and retrieve all update types and keep updating the channel", async () => {
@@ -834,7 +922,6 @@ export const testStore = <T extends IEngineStore>(
         });
 
         const dispute = await store.getChannelDispute(channel.channelAddress);
-        console.log("dispute: ", dispute);
       });
     });
   });

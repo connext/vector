@@ -9,6 +9,8 @@ import {
   IEngineStore,
   ResolveUpdateDetails,
   StoredTransaction,
+  StoredTransactionAttempt,
+  StoredTransactionReceipt,
   StoredTransactionStatus,
   TransactionReason,
   TransferDispute,
@@ -107,6 +109,11 @@ class VectorIndexedDBDatabase extends Dexie {
       transferDisputes: "transferId",
     });
 
+    this.version(5).stores({
+      withdrawCommitment: "transferId,channelAddress,transactionHash",
+      transactions: "&id",
+    });
+
     this.channels = this.table("channels");
     this.transfers = this.table("transfers");
     this.transactions = this.table("transactions");
@@ -170,6 +177,25 @@ export class BrowserStore implements IEngineStore, IChainServiceStore {
     await this.db.channels.clear();
     await this.db.transfers.clear();
     await this.db.transactions.clear();
+  }
+
+  // TODO (@jakekidd): Does this belong in utils somewhere? I believe it's only use case is here.
+  /// Santitize TransactionReceipt for input as StoredTransactionReceipt.
+  private sanitizeReceipt(receipt: TransactionReceipt): StoredTransactionReceipt {
+    return {
+      transactionHash: receipt.transactionHash,
+      contractAddress: receipt.contractAddress,
+      transactionIndex: receipt.transactionIndex,
+      root: receipt.root,
+      gasUsed: receipt.gasUsed.toString(),
+      cumulativeGasUsed: receipt.cumulativeGasUsed.toString(),
+      logsBloom: receipt.logsBloom,
+      blockHash: receipt.blockHash,
+      blockNumber: receipt.blockNumber,
+      logs: receipt.logs.toString(),
+      byzantium: receipt.byzantium,
+      status: receipt.status,
+    } as StoredTransactionReceipt;
   }
 
   async saveChannelStateAndTransfers(
@@ -309,19 +335,43 @@ export class BrowserStore implements IEngineStore, IChainServiceStore {
     return transfers.map(storedTransferToTransferState);
   }
 
+  async getTransactionById(onchainTransactionId: string): Promise<StoredTransaction | undefined> {
+    return await this.db.transactions.get({ id: onchainTransactionId })
+  }
+
   async getActiveTransactions(): Promise<StoredTransaction[]> {
-    const tx = await this.db.transactions.filter(tx => {
-      return !!tx.transactionHash && !tx.blockHash && !tx.gasUsed
-    }).toArray();
+    const tx = await this.db.transactions
+      .filter((tx) => {
+        return !tx.receipt && tx.status === StoredTransactionStatus.submitted;
+      })
+      .toArray();
     return tx;
   }
 
-  async saveTransactionResponse(
+  async saveTransactionAttempt(
+    onchainTransactionId: string,
     channelAddress: string,
     reason: TransactionReason,
-    transaction: TransactionResponse,
+    response: TransactionResponse,
   ): Promise<void> {
+    // Populate nested attempts array.
+    let attempts: StoredTransactionAttempt[] = [];
+    const res = await this.db.transactions.where(":id").equals(onchainTransactionId).first();
+    if (res) {
+      attempts = Array.from(res.attempts);
+    }
+    attempts.push({
+      // TransactionResponse fields (defined when submitted)
+      gasLimit: response.gasLimit.toString(),
+      gasPrice: response.gasPrice.toString(),      
+      transactionHash: response.hash,
+
+      createdAt: new Date(),
+    } as StoredTransactionAttempt);
+
     await this.db.transactions.put({
+      id: onchainTransactionId,
+
       //// Helper fields
       channelAddress,
       status: StoredTransactionStatus.submitted,
@@ -329,44 +379,32 @@ export class BrowserStore implements IEngineStore, IChainServiceStore {
 
       //// Provider fields
       // Minimum fields (should always be defined)
-      to: transaction.to!,
-      from: transaction.from,
-      data: transaction.data,
-      value: transaction.value.toString(),
-      chainId: transaction.chainId,
-
-      // TransactionRequest fields (defined when tx populated)
-      nonce: transaction.nonce,
-      gasLimit: transaction.gasLimit.toString(),
-      gasPrice: transaction.gasPrice.toString(),
-
-      // TransactionResponse fields (defined when submitted)
-      transactionHash: transaction.hash, // may be edited on mining
-      timestamp: transaction.timestamp,
-      raw: transaction.raw,
-      blockHash: transaction.blockHash,
-      blockNumber: transaction.blockNumber,
-    });
+      to: response.to!,
+      from: response.from,
+      data: response.data,
+      value: response.value.toString(),
+      chainId: response.chainId,
+      nonce: response.nonce,
+      attempts,
+    } as StoredTransaction, onchainTransactionId);
   }
 
-  async saveTransactionReceipt(channelAddress: string, transaction: TransactionReceipt): Promise<void> {
-    await this.db.transactions.update(transaction.transactionHash, {
+  async saveTransactionReceipt(onchainTransactionId: string, receipt: TransactionReceipt): Promise<void> {
+    await this.db.transactions.update(onchainTransactionId, {
       status: StoredTransactionStatus.mined,
-      logs: transaction.logs,
-      contractAddress: transaction.contractAddress,
-      transactionIndex: transaction.transactionIndex,
-      root: transaction.root,
-      gasUsed: transaction.gasUsed.toString(),
-      logsBloom: transaction.logsBloom,
-      cumulativeGasUsed: transaction.cumulativeGasUsed.toString(),
-      byzantium: transaction.byzantium,
+      receipt: this.sanitizeReceipt(receipt),
     });
   }
 
-  async saveTransactionFailure(channelAddress: string, transactionHash: string, error: string): Promise<void> {
-    await this.db.transactions.update(transactionHash, {
+  async saveTransactionFailure(
+    onchainTransactionId: string,
+    error: string,
+    receipt?: TransactionReceipt,
+  ): Promise<void> {
+    await this.db.transactions.update(onchainTransactionId, {
       status: StoredTransactionStatus.failed,
       error,
+      receipt: receipt ? this.sanitizeReceipt(receipt) : undefined,
     });
   }
 
@@ -395,6 +433,21 @@ export class BrowserStore implements IEngineStore, IChainServiceStore {
     }
     const { transferId, ...commitment } = w;
     return commitment;
+  }
+
+  // TOOD: dont really need this yet, but prob will soon
+  getUnsubmittedWithdrawals(
+    channelAddress: string,
+    withdrawalDefinition: string,
+  ): Promise<
+    {
+      commitment: WithdrawCommitmentJson; // function. However, the constructor should *not* be used when creating
+      // function. However, the constructor should *not* be used when creating
+      // an instance of the BrowserStore
+      transfer: FullTransferState<any>;
+    }[]
+  > {
+    throw new Error("Method not implemented.");
   }
 
   async saveTransferDispute(

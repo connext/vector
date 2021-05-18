@@ -27,7 +27,7 @@ Note: Revisit these instructions by frequently checking Prisma [releases](https:
 - Run `make dls` to find docker container ID for `carol`.
 - Run `docker exec -it CONTAINER_ID bash`.
 - Run `cd modules/server-node`.
-- Run `VECTOR_DATABASE_URL=sqlite:///tmp/store.sqlite npm run migration:generate` to generate migration locally. It will show up in the `prisma-sqlite/migrations` directory on the host machine.
+- Run `VECTOR_DATABASE_URL=sqlite:///tmp/store.sqlite npm run migration:generate:sqlite` to generate migration locally. It will show up in the `prisma-sqlite/migrations` directory on the host machine.
 - Modify as needed, then run `npx prisma migrate dev --preview-feature` to apply the migration during development.
 - When satisfied, port the changes over exactly as is to the `prisma-postgres/schema.prisma`. The only diff between the two files should be the database provider.
 - Run `make stop-all` to stop the `trio` stack.
@@ -35,5 +35,5 @@ Note: Revisit these instructions by frequently checking Prisma [releases](https:
 - Run `make dls` to find docker container ID for `node`.
 - Run `docker exec -it CONTAINER_ID bash`.
 - Run `cd modules/server-node`.
-- Run `VECTOR_DATABASE_URL=postgresql://vector:vector@database_node:5432/vector npm run migration:generate` to generate migration locally. It will show up in the `prisma-postgres/migrations` directory on the host machine.
+- Run `VECTOR_DATABASE_URL=postgresql://vector:vector@database-node:5432/vector npm run migration:generate:postgres` to generate migration locally. It will show up in the `prisma-postgres/migrations` directory on the host machine.
 - Commit the new migrations and schema changes for both Postgres and SQLite to the repo.
