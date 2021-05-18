@@ -1035,6 +1035,15 @@ export class VectorEngine implements IVectorEngine {
       );
     }
 
+    if (json.transactionHash) {
+      return Result.fail(
+        new RpcError(RpcError.reasons.TransactionFound, params.channelAddress, this.publicIdentifier, {
+          transferId: params.transferId,
+          transactionHash: json.transactionHash,
+        }),
+      );
+    }
+
     const commitment = await WithdrawCommitment.fromJson(json);
 
     const channelRes = await this.getChannelState({ channelAddress: params.channelAddress });
