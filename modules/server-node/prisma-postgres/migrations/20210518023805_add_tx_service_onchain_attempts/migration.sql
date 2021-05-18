@@ -27,7 +27,7 @@ ALTER TABLE "transfer" DROP CONSTRAINT "transfer_transactionHash_fkey";
 -- DropIndex
 DROP INDEX "onchain_transaction.transactionHash_chainId_unique";
 
-CREATE OR REPLACE FUNCTION random_text() RETURNS int LANGUAGE SQL AS
+CREATE OR REPLACE FUNCTION random_text() RETURNS text LANGUAGE SQL AS
 $$ SELECT md5(random()::text); $$;
 
 -- AlterTable
