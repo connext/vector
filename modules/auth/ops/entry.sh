@@ -45,8 +45,12 @@ export VECTOR_JWT_SIGNER_PUBLIC_KEY
 
 if [[ "$VECTOR_PROD" == "true" ]]
 then
-  echo "listing"
+  echo "listing dir"
+  pwd
+  cd dist
+  echo "listing dist"
   exec ls
+  exec cd ../
   echo "Starting messaging in prod-mode"
   export NODE_ENV=production
   exec node --no-deprecation dist/bundle.js
