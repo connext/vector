@@ -68,6 +68,7 @@ CREATE TABLE "onchain_transaction_attempt" (
 -- CreateTable
 CREATE TABLE "onchain_transaction_receipt" (
     "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "onchainTransactionId" TEXT NOT NULL,
     "transactionHash" TEXT NOT NULL PRIMARY KEY,
     "timestamp" TEXT,
     "raw" TEXT,
@@ -81,7 +82,8 @@ CREATE TABLE "onchain_transaction_receipt" (
     "logs" TEXT,
     "cumulativeGasUsed" TEXT,
     "byzantium" BOOLEAN,
-    "status" INTEGER
+    "status" INTEGER,
+    FOREIGN KEY ("onchainTransactionId") REFERENCES "onchain_transaction" ("id") ON DELETE CASCADE ON UPDATE CASCADE
 );
 
 -- RedefineTables
@@ -99,14 +101,11 @@ CREATE TABLE "new_onchain_transaction" (
     "reason" TEXT NOT NULL,
     "error" TEXT,
     "channelAddress" TEXT NOT NULL,
-    "confirmedTransactionHash" TEXT,
-    FOREIGN KEY ("channelAddress") REFERENCES "channel" ("channelAddress") ON DELETE CASCADE ON UPDATE CASCADE,
-    FOREIGN KEY ("confirmedTransactionHash") REFERENCES "onchain_transaction_receipt" ("transactionHash") ON DELETE SET NULL ON UPDATE CASCADE
+    FOREIGN KEY ("channelAddress") REFERENCES "channel" ("channelAddress") ON DELETE CASCADE ON UPDATE CASCADE
 );
 INSERT INTO "new_onchain_transaction" ("to", "from", "data", "value", "chainId", "nonce", "status", "reason", "error", "channelAddress", "createdAt") SELECT "to", "from", "data", "value", "chainId", "nonce", "status", "reason", "error", "channelAddress", "createdAt" FROM "onchain_transaction";
 DROP TABLE "onchain_transaction";
 ALTER TABLE "new_onchain_transaction" RENAME TO "onchain_transaction";
-CREATE UNIQUE INDEX "onchain_transaction_confirmedTransactionHash_unique" ON "onchain_transaction"("confirmedTransactionHash");
 CREATE TABLE "new_transfer" (
     "transferId" TEXT NOT NULL PRIMARY KEY,
     "routingId" TEXT NOT NULL,
@@ -139,3 +138,6 @@ CREATE UNIQUE INDEX "transfer_resolveUpdateChannelAddressId_resolveUpdateNonce_u
 CREATE UNIQUE INDEX "transfer_onchainTransactionId_unique" ON "transfer"("onchainTransactionId");
 PRAGMA foreign_key_check;
 PRAGMA foreign_keys=ON;
+
+-- CreateIndex
+CREATE UNIQUE INDEX "onchain_transaction_receipt_onchainTransactionId_unique" ON "onchain_transaction_receipt"("onchainTransactionId");

@@ -19,7 +19,6 @@
   - You are about to drop the column `byzantium` on the `onchain_transaction` table. All the data in the column will be lost.
   - You are about to drop the `ChannelDispute` table. If the table is not empty, all the data it contains will be lost.
   - You are about to drop the `TransferDispute` table. If the table is not empty, all the data it contains will be lost.
-  - A unique constraint covering the columns `[confirmedTransactionHash]` on the table `onchain_transaction` will be added. If there are existing duplicate values, this will fail.
   - A unique constraint covering the columns `[onchainTransactionId]` on the table `transfer` will be added. If there are existing duplicate values, this will fail.
   - The required column `id` was added to the `onchain_transaction` table with a prisma-level default value. This is not possible if the table is not empty. Please add this column as optional, then populate it before making it required.
 
@@ -54,7 +53,6 @@ DROP COLUMN "logs",
 DROP COLUMN "cumulativeGasUsed",
 DROP COLUMN "byzantium",
 ADD COLUMN     "id" TEXT NOT NULL,
-ADD COLUMN     "confirmedTransactionHash" TEXT,
 ALTER COLUMN "to" DROP NOT NULL,
 ALTER COLUMN "from" DROP NOT NULL,
 ALTER COLUMN "data" DROP NOT NULL,
@@ -105,6 +103,7 @@ CREATE TABLE "onchain_transaction_attempt" (
 -- CreateTable
 CREATE TABLE "onchain_transaction_receipt" (
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "onchainTransactionId" TEXT NOT NULL,
     "transactionHash" TEXT NOT NULL,
     "timestamp" TEXT,
     "raw" TEXT,
@@ -124,7 +123,7 @@ CREATE TABLE "onchain_transaction_receipt" (
 );
 
 -- CreateIndex
-CREATE UNIQUE INDEX "onchain_transaction_confirmedTransactionHash_unique" ON "onchain_transaction"("confirmedTransactionHash");
+CREATE UNIQUE INDEX "onchain_transaction_receipt_onchainTransactionId_unique" ON "onchain_transaction_receipt"("onchainTransactionId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "transfer_onchainTransactionId_unique" ON "transfer"("onchainTransactionId");
@@ -139,7 +138,7 @@ ALTER TABLE "transfer_dispute" ADD FOREIGN KEY ("transferId") REFERENCES "transf
 ALTER TABLE "onchain_transaction_attempt" ADD FOREIGN KEY ("onchainTransactionId") REFERENCES "onchain_transaction"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "onchain_transaction" ADD FOREIGN KEY ("confirmedTransactionHash") REFERENCES "onchain_transaction_receipt"("transactionHash") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "onchain_transaction_receipt" ADD FOREIGN KEY ("onchainTransactionId") REFERENCES "onchain_transaction"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "transfer" ADD FOREIGN KEY ("onchainTransactionId") REFERENCES "onchain_transaction"("id") ON DELETE SET NULL ON UPDATE CASCADE;
