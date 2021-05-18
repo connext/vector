@@ -52,7 +52,7 @@ import {
   convertWithdrawParams,
 } from "./paramConverter";
 import { setupEngineListeners } from "./listeners";
-import { getEngineEvtContainer } from "./utils";
+import { getEngineEvtContainer, withdrawRetryForTrasferId } from "./utils";
 import { sendIsAlive } from "./isAlive";
 import { WithdrawCommitment } from "@connext/vector-contracts";
 
@@ -1026,26 +1026,6 @@ export class VectorEngine implements IVectorEngine {
       );
     }
 
-    const json = await this.store.getWithdrawalCommitment(params.transferId);
-    if (!json) {
-      return Result.fail(
-        new RpcError(RpcError.reasons.WithdrawResolutionFailed, params.channelAddress, this.publicIdentifier, {
-          transferId: params.transferId,
-        }),
-      );
-    }
-
-    if (json.transactionHash) {
-      return Result.fail(
-        new RpcError(RpcError.reasons.TransactionFound, params.channelAddress, this.publicIdentifier, {
-          transferId: params.transferId,
-          transactionHash: json.transactionHash,
-        }),
-      );
-    }
-
-    const commitment = await WithdrawCommitment.fromJson(json);
-
     const channelRes = await this.getChannelState({ channelAddress: params.channelAddress });
     if (channelRes.isError) {
       return Result.fail(channelRes.getError()!);
@@ -1059,32 +1039,33 @@ export class VectorEngine implements IVectorEngine {
       );
     }
 
-    if (!json.bobSignature || !json.aliceSignature) {
-      return Result.fail(
-        new RpcError(RpcError.reasons.CommitmentSingleSigned, params.channelAddress, this.publicIdentifier, {
-          transferId: params.transferId,
-        }),
-      );
+    const res = await withdrawRetryForTrasferId(
+      params.transferId,
+      channel,
+      this.store,
+      this.chainService,
+      this.logger,
+      this.publicIdentifier,
+    );
+
+    if (res.isError) {
+      return Result.fail(res.getError()!);
     }
+
+    const withdrawRetryRes = res.getValue();
 
     this.logger.info(
-      { channelAddress: params.channelAddress, transferId: params.transferId },
-      "Withdraw retry initiated",
+      {
+        channel: channel,
+        method,
+        methodId,
+        txHash: withdrawRetryRes.transactionHash,
+        channelAddress: withdrawRetryRes.channelAddress,
+      },
+      "Method complete",
     );
-    const transaction = await this.chainService.sendWithdrawTx(channel, commitment.getSignedTransaction());
-    if (transaction.isError) {
-      return Result.fail(transaction.getError()!);
-    }
-    const txHash = transaction.getValue().transactionHash;
-    commitment!.addTransaction(txHash);
-    await this.store.saveWithdrawalCommitment(params.transferId, commitment!.toJson());
 
-    this.logger.info({ channel: channel, method, methodId, txHash, transaction }, "Method complete");
-    return Result.ok({
-      transactionHash: txHash,
-      transferId: params.transferId,
-      channelAddress: channel.channelAddress,
-    });
+    return Result.ok(withdrawRetryRes);
   }
 
   private async decrypt(encrypted: string): Promise<Result<string, EngineError>> {
