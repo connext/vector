@@ -115,8 +115,8 @@ class VectorIndexedDBDatabase extends Dexie {
       withdrawCommitment: "transferId,channelAddress,transactionHash",
       transactions2: "id, transactionHash",
     }).upgrade(async tx => {
-      const transactions = await tx.transactions.toArray();
-      await tx.transactions2.bulkAdd(transactions);
+      const transactions = await tx.table("transactions").toArray();
+      await tx.table("transactions2").bulkAdd(transactions);
     });
 
     this.version(6).stores({
@@ -126,8 +126,8 @@ class VectorIndexedDBDatabase extends Dexie {
     this.version(7).stores({
       transactions: "id, transactionHash"
     }).upgrade(async tx => {
-      const transactions2 = await tx.transactions2.toArray();
-      await tx.transactions.bulkAdd(transactions2);
+      const transactions2 = await tx.table("transactions2").toArray();
+      await tx.table("transactions").bulkAdd(transactions2);
     });
 
     this.version(8).stores({
