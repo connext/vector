@@ -544,11 +544,7 @@ export class BrowserNode implements INodeService {
     try {
       const rpc = constructRpcRequest<"chan_withdrawRetry">(ChannelRpcMethods.chan_withdrawRetry, params);
       const res = await this.channelProvider!.send(rpc);
-      return Result.ok({
-        channelAddress: res.channelAddress,
-        transferId: res.transferId,
-        transactionHash: res.transactionHash,
-      });
+      return Result.ok(res);
     } catch (e) {
       return Result.fail(e);
     }
