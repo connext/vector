@@ -41,12 +41,12 @@ import {
 import { getRandomBytes32, hashWithdrawalQuote, mkSig } from "@connext/vector-utils";
 import { getAddress } from "@ethersproject/address";
 import { BigNumber } from "@ethersproject/bignumber";
-import { AddressZero, HashZero, Zero } from "@ethersproject/constants";
+import { Zero } from "@ethersproject/constants";
 import Pino, { BaseLogger } from "pino";
 
 import { IsAliveError, RestoreError, WithdrawQuoteError } from "./errors";
-
 import { EngineEvtContainer } from "./index";
+import { submitUnsubmittedWithdrawals } from "./utils";
 
 export async function setupEngineListeners(
   evts: EngineEvtContainer,
@@ -545,84 +545,6 @@ export async function resolveExistingWithdrawals(
       logger.info({ method, methodId, transfer: transfer!.transferId }, "Resolved withdrawal");
     }),
   );
-}
-
-export async function submitUnsubmittedWithdrawals(
-  channel: FullChannelState,
-  store: IEngineStore,
-  chainAddresses: ChainAddresses,
-  chainService: IVectorChainService,
-  logger: BaseLogger,
-): Promise<void> {
-  const method = "submitUnsubmittedWithdrawals";
-  const methodId = getRandomBytes32();
-
-  const withdrawInfo = await chainService.getRegisteredTransferByName(
-    TransferNames.Withdraw,
-    chainAddresses[channel.networkContext.chainId].transferRegistryAddress,
-    channel.networkContext.chainId,
-  );
-  if (withdrawInfo.isError) {
-    logger.error(
-      { method, methodId, error: withdrawInfo.getError()?.toJson() },
-      "Error in chainService.getRegisteredTransferByName",
-    );
-  }
-
-  const unsubmitted = await store.getUnsubmittedWithdrawals(channel.channelAddress, withdrawInfo.getValue().definition);
-  for (const u of unsubmitted) {
-    logger.info({ method, methodId, transferId: u.transfer.transferId }, "Submitting unsubmitted withdrawal");
-    try {
-      const commitment = await WithdrawCommitment.fromJson(u.commitment);
-
-      // before submitting, check status
-      const wasSubmitted = await chainService.getWithdrawalTransactionRecord(
-        u.commitment,
-        channel.channelAddress,
-        channel.networkContext.chainId,
-      );
-      if (wasSubmitted.isError) {
-        logger.error(
-          { method, methodId, error: jsonifyError(wasSubmitted.getError()!) },
-          "Could not check submission status",
-        );
-        continue;
-      }
-      const noOp = commitment.amount === "0" && commitment.callTo === AddressZero;
-      if (wasSubmitted.getValue() || noOp) {
-        logger.info(
-          {
-            transferId: u.transfer.transferId,
-            channelAddress: channel.channelAddress,
-            commitment: u.commitment,
-            wasSubmitted: wasSubmitted.getValue(),
-            noOp,
-          },
-          "Previously submitted / no-op",
-        );
-        commitment.addTransaction(HashZero);
-      } else {
-        const tx = await chainService.sendWithdrawTx(channel, commitment.getSignedTransaction());
-        if (tx.isError) {
-          logger.error(
-            { method, methodId, error: tx.getError()?.toJson(), commitment: u },
-            "Error in chainService.sendWithdrawTx",
-          );
-        }
-        logger.info(
-          { method, methodId, transactionHash: tx.getValue().transactionHash },
-          "Submitted unsubmitted withdrawal",
-        );
-        commitment.addTransaction(tx.getValue().transactionHash);
-      }
-      await store.saveWithdrawalCommitment(u.transfer.transferId, commitment.toJson());
-    } catch (e) {
-      logger.error(
-        { method, methodId, error: jsonifyError(e), commitment: u },
-        "Error submitting unsubmitted withdrawal",
-      );
-    }
-  }
 }
 
 function handleSetup(
