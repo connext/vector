@@ -145,6 +145,7 @@ model Transfer {
   // has OnchainTransaction relation IFF we submitted (and have tx record)
   onchainTransactionId String?
   onchainTransaction   OnchainTransaction? @relation(fields: [onchainTransactionId], references: [id])
+  transactionHash      String? // in case we didn't submit
 
   // balance
   amountA String
