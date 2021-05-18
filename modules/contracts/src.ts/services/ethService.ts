@@ -529,7 +529,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
    * the tx will be resubmitted at the same nonce.
    */
   public async waitForConfirmation(chainId: number, responses: TransactionResponse[]): Promise<TransactionReceipt> {
-    const provider: JsonRpcProvider = this.chainProviders[chainId];
+    const provider = this.chainProviders[chainId];
     if (!provider) {
       throw new ChainError(ChainError.reasons.ProviderNotFound);
     }

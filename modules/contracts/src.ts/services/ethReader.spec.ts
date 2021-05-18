@@ -1,6 +1,6 @@
-import { ChainError, FullChannelState, Result } from "@connext/vector-types";
+import { ChainError, ChainProvider, FullChannelState, Result } from "@connext/vector-types";
 import { createTestChannelState, expect, getTestLoggers, mkHash } from "@connext/vector-utils";
-import { JsonRpcProvider, TransactionReceipt } from "@ethersproject/providers";
+import { TransactionReceipt } from "@ethersproject/providers";
 import { AddressZero, One, Zero } from "@ethersproject/constants";
 import { parseUnits } from "@ethersproject/units";
 import { restore, reset, createStubInstance, SinonStubbedInstance } from "sinon";
@@ -9,8 +9,8 @@ import { EthereumChainReader, MIN_GAS_PRICE, BUMP_GAS_PRICE } from "./ethReader"
 
 let ethReader: EthereumChainReader;
 let channelState: FullChannelState;
-let provider1337: SinonStubbedInstance<JsonRpcProvider>;
-let provider1338: SinonStubbedInstance<JsonRpcProvider>;
+let provider1337: SinonStubbedInstance<ChainProvider>;
+let provider1338: SinonStubbedInstance<ChainProvider>;
 
 const assertResult = (result: Result<any>, isError: boolean, unwrappedVal?: any) => {
   if (isError) {
@@ -46,7 +46,7 @@ describe("ethReader", () => {
   beforeEach(() => {
     // eth service deps
 
-    const _provider = createStubInstance(JsonRpcProvider);
+    const _provider = createStubInstance(ChainProvider);
     _provider.getTransaction.resolves(_txResponse);
     provider1337 = _provider;
     provider1338 = _provider;

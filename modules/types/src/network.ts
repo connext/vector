@@ -89,26 +89,6 @@ export class ChainProvider implements BaseProvider {
     this._provider = provider;
     this.chainId = chainId;
     this.providerUrls = providerUrls;
-
-    // for (var member in BaseProvider) {
-    //   if (typeof BaseProvider[member] === "function") {
-    //     // if (T.hasOwnProperty(member)) {
-    //     this[member] = this._provider[member];
-    //     // }
-    //   }
-    // }
-
-    // Object.assign(this, this._provider); -> TypeError: Cannot assign to read only property '_isProvider' of object '#<ChainProvider>'
-    // for (var key in Object.keys(this._provider)) {
-    //   console.log("DEBUG MESSAGE:")
-    //   console.log(key, this._provider[key]);
-    //   if (typeof this._provider[key] == "function") {
-    //     Object.assign(this, {
-    //       key: this._provider[key]
-    //     });
-    //     console.log(this[key]);
-    //   }
-    // }
   }
 
   send(method: string, params: any[]): Promise<any> {
@@ -181,9 +161,10 @@ export class ChainProvider implements BaseProvider {
     this._provider.polling = value;
   }
   get pollingInterval(): number {
-    return this._provider.pollingInterval;
+    return this._provider ? this._provider.pollingInterval : this._pollingInterval;
   }
   set pollingInterval(value: number) {
+    this._pollingInterval = value;
     this._provider.pollingInterval = value;
   }
   _getFastBlockNumber(): Promise<number> {

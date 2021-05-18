@@ -6,14 +6,12 @@ import { Wallet } from "@ethersproject/wallet";
 import { BigNumber } from "@ethersproject/bignumber";
 import { parseEther } from "@ethersproject/units";
 import axios from "axios";
-import PriorityQueue from "p-queue";
 
 import { rebalanceIfNeeded } from "../services/autoRebalance";
 import { getConfig } from "../config";
 import * as metrics from "../metrics";
 import { PrismaStore, RouterRebalanceStatus } from "../services/store";
 import { _createQueueForSwap } from "../services/rebalanceQueue";
-import { AutoRebalanceServiceError } from "../errors";
 
 const config = getConfig();
 
@@ -24,7 +22,7 @@ const { log } = getTestLoggers(testName, config.logLevel as any);
 const setupForRebalance = (
   mockAxios: Sinon.SinonStubbedInstance<any>,
   wallet: Sinon.SinonStubbedInstance<Wallet>,
-  hydratedProviders: { [chainId: number]: Sinon.SinonStubbedInstance<JsonRpcProvider> },
+  hydratedProviders: { [chainId: number]: Sinon.SinonStubbedInstance<ChainProvider> },
   chainService: Sinon.SinonStubbedInstance<VectorChainReader>,
   ): {
     transaction: {
