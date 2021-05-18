@@ -135,11 +135,7 @@ export type ChannelRpcMethodsResponsesMap = {
     transactionHash?: string;
     transaction: MinimalTransaction;
   };
-  [ChannelRpcMethods.chan_withdrawRetry]: {
-    transactionHash: string;
-    transferId: string;
-    channelAddress: string;
-  };
+  [ChannelRpcMethods.chan_withdrawRetry]: NodeResponses.WithdrawRetry
   [ChannelRpcMethods.chan_subscribe]: any;
   [ChannelRpcMethods.chan_unsubscribeAll]: any;
   [ChannelRpcMethods.connext_authenticate]: {
