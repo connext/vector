@@ -109,12 +109,30 @@ class VectorIndexedDBDatabase extends Dexie {
       transferDisputes: "transferId",
     });
 
+    // Using a temp table (transactions2) to migrate which column is the primary key
+    // (transactionHash -> id)
     this.version(5).stores({
       withdrawCommitment: "transferId,channelAddress,transactionHash",
-      transactions2: "id",
-    }).upgrade(tx => tx.transactions.toArray().then(transactions => {
-      return tx.transactions2.bulkAdd()
-    }))
+      transactions2: "id, transactionHash",
+    }).upgrade(async tx => {
+      const transactions = await tx.transactions.toArray();
+      await tx.transactions2.bulkAdd(transactions);
+    });
+
+    this.version(6).stores({
+      transactions: null
+    });
+
+    this.version(7).stores({
+      transactions: "id, transactionHash"
+    }).upgrade(async tx => {
+      const transactions2 = await tx.transactions2.toArray();
+      await tx.transactions.bulkAdd(transactions2);
+    });
+
+    this.version(8).stores({
+      transactions2: null
+    });
 
     this.channels = this.table("channels");
     this.transfers = this.table("transfers");
