@@ -13,6 +13,7 @@ import {
 } from "../../utils/channel";
 
 import * as docker_api from './dockerNodeMgmt'
+import {d_net_create, swarm_init} from "./dockerNodeMgmt";
 const logger = pino({ level: env.logLevel });
 
 //??is there a difference between doug and carol ?
@@ -121,5 +122,7 @@ async function start(){
 
     //setup channel between all carols and the random node
 }
+d_net_create()
+swarm_init()
 
-console.log(docker_api.swarm_init)
+
