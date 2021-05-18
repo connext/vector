@@ -22,7 +22,8 @@
 
 */
 -- DropForeignKey
-ALTER TABLE "transfer" DROP CONSTRAINT "transfer_transactionHash_fkey";
+ALTER TABLE "transfer" DROP CONSTRAINT "transfer_transactionHash_fkey",
+DROP COLUMN "onchainTransactionId";
 
 -- DropIndex
 DROP INDEX "onchain_transaction.transactionHash_chainId_unique";
