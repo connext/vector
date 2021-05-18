@@ -20,6 +20,7 @@ model Balance {
   channelAddress   String
 
   @@id([participant, channelAddress, assetId])
+  @@map(name: "balance")
 }
 
 model ChannelDispute {
@@ -73,6 +74,7 @@ model Channel {
 
   @@unique([publicIdentifierA, publicIdentifierB, chainId])
   @@unique([participantA, participantB, chainId])
+  @@map(name: "channel")
 }
 
 model Update {
@@ -126,6 +128,7 @@ model Update {
   resolvedTransfer Transfer? @relation("ResolvedTransfer")
 
   @@id([channelAddressId, nonce])
+  @@map(name: "update")
 }
 
 model Transfer {
@@ -167,6 +170,7 @@ model Transfer {
   dispute TransferDispute? @relation("OffchainTransfer")
 
   @@unique([routingId, channelAddressId])
+  @@map(name: "transfer")
 }
 
 model EventSubscription {
@@ -176,6 +180,7 @@ model EventSubscription {
   url              String
 
   @@unique([publicIdentifier, event])
+  @@map(name: "event-subscription")
 }
 
 model OnchainTransaction {
@@ -201,6 +206,8 @@ model OnchainTransaction {
   // Tx fields
   attempts OnchainTransactionAttempt[] // 1-n
   receipt  OnchainTransactionReceipt?
+
+  @@map(name: "onchain_transaction")
 }
 
 model OnchainTransactionAttempt {
@@ -212,6 +219,8 @@ model OnchainTransactionAttempt {
   transactionHash String @id
   gasLimit        String
   gasPrice        String
+
+  @@map(name: "onchain_transaction_attempt")
 }
 
 model OnchainTransactionReceipt {
@@ -236,13 +245,19 @@ model OnchainTransactionReceipt {
   cumulativeGasUsed String?
   byzantium         Boolean?
   status            Int?
+
+  @@map(name: "onchain_transaction_receipt")
 }
 
 model Configuration {
   id Int @id
+
+  @@map(name: "configuration")
 }
 
 model NodeIndex {
   index            Int    @id
   publicIdentifier String @unique
+
+  @@map(name: "node_index")
 }
