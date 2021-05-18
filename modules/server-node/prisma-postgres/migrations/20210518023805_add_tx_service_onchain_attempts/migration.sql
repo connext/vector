@@ -23,7 +23,7 @@
 */
 -- DropForeignKey
 ALTER TABLE "transfer" DROP CONSTRAINT "transfer_transactionHash_fkey",
-DROP COLUMN "onchainTransactionId",
+RENAME COLUMN "onchainTransactionId" TO "deprecatedOnchainTransactionId",
 ADD COLUMN "onchainTransactionId";
 
 -- DropIndex
