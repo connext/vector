@@ -5,26 +5,21 @@ import {RestServerNodeService} from "@connext/vector-utils";
 import pino from "pino";
 import {carolEvts} from "./setupServer";
 import {
-    advanceBlocktime,
     chainId1,
-    chainId2,
-    defundChannel,
     deposit,
-    disputeChannel,
-    exitAssets,
-    provider1,
-    requestCollateral,
     setup,
-    transfer,
     wallet1,
     wallet2,
-    withdraw,
 } from "../../utils/channel";
+
+import * as docker_api from './dockerNodeMgmt'
 const logger = pino({ level: env.logLevel });
+
+//??is there a difference between doug and carol ?
 
 const testName:string = 'Router Load Test'
 const rogerURL:string = "localhost?"
-const carolURL:string = "localhost"
+const carolURL:string = "localhost??"
 
 
 let routers:RestServerNodeService[] = [];
@@ -126,3 +121,5 @@ async function start(){
 
     //setup channel between all carols and the random node
 }
+
+console.log(docker_api.swarm_init)
