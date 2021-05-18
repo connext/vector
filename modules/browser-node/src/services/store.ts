@@ -111,8 +111,10 @@ class VectorIndexedDBDatabase extends Dexie {
 
     this.version(5).stores({
       withdrawCommitment: "transferId,channelAddress,transactionHash",
-      transactions: "&id",
-    });
+      transactions2: "id",
+    }).upgrade(tx => tx.transactions.toArray().then(transactions => {
+      return tx.transactions2.bulkAdd()
+    }))
 
     this.channels = this.table("channels");
     this.transfers = this.table("transfers");
