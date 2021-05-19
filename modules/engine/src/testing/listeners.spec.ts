@@ -570,7 +570,7 @@ describe(testName, () => {
         chainService as IVectorChainService,
         getEngineEvtContainer(),
         log,
-        50,
+        messaging,
       );
 
       expect(vector.resolve.getCall(0).args[0]).to.containSubset({

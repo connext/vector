@@ -952,8 +952,8 @@ export class VectorEngine implements IVectorEngine {
     const initiatorSubmits = createParams.meta.initiatorSubmits ?? false;
 
     // set up event listeners before sending request
-    const timeout = 90_000;
-    const resolvedReconciled = (_transferId) =>
+    const timeout = 300_000;
+    const resolvedReconciled = (_transferId: string) =>
       Promise.all([
         // resolved should always happen
         this.evts[WITHDRAWAL_RESOLVED_EVENT].waitFor(

@@ -177,7 +177,7 @@ export async function withdrawRetryForTransferId(
     await messaging.publishWithdrawalSubmittedMessage(
       getParticipant(channel, publicIdentifier) === "alice" ? channel.bobIdentifier : channel.aliceIdentifier,
       publicIdentifier,
-      Result.ok({ txHash: tx.getValue().transactionHash }),
+      Result.ok({ txHash: tx.getValue().transactionHash, transferId }),
     );
   }
   commitment.addTransaction(txHash);

@@ -188,10 +188,14 @@ export interface IMessagingService extends IBasicMessaging {
   publishWithdrawalSubmittedMessage(
     to: string,
     from: string,
-    data: Result<{ txHash: string }, VectorError>,
+    data: Result<{ txHash: string; transferId: string }, VectorError>,
   ): Promise<void>;
   onReceiveWithdrawalSubmittedMessage(
     myPublicIdentifier: string,
-    callback: (submitted: Result<{ txHash: string }, NodeError>, from: string, inbox: string) => void,
+    callback: (
+      submitted: Result<{ txHash: string; transferId: string }, NodeError>,
+      from: string,
+      inbox: string,
+    ) => void,
   ): Promise<void>;
 }
