@@ -429,21 +429,34 @@ export async function setupEngineListeners(
 
   // receive this message when withdraw tx is received
   await messaging.onReceiveWithdrawalSubmittedMessage(signer.publicIdentifier, async (data) => {
-    const commitment = await store.getWithdrawalCommitment(data.getValue().transferId);
+    const { channelAddress, transferId, txHash } = data.getValue();
+    const commitment = await store.getWithdrawalCommitment(transferId);
     if (!commitment) {
       logger.error(
         {
           method: "onReceiveWithdrawalSubmittedMessage",
-          transferId: data.getValue().transferId,
-          txHash: data.getValue().txHash,
+          transferId,
+          txHash,
         },
         "No commitment in store",
       );
       return;
     }
     const wc = await WithdrawCommitment.fromJson(commitment);
-    wc.addTransaction(data.getValue().txHash);
-    await store.saveWithdrawalCommitment(data.getValue().transferId, wc.toJson());
+    wc.addTransaction(txHash);
+    await store.saveWithdrawalCommitment(transferId, wc.toJson());
+    const channel = await store.getChannelState(channelAddress);
+    const transfer = await store.getTransferState(transferId);
+    // Withdrawal resolution meta will include the transaction hash,
+    // post to EVT here
+    evts[WITHDRAWAL_RECONCILED_EVENT].post({
+      aliceIdentifier: channel!.aliceIdentifier,
+      bobIdentifier: channel!.bobIdentifier,
+      channelAddress,
+      transferId,
+      transactionHash: txHash,
+      meta: transfer?.meta,
+    });
   });
 
   ////////////////////////////
@@ -958,16 +971,6 @@ export async function handleWithdrawalTransferResolution(
   if (signer.address !== alice) {
     // Store the double signed commitment
     await store.saveWithdrawalCommitment(transferId, commitment!.toJson());
-    // Withdrawal resolution meta will include the transaction hash,
-    // post to EVT here
-    evts[WITHDRAWAL_RECONCILED_EVENT].post({
-      aliceIdentifier,
-      bobIdentifier,
-      channelAddress,
-      transferId,
-      transactionHash: meta?.transactionHash,
-      meta: event.updatedTransfer.meta,
-    });
     logger.info({ method, methodId, withdrawalAmount: withdrawalAmount.toString(), assetId }, "Completed");
     return;
   }
@@ -1182,7 +1185,7 @@ export const resolveWithdrawal = async (
       await messaging.publishWithdrawalSubmittedMessage(
         bobIdentifier,
         aliceIdentifier,
-        Result.ok({ transferId, txHash: transactionHash }),
+        Result.ok({ transferId, txHash: transactionHash, channelAddress }),
       );
     } else {
       // log the transaction error, try to resolve with an undefined hash

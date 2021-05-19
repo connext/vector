@@ -953,22 +953,16 @@ export class VectorEngine implements IVectorEngine {
 
     // set up event listeners before sending request
     const timeout = 300_000;
-    const resolvedReconciled = (_transferId: string) =>
-      Promise.all([
-        // resolved should always happen
-        this.evts[WITHDRAWAL_RESOLVED_EVENT].waitFor(
-          (data) => data.channelAddress === params.channelAddress && data.transfer.transferId === _transferId,
-          timeout,
-        ),
-        // reconciling (submission to chain) may not happen (i.e. holding
-        // mainnet withdrawals for lower gas)
-        Promise.race([
-          this.evts[WITHDRAWAL_RECONCILED_EVENT].waitFor(
-            (data) => data.channelAddress === params.channelAddress && data.transferId === _transferId,
-          ),
-          delay(timeout),
-        ]),
-      ]);
+    const resolved = (_transferId: string) =>
+      this.evts[WITHDRAWAL_RESOLVED_EVENT].waitFor(
+        (data) => data.channelAddress === params.channelAddress && data.transfer.transferId === _transferId,
+        timeout,
+      );
+    const reconciled = (_transferId: string) =>
+      this.evts[WITHDRAWAL_RECONCILED_EVENT].waitFor(
+        (data) => data.channelAddress === params.channelAddress && data.transferId === _transferId,
+        timeout,
+      );
 
     // create withdrawal transfer
     const protocolRes = await this.vector.create(createParams);
@@ -979,12 +973,18 @@ export class VectorEngine implements IVectorEngine {
     const transferId = res.latestUpdate.details.transferId;
     this.logger.info({ channelAddress: params.channelAddress, transferId }, "Withdraw transfer created");
 
-    let transactionHash: string | undefined = undefined;
-    let transaction: MinimalTransaction | undefined = undefined;
+    let transactionHash: string | undefined;
+    let transaction: MinimalTransaction | undefined;
     try {
-      const [resolved, reconciled] = await resolvedReconciled(transferId);
-      transactionHash = typeof reconciled === "object" ? reconciled.transactionHash : undefined;
-      transaction = resolved.transaction;
+      // wait for resolution either way
+      const _resolved = await resolved(transferId);
+
+      // if we arent explicitly submitting, wait for counterparty to submit
+      if (!initiatorSubmits) {
+        const _reconciled = await reconciled(transferId);
+        transactionHash = typeof reconciled === "object" ? _reconciled.transactionHash : undefined;
+      }
+      transaction = _resolved.transaction;
     } catch (e) {
       this.logger.warn(
         { channelAddress: params.channelAddress, transferId, timeout, initiatorSubmits },

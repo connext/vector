@@ -291,10 +291,11 @@ export class MemoryMessagingService implements IMessagingService {
   ): Promise<void> {
     throw new Error("Method not implemented.");
   }
+
   onReceiveWithdrawalSubmittedMessage(
     myPublicIdentifier: string,
     callback: (
-      submitted: Result<{ txHash: string; transferId: string }, NodeError>,
+      submitted: Result<{ txHash: string; transferId: string; channelAddress: string }, NodeError>,
       from: string,
       inbox: string,
     ) => void,

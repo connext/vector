@@ -640,7 +640,7 @@ export class NatsMessagingService extends NatsBasicMessagingService implements I
   publishWithdrawalSubmittedMessage(
     to: string,
     from: string,
-    data: Result<{ txHash: string; transferId: string }, VectorError>,
+    data: Result<{ channelAddress: string; txHash: string; transferId: string }, VectorError>,
   ): Promise<void> {
     return this.publish(`${to}.${from}.withdrawal-submitted`, safeJsonStringify(data.toJson()));
   }
@@ -648,7 +648,7 @@ export class NatsMessagingService extends NatsBasicMessagingService implements I
   onReceiveWithdrawalSubmittedMessage(
     myPublicIdentifier: string,
     callback: (
-      submitted: Result<{ txHash: string; transferId: string }, NodeError>,
+      submitted: Result<{ channelAddress: string; txHash: string; transferId: string }, NodeError>,
       from: string,
       inbox: string,
     ) => void,
