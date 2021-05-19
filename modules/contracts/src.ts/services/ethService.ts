@@ -519,26 +519,21 @@ export class EthereumChainService extends EthereumChainReader implements IVector
     // that it's the previous one, any of them could have been confirmed.
     const pollForReceipt = async (): Promise<TransactionReceipt | undefined> => {
       // Make a pool of promises for resolving each receipt call (once it reaches target confirmations).
-      const pool: Promise<TransactionReceipt | undefined>[] = responses.map((response) => {
-        return new Promise<TransactionReceipt>((resolve) => {
-          provider.getTransactionReceipt(response.hash).then((r) => {
-            if (r && r.confirmations >= numConfirmations) {
-              return resolve(r);
-            }
-          });
-        });
-      });
-
-      // Add a promise returning undefined with a delay of 2 seconds to the pool.
-      // This will execute in the event that none of the provider.getTransactionReceipt calls work,
-      // and/or none of them have the number of confirmations we want.
-      pool.concat(
-        new Promise<undefined>((resolve) => {
-          delay(2_000).then(() => { return resolve(undefined); })
-        })
+      const response = await Promise.race<any>(
+        responses
+          .map((response) => {
+            return new Promise(async (resolve) => {
+              const r = await provider.getTransactionReceipt(response.hash);
+              if (r && r.confirmations >= numConfirmations) {
+                return resolve(r);
+              }
+            });
+          })
+          // Add a promise returning undefined with a delay of 2 seconds to the pool.
+          // This will execute in the event that none of the provider.getTransactionReceipt calls work,
+          // and/or none of them have the number of confirmations we want.
+          .concat(delay(2_000)),
       );
-
-      const response = await Promise.race<TransactionReceipt | undefined>(pool);
       return response;
     };
 
