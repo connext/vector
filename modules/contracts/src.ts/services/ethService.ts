@@ -437,6 +437,11 @@ export class EthereumChainService extends EthereumChainReader implements IVector
             throw error;
           }
         }
+
+        // Check status in event of tx reversion.
+        if (receipt && receipt.status === 0) {
+          throw new ChainError(ChainError.reasons.TxReverted, { receipt });
+        }
       } catch (e) {
         const latestResponse: TransactionResponse | undefined = responses[responses.length - 1];
         // Check if the error was a confirmation timeout.
@@ -538,10 +543,6 @@ export class EthereumChainService extends EthereumChainReader implements IVector
     }
     if (!receipt) {
       throw new ChainError(ChainError.retryableTxErrors.ConfirmationTimeout);
-    }
-    // Check status in event of tx reversion.
-    if (receipt.status === 0) {
-      throw new ChainError(ChainError.reasons.TxReverted, { receipt });
     }
     return receipt;
   }
