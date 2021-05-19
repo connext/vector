@@ -147,6 +147,7 @@ export async function withdrawRetryForTransferId(
     return Result.fail(wasSubmitted.getError()!);
   }
   const noOp = commitment.amount === "0" && commitment.callTo === AddressZero;
+  let txHash;
   if (wasSubmitted.getValue() || noOp) {
     logger.info(
       {
@@ -158,8 +159,9 @@ export async function withdrawRetryForTransferId(
       },
       "Previously submitted / no-op",
     );
-    commitment.addTransaction(HashZero);
+    txHash = HashZero;
   } else {
+    logger.info({ method, methodId, channelAddress: channel.channelAddress, transferId }, "Withdraw retry initiated");
     const tx = await chainService.sendWithdrawTx(channel, commitment.getSignedTransaction());
     if (tx.isError) {
       logger.error(
@@ -171,27 +173,15 @@ export async function withdrawRetryForTransferId(
       { method, methodId, transactionHash: tx.getValue().transactionHash },
       "Submitted unsubmitted withdrawal",
     );
-    commitment.addTransaction(tx.getValue().transactionHash);
+    txHash = tx.getValue().transactionHash;
     await messaging.publishWithdrawalSubmittedMessage(
       getParticipant(channel, publicIdentifier) === "alice" ? channel.bobIdentifier : channel.aliceIdentifier,
       publicIdentifier,
       Result.ok({ txHash: tx.getValue().transactionHash }),
     );
   }
+  commitment.addTransaction(txHash);
   await store.saveWithdrawalCommitment(transferId, commitment.toJson());
-
-  logger.info({ method, methodId, channelAddress: channel.channelAddress, transferId }, "Withdraw retry initiated");
-  const transaction = await chainService.sendWithdrawTx(channel, commitment.getSignedTransaction());
-  if (transaction.isError) {
-    return Result.fail(transaction.getError()!);
-  }
-  const txHash = transaction.getValue().transactionHash;
-  logger.info(
-    { method, methodId, channelAddress: channel.channelAddress, transferId, txHash },
-    "Withdraw retry complete",
-  );
-  commitment!.addTransaction(txHash);
-  await store.saveWithdrawalCommitment(transferId, commitment!.toJson());
 
   return Result.ok({
     transactionHash: txHash,

@@ -127,7 +127,6 @@ describe(testName, () => {
       const bobSig = await bob.signMessage(commitment.hashToSign());
 
       await commitment.addSignatures(aliceSig, bobSig);
-      console.log("commitment: ", commitment.toJson());
 
       store.getUnsubmittedWithdrawals.resolves([
         {
@@ -151,7 +150,7 @@ describe(testName, () => {
         channel.channel.aliceIdentifier,
       );
 
-      expect(chainService.sendWithdrawTx.callCount).to.eq(2);
+      expect(chainService.sendWithdrawTx.callCount).to.eq(1);
       expect(store.saveWithdrawalCommitment.callCount).to.eq(2);
     });
   });
