@@ -21,6 +21,7 @@ import {
   TransferDisputeSchema,
   ChannelDisputeSchema,
   TVectorErrorJson,
+  TDecimalString,
 } from "./basic";
 
 ////////////////////////////////////////
@@ -442,6 +443,27 @@ const PostAdminRetryWithdrawTransactionResponseSchema = {
   }),
 };
 
+// GENERATE SINGLE SIGNED WITHDRAW COMMITMENT
+const PostAdminGenerateWithdrawCommitmentBodySchema = Type.Object({
+  adminToken: Type.String(),
+  publicIdentifier: TPublicIdentifier,
+  counterpartyIdentifier: TPublicIdentifier,
+  chainId: TChainId,
+  assetId: TAddress,
+  amount: Type.Optional(TDecimalString),
+  recipient: Type.Optional(TAddress),
+  nonce: Type.Optional(Type.Number()),
+  callTo: Type.Optional(TAddress),
+  callData: Type.Optional(Type.String()),
+});
+
+const PostAdminGenerateWithdrawCommitmentResponseSchema = {
+  200: Type.Object({
+    commitment: Type.Any(),
+    transferId: TBytes32,
+  }),
+};
+
 // SUBMIT UNSUBMITTED WITHDRAWALS
 const PostAdminSubmitWithdrawalsBodySchema = Type.Object({
   adminToken: Type.String(),
@@ -693,6 +715,9 @@ export namespace NodeParams {
 
   export const SubmitWithdrawalsSchema = PostAdminSubmitWithdrawalsBodySchema;
   export type SubmitWithdrawals = Static<typeof SubmitWithdrawalsSchema>;
+
+  export const GenerateWithdrawCommitmentSchema = PostAdminGenerateWithdrawCommitmentBodySchema;
+  export type GenerateWithdrawCommitment = Static<typeof GenerateWithdrawCommitmentSchema>;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-namespace
@@ -823,4 +848,7 @@ export namespace NodeResponses {
 
   export const SubmitWithdrawalsSchema = PostAdminSubmitWithdrawalsResponseSchema;
   export type SubmitWithdrawals = Static<typeof PostAdminSubmitWithdrawalsResponseSchema["200"]>;
+
+  export const GenerateWithdrawCommitmentSchema = PostAdminGenerateWithdrawCommitmentResponseSchema;
+  export type GenerateWithdrawCommitment = Static<typeof GenerateWithdrawCommitmentSchema["200"]>;
 }

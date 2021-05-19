@@ -8,6 +8,7 @@ export class ServerNodeError extends NodeError {
   static readonly type = "ServerNodeError";
 
   static readonly reasons = {
+    BadRequest: "Problem with request",
     ChainServiceNotFound: "Chain service not found",
     ChannelNotFound: "Channel not found",
     ClearStoreFailed: "Failed to clear store",
@@ -23,6 +24,7 @@ export class ServerNodeError extends NodeError {
     TransactionNotFound: "Transaction not found",
     TransferNotFound: "Transfer not found",
     Unauthorized: "Unauthorized",
+    UnexpectedError: "Unexpected server error",
   } as const;
 
   readonly context: ServerNodeErrorContext;
