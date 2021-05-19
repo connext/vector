@@ -565,7 +565,7 @@ export class PrismaStore implements IServerNodeStore {
     const entities = await this.prisma.transfer.findMany({
       where: {
         channelAddressId: channelAddress,
-        onchainTransactionId: null,
+        transactionHash: null,
         resolveUpdateChannelAddressId: channelAddress,
         createUpdate: { transferDefinition: withdrawalDefinition },
       },
@@ -778,8 +778,61 @@ export class PrismaStore implements IServerNodeStore {
     // 3. update
     const updateWrite = !channelState.latestUpdate
       ? undefined
-      : this.prisma.update.create({
-          data: {
+      : this.prisma.update.upsert({
+          where: {
+            channelAddressId_nonce: {
+              channelAddressId: channelState.channelAddress,
+              nonce: channelState.latestUpdate.nonce,
+            },
+          },
+          update: {
+            channelAddressId: channelState.channelAddress,
+            channel: { connect: { channelAddress: channelState.channelAddress } },
+            fromIdentifier: channelState.latestUpdate.fromIdentifier,
+            toIdentifier: channelState.latestUpdate.toIdentifier,
+            nonce: channelState.latestUpdate!.nonce,
+            signatureA: channelState.latestUpdate?.aliceSignature,
+            signatureB: channelState.latestUpdate?.bobSignature,
+            amountA: channelState.latestUpdate!.balance.amount[0],
+            amountB: channelState.latestUpdate!.balance.amount[1],
+            toA: channelState.latestUpdate!.balance.to[0],
+            toB: channelState.latestUpdate!.balance.to[1],
+            type: channelState.latestUpdate!.type,
+            assetId: channelState.latestUpdate!.assetId,
+
+            // details
+            // deposit
+            totalDepositsAlice: (channelState.latestUpdate!.details as DepositUpdateDetails).totalDepositsAlice,
+            totalDepositsBob: (channelState.latestUpdate!.details as DepositUpdateDetails).totalDepositsBob,
+
+            // create
+            transferInitialState: (channelState.latestUpdate!.details as CreateUpdateDetails).transferInitialState
+              ? JSON.stringify((channelState.latestUpdate!.details as CreateUpdateDetails).transferInitialState)
+              : undefined,
+            transferAmountA:
+              (channelState.latestUpdate!.details as CreateUpdateDetails).balance?.amount[0] ?? undefined,
+            transferToA: (channelState.latestUpdate!.details as CreateUpdateDetails).balance?.to[0] ?? undefined,
+            transferAmountB:
+              (channelState.latestUpdate!.details as CreateUpdateDetails).balance?.amount[1] ?? undefined,
+            transferToB: (channelState.latestUpdate!.details as CreateUpdateDetails).balance?.to[1] ?? undefined,
+            merkleRoot: (channelState.latestUpdate!.details as CreateUpdateDetails).merkleRoot,
+            merkleProofData: (channelState.latestUpdate!.details as CreateUpdateDetails).merkleProofData?.join(),
+            transferDefinition: (channelState.latestUpdate!.details as CreateUpdateDetails).transferDefinition,
+            transferEncodings: (channelState.latestUpdate!.details as CreateUpdateDetails).transferEncodings
+              ? (channelState.latestUpdate!.details as CreateUpdateDetails).transferEncodings.join("$") // comma separation doesnt work
+              : undefined,
+            transferId: (channelState.latestUpdate!.details as CreateUpdateDetails).transferId,
+            transferTimeout: (channelState.latestUpdate!.details as CreateUpdateDetails).transferTimeout,
+            meta: (channelState.latestUpdate!.details as CreateUpdateDetails).meta
+              ? JSON.stringify((channelState.latestUpdate!.details as CreateUpdateDetails).meta)
+              : undefined,
+
+            // resolve
+            transferResolver: (channelState.latestUpdate!.details as ResolveUpdateDetails).transferResolver
+              ? JSON.stringify((channelState.latestUpdate!.details as ResolveUpdateDetails).transferResolver)
+              : undefined,
+          },
+          create: {
             channelAddressId: channelState.channelAddress,
             channel: { connect: { channelAddress: channelState.channelAddress } },
             fromIdentifier: channelState.latestUpdate.fromIdentifier,
@@ -853,17 +906,12 @@ export class PrismaStore implements IServerNodeStore {
       });
     } else if (channelState.latestUpdate?.type === UpdateType.resolve) {
       transferWrite = this.prisma.transfer.update({
-        where: { transferId: transfer?.transferId },
+        where: { transferId: transfer!.transferId },
         data: {
-          channelAddressId: channelState.channelAddress,
-          transferId: transfer!.transferId,
-          routingId: transfer!.meta?.routingId ?? getRandomBytes32(),
           amountA: transfer!.balance.amount[0],
           toA: transfer!.balance.to[0],
           amountB: transfer!.balance.amount[1],
           toB: transfer!.balance.to[1],
-          initialStateHash: transfer!.initialStateHash,
-          channelNonce: transfer!.channelNonce,
           channel: { disconnect: true },
           resolveUpdate: {
             connect: {
