@@ -982,7 +982,7 @@ export class VectorEngine implements IVectorEngine {
       // if we arent explicitly submitting, wait for counterparty to submit
       if (!initiatorSubmits) {
         const _reconciled = await reconciled(transferId);
-        transactionHash = typeof reconciled === "object" ? _reconciled.transactionHash : undefined;
+        transactionHash = typeof _reconciled === "object" ? _reconciled.transactionHash : undefined;
       }
       transaction = _resolved.transaction;
     } catch (e) {
