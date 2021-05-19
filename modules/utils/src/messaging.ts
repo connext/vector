@@ -617,7 +617,6 @@ export class NatsMessagingService extends NatsBasicMessagingService implements I
     from: string,
     data: Result<ConditionalTransferRoutingCompletePayload, VectorError>,
   ): Promise<void> {
-    console.log("publishTransferRoutingCompleteMessage ======> ", `${to}.${from}.forwarded-transfer`);
     return this.publish(`${to}.${from}.transfer-routing-complete`, safeJsonStringify(data.toJson()));
   }
 
@@ -629,14 +628,31 @@ export class NatsMessagingService extends NatsBasicMessagingService implements I
       inbox: string,
     ) => void,
   ): Promise<void> {
-    console.log(
-      "onReceiveTransferRoutingCompleteMessage ======> ",
-      `${myPublicIdentifier}.*.transfer-routing-complete`,
-    );
     return this.registerCallback(
       `${myPublicIdentifier}.*.transfer-routing-complete`,
       callback,
       "onReceiveForwardedTransferMessage",
+    );
+  }
+  ////////////
+
+  // WITHDRAWAL SUBMITTED
+  publishWithdrawalSubmittedMessage(
+    to: string,
+    from: string,
+    data: Result<{ txHash: string }, VectorError>,
+  ): Promise<void> {
+    return this.publish(`${to}.${from}.withdrawal-submitted`, safeJsonStringify(data.toJson()));
+  }
+
+  onReceiveWithdrawalSubmittedMessage(
+    myPublicIdentifier: string,
+    callback: (submitted: Result<{ txHash: string }, NodeError>, from: string, inbox: string) => void,
+  ): Promise<void> {
+    return this.registerCallback(
+      `${myPublicIdentifier}.*.withdrawal-submitted`,
+      callback,
+      "onReceiveWithdrawalSubmittedMessage",
     );
   }
   ////////////
