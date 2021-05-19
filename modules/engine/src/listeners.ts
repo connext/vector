@@ -345,7 +345,15 @@ export async function setupEngineListeners(
 
       // if channel is not a mainnet channel and user is alice, we can attempt to resubmit unsubmitted withdrawals
       if (channel.networkContext.chainId !== 1 && signer.publicIdentifier === channel.aliceIdentifier) {
-        submitUnsubmittedWithdrawals(channel, store, chainAddresses, chainService, logger);
+        submitUnsubmittedWithdrawals(
+          channel,
+          store,
+          chainAddresses,
+          chainService,
+          logger,
+          messaging,
+          signer.publicIdentifier,
+        );
       }
 
       // respond if necessary

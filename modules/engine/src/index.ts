@@ -52,7 +52,7 @@ import {
   convertWithdrawParams,
 } from "./paramConverter";
 import { setupEngineListeners } from "./listeners";
-import { getEngineEvtContainer, withdrawRetryForTrasferId } from "./utils";
+import { getEngineEvtContainer, withdrawRetryForTransferId } from "./utils";
 import { sendIsAlive } from "./isAlive";
 import { WithdrawCommitment } from "@connext/vector-contracts";
 
@@ -1039,12 +1039,13 @@ export class VectorEngine implements IVectorEngine {
       );
     }
 
-    const res = await withdrawRetryForTrasferId(
+    const res = await withdrawRetryForTransferId(
       params.transferId,
       channel,
       this.store,
       this.chainService,
       this.logger,
+      this.messaging,
       this.publicIdentifier,
     );
 

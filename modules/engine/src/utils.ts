@@ -30,9 +30,10 @@ import {
   IVectorChainService,
   TransferNames,
   jsonifyError,
+  IMessagingService,
 } from "@connext/vector-types";
 import { WithdrawCommitment } from "@connext/vector-contracts";
-import { FeeCalculationError, normalizeFee, getRandomBytes32 } from "@connext/vector-utils";
+import { FeeCalculationError, normalizeFee, getRandomBytes32, getParticipant } from "@connext/vector-utils";
 import { BigNumber } from "@ethersproject/bignumber";
 import { Evt } from "evt";
 import { AddressZero, HashZero } from "@ethersproject/constants";
@@ -90,16 +91,17 @@ export function normalizeGasFees(
   );
 }
 
-export async function withdrawRetryForTrasferId(
+export async function withdrawRetryForTransferId(
   transferId: string,
   channel: FullChannelState,
   store: IEngineStore,
   chainService: IVectorChainService,
   logger: BaseLogger,
-  publicIdentifier?: string,
+  messaging: IMessagingService,
+  publicIdentifier: string,
   commitment?: WithdrawCommitment,
 ): Promise<Result<ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_withdrawRetry], EngineError>> {
-  const method = "withdrawRetryForTrasferId";
+  const method = "withdrawRetryForTransferId";
   const methodId = getRandomBytes32();
   if (!commitment) {
     const json = await store.getWithdrawalCommitment(transferId);
@@ -170,6 +172,11 @@ export async function withdrawRetryForTrasferId(
       "Submitted unsubmitted withdrawal",
     );
     commitment.addTransaction(tx.getValue().transactionHash);
+    await messaging.publishWithdrawalSubmittedMessage(
+      getParticipant(channel, publicIdentifier) === "alice" ? channel.bobIdentifier : channel.aliceIdentifier,
+      publicIdentifier,
+      Result.ok({ txHash: tx.getValue().transactionHash }),
+    );
   }
   await store.saveWithdrawalCommitment(transferId, commitment.toJson());
 
@@ -199,6 +206,8 @@ export async function submitUnsubmittedWithdrawals(
   chainAddresses: ChainAddresses,
   chainService: IVectorChainService,
   logger: BaseLogger,
+  messaging: IMessagingService,
+  publicIdentifier: string,
 ): Promise<void> {
   const method = "submitUnsubmittedWithdrawals";
   const methodId = getRandomBytes32();
@@ -220,13 +229,14 @@ export async function submitUnsubmittedWithdrawals(
     logger.info({ method, methodId, transferId: u.transfer.transferId }, "Submitting unsubmitted withdrawal");
 
     const commitment = await WithdrawCommitment.fromJson(u.commitment);
-    const res = await withdrawRetryForTrasferId(
+    const res = await withdrawRetryForTransferId(
       u.transfer.transferId,
       channel,
       store,
       chainService,
       logger,
-      "",
+      messaging,
+      publicIdentifier,
       commitment,
     );
 

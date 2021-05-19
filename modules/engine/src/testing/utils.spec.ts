@@ -95,7 +95,7 @@ describe(testName, () => {
     // By default acquire/release for restore succeeds
     acquireRestoreLockStub = Sinon.stub().resolves(Result.ok(undefined));
     releaseRestoreLockStub = Sinon.stub().resolves(Result.ok(undefined));
-    withdrawRetryForTrasferIdStub = Sinon.stub(utils, "withdrawRetryForTrasferId");
+    withdrawRetryForTrasferIdStub = Sinon.stub(utils, "withdrawRetryForTransferId");
   });
 
   afterEach(() => {
@@ -147,6 +147,8 @@ describe(testName, () => {
         chainAddresses,
         chainService as IVectorChainService,
         log,
+        messaging,
+        channel.channel.aliceIdentifier,
       );
 
       expect(chainService.sendWithdrawTx.callCount).to.eq(2);
