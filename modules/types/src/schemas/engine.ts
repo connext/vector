@@ -167,6 +167,12 @@ const WithdrawParamsSchema = Type.Object({
   initiatorSubmits: Type.Optional(Type.Boolean()),
 });
 
+// Withdraw Retry engine
+const WithdrawRetryParamsSchema = Type.Object({
+  channelAddress: TAddress,
+  transferId: TBytes32,
+});
+
 //////////////////
 /// Dispute Methods
 
@@ -304,6 +310,9 @@ export namespace EngineParams {
 
   export const WithdrawSchema = WithdrawParamsSchema;
   export type Withdraw = Static<typeof WithdrawSchema>;
+
+  export const WithdrawRetrySchema = WithdrawRetryParamsSchema;
+  export type WithdrawRetry = Static<typeof WithdrawRetrySchema>;
 
   export const DisputeChannelSchema = DisputeChannelParamsSchema;
   export type DisputeChannel = Static<typeof DisputeChannelParamsSchema>;

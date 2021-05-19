@@ -59,7 +59,6 @@ import {
   handleWithdrawalTransferResolution,
   resolveExistingWithdrawals,
   setupEngineListeners,
-  submitUnsubmittedWithdrawals,
 } from "../listeners";
 import * as utils from "../utils";
 import * as listeners from "../listeners";
@@ -384,7 +383,7 @@ describe(testName, () => {
       const isAlice = signer.address === updatedChannelState.alice;
 
       // Verify the store calls were correctly executed
-      expect(store.saveWithdrawalCommitment.callCount).to.be.eq(isWithdrawalInitiator ? 0 : 1);
+      expect(store.saveWithdrawalCommitment.callCount).to.be.eq(isAlice ? 2 : 1);
       // If the call was executed, verify arguments
       if (store.saveWithdrawalCommitment.callCount) {
         const [storeTransferId, withdrawCommitment] = store.saveWithdrawalCommitment.args[0];
@@ -412,8 +411,6 @@ describe(testName, () => {
         expect(channelAddress).to.be.eq(updatedChannelState.channelAddress);
         expect(transferId).to.be.eq(transfer.transferId);
         // Verify transaction hash in meta if withdraw attempted
-        chainService.sendWithdrawTx.callCount &&
-          expect(meta).to.containSubset({ transactionHash: withdrawTransactionHash });
       }
     };
 
@@ -571,7 +568,7 @@ describe(testName, () => {
         chainService as IVectorChainService,
         getEngineEvtContainer(),
         log,
-        50,
+        messaging,
       );
 
       expect(vector.resolve.getCall(0).args[0]).to.containSubset({
@@ -871,55 +868,6 @@ describe(testName, () => {
         } as ConditionalTransferRoutingCompletePayload),
       );
       await promise;
-    });
-  });
-
-  describe("submitUnsubmittedWithdrawals", () => {
-    it("should work", async () => {
-      chainService.getWithdrawalTransactionRecord.onFirstCall().resolves(Result.ok(true));
-      chainService.getWithdrawalTransactionRecord.resolves(Result.ok(false));
-
-      const alice = getRandomChannelSigner();
-      const bob = getRandomChannelSigner();
-
-      const channel = createTestChannelState("create", { alice: alice.address, bob: bob.address });
-      channel.channel.networkContext.chainId = chainId;
-
-      const commitment = new WithdrawCommitment(
-        channel.channel.channelAddress,
-        alice.address,
-        bob.address,
-        mkAddress("0xabc"),
-        channel.transfer.assetId,
-        "1",
-        channel.channel.nonce.toString(),
-      );
-      const aliceSig = await alice.signMessage(commitment.hashToSign());
-      const bobSig = await bob.signMessage(commitment.hashToSign());
-
-      await commitment.addSignatures(aliceSig, bobSig);
-      console.log("commitment: ", commitment.toJson());
-
-      store.getUnsubmittedWithdrawals.resolves([
-        {
-          commitment: commitment.toJson(),
-          transfer: channel.transfer,
-        },
-        {
-          commitment: commitment.toJson(),
-          transfer: channel.transfer,
-        },
-      ]);
-      await submitUnsubmittedWithdrawals(
-        channel.channel,
-        store,
-        chainAddresses,
-        chainService as IVectorChainService,
-        log,
-      );
-
-      expect(chainService.sendWithdrawTx.callCount).to.eq(1);
-      expect(store.saveWithdrawalCommitment.callCount).to.eq(2);
     });
   });
 });
