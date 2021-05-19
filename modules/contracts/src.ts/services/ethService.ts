@@ -507,7 +507,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
    * a timeout. If within the timeout there are *not* 10 confirmations,
    * the tx will be resubmitted at the same nonce.
    */
-   public async waitForConfirmation(chainId: number, responses: TransactionResponse[]): Promise<TransactionReceipt> {
+  public async waitForConfirmation(chainId: number, responses: TransactionResponse[]): Promise<TransactionReceipt> {
     const provider: JsonRpcProvider = this.chainProviders[chainId];
     if (!provider) {
       throw new ChainError(ChainError.reasons.ProviderNotFound);
