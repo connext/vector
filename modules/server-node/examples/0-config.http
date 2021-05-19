@@ -12,11 +12,12 @@
 @carolPublicIdentifier = vector8ZaxNSdUM83kLXJSsmj5jrcq17CpZUwBirmboaNPtQMEXjVNrL
 @davePublicIdentifier = vector7mAydt3S3dDPWJMYSHZPdRo16Pru145qTNQYFoS8TrpXWW8HAj
 @rogerPublicIdentifier = vector8Uz1BdpA9hV5uTm6QUv5jj1PsUyCH8m8ciA94voCzsxVmrBRor
+
 @chainId = 1337
 
 @nodeUrl = {{carolUrl}}
 @nodePublicIdentifier = {{carolPublicIdentifier}}
-@counterpartyPublicIdentifier = {{carolPublicIdentifier}}
+@counterpartyPublicIdentifier = {{rogerPublicIdentifier}}
 @channel = {{carolRogerChannel}}
 
 ##############
@@ -66,14 +67,6 @@ Content-Type: application/json
 ##############
 ### CREATE NODE
 POST {{nodeUrl}}/node
-Content-Type: application/json
-
-{
-  "index": 0
-}
-
-### CREATE DAVE
-POST {{daveUrl}}/node
 Content-Type: application/json
 
 {

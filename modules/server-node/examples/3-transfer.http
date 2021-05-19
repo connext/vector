@@ -107,18 +107,3 @@ GET {{nodeUrl}}/{{nodePublicIdentifier}}/channels/{{channel}}/active-transfers
 ### Get Transfer By Routing Id
 GET {{nodeUrl}}/{{nodePublicIdentifier}}/{{channel}}/transfers/routing-id/{{routingId}}
 
-##############
-### Start Auction
-
-POST {{carolUrl}}/run-auction
-Content-Type: application/json
-
-{
-  "amount": "1000000",
-  "publicIdentifier": "{{carolPublicIdentifier}}",
-  "assetId": "0x0000000000000000000000000000000000000000",
-  "chainId": 1337,
-  "recipient": "{{recipientPublicIdentifier}}",
-  "recipientAssetId": "0x0000000000000000000000000000000000000000",
-  "recipientChainId": 1337
-}
