@@ -2,6 +2,10 @@
 
 ## Next Release
 
+## 0.2.5-beta.9
+
+- \[server-node\] Store resilient to restarts
+
 ## 0.2.5-beta.8
 
 - \[server-node, browser-node\] Schema/migration fixes
