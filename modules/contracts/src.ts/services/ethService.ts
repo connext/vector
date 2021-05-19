@@ -470,7 +470,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
           if (e.message.includes("sender doesn't have enough funds")) {
             error = new ChainError(ChainError.reasons.NotEnoughFunds);
           }
-          // Don't save tx if it failed to submit (i.e. no response), only if it fails to mine.
+          // Don't save tx if it failed to submit (i.e. never received response), only if it fails to mine.
           if (latestResponse) {
             // If we get any other error here, we classify this event as a tx failure.
             await this.handleTxFail(
