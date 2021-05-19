@@ -387,24 +387,23 @@ export class EthereumChainService extends EthereumChainReader implements IVector
             throw error;
           }
         } else {
-          // If response returns undefined, we assume the tx was not sent. This will happen if some logic was
-          // passed into txFn to bail out at the time of sending.
           let tempResponse = result.getValue();
-          if (!tempResponse) {
+          if (tempResponse) {
+            response = tempResponse;
+            // NOTE: Response MUST be defined here because if it was NEVER defined (i.e. undefined on first iteration),
+            // we would have returned in prev block, and if it was undefined on this iteration we would not overwrite
+            // that value.
+            // Tx was submitted: handle saving to store.
+            await this.handleTxSubmit(onchainTransactionId, method, methodId, channelAddress, reason, response)
+          } else {
+            // If response returns undefined, we assume the tx was not sent. This will happen if some logic was
+            // passed into txFn to bail out at the time of sending.
             this.log.warn({ method, methodId, channelAddress, reason }, "Did not attempt tx");
             // Iff this is the only iteration, then we want to go ahead return w/o saving anything.
             if (tryNumber === 1) {
               return Result.ok(undefined);
             }
-          } else {
-            response = tempResponse;
           }
-
-          // NOTE: Response MUST be defined here because if it was NEVER defined (i.e. undefined on first iteration),
-          // we would have returned in prev block, and if it was undefined on this iteration we would not overwrite
-          // that value.
-          // Tx was submitted: handle saving to store.
-          await this.handleTxSubmit(onchainTransactionId, method, methodId, channelAddress, reason, response!);
         }
 
         /// CONFIRM
