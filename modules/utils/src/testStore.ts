@@ -38,7 +38,11 @@ import {
 
 /// TODO(@jakekidd): We may want to move these helpers to utils
 /// Sanitize tx response for comparison to stored values.
-const sanitizeResponse = (response: TransactionResponse, channelAddress: string, reason: TransactionReason): StoredTransaction => {
+const sanitizeResponse = (
+  response: TransactionResponse,
+  channelAddress: string,
+  reason: TransactionReason,
+): StoredTransaction => {
   return {
     channelAddress,
     status: StoredTransactionStatus.submitted,
@@ -50,7 +54,7 @@ const sanitizeResponse = (response: TransactionResponse, channelAddress: string,
     chainId: response.chainId,
     nonce: response.nonce,
   } as StoredTransaction;
-}
+};
 
 /// Sanitize tx response for comparison to stored value for tx attempts.
 const sanitizeAttempt = (response: TransactionResponse): StoredTransactionAttempt => {
@@ -59,7 +63,7 @@ const sanitizeAttempt = (response: TransactionResponse): StoredTransactionAttemp
     gasLimit: response.gasLimit.toString(),
     gasPrice: response.gasPrice.toString(),
   } as StoredTransactionAttempt;
-}
+};
 
 // NOTE: This method exists as a private helper in browser-node. See above TODO.
 /// Sanitize tx receipt for comparison to stored value for tx receipt.
@@ -77,8 +81,8 @@ const sanitizeReceipt = (receipt: TransactionReceipt): StoredTransactionReceipt 
     logs: receipt.logs.toString(),
     byzantium: receipt.byzantium,
     status: receipt.status ?? undefined,
-  }
-}
+  };
+};
 
 export const testStore = <T extends IEngineStore>(
   name: string,
@@ -567,6 +571,7 @@ export const testStore = <T extends IEngineStore>(
             aliceIdentifier: alice.publicIdentifier,
             bobIdentifier: bob.publicIdentifier,
             latestUpdate: { ...createUpdate },
+            nonce: createUpdate.nonce,
           });
           await store.saveChannelState(createChannel, { ...transfer, balance: createUpdate.balance });
 
@@ -577,6 +582,7 @@ export const testStore = <T extends IEngineStore>(
             aliceIdentifier: alice.publicIdentifier,
             bobIdentifier: bob.publicIdentifier,
             latestUpdate: { ...resolveUpdate },
+            nonce: resolveUpdate.nonce,
           }).channel;
           await store.saveChannelState(
             { ...resolveChannel, latestUpdate: resolveUpdate },
@@ -722,9 +728,12 @@ export const testStore = <T extends IEngineStore>(
         let storedTransaction = await store.getTransactionById(onchainTransactionId);
         expect(storedTransaction.attempts.length).to.equal(NUM_ATTEMPTS);
         // here's the most important check in this unit test: does the tx order match?
-        assert(storedTransaction.attempts.every((attempt, index) => {
-          return attempt.transactionHash == hashes[index];
-        }), "each transaction attempt stored must be returned in order of execution");
+        assert(
+          storedTransaction.attempts.every((attempt, index) => {
+            return attempt.transactionHash == hashes[index];
+          }),
+          "each transaction attempt stored must be returned in order of execution",
+        );
       });
 
       it("should save and retrieve all update types and keep updating the channel", async () => {
