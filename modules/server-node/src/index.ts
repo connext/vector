@@ -1054,14 +1054,6 @@ server.post<{ Body: NodeParams.WithdrawRetry }>(
     try {
       const res = await engine.request<typeof ChannelRpcMethods.chan_withdrawRetry>(rpc);
       return reply.status(200).send(res);
-      // const chainService = getChainService(channel.aliceIdentifier) ?? getChainService(channel.bobIdentifier);
-      // if (!chainService) {
-      //   return reply
-      //     .status(404)
-      //     .send(new ServerNodeError(ServerNodeError.reasons.ChainServiceNotFound, "", request.body).toJson());
-      // }
-      // commitment!.addTransaction(tx.getValue().transactionHash);
-      // await store.saveWithdrawalCommitment(request.body.transferId, commitment!.toJson());
     } catch (e) {
       return reply.status(500).send(jsonifyError(e));
     }
