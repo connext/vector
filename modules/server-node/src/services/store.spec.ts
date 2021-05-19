@@ -31,6 +31,57 @@ describe("Server node-specific methods", async () => {
     await store.disconnect();
   });
 
+  describe("should handle disconnects", () => {
+    it("should handle a disconnect during `create`", async () => {
+      // Save channel
+      const channel1 = mkAddress("0xaaa");
+      const aliceCS = getRandomChannelSigner();
+      const bobCS = getRandomChannelSigner();
+      const createState1 = createTestChannelState(
+        "create",
+        {
+          channelAddress: channel1,
+          aliceIdentifier: aliceCS.publicIdentifier,
+          bobIdentifier: bobCS.publicIdentifier,
+          merkleRoot: mkHash("0x111"),
+        },
+        { transferId: mkHash("0x123"), meta: { routingId: mkHash("0x123") } },
+      );
+      await store.saveChannelState(createState1.channel, createState1.transfer);
+      const transfer1 = await store.getTransferState(mkHash("0x123"));
+      expect(transfer1).to.be.ok;
+
+      const createState2 = createTestChannelState(
+        "create",
+        {
+          channelAddress: channel1,
+          aliceIdentifier: aliceCS.publicIdentifier,
+          bobIdentifier: bobCS.publicIdentifier,
+          merkleRoot: mkHash("0x222"),
+        },
+        { transferId: mkHash("0x456"), meta: { routingId: mkHash("0x456") } },
+      );
+      await Promise.all([
+        new Promise(async (resolve) => {
+          try {
+            await store.saveChannelState(createState2.channel, createState2.transfer);
+            resolve("");
+          } catch (e) {
+            resolve("");
+          }
+        }),
+        store.disconnect(),
+      ]);
+
+      // Reconnect
+      await store.connect();
+      const channel = await store.getChannelState(channel1);
+      const transfer2 = await store.getTransferState(mkHash("0x456"));
+      expect(channel).to.be.deep.eq(createState1.channel);
+      expect(transfer2).to.be.undefined;
+    });
+  });
+
   describe("getUnsubmittedWithdrawals", () => {
     it("should get resolved withdrawals by transfer definition which dont have tx hashes and are not canceled", async () => {
       const channel1 = mkAddress("0xaaa");
