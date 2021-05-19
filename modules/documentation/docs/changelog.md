@@ -2,6 +2,10 @@
 
 ## Next Release
 
+## 0.2.5-beta.8
+
+- \[server-node, browser-node\] Schema/migration fixes
+
 ## 0.2.5-beta.7
 
 - \[contracts\] Tx service schema updates
