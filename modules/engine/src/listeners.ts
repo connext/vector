@@ -1170,14 +1170,6 @@ export const resolveWithdrawal = async (
     if (!withdrawalResponse.isError) {
       const transactionHash = withdrawalResponse.getValue()!.transactionHash;
       logger.info({ method, transactionHash }, "Submitted tx");
-      // Post to reconciliation evt on submission
-      evts[WITHDRAWAL_RECONCILED_EVENT].post({
-        aliceIdentifier,
-        bobIdentifier,
-        channelAddress,
-        transferId,
-        transactionHash,
-      });
       commitment.addTransaction(transactionHash);
       await store.saveWithdrawalCommitment(transfer.transferId, commitment.toJson());
 
@@ -1187,6 +1179,15 @@ export const resolveWithdrawal = async (
         aliceIdentifier,
         Result.ok({ transferId, txHash: transactionHash, channelAddress }),
       );
+
+      // Post to reconciliation evt on submission
+      evts[WITHDRAWAL_RECONCILED_EVENT].post({
+        aliceIdentifier,
+        bobIdentifier,
+        channelAddress,
+        transferId,
+        transactionHash,
+      });
     } else {
       // log the transaction error, try to resolve with an undefined hash
       logger.error({ error: withdrawalResponse.getError()!.message, method }, "Failed to submit tx");
