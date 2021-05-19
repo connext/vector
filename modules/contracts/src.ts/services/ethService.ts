@@ -396,7 +396,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
 
             /// CONFIRM
             // Now we wait for confirmation and get tx receipt.
-            receipt = await this.waitForConfirmation(chainId, response);
+            receipt = await this.waitForConfirmation(chainId, responses);
           } else {
             // If response returns undefined, we assume the tx was not sent. This will happen if some logic was
             // passed into txFn to bail out at the time of sending.
@@ -406,7 +406,10 @@ export class EthereumChainService extends EthereumChainReader implements IVector
             if (tryNumber === 1) {
               return Result.ok(undefined);
             } else {
-              this.log.warn({ method, methodId, channelAddress, reason }, `txFn returned undefined on try ${tryNumber}`);
+              this.log.warn(
+                { method, methodId, channelAddress, reason },
+                `txFn returned undefined on try ${tryNumber}`,
+              );
             }
           }
         } else {
@@ -427,7 +430,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
             // that it's the previous one, any of them could have been confirmed.
             for (let i = 0; i < responses.length; i++) {
               try {
-                receipt = await this.waitForConfirmation(chainId, responses[i]);
+                receipt = await this.waitForConfirmation(chainId, responses);
               } catch {}
               if (receipt) {
                 break;
@@ -511,29 +514,41 @@ export class EthereumChainService extends EthereumChainReader implements IVector
     return Result.ok(receipt);
   }
 
-  public async waitForConfirmation(chainId: number, response: TransactionResponse): Promise<TransactionReceipt> {
+  /**
+   * Will wait for any of the given TransactionResponses to return
+   * a receipt. Once a receipt is returned by any of the responses,
+   * it will wait for 10 confirmations of the given receipt against
+   * a timeout. If within the timeout there are *not* 10 confirmations,
+   * the tx will be resubmitted at the same nonce.
+   */
+  public async waitForConfirmation(chainId: number, responses: TransactionResponse[]): Promise<TransactionReceipt> {
     const provider: JsonRpcProvider = this.chainProviders[chainId];
     if (!provider) {
       throw new ChainError(ChainError.reasons.ProviderNotFound);
     }
     const numConfirmations = getConfirmationsForChain(chainId);
-    // An anon fn to get the tx receipt, as we may require multiple retries with raised gas price.
+    // An anon fn to get the tx receipts for all responses
     const getTransactionReceipt = async (): Promise<TransactionReceipt | undefined> => {
-      const receipt = await provider.getTransactionReceipt(response.hash);
-      if (receipt?.confirmations < numConfirmations) {
-        return undefined;
-      }
-      return receipt;
+      const response = await Promise.race<any>(
+        responses
+          .map((response) => {
+            return new Promise(async (resolve) => {
+              const r = await provider.getTransactionReceipt(response.hash);
+              if (r && r.confirmations >= numConfirmations) {
+                return resolve(r);
+              }
+            });
+          })
+          .concat(delay(2_000)),
+      );
+      return response;
     };
-
     // Poll for receipt.
     let receipt: TransactionReceipt | undefined = await getTransactionReceipt();
     // NOTE: This loop won't execute if receipt is valid (not undefined).
     let timeElapsed: number = 0;
     const startMark = new Date().getTime();
     while (!receipt && timeElapsed < CONFIRMATION_TIMEOUT) {
-      // Pause for 2 sec.
-      await delay(2000);
       receipt = await getTransactionReceipt();
       if (receipt) {
         break;
