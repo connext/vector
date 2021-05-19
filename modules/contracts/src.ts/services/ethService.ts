@@ -393,10 +393,6 @@ export class EthereumChainService extends EthereumChainReader implements IVector
             // that value.
             // Tx was submitted: handle saving to store.
             await this.handleTxSubmit(onchainTransactionId, method, methodId, channelAddress, reason, response);
-
-            /// CONFIRM
-            // Now we wait for confirmation and get tx receipt.
-            receipt = await this.waitForConfirmation(chainId, response);
           } else {
             // If response returns undefined, we assume the tx was not sent. This will happen if some logic was
             // passed into txFn to bail out at the time of sending.
@@ -423,21 +419,14 @@ export class EthereumChainService extends EthereumChainReader implements IVector
               { method, methodId, channelAddress, reason },
               "Nonce already used: proceeding to check for confirmation in previous transactions.",
             );
-            // We must check for confirmation in all previous transactions. Although it's most likely
-            // that it's the previous one, any of them could have been confirmed.
-            for (let i = 0; i < responses.length; i++) {
-              try {
-                receipt = await this.waitForConfirmation(chainId, responses[i]);
-              } catch {}
-              if (receipt) {
-                break;
-              }
-            }
           } else {
             throw error;
           }
         }
 
+        /// CONFIRM
+        // Now we wait for confirmation and get tx receipt.
+        receipt = await this.waitForConfirmation(chainId, responses);
         // Check status in event of tx reversion.
         if (receipt && receipt.status === 0) {
           throw new ChainError(ChainError.reasons.TxReverted, { receipt });
@@ -511,39 +500,64 @@ export class EthereumChainService extends EthereumChainReader implements IVector
     return Result.ok(receipt);
   }
 
-  public async waitForConfirmation(chainId: number, response: TransactionResponse): Promise<TransactionReceipt> {
+  /**
+   * Will wait for any of the given TransactionResponses to return
+   * a receipt. Once a receipt is returned by any of the responses,
+   * it will wait for 10 confirmations of the given receipt against
+   * a timeout. If within the timeout there are *not* 10 confirmations,
+   * the tx will be resubmitted at the same nonce.
+   */
+   public async waitForConfirmation(chainId: number, responses: TransactionResponse[]): Promise<TransactionReceipt> {
     const provider: JsonRpcProvider = this.chainProviders[chainId];
     if (!provider) {
       throw new ChainError(ChainError.reasons.ProviderNotFound);
     }
     const numConfirmations = getConfirmationsForChain(chainId);
-    // An anon fn to get the tx receipt, as we may require multiple retries with raised gas price.
-    const getTransactionReceipt = async (): Promise<TransactionReceipt | undefined> => {
-      const receipt = await provider.getTransactionReceipt(response.hash);
-      if (receipt?.confirmations < numConfirmations) {
-        return undefined;
-      }
-      return receipt;
+
+    // An anon fn to get the tx receipts for all responses.
+    // We must check for confirmation in all previous transactions. Although it's most likely
+    // that it's the previous one, any of them could have been confirmed.
+    const pollForReceipt = async (): Promise<TransactionReceipt | undefined> => {
+      // Make a pool of promises for resolving each receipt call (once it reaches target confirmations).
+      const pool: Promise<TransactionReceipt | undefined>[] = responses.map((response) => {
+        return new Promise<TransactionReceipt>((resolve) => {
+          provider.getTransactionReceipt(response.hash).then((r) => {
+            if (r && r.confirmations >= numConfirmations) {
+              return resolve(r);
+            }
+          });
+        });
+      });
+
+      // Add a promise returning undefined with a delay of 2 seconds to the pool.
+      // This will execute in the event that none of the provider.getTransactionReceipt calls work,
+      // and/or none of them have the number of confirmations we want.
+      pool.concat(
+        new Promise<undefined>((resolve) => {
+          delay(2_000).then(() => { return resolve(undefined); })
+        })
+      );
+
+      const response = await Promise.race<TransactionReceipt | undefined>(pool);
+      return response;
     };
 
     // Poll for receipt.
-    let receipt: TransactionReceipt | undefined = await getTransactionReceipt();
+    let receipt: TransactionReceipt | undefined = await pollForReceipt();
     // NOTE: This loop won't execute if receipt is valid (not undefined).
     let timeElapsed: number = 0;
     const startMark = new Date().getTime();
     while (!receipt && timeElapsed < CONFIRMATION_TIMEOUT) {
-      // Pause for 2 sec.
-      await delay(2000);
-      receipt = await getTransactionReceipt();
-      if (receipt) {
-        break;
-      }
+      receipt = await pollForReceipt();
       // Update elapsed time.
       timeElapsed = new Date().getTime() - startMark;
     }
+
+    // If there is no receipt, we timed out in our polling operation.
     if (!receipt) {
       throw new ChainError(ChainError.retryableTxErrors.ConfirmationTimeout);
     }
+
     return receipt;
   }
 
