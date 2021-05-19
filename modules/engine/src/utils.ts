@@ -150,7 +150,7 @@ export async function withdrawRetryForTrasferId(
       {
         transferId,
         channelAddress: channel.channelAddress,
-        commitment: commitment,
+        commitment,
         wasSubmitted: wasSubmitted.getValue(),
         noOp,
       },
@@ -161,7 +161,7 @@ export async function withdrawRetryForTrasferId(
     const tx = await chainService.sendWithdrawTx(channel, commitment.getSignedTransaction());
     if (tx.isError) {
       logger.error(
-        { method, methodId, error: tx.getError()?.toJson(), commitment: u },
+        { method, methodId, error: tx.getError()?.toJson(), commitment },
         "Error in chainService.sendWithdrawTx",
       );
     }
