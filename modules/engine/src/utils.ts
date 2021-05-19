@@ -99,8 +99,9 @@ export async function withdrawRetryForTrasferId(
   publicIdentifier?: string,
   commitment?: WithdrawCommitment,
 ): Promise<Result<ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_withdrawRetry], EngineError>> {
-  let _commitment = commitment;
-  if (!_commitment) {
+  const method = "withdrawRetryForTrasferId";
+  const methodId = getRandomBytes32();
+  if (!commitment) {
     const json = await store.getWithdrawalCommitment(transferId);
     if (!json) {
       return Result.fail(
@@ -119,7 +120,7 @@ export async function withdrawRetryForTrasferId(
       );
     }
 
-    _commitment = await WithdrawCommitment.fromJson(json);
+    commitment = await WithdrawCommitment.fromJson(json);
 
     if (!json.bobSignature || !json.aliceSignature) {
       return Result.fail(
@@ -130,14 +131,60 @@ export async function withdrawRetryForTrasferId(
     }
   }
 
-  logger.info({ channelAddress: channel.channelAddress, transferId: transferId }, "Withdraw retry initiated");
-  const transaction = await chainService.sendWithdrawTx(channel, _commitment.getSignedTransaction());
+  // before submitting, check status
+  const wasSubmitted = await chainService.getWithdrawalTransactionRecord(
+    commitment.toJson(),
+    channel.channelAddress,
+    channel.networkContext.chainId,
+  );
+  if (wasSubmitted.isError) {
+    logger.error(
+      { method, methodId, error: jsonifyError(wasSubmitted.getError()!) },
+      "Could not check submission status",
+    );
+    return Result.fail(wasSubmitted.getError()!);
+  }
+  const noOp = commitment.amount === "0" && commitment.callTo === AddressZero;
+  if (wasSubmitted.getValue() || noOp) {
+    logger.info(
+      {
+        transferId,
+        channelAddress: channel.channelAddress,
+        commitment: commitment,
+        wasSubmitted: wasSubmitted.getValue(),
+        noOp,
+      },
+      "Previously submitted / no-op",
+    );
+    commitment.addTransaction(HashZero);
+  } else {
+    const tx = await chainService.sendWithdrawTx(channel, commitment.getSignedTransaction());
+    if (tx.isError) {
+      logger.error(
+        { method, methodId, error: tx.getError()?.toJson(), commitment: u },
+        "Error in chainService.sendWithdrawTx",
+      );
+    }
+    logger.info(
+      { method, methodId, transactionHash: tx.getValue().transactionHash },
+      "Submitted unsubmitted withdrawal",
+    );
+    commitment.addTransaction(tx.getValue().transactionHash);
+  }
+  await store.saveWithdrawalCommitment(transferId, commitment.toJson());
+
+  logger.info({ method, methodId, channelAddress: channel.channelAddress, transferId }, "Withdraw retry initiated");
+  const transaction = await chainService.sendWithdrawTx(channel, commitment.getSignedTransaction());
   if (transaction.isError) {
     return Result.fail(transaction.getError()!);
   }
   const txHash = transaction.getValue().transactionHash;
+  logger.info(
+    { method, methodId, channelAddress: channel.channelAddress, transferId, txHash },
+    "Withdraw retry complete",
+  );
   commitment!.addTransaction(txHash);
-  await store.saveWithdrawalCommitment(transferId, _commitment!.toJson());
+  await store.saveWithdrawalCommitment(transferId, commitment!.toJson());
 
   return Result.ok({
     transactionHash: txHash,
