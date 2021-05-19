@@ -37,7 +37,7 @@ let sendTxWithRetriesMock: SinonStub;
 let approveMock: SinonStub;
 let getCodeMock: SinonStub;
 let getOnchainBalanceMock: SinonStub;
-let waitForAConfirmation: SinonStub<[chainId: number, responses: TransactionResponse[]], Promise<TransactionReceipt>>;
+let waitForConfirmation: SinonStub<[chainId: number, responses: TransactionResponse[]], Promise<TransactionReceipt>>;
 let getGasPrice: SinonStub<[chainId: number], Promise<Result<BigNumber, ChainError>>>;
 
 let channelState: FullChannelState;
@@ -453,7 +453,7 @@ describe("ethService unit test", () => {
 
   describe("sendAndConfirmTx", () => {
     beforeEach(() => {
-      waitForAConfirmation = stub(ethService, "waitForAConfirmation");
+      waitForConfirmation = stub(ethService, "waitForConfirmation");
     });
 
     it("if txFn returns undefined, returns undefined", async () => {
@@ -497,7 +497,7 @@ describe("ethService unit test", () => {
 
     it("if receipt status == 0, saves response with error", async () => {
       const badReceipt = { ...txReceipt, status: 0 };
-      waitForAConfirmation.resolves(badReceipt);
+      waitForConfirmation.resolves(badReceipt);
       const result = await ethService.sendAndConfirmTx(AddressZero, 1337, "allowance", async () => {
         return txResponse;
       });
@@ -519,7 +519,7 @@ describe("ethService unit test", () => {
     it("if receipt wait fn errors, saves response with error", async () => {
       const ERROR_MSG = "Booooo";
       const error = new Error(ERROR_MSG);
-      waitForAConfirmation.rejects(error);
+      waitForConfirmation.rejects(error);
       const result = await ethService.sendAndConfirmTx(AddressZero, 1337, "allowance", async () => {
         return txResponse;
       });
@@ -540,8 +540,8 @@ describe("ethService unit test", () => {
     it("retries transaction with higher gas price", async () => {
       const newTx = { ...txResponse, hash: mkHash("0xddd") }; // change hash to simulate higher gas and new hash
       const newReceipt = { ...txReceipt, transactionHash: newTx.hash };
-      waitForAConfirmation.onFirstCall().rejects(new ChainError(ChainError.retryableTxErrors.ConfirmationTimeout));
-      waitForAConfirmation.onSecondCall().resolves(newReceipt);
+      waitForConfirmation.onFirstCall().rejects(new ChainError(ChainError.retryableTxErrors.ConfirmationTimeout));
+      waitForConfirmation.onSecondCall().resolves(newReceipt);
 
       let receivedNonce: number = -1;
       let firstGasPrice: BigNumber = BigNumber.from(-1);
@@ -588,7 +588,7 @@ describe("ethService unit test", () => {
 
     it("stops trying to send if at max gas price", async () => {
       getGasPrice.resolves(Result.ok(BIG_GAS_PRICE.sub(1)));
-      waitForAConfirmation.onFirstCall().rejects(new ChainError(ChainError.retryableTxErrors.ConfirmationTimeout));
+      waitForConfirmation.onFirstCall().rejects(new ChainError(ChainError.retryableTxErrors.ConfirmationTimeout));
 
       const result = await ethService.sendAndConfirmTx(AddressZero, 1337, "allowance", async () => {
         return txResponse;
@@ -610,7 +610,7 @@ describe("ethService unit test", () => {
     });
 
     it("happy: saves responses if confirmation happens on first loop", async () => {
-      waitForAConfirmation.resolves(txReceipt);
+      waitForConfirmation.resolves(txReceipt);
       const result = await ethService.sendAndConfirmTx(AddressZero, 1337, "allowance", async () => {
         return txResponse;
       });
@@ -630,9 +630,9 @@ describe("ethService unit test", () => {
     });
   });
 
-  describe("waitForAConfirmation", () => {
+  describe("waitForConfirmation", () => {
     it("should return an error if there is no provider for chain", async () => {
-      await expect(ethService.waitForAConfirmation(111, [txResponse])).to.eventually.be.rejectedWith(
+      await expect(ethService.waitForConfirmation(111, [txResponse])).to.eventually.be.rejectedWith(
         ChainError.reasons.ProviderNotFound,
       );
     });
@@ -641,14 +641,14 @@ describe("ethService unit test", () => {
       provider1337.getTransactionReceipt.onFirstCall().resolves({ ...txReceipt, confirmations: 0 });
       provider1337.getTransactionReceipt.onSecondCall().resolves({ ...txReceipt, confirmations: 0 });
       provider1337.getTransactionReceipt.onThirdCall().resolves(txReceipt);
-      const res = await ethService.waitForAConfirmation(1337, [txResponse]);
+      const res = await ethService.waitForConfirmation(1337, [txResponse]);
       expect(res).to.deep.eq(txReceipt);
       expect(provider1337.getTransactionReceipt.callCount).to.eq(3);
     });
 
     it("should error with a timeout error if it is past the confirmation time", async () => {
       provider1337.getTransactionReceipt.onThirdCall().resolves(undefined);
-      await expect(ethService.waitForAConfirmation(1337, [txResponse])).to.eventually.be.rejectedWith(
+      await expect(ethService.waitForConfirmation(1337, [txResponse])).to.eventually.be.rejectedWith(
         ChainError.retryableTxErrors.ConfirmationTimeout,
       );
     });
