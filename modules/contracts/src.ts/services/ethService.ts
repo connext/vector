@@ -339,8 +339,13 @@ export class EthereumChainService extends EthereumChainReader implements IVector
     if (!signer) {
       return Result.fail(new ChainError(ChainError.reasons.SignerNotFound));
     }
+    // Used to track the number of attempts, regardless of whether a tx was successfully submitted
+    // on each.
     let tryNumber: number = 0;
-    let response: TransactionResponse | undefined;
+    // TODO: Add an optional argument above to take in an onchainTransactionId, and then fill
+    // in this data with the already-existing store record of the tx.
+    let responses: TransactionResponse[] = [];
+    let nonce: number | undefined;
     let receipt: TransactionReceipt | undefined;
     let gasPrice: BigNumber;
 
@@ -368,52 +373,72 @@ export class EthereumChainService extends EthereumChainReader implements IVector
       try {
         /// SUBMIT
         // NOTE: Nonce will persist across iterations, as soon as it is defined in the first one.
-        const result = await this.sendTx(txFn, gasPrice, response ? response.nonce : undefined);
-        if (result.isError) {
+        const result = await this.sendTx(txFn, gasPrice, nonce);
+        if (!result.isError) {
+          const response = result.getValue();
+          if (response) {
+            // Save nonce.
+            if (nonce === undefined) {
+              nonce = response.nonce;
+            } else if (response.nonce != nonce) {
+              // TODO: Is this edge case possible?
+              // Only if the callback txFn() *disobeys* us in not passing in the nonce.
+              // throw new ChainError(ChainError.reasons.)
+            }
+
+            // Add this response to our local response history.
+            responses.push(response);
+            // NOTE: Response MUST be defined here because if it was NEVER defined (i.e. undefined on first iteration),
+            // we would have returned in prev block, and if it was undefined on this iteration we would not overwrite
+            // that value.
+            // Tx was submitted: handle saving to store.
+            await this.handleTxSubmit(onchainTransactionId, method, methodId, channelAddress, reason, response);
+
+            /// CONFIRM
+            // Now we wait for confirmation and get tx receipt.
+            receipt = await this.waitForConfirmation(chainId, response);
+          } else {
+            // If response returns undefined, we assume the tx was not sent. This will happen if some logic was
+            // passed into txFn to bail out at the time of sending.
+            this.log.warn({ method, methodId, channelAddress, reason }, "Did not attempt tx");
+            // TODO: @layne re-check: is this logic valid?:
+            // Iff this is the only iteration, then we want to go ahead return w/o saving anything.
+            if (tryNumber === 1) {
+              return Result.ok(undefined);
+            } else {
+              this.log.warn({ method, methodId, channelAddress, reason }, `txFn returned undefined on try ${tryNumber}`);
+            }
+          }
+        } else {
           // If an error occurred, throw it to handle it in the catch block.
           const error = result.getError()!;
-          // If the nonce has already been used, the 'original' tx must have been mined and the tx
+          // If the nonce has already been used, one of the original txs must have been mined and the tx
           // we attempted here was a duplicate with bumped gas. Assuming we're on a subsuquent attempt,
-          // handle this by simply proceeding to the confirm block without throwing.
-          if (tryNumber > 1 && error.message.includes("nonce has already been used")) {
+          // handle this by simply proceeding to confirm (each prev tx) without throwing.
+          if (responses.length >= 1 && error.message.includes("nonce has already been used")) {
             // TODO: Confirm that this error message comparison is valid in this context.
             // TODO: Might be better to compare code to NONCE_EXPIRED, etc.
             // A more robust comparison is desirable here either way.
             this.log.info(
               { method, methodId, channelAddress, reason },
-              "Nonce already used: proceeding to check for confirmation.",
+              "Nonce already used: proceeding to check for confirmation in previous transactions.",
             );
+            // We must check for confirmation in all previous transactions. Although it's most likely
+            // that it's the previous one, any of them could have been confirmed.
+            for (let i = 0; i < responses.length; i++) {
+              try {
+                receipt = await this.waitForConfirmation(chainId, responses[i]);
+              } catch {}
+              if (receipt) {
+                break;
+              }
+            }
           } else {
             throw error;
           }
-        } else {
-          let tempResponse = result.getValue();
-          if (tempResponse) {
-            response = tempResponse;
-            // NOTE: Response MUST be defined here because if it was NEVER defined (i.e. undefined on first iteration),
-            // we would have returned in prev block, and if it was undefined on this iteration we would not overwrite
-            // that value.
-            // Tx was submitted: handle saving to store.
-            await this.handleTxSubmit(onchainTransactionId, method, methodId, channelAddress, reason, response)
-          } else {
-            // If response returns undefined, we assume the tx was not sent. This will happen if some logic was
-            // passed into txFn to bail out at the time of sending.
-            this.log.warn({ method, methodId, channelAddress, reason }, "Did not attempt tx");
-            // Iff this is the only iteration, then we want to go ahead return w/o saving anything.
-            if (tryNumber === 1) {
-              return Result.ok(undefined);
-            }
-          }
-        }
-
-        /// CONFIRM
-        // Now we wait for confirmation and get tx receipt.
-        receipt = await this.waitForConfirmation(chainId, response!);
-        // Check status in event of tx reversion.
-        if (receipt.status === 0) {
-          throw new ChainError(ChainError.reasons.TxReverted, { receipt, method, methodId });
         }
       } catch (e) {
+        const latestResponse: TransactionResponse | undefined = responses[responses.length - 1];
         // Check if the error was a confirmation timeout.
         if (e.message === ChainError.retryableTxErrors.ConfirmationTimeout) {
           // Scale up gas by percentage as specified by GAS_BUMP_PERCENT.
@@ -436,7 +461,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
               methodId,
               channelAddress,
               reason,
-              response!,
+              latestResponse,
               receipt,
               error,
               "Max gas price reached",
@@ -452,7 +477,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
             error = new ChainError(ChainError.reasons.NotEnoughFunds);
           }
           // Don't save tx if it failed to submit (i.e. no response), only if it fails to mine.
-          if (response) {
+          if (latestResponse) {
             // If we get any other error here, we classify this event as a tx failure.
             await this.handleTxFail(
               onchainTransactionId,
@@ -460,7 +485,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
               methodId,
               channelAddress,
               reason,
-              response,
+              latestResponse,
               receipt,
               e,
               "Tx reverted",
@@ -513,6 +538,10 @@ export class EthereumChainService extends EthereumChainReader implements IVector
     }
     if (!receipt) {
       throw new ChainError(ChainError.retryableTxErrors.ConfirmationTimeout);
+    }
+    // Check status in event of tx reversion.
+    if (receipt.status === 0) {
+      throw new ChainError(ChainError.reasons.TxReverted, { receipt });
     }
     return receipt;
   }
