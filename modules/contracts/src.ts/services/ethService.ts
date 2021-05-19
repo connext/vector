@@ -397,9 +397,8 @@ export class EthereumChainService extends EthereumChainReader implements IVector
             // If response returns undefined, we assume the tx was not sent. This will happen if some logic was
             // passed into txFn to bail out at the time of sending.
             this.log.warn({ method, methodId, channelAddress, reason }, "Did not attempt tx");
-            // TODO: @layne re-check: is this logic valid?:
             // Iff this is the only iteration, then we want to go ahead return w/o saving anything.
-            if (tryNumber === 1) {
+            if (responses.length === 0) {
               return Result.ok(undefined);
             } else {
               this.log.warn({ method, methodId, channelAddress, reason }, `txFn returned undefined on try ${tryNumber}`);
