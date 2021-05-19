@@ -2,6 +2,10 @@
 
 ## Next Release
 
+## 0.2.5-beta.10
+
+- \[engine\] Improve withdrawal retry logic
+
 ## 0.2.5-beta.9
 
 - \[server-node\] Store resilient to restarts
