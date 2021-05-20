@@ -294,7 +294,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
             channelAddress,
             chainId,
           },
-          "Tx confirmed",
+          receipt.getValue() ? "Tx confirmed" : "Tx was not sent",
         );
         return receipt;
       }
@@ -504,7 +504,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
           } else {
             this.log.error(
               { method, methodId, channelAddress, reason, error: jsonifyError(error) },
-              "Failed to send tx",
+              "Tx was never sent due to error",
             );
           }
           return Result.fail(error);
