@@ -414,7 +414,9 @@ export class EthereumChainService extends EthereumChainReader implements IVector
             responses.length >= 1
             && (
               error.message.includes("nonce has already been used")
-              || error.message.includes("Transaction nonce is too low. Try incrementing the nonce.")
+              // If we get a 'nonce is too low' message, a previous tx has been mined, and ethers thought
+              // we were making another tx attempt with the same nonce.
+              || error.message.includes("Transaction nonce is too low.")
             )
           ) {
             // A more robust comparison is desirable here either way.
