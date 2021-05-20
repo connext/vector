@@ -1015,7 +1015,7 @@ export class VectorEngine implements IVectorEngine {
     const method = "withdrawRetry";
     const methodId = getRandomBytes32();
     this.logger.info({ params, method, methodId }, "Method started");
-    const validate = ajv.compile(EngineParams.WithdrawSchema);
+    const validate = ajv.compile(EngineParams.WithdrawRetrySchema);
     const valid = validate(params);
     if (!valid) {
       return Result.fail(
