@@ -1,0 +1,175 @@
+@aliceUrl = http://localhost:8003
+@bobUrl = http://localhost:8004
+@carolUrl = http://localhost:8005
+@daveUrl = http://localhost:8006
+@rogerUrl = http://localhost:8007
+@roger1Url = http://localhost:8017
+@roger2Url = http://localhost:8027
+@aliceBobChannel = 0x47809CD3218c69aB21BeEe8ad6a7b7Ec5E026859
+@carolRogerChannel = 0x66920C67620b492C3FF7f904af6DC3a8B58D7C9C
+@daveRogerChannel = 0x7E513218D56ef4465208d587e9eff56e9035cd02
+@adminToken = cxt1234
+@alicePublicIdentifier = vector8WxfqTu8EC2FLM6g4y6TgbSrx4EPP9jeDFQk3VBsBM7Jv8NakR
+@bobPublicIdentifier = vector5ArRsL26avPNyfvJd2qMAppsEVeJv11n31ex542T9gCd5B1cP3
+@carolPublicIdentifier = vector8ZaxNSdUM83kLXJSsmj5jrcq17CpZUwBirmboaNPtQMEXjVNrL
+@davePublicIdentifier = vector7mAydt3S3dDPWJMYSHZPdRo16Pru145qTNQYFoS8TrpXWW8HAj
+@rogerPublicIdentifier = vector8Uz1BdpA9hV5uTm6QUv5jj1PsUyCH8m8ciA94voCzsxVmrBRor
+@roger1PublicIdentifier = vector5ANRAPfyUHv5aFB4iUxZ8ABfCE8ykDn3d1qkoUVfW7qFmmegur
+@roger2PublicIdentifier = vector5jDmgMUxaSzqq6nqWXvxh1eN3kyofeJrBrJsMKUwS3zsQHPSzj
+@chainId = 1337
+
+@nodeUrl = {{carolUrl}}
+@nodePublicIdentifier = {{carolPublicIdentifier}}
+@counterpartyPublicIdentifier = {{rogerPublicIdentifier}}
+@channel = {{carolRogerChannel}}
+
+##############
+### GET CONFIG
+GET {{nodeUrl}}/config
+
+##############
+### GET ROUTER CONFIG
+GET {{nodeUrl}}/{{nodePublicIdentifier}}/router/config/{{rogerPublicIdentifier}}
+
+##############
+### GET STATUS
+GET {{nodeUrl}}/{{nodePublicIdentifier}}/status
+
+##############
+### GET CHANNELS
+GET {{nodeUrl}}/{{nodePublicIdentifier}}/channels
+
+##############
+### GET CHANNEL
+GET {{nodeUrl}}/{{nodePublicIdentifier}}/channels/{{channel}}
+
+##############
+### GET CHANNEL BY PARTICIPANTS
+GET {{nodeUrl}}/{{nodePublicIdentifier}}/channels/counterparty/{{counterpartyPublicIdentifier}}/chain-id/{{chainId}}
+
+##############
+### CLEAR STORE
+POST {{nodeUrl}}/clear-store
+Content-Type: application/json
+
+{
+  "adminToken": "{{adminToken}}"
+}
+
+####################
+### RETRY WITHDRAWAL
+POST {{nodeUrl}}/withdraw/retry
+Content-Type: application/json
+
+{
+  "adminToken": "{{adminToken}}",
+  "transferId": "0xe9c2f1f4efb9a9f55fcce0be95f1fe16c0ec9e49a68a706c52c1dec4d92e81d0"
+}
+
+
+##############
+### CREATE NODE
+POST {{nodeUrl}}/node
+Content-Type: application/json
+
+{
+  "index": 0
+}
+
+### CREATE DAVE
+POST {{daveUrl}}/node
+Content-Type: application/json
+
+{
+  "index": 0
+}
+
+
+##############
+### Setup Channel
+POST {{nodeUrl}}/setup
+Content-Type: application/json
+
+{
+  "counterpartyIdentifier": "{{counterpartyPublicIdentifier}}",
+  "publicIdentifier": "{{nodePublicIdentifier}}",
+  "chainId": "{{chainId}}",
+  "timeout": "100000"
+}
+
+
+
+##############
+### Setup Channel
+POST {{nodeUrl}}/setup
+Content-Type: application/json
+
+{
+  "counterpartyIdentifier": "{{roger1PublicIdentifier}}",
+  "publicIdentifier": "{{nodePublicIdentifier}}",
+  "chainId": "{{chainId}}",
+  "timeout": "100000"
+}
+
+##############
+### Setup Channel
+POST {{nodeUrl}}/setup
+Content-Type: application/json
+
+{
+  "counterpartyIdentifier": "{{roger2PublicIdentifier}}",
+  "publicIdentifier": "{{nodePublicIdentifier}}",
+  "chainId": "{{chainId}}",
+  "timeout": "100000"
+}
+##############
+### Setup Channel
+POST {{daveUrl}}/setup
+Content-Type: application/json
+
+{
+  "counterpartyIdentifier": "{{rogerPublicIdentifier}}",
+  "publicIdentifier": "{{davePublicIdentifier}}",
+  "chainId": "{{chainId}}",
+  "timeout": "100000"
+}
+
+##############
+### Setup Channel
+POST {{daveUrl}}/setup
+Content-Type: application/json
+
+{
+  "counterpartyIdentifier": "{{roger1PublicIdentifier}}",
+  "publicIdentifier": "{{davePublicIdentifier}}",
+  "chainId": "{{chainId}}",
+  "timeout": "100000"
+}
+
+##############
+### Setup Channel
+POST {{daveUrl}}/setup
+Content-Type: application/json
+
+{
+  "counterpartyIdentifier": "{{roger2PublicIdentifier}}",
+  "publicIdentifier": "{{davePublicIdentifier}}",
+  "chainId": "{{chainId}}",
+  "timeout": "100000"
+}
+
+##############
+### Start Auction
+
+POST {{carolUrl}}/run-auction
+Content-Type: application/json
+
+{
+  "amount": "1000000",
+  "publicIdentifier": "{{carolPublicIdentifier}}",
+  "assetId": "0x0000000000000000000000000000000000000000",
+  "chainId": 1337,
+  "recipient": "{{davePublicIdentifier}}",
+  "recipientAssetId": "0x0000000000000000000000000000000000000000",
+  "recipientChainId": 1337
+} 

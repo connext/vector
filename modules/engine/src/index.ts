@@ -46,6 +46,7 @@ import Ajv from "ajv";
 import { Evt } from "evt";
 
 import { version } from "../package.json";
+import { v4 } from "uuid";
 
 import { DisputeError, IsAliveError, RestoreError, AuctionError, RpcError } from "./errors";
 import {
@@ -55,7 +56,7 @@ import {
   convertWithdrawParams,
 } from "./paramConverter";
 import { setupEngineListeners } from "./listeners";
-import { getEngineEvtContainer } from "./utils";
+import { getEngineEvtContainer, withdrawRetryForTransferId } from "./utils";
 import { sendIsAlive } from "./isAlive";
 import { WithdrawCommitment } from "@connext/vector-contracts";
 
@@ -68,8 +69,6 @@ export class VectorEngine implements IVectorEngine {
   private readonly evts: EngineEvtContainer = getEngineEvtContainer();
 
   private readonly restoreLocks: { [channelAddress: string]: string } = {};
-
-  private auctionResponses: Array<NodeResponses.RunAuction> = [];
 
   private constructor(
     private readonly signer: IChannelSigner,
@@ -957,22 +956,17 @@ export class VectorEngine implements IVectorEngine {
     const initiatorSubmits = createParams.meta.initiatorSubmits ?? false;
 
     // set up event listeners before sending request
-    const timeout = 90_000;
-    const resolvedReconciled = Promise.all([
-      // resolved should always happen
+    const timeout = 300_000;
+    const resolved = (_transferId: string) =>
       this.evts[WITHDRAWAL_RESOLVED_EVENT].waitFor(
-        (data) => data.channelAddress === params.channelAddress && data.transfer.transferId === transferId,
+        (data) => data.channelAddress === params.channelAddress && data.transfer.transferId === _transferId,
         timeout,
-      ),
-      // reconciling (submission to chain) may not happen (i.e. holding
-      // mainnet withdrawals for lower gas)
-      Promise.race([
-        this.evts[WITHDRAWAL_RECONCILED_EVENT].waitFor(
-          (data) => data.channelAddress === params.channelAddress && data.transferId === transferId,
-        ),
-        delay(timeout),
-      ]),
-    ]);
+      );
+    const reconciled = (_transferId: string) =>
+      this.evts[WITHDRAWAL_RECONCILED_EVENT].waitFor(
+        (data) => data.channelAddress === params.channelAddress && data.transferId === _transferId,
+        timeout,
+      );
 
     // create withdrawal transfer
     const protocolRes = await this.vector.create(createParams);
@@ -983,12 +977,18 @@ export class VectorEngine implements IVectorEngine {
     const transferId = res.latestUpdate.details.transferId;
     this.logger.info({ channelAddress: params.channelAddress, transferId }, "Withdraw transfer created");
 
-    let transactionHash: string | undefined = undefined;
-    let transaction: MinimalTransaction | undefined = undefined;
+    let transactionHash: string | undefined;
+    let transaction: MinimalTransaction | undefined;
     try {
-      const [resolved, reconciled] = await resolvedReconciled;
-      transactionHash = typeof reconciled === "object" ? reconciled.transactionHash : undefined;
-      transaction = resolved.transaction;
+      // wait for resolution either way
+      const _resolved = await resolved(transferId);
+
+      // if we arent explicitly submitting, wait for counterparty to submit
+      if (!initiatorSubmits) {
+        const _reconciled = await reconciled(transferId);
+        transactionHash = typeof _reconciled === "object" ? _reconciled.transactionHash : undefined;
+      }
+      transaction = _resolved.transaction;
     } catch (e) {
       this.logger.warn(
         { channelAddress: params.channelAddress, transferId, timeout, initiatorSubmits },
@@ -1011,6 +1011,66 @@ export class VectorEngine implements IVectorEngine {
 
     this.logger.info({ channel: res, method, methodId, transactionHash, transaction }, "Method complete");
     return Result.ok({ channel: res, transactionHash, transaction: transaction! });
+  }
+
+  private async withdrawRetry(
+    params: EngineParams.WithdrawRetry,
+  ): Promise<Result<ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_withdrawRetry], EngineError>> {
+    const method = "withdrawRetry";
+    const methodId = getRandomBytes32();
+    this.logger.info({ params, method, methodId }, "Method started");
+    const validate = ajv.compile(EngineParams.WithdrawRetrySchema);
+    const valid = validate(params);
+    if (!valid) {
+      return Result.fail(
+        new RpcError(RpcError.reasons.InvalidParams, params.channelAddress ?? "", this.publicIdentifier, {
+          invalidParamsError: validate.errors?.map((e) => e.message).join(","),
+          invalidParams: params,
+        }),
+      );
+    }
+
+    const channelRes = await this.getChannelState({ channelAddress: params.channelAddress });
+    if (channelRes.isError) {
+      return Result.fail(channelRes.getError()!);
+    }
+    const channel = channelRes.getValue();
+    if (!channel) {
+      return Result.fail(
+        new RpcError(RpcError.reasons.ChannelNotFound, params.channelAddress, this.publicIdentifier, {
+          transferId: params.transferId,
+        }),
+      );
+    }
+
+    const res = await withdrawRetryForTransferId(
+      params.transferId,
+      channel,
+      this.store,
+      this.chainService,
+      this.logger,
+      this.messaging,
+      this.publicIdentifier,
+    );
+
+    if (res.isError) {
+      return Result.fail(res.getError()!);
+    }
+
+    const withdrawRetryRes = res.getValue();
+
+    this.logger.info(
+      {
+        channel: channel,
+        method,
+        methodId,
+        txHash: withdrawRetryRes.transactionHash,
+        channelAddress: withdrawRetryRes.channelAddress,
+      },
+      "Method complete",
+    );
+
+    return Result.ok(withdrawRetryRes);
   }
 
   private async decrypt(encrypted: string): Promise<Result<string, EngineError>> {
@@ -1554,20 +1614,15 @@ export class VectorEngine implements IVectorEngine {
     };
     this.evts[EngineEvents.RUN_AUCTION_EVENT].post(payload);
 
-    const inbox = getRandomBytes32();
+    const inbox = v4();
     const from = this.signer.publicIdentifier;
+    let auctionResponses: Array<NodeResponses.RunAuction> = [];
 
     // Call onReceiveAuctionMessage to listen on unique INBOX and collect responses for 5 seconds (will tweak and tune this number).
     // Maybe something like wait for 5 responses or 5 seconds? Watch out for race conditions of setting listener after message is already sent.
     try {
       //Call publishStartAuction with provided data.
       this.messaging.publishStartAuction(from, from, Result.ok(params), inbox);
-
-      function waitForRespones(t) {
-        return new Promise(function (resolve) {
-          setTimeout(resolve, t);
-        });
-      }
 
       await this.messaging.onReceiveAuctionMessage(this.publicIdentifier, inbox, (runAuction, from, inbox) => {
         const method = "onReceiveAuctionMessage";
@@ -1578,35 +1633,34 @@ export class VectorEngine implements IVectorEngine {
           return;
         }
         const res = runAuction.getValue();
-        this.auctionResponses.push(res);
+        auctionResponses.push(res);
       });
 
       // wait for 5 responses or 3 secs
-      if (this.auctionResponses.length < 5) {
-        await waitForRespones(3000);
+      if (auctionResponses.length < 5) {
+        await delay(3000);
       }
 
-      this.logger.info(this.auctionResponses, "Router Responses");
+      this.logger.info(auctionResponses, "Router Responses");
 
-      if (this.auctionResponses.length == 0) {
+      if (auctionResponses.length === 0) {
         // TODO: Add error cases (reasons) to Error Class
         return Result.fail(new AuctionError(AuctionError.reasons.NoResponses, this.publicIdentifier, params, {}));
       }
 
       // compare fees and return cheapest option
       // TODO: compare swapRates also
-      let lowestFee = parseInt(this.auctionResponses[0].totalFee);
+      let lowestFee = parseInt(auctionResponses[0].totalFee);
       let lowestFeeIndex = 0;
 
-      for (const [i, elem] of this.auctionResponses.entries()) {
-        // console.log("totalFee elem:", elem.totalFee, "lowestFee:", lowestFee);
+      for (const [i, elem] of auctionResponses.entries()) {
         if (parseInt(elem.totalFee) < lowestFee) {
           lowestFee = parseInt(elem.totalFee);
           lowestFeeIndex = i;
         }
       }
-      this.logger.info(this.auctionResponses[lowestFeeIndex], "Chosen Router");
-      return Result.ok(this.auctionResponses[lowestFeeIndex]);
+      this.logger.info(auctionResponses[lowestFeeIndex], "Chosen Router");
+      return Result.ok(auctionResponses[lowestFeeIndex]);
     } catch (err) {
       return Result.fail(
         new RpcError(RpcError.reasons.InvalidParams, "", this.publicIdentifier, {
@@ -1615,7 +1669,8 @@ export class VectorEngine implements IVectorEngine {
         }),
       );
     } finally {
-      this.auctionResponses = [];
+      auctionResponses = [];
+      this.messaging.unsubscribe(inbox);
     }
   }
 

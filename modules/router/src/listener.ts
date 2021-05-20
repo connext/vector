@@ -1012,9 +1012,9 @@ export async function setupListeners(
       fee: fee.toString(),
       expiry: (Date.now() + (getConfig().feeQuoteExpiry ?? DEFAULT_FEE_EXPIRY)).toString(), // valid for next 2 blocks
     };
-    const toSign = hashTransferQuote(quote);
+
     try {
-      const signature = await routerSigner.signMessage(toSign);
+      const signature = await routerSigner.signMessage(quote.toString());
       await messagingService.respondToAuctionMessage(
         inbox,
         Result.ok({

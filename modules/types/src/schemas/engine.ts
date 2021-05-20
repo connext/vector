@@ -173,9 +173,15 @@ const RunAuctionParamsSchema = Type.Object({
   amount: TIntegerString,
   assetId: TAddress,
   chainId: TChainId,
-  recipient: Type.Optional(TPublicIdentifier),
-  recipientChainId: Type.Optional(TChainId),
-  recipientAssetId: Type.Optional(TAddress),
+  recipient: TPublicIdentifier,
+  recipientChainId: TChainId,
+  recipientAssetId: TAddress,
+});
+
+// Withdraw Retry engine
+const WithdrawRetryParamsSchema = Type.Object({
+  channelAddress: TAddress,
+  transferId: TBytes32,
 });
 
 //////////////////
@@ -315,6 +321,9 @@ export namespace EngineParams {
 
   export const WithdrawSchema = WithdrawParamsSchema;
   export type Withdraw = Static<typeof WithdrawSchema>;
+
+  export const WithdrawRetrySchema = WithdrawRetryParamsSchema;
+  export type WithdrawRetry = Static<typeof WithdrawRetrySchema>;
 
   export const DisputeChannelSchema = DisputeChannelParamsSchema;
   export type DisputeChannel = Static<typeof DisputeChannelParamsSchema>;

@@ -29,14 +29,3 @@ Content-Type: application/json
   "chainId": "{{chainId}}",
   "timeout": "100000"
 }
-
-### Setup Channel daveRoger
-POST {{daveUrl}}/setup
-Content-Type: application/json
-
-{
-  "counterpartyIdentifier": "{{counterpartyPublicIdentifier}}",
-  "publicIdentifier": "{{davePublicIdentifier}}",
-  "chainId": "{{chainId}}",
-  "timeout": "100000"
-}

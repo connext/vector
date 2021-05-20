@@ -201,4 +201,18 @@ export interface IMessagingService extends IBasicMessaging {
     inbox,
     callback: (runAuction: Result<NodeResponses.RunAuction, NodeError>, from: string, inbox: string) => void,
   ): Promise<void>;
+
+  publishWithdrawalSubmittedMessage(
+    to: string,
+    from: string,
+    data: Result<{ channelAddress: string; txHash: string; transferId: string }, VectorError>,
+  ): Promise<void>;
+  onReceiveWithdrawalSubmittedMessage(
+    myPublicIdentifier: string,
+    callback: (
+      submitted: Result<{ channelAddress: string; txHash: string; transferId: string }, NodeError>,
+      from: string,
+      inbox: string,
+    ) => void,
+  ): Promise<void>;
 }

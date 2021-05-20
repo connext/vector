@@ -21,10 +21,6 @@ export const createTestTxResponse = (
     nonce: 43,
     gasLimit: BigNumber.from(123576),
     gasPrice: BigNumber.from(1657639),
-    timestamp: Date.now(),
-    raw: mkHash(),
-    blockHash,
-    blockNumber,
     confirmations: 0,
     wait: () =>
       Promise.resolve(

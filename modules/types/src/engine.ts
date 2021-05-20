@@ -124,9 +124,9 @@ export type RunAuctionPayload = {
   senderPublicIdentifier: string;
   senderAssetId: string;
   senderChainId: number;
-  receiverPublicIdentifier?: string;
-  receiverAssetId?: string;
-  receiverChainId?: number;
+  receiverPublicIdentifier: string;
+  receiverAssetId: string;
+  receiverChainId: number;
 };
 
 // Grouped event types
