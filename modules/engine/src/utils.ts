@@ -21,9 +21,7 @@ import {
   TransferDisputedPayload,
   TransferDefundedPayload,
   ConditionalTransferRoutingCompletePayload,
-<<<<<<< HEAD
   RunAuctionPayload,
-=======
   ChainAddresses,
   ChannelRpcMethodsResponsesMap,
   ChannelRpcMethods,
@@ -34,7 +32,6 @@ import {
   TransferNames,
   jsonifyError,
   IMessagingService,
->>>>>>> main
 } from "@connext/vector-types";
 import { WithdrawCommitment } from "@connext/vector-contracts";
 import { FeeCalculationError, normalizeFee, getRandomBytes32, getParticipant } from "@connext/vector-utils";
