@@ -35,6 +35,7 @@ import { BaseLogger } from "pino";
 import PriorityQueue from "p-queue";
 import { AddressZero, HashZero } from "@ethersproject/constants";
 import { Evt } from "evt";
+import { v4 as uuidV4 } from "uuid";
 
 import { ChannelFactory, VectorChannel } from "../artifacts";
 
@@ -44,7 +45,7 @@ import { parseUnits } from "ethers/lib/utils";
 export const EXTRA_GAS = 50_000;
 // The amount of time (ms) to wait before a confirmation polling period times out,
 // indiciating we should resubmit tx with higher gas if the tx is not confirmed.
-export const CONFIRMATION_TIMEOUT = 15_000;
+export const CONFIRMATION_TIMEOUT = 45_000;
 // The min percentage to bump gas.
 export const GAS_BUMP_PERCENT = 20;
 // 1M gas should cover all Connext txs. Gas won't exceed this amount.
@@ -107,14 +108,15 @@ export class EthereumChainService extends EthereumChainReader implements IVector
 
   /// Upsert tx submission to store, fire tx submit event.
   private async handleTxSubmit(
+    onchainTransactionId: string,
     method: string,
     methodId: string,
     channelAddress: string,
     reason: TransactionReason,
     response: TransactionResponse,
-  ) {
+  ): Promise<void> {
     this.log.info({ method, methodId, channelAddress, reason, response }, "Tx submitted.");
-    await this.store.saveTransactionResponse(channelAddress, reason, response);
+    await this.store.saveTransactionAttempt(onchainTransactionId, channelAddress, reason, response);
     this.evts[ChainServiceEvents.TRANSACTION_SUBMITTED].post({
       response: Object.fromEntries(
         Object.entries(response).map(([key, value]) => {
@@ -128,14 +130,15 @@ export class EthereumChainService extends EthereumChainReader implements IVector
 
   /// Save the tx receipt in the store and fire tx mined event.
   private async handleTxMined(
+    onchainTransactionId: string,
     method: string,
     methodId: string,
     channelAddress: string,
     reason: TransactionReason,
     receipt: TransactionReceipt,
   ) {
-    this.log.info({ method, methodId, channelAddress, reason, receipt }, "Tx mined.");
-    await this.store.saveTransactionReceipt(channelAddress, receipt);
+    this.log.info({ method, methodId, onchainTransactionId, reason, receipt }, "Tx mined.");
+    await this.store.saveTransactionReceipt(onchainTransactionId, receipt);
     this.evts[ChainServiceEvents.TRANSACTION_MINED].post({
       receipt: Object.fromEntries(
         Object.entries(receipt).map(([key, value]) => {
@@ -149,6 +152,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
 
   /// Save tx failure in store and fire tx failed event.
   private async handleTxFail(
+    onchainTransactionId: string,
     method: string,
     methodId: string,
     channelAddress: string,
@@ -159,7 +163,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
     message: string = "Tx reverted",
   ) {
     this.log.error({ method, methodId, error: error ? jsonifyError(error) : message }, message);
-    await this.store.saveTransactionFailure(channelAddress, response.hash, error?.message ?? message);
+    await this.store.saveTransactionFailure(onchainTransactionId, error?.message ?? message, receipt);
     this.evts[ChainServiceEvents.TRANSACTION_FAILED].post({
       error,
       channelAddress,
@@ -199,18 +203,11 @@ export class EthereumChainService extends EthereumChainReader implements IVector
   /// Check to see if any txs were left in an unfinished state. This should only execute on
   /// contructor / init.
   public async revitalizeTxs() {
-    // Get all tx's from store that were left in submitted state. Resubmit them.
+    // Get all txs from store that were left in submitted state. Resubmit them.
     const storedTransactions: StoredTransaction[] = await this.store.getActiveTransactions();
-    // TODO: Should we filter out "stale" tx's (older than a specified elapsed time)?
-    // RS: probably not
     for (const tx of storedTransactions) {
-      const txResponseRes = await this.getTxResponseFromHash(tx.chainId, {
-        to: tx.to,
-        data: tx.data,
-        value: tx.value,
-        transactionHash: tx.transactionHash,
-        nonce: tx.nonce,
-      });
+      const latestAttempt = tx.attempts[tx.attempts.length - 1];
+      const txResponseRes = await this.getTxResponseFromHash(tx.chainId, latestAttempt.transactionHash);
       if (txResponseRes.isError) {
         this.log.error({ error: txResponseRes.getError(), tx }, "Error in getTxResponseFromHash");
         continue;
@@ -231,7 +228,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
           to: tx.to,
           data: tx.data,
           chainId: tx.chainId,
-          gasPrice: tx.gasPrice,
+          gasPrice: latestAttempt.gasPrice,
           nonce: tx.nonce,
           value: BigNumber.from(tx.value || 0),
         });
@@ -244,7 +241,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
   /// Throws ChainError if signer not found, tx not found, or tx already mined.
   public async getTxResponseFromHash(
     chainId: number,
-    tx: MinimalTransaction & { transactionHash: string; nonce: number },
+    txHash: string,
   ): Promise<Result<{ response?: TransactionResponse; receipt?: TransactionReceipt }, ChainError>> {
     const provider = this.chainProviders[chainId];
     if (!provider) {
@@ -252,71 +249,15 @@ export class EthereumChainService extends EthereumChainReader implements IVector
     }
 
     try {
-      const response = await provider.getTransaction(tx.transactionHash);
+      const response = await provider.getTransaction(txHash);
       let receipt: TransactionReceipt | undefined;
       if (response?.confirmations > 0) {
-        receipt = await provider.send("eth_getTransactionReceipt", [tx.transactionHash]);
+        receipt = await provider.send("eth_getTransactionReceipt", [txHash]);
       }
       return Result.ok({ response, receipt });
     } catch (e) {
-      return Result.fail(
-        new ChainError(ChainError.reasons.TxNotFound, { error: e, transactionHash: tx.transactionHash }),
-      );
+      return Result.fail(new ChainError(ChainError.reasons.TxNotFound, { error: e, transactionHash: txHash }));
     }
-  }
-
-  public async speedUpTx(
-    chainId: number,
-    tx: MinimalTransaction & { transactionHash: string; nonce: number },
-  ): Promise<Result<TransactionReceipt, ChainError>> {
-    const method = "speedUpTx";
-    const methodId = getRandomBytes32();
-    this.log.info({ method, methodId, transactionHash: tx.transactionHash }, "Method started");
-    let receipt: TransactionResponse | null;
-    const signer = this.getSigner(chainId);
-    if (!signer) {
-      return Result.fail(new ChainError(ChainError.reasons.SignerNotFound, { chainId }));
-    }
-    // Make sure tx is not mined already
-    const getTxRes = await this.getTxResponseFromHash(chainId, tx);
-    if (getTxRes.isError) {
-      return Result.fail(getTxRes.getError()!);
-    }
-    if (getTxRes.getValue().receipt) {
-      return Result.fail(new ChainError(ChainError.reasons.TxAlreadyMined));
-    }
-
-    // Safe to retry sending
-    const txRes = await this.sendTxWithRetries(
-      tx.to,
-      chainId,
-      TransactionReason.speedUpTransaction,
-      async (gasPrice: BigNumber, nonce?: number) => {
-        const price = await this.getGasPrice(chainId);
-        if (price.isError) {
-          throw price.getError()!;
-        }
-        const current = price.getValue().add(parseUnits("20", "gwei"));
-        const increased = current.gt(receipt?.gasPrice ?? 0)
-          ? current
-          : BigNumber.from(receipt?.gasPrice ?? 0).add(parseUnits("20", "gwei"));
-        return signer.sendTransaction({
-          to: tx.to,
-          data: tx.data,
-          chainId,
-          gasPrice: increased,
-          nonce: tx.nonce,
-          value: BigNumber.from(tx.value),
-        });
-      },
-    );
-    if (txRes.isError) {
-      return Result.fail(txRes.getError()!);
-    }
-    if (!txRes.getValue()) {
-      return Result.fail(new ChainError(ChainError.reasons.FailedToSendTx, { message: "Tx response not available" }));
-    }
-    return Result.ok(txRes.getValue()!);
   }
 
   public async sendTxWithRetries(
@@ -398,12 +339,16 @@ export class EthereumChainService extends EthereumChainReader implements IVector
     if (!signer) {
       return Result.fail(new ChainError(ChainError.reasons.SignerNotFound));
     }
+    // Used to track the number of attempts, regardless of whether a tx was successfully submitted
+    // on each.
     let tryNumber: number = 0;
-    let response: TransactionResponse | undefined;
+    // TODO: Add an optional argument above to take in an onchainTransactionId, and then fill
+    // in this data with the already-existing store record of the tx.
+    let responses: TransactionResponse[] = [];
+    let nonce: number | undefined;
     let receipt: TransactionReceipt | undefined;
-    // Nonce will persist across iterations, as soon as it is defined in the first one.
-    let nonce: number | undefined = undefined;
     let gasPrice: BigNumber;
+
     try {
       // Get (initial) gas price if there is not a preset amount passed into this method.
       gasPrice =
@@ -421,58 +366,78 @@ export class EthereumChainService extends EthereumChainReader implements IVector
 
     // This is the gas bump loop.
     // We will raise gas price for a tx if the confirmation of the tx times out.
-    // (Default timeout should be around ~15 sec, i.e. GAS_BUMP_THRESHOLD)
+    // (Default timeout is GAS_BUMP_THRESHOLD)
+    let onchainTransactionId = uuidV4();
     while (!receipt) {
       tryNumber += 1;
       try {
         /// SUBMIT
-        const result = await this.sendTx(txFn, gasPrice, response ? response.nonce : undefined);
-        if (result.isError) {
+        // NOTE: Nonce will persist across iterations, as soon as it is defined in the first one.
+        const result = await this.sendTx(txFn, gasPrice, nonce);
+        if (!result.isError) {
+          const response = result.getValue();
+          if (response) {
+            // Save nonce.
+            if (nonce === undefined) {
+              nonce = response.nonce;
+            } else if (response.nonce != nonce) {
+              // TODO: Is this edge case possible?
+              // Only if the callback txFn() *disobeys* us in not passing in the nonce.
+              // throw new ChainError(ChainError.reasons.)
+            }
+
+            // Add this response to our local response history.
+            responses.push(response);
+            // NOTE: Response MUST be defined here because if it was NEVER defined (i.e. undefined on first iteration),
+            // we would have returned in prev block, and if it was undefined on this iteration we would not overwrite
+            // that value.
+            // Tx was submitted: handle saving to store.
+            await this.handleTxSubmit(onchainTransactionId, method, methodId, channelAddress, reason, response);
+          } else {
+            // If response returns undefined, we assume the tx was not sent. This will happen if some logic was
+            // passed into txFn to bail out at the time of sending.
+            this.log.warn({ method, methodId, channelAddress, reason }, "Did not attempt tx");
+            // Iff this is the only iteration, then we want to go ahead return w/o saving anything.
+            if (responses.length === 0) {
+              return Result.ok(undefined);
+            } else {
+              this.log.warn({ method, methodId, channelAddress, reason }, `txFn returned undefined on try ${tryNumber}`);
+            }
+          }
+        } else {
           // If an error occurred, throw it to handle it in the catch block.
           const error = result.getError()!;
-          // If the nonce has already been used, the 'original' tx must have been mined and the tx
+          // If the nonce has already been used, one of the original txs must have been mined and the tx
           // we attempted here was a duplicate with bumped gas. Assuming we're on a subsuquent attempt,
-          // handle this by simply proceeding to the confirm block without throwing.
-          if (tryNumber > 1 && error.message.includes("nonce has already been used")) {
-            // TODO: Confirm that this error message comparison is valid in this context.
-            // TODO: Might be better to compare code to NONCE_EXPIRED, etc.
+          // handle this by simply proceeding to confirm (each prev tx) without throwing.
+          if (
+            responses.length >= 1
+            && (
+              error.message.includes("nonce has already been used")
+              // If we get a 'nonce is too low' message, a previous tx has been mined, and ethers thought
+              // we were making another tx attempt with the same nonce.
+              || error.message.includes("Transaction nonce is too low.")
+            )
+          ) {
             // A more robust comparison is desirable here either way.
             this.log.info(
               { method, methodId, channelAddress, reason },
-              "Nonce already used: proceeding to check for confirmation.",
+              "Nonce already used: proceeding to check for confirmation in previous transactions.",
             );
           } else {
             throw error;
           }
-        } else {
-          // If response returns undefined, we assume the tx was not sent. This will happen if some logic was
-          // passed into txFn to bail out at the time of sending.
-          let tempResponse = result.getValue();
-          if (!tempResponse) {
-            this.log.warn({ method, methodId, channelAddress, reason }, "Did not attempt tx");
-            // Iff this is the only iteration, then we want to go ahead return w/o saving anything.
-            if (tryNumber === 1) {
-              return Result.ok(undefined);
-            }
-          } else {
-            response = tempResponse;
-          }
-
-          // NOTE: Response MUST be defined here because if it was NEVER defined (i.e. undefined on first iteration),
-          // we would have returned in prev block, and if it was undefined on this iteration we would not overwrite
-          // that value.
-          // Tx was submitted: handle saving to store.
-          await this.handleTxSubmit(method, methodId, channelAddress, reason, response!);
         }
 
         /// CONFIRM
         // Now we wait for confirmation and get tx receipt.
-        receipt = await this.waitForConfirmation(chainId, response!);
+        receipt = await this.waitForConfirmation(chainId, responses);
         // Check status in event of tx reversion.
-        if (receipt.status === 0) {
-          throw new ChainError(ChainError.reasons.TxReverted, { receipt, method, methodId });
+        if (receipt && receipt.status === 0) {
+          throw new ChainError(ChainError.reasons.TxReverted, { receipt });
         }
       } catch (e) {
+        const latestResponse: TransactionResponse | undefined = responses[responses.length - 1];
         // Check if the error was a confirmation timeout.
         if (e.message === ChainError.retryableTxErrors.ConfirmationTimeout) {
           // Scale up gas by percentage as specified by GAS_BUMP_PERCENT.
@@ -490,11 +455,12 @@ export class EthereumChainService extends EthereumChainReader implements IVector
               max: BIG_GAS_PRICE,
             });
             await this.handleTxFail(
+              onchainTransactionId,
               method,
               methodId,
               channelAddress,
               reason,
-              response!,
+              latestResponse,
               receipt,
               error,
               "Max gas price reached",
@@ -509,10 +475,20 @@ export class EthereumChainService extends EthereumChainReader implements IVector
           if (e.message.includes("sender doesn't have enough funds")) {
             error = new ChainError(ChainError.reasons.NotEnoughFunds);
           }
-          // Don't save tx if it failed to submit (i.e. no response), only if it fails to mine.
-          if (response) {
+          // Don't save tx if it failed to submit (i.e. never received response), only if it fails to mine.
+          if (latestResponse) {
             // If we get any other error here, we classify this event as a tx failure.
-            await this.handleTxFail(method, methodId, channelAddress, reason, response, receipt, e, "Tx reverted");
+            await this.handleTxFail(
+              onchainTransactionId,
+              method,
+              methodId,
+              channelAddress,
+              reason,
+              latestResponse,
+              receipt,
+              e,
+              "Tx reverted",
+            );
           } else {
             this.log.error(
               { method, methodId, channelAddress, reason, error: jsonifyError(error) },
@@ -525,43 +501,63 @@ export class EthereumChainService extends EthereumChainReader implements IVector
     }
 
     // Success! Save mined tx receipt.
-    await this.handleTxMined(method, methodId, channelAddress, reason, receipt);
+    await this.handleTxMined(onchainTransactionId, method, methodId, channelAddress, reason, receipt);
     return Result.ok(receipt);
   }
 
-  public async waitForConfirmation(chainId: number, response: TransactionResponse): Promise<TransactionReceipt> {
+  /**
+   * Will wait for any of the given TransactionResponses to return
+   * a receipt. Once a receipt is returned by any of the responses,
+   * it will wait for 10 confirmations of the given receipt against
+   * a timeout. If within the timeout there are *not* 10 confirmations,
+   * the tx will be resubmitted at the same nonce.
+   */
+  public async waitForConfirmation(chainId: number, responses: TransactionResponse[]): Promise<TransactionReceipt> {
     const provider: JsonRpcProvider = this.chainProviders[chainId];
     if (!provider) {
       throw new ChainError(ChainError.reasons.ProviderNotFound);
     }
     const numConfirmations = getConfirmationsForChain(chainId);
-    // An anon fn to get the tx receipt, as we may require multiple retries with raised gas price.
-    const getTransactionReceipt = async (): Promise<TransactionReceipt | undefined> => {
-      const receipt = await provider.send("eth_getTransactionReceipt", [response.hash]);
-      if (receipt?.confirmations < numConfirmations) {
-        return undefined;
-      }
-      return receipt;
+
+    // An anon fn to get the tx receipts for all responses.
+    // We must check for confirmation in all previous transactions. Although it's most likely
+    // that it's the previous one, any of them could have been confirmed.
+    const pollForReceipt = async (): Promise<TransactionReceipt | undefined> => {
+      // Make a pool of promises for resolving each receipt call (once it reaches target confirmations).
+      const response = await Promise.race<any>(
+        responses
+          .map((response) => {
+            return new Promise(async (resolve) => {
+              const r = await provider.getTransactionReceipt(response.hash);
+              if (r && r.confirmations >= numConfirmations) {
+                return resolve(r);
+              }
+            });
+          })
+          // Add a promise returning undefined with a delay of 2 seconds to the pool.
+          // This will execute in the event that none of the provider.getTransactionReceipt calls work,
+          // and/or none of them have the number of confirmations we want.
+          .concat(delay(2_000)),
+      );
+      return response;
     };
 
     // Poll for receipt.
-    let receipt: TransactionReceipt | undefined = await getTransactionReceipt();
+    let receipt: TransactionReceipt | undefined = await pollForReceipt();
     // NOTE: This loop won't execute if receipt is valid (not undefined).
     let timeElapsed: number = 0;
     const startMark = new Date().getTime();
     while (!receipt && timeElapsed < CONFIRMATION_TIMEOUT) {
-      // Pause for 2 sec.
-      await delay(2000);
-      receipt = await getTransactionReceipt();
-      if (receipt) {
-        break;
-      }
+      receipt = await pollForReceipt();
       // Update elapsed time.
       timeElapsed = new Date().getTime() - startMark;
     }
+
+    // If there is no receipt, we timed out in our polling operation.
     if (!receipt) {
       throw new ChainError(ChainError.retryableTxErrors.ConfirmationTimeout);
     }
+
     return receipt;
   }
 

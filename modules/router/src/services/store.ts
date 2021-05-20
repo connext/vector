@@ -154,6 +154,7 @@ export class PrismaStore implements IRouterStore {
         toChainId: swap.toChainId.toString(),
       },
     });
+    
     return result
       ? {
           id: result.id,
@@ -162,7 +163,7 @@ export class PrismaStore implements IRouterStore {
           approveHash: result.approveHash ? result.approveHash : undefined,
           approveChain: result.approveChain ? parseInt(result.approveChain) : undefined,
           executeHash: result.executeHash ? result.executeHash : undefined,
-          executeChain: result.executeChain ? parseInt(result.executeChain) : undefined,
+          executeChain: result.executeChain  ? parseInt(result.executeChain) : undefined,
           completeHash: result.completeHash ? result.completeHash : undefined,
           completeChain: result.completeChain ? parseInt(result.completeChain) : undefined,
         }

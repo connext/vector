@@ -2,6 +2,46 @@
 
 ## Next Release
 
+## 0.2.5-beta.13
+
+- \[engine\] hotfix for withdraw retry schema
+
+## 0.2.5-beta.12
+
+- \[contracts\] hotfix of race condition of resubmitted transactions
+
+## 0.2.5-beta.11
+
+- \[contracts\] Improve handling of resubmitted transactions
+
+## 0.2.5-beta.10
+
+- \[engine\] Improve withdrawal retry logic
+
+## 0.2.5-beta.9
+
+- \[server-node\] Store resilient to restarts
+
+## 0.2.5-beta.8
+
+- \[server-node, browser-node\] Schema/migration fixes
+
+## 0.2.5-beta.7
+
+- \[contracts\] Tx service schema updates
+
+## 0.2.5-beta.6
+
+- \[utils\] Add FTM chain
+
+## 0.2.5-beta.5
+
+- \[utils\] Add PlotX token
+
+## 0.2.5-beta.4
+
+- \[utils\] Bump non-mainnet confirmations from 3 to 10
+
 ## 0.2.5-beta.3
 
 - \[contracts\] Don't revitalize tx

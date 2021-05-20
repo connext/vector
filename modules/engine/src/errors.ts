@@ -137,6 +137,8 @@ export class RpcError extends EngineError {
     SigningFailed: "Failed to sign message",
     UtilitySigningFailed: "Failed to sign utility message",
     WithdrawResolutionFailed: "Withdrawal commitment not found post-create",
+    TransactionFound: "Withdrawal transaction found",
+    CommitmentSingleSigned: "Withdrawal commitment single-signed",
   } as const;
 
   constructor(

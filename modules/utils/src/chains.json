@@ -72,6 +72,10 @@
       "0x4fabb145d64652a948d72533023f6e7a623c7c53": {
         "symbol": "BUSD",
         "mainnetEquivalent": "0x4fabb145d64652a948d72533023f6e7a623c7c53"
+      },
+      "0x72F020f8f3E8fd9382705723Cd26380f8D0c66Bb": {
+        "symbol": "PLOTX",
+        "mainnetEquivalent": "0x72F020f8f3E8fd9382705723Cd26380f8D0c66Bb"
       }
     },
     "rpc": [
@@ -123,6 +127,10 @@
       "0x7ceB23fD6bC0adD59E62ac25578270cFf1b9f619": {
         "symbol": "WETH (PoS)",
         "mainnetEquivalent": "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"
+      },
+      "0xe82808eaA78339b06a691fd92E1Be79671cAd8D3": {
+        "symbol": "PLOTX",
+        "mainnetEquivalent": "0x72F020f8f3E8fd9382705723Cd26380f8D0c66Bb"
       }
     },
     "rpc": ["https://rpc-mainnet.matic.network", "wss://ws-mainnet.matic.network"],
@@ -149,6 +157,10 @@
       "0x48987E8B356e0dE474ddE9Bc10541F8106C88A23": {
         "symbol": "PROPS",
         "mainnetEquivalent": "0x6fe56c0bcdd471359019fcbc48863d6c3e9d4f41"
+      },
+      "0x07DDC851a1bee757335EBcd7B14348359fDaB60f": {
+        "symbol": "PLOTX",
+        "mainnetEquivalent": "0x72F020f8f3E8fd9382705723Cd26380f8D0c66Bb"
       }
     },
     "rpc": ["https://rpc-mumbai.matic.today", "wss://ws-mumbai.matic.today"],
@@ -223,6 +235,10 @@
       "0x7a652687E2f9167cdC9831C0f9B5C3Ff5E5Bc5C7": {
         "symbol": "PROPS",
         "mainnetEquivalent": "0x6fe56c0bcdd471359019fcbc48863d6c3e9d4f41"
+      },
+      "0x07DDC851a1bee757335EBcd7B14348359fDaB60f": {
+        "symbol": "PLOTX",
+        "mainnetEquivalent": "0x72F020f8f3E8fd9382705723Cd26380f8D0c66Bb"
       }
     },
     "rpc": ["https://rpc.goerli.mudit.blog/", "https://rpc.slock.it/goerli ", "https://goerli.prylabs.net/"],
@@ -439,6 +455,37 @@
       "0x0298c2b32eaE4da002a15f36fdf7615BEa3DA047": {
         "symbol": "HUSD",
         "mainnetEquivalent": "0xdF574c24545E5FfEcb9a659c229253D4111d87e1"
+      }
+    }
+  },
+  {
+    "name": "Fantom Opera",
+    "chainId": 250,
+    "shortName": "ftm",
+    "chain": "FTM",
+    "network": "mainnet",
+    "networkId": 250,
+    "nativeCurrency": { "name": "Fantom", "symbol": "FTM", "decimals": 18 },
+    "rpc": ["https://rpcapi.fantom.network"],
+    "faucets": [],
+    "explorers": [{ "name": "ftmscan", "url": "https://ftmscan.com", "icon": "ftmscan", "standard": "EIP3091" }],
+    "infoURL": "https://fantom.foundation",
+    "assetId": {
+      "0x0000000000000000000000000000000000000000": {
+        "symbol": "FTM",
+        "mainnetEquivalent": "0x4e15361fd6b4bb609fa63c81a2be19d873717870"
+      },
+      "0x8d11ec38a3eb5e956b052f67da8bdc9bef8abf3e": {
+        "symbol": "DAI",
+        "mainnetEquivalent": "0x6B175474E89094C44Da98b954EedeAC495271d0F"
+      },
+      "0x049d68029688eabf473097a2fc38ef61633a3c7a": {
+        "symbol": "USDT",
+        "mainnetEquivalent": "0xdAC17F958D2ee523a2206206994597C13D831ec7"
+      },
+      "0x04068da6c83afcfa0e13ba15a6696662335d5b75": {
+        "symbol": "USDC",
+        "mainnetEquivalent": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
       }
     }
   }

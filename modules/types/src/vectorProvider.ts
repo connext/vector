@@ -33,6 +33,7 @@ export const ChannelRpcMethods = {
   chan_resolveTransfer: "chan_resolveTransfer",
   chan_restoreState: "chan_restoreState",
   chan_withdraw: "chan_withdraw",
+  chan_withdrawRetry: "chan_withdrawRetry",
   chan_subscribe: "chan_subscribe",
   chan_unsubscribeAll: "chan_unsubscribeAll",
   connext_authenticate: "connext_authenticate",
@@ -77,6 +78,7 @@ export type ChannelRpcMethodsPayloadMap = {
   [ChannelRpcMethods.chan_resolveTransfer]: EngineParams.ResolveTransfer;
   [ChannelRpcMethods.chan_restoreState]: EngineParams.RestoreState;
   [ChannelRpcMethods.chan_withdraw]: EngineParams.Withdraw;
+  [ChannelRpcMethods.chan_withdrawRetry]: EngineParams.WithdrawRetry;
   [ChannelRpcMethods.chan_subscribe]: { event: string; once: boolean };
   [ChannelRpcMethods.chan_unsubscribeAll]: {};
   [ChannelRpcMethods.connext_authenticate]: {
@@ -135,6 +137,7 @@ export type ChannelRpcMethodsResponsesMap = {
     transactionHash?: string;
     transaction: MinimalTransaction;
   };
+  [ChannelRpcMethods.chan_withdrawRetry]: NodeResponses.WithdrawRetry
   [ChannelRpcMethods.chan_subscribe]: any;
   [ChannelRpcMethods.chan_unsubscribeAll]: any;
   [ChannelRpcMethods.connext_authenticate]: {
