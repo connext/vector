@@ -410,9 +410,13 @@ export class EthereumChainService extends EthereumChainReader implements IVector
           // If the nonce has already been used, one of the original txs must have been mined and the tx
           // we attempted here was a duplicate with bumped gas. Assuming we're on a subsuquent attempt,
           // handle this by simply proceeding to confirm (each prev tx) without throwing.
-          if (responses.length >= 1 && error.message.includes("nonce has already been used")) {
-            // TODO: Confirm that this error message comparison is valid in this context.
-            // TODO: Might be better to compare code to NONCE_EXPIRED, etc.
+          if (
+            responses.length >= 1
+            && (
+              error.message.includes("nonce has already been used")
+              || error.message.includes("Transaction nonce is too low. Try incrementing the nonce.")
+            )
+          ) {
             // A more robust comparison is desirable here either way.
             this.log.info(
               { method, methodId, channelAddress, reason },
