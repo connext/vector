@@ -157,7 +157,6 @@ export class EthereumChainService extends EthereumChainReader implements IVector
     methodId: string,
     channelAddress: string,
     reason: TransactionReason,
-    response: TransactionResponse,
     receipt?: TransactionReceipt,
     error?: Error,
     message: string = "Tx reverted",
@@ -339,6 +338,10 @@ export class EthereumChainService extends EthereumChainReader implements IVector
     if (!signer) {
       return Result.fail(new ChainError(ChainError.reasons.SignerNotFound));
     }
+    const provider: JsonRpcProvider = this.chainProviders[chainId];
+    if (!provider) {
+      throw new ChainError(ChainError.reasons.ProviderNotFound);
+    }
     // Used to track the number of attempts, regardless of whether a tx was successfully submitted
     // on each.
     let tryNumber: number = 0;
@@ -396,12 +399,18 @@ export class EthereumChainService extends EthereumChainReader implements IVector
           } else {
             // If response returns undefined, we assume the tx was not sent. This will happen if some logic was
             // passed into txFn to bail out at the time of sending.
-            this.log.warn({ method, methodId, channelAddress, reason }, "Did not attempt tx");
-            // Iff this is the only iteration, then we want to go ahead return w/o saving anything.
+            this.log.warn(
+              { method, methodId, channelAddress, reason },
+              "Did not attempt tx."
+            );
             if (responses.length === 0) {
+              // Iff this is the only iteration, then we want to go ahead return w/o saving anything.
               return Result.ok(undefined);
             } else {
-              this.log.warn({ method, methodId, channelAddress, reason }, `txFn returned undefined on try ${tryNumber}`);
+              this.log.info(
+                { method, methodId, channelAddress, reason },
+                `txFn returned undefined on try ${tryNumber}. Proceeding to confirmation step.`
+              );
             }
           }
         } else {
@@ -417,14 +426,19 @@ export class EthereumChainService extends EthereumChainReader implements IVector
               // If we get a 'nonce is too low' message, a previous tx has been mined, and ethers thought
               // we were making another tx attempt with the same nonce.
               || error.message.includes("Transaction nonce is too low.")
+              // Another ethers message that we could potentially be getting back.
+              || error.message.includes("There is another transaction with same nonce in the queue.")
             )
           ) {
-            // A more robust comparison is desirable here either way.
             this.log.info(
               { method, methodId, channelAddress, reason },
               "Nonce already used: proceeding to check for confirmation in previous transactions.",
             );
           } else {
+            this.log.error(
+              { method, methodId, channelAddress, reason },
+              `Error occurred while executing tx submit: ${error}`
+            )
             throw error;
           }
         }
@@ -437,15 +451,17 @@ export class EthereumChainService extends EthereumChainReader implements IVector
           throw new ChainError(ChainError.reasons.TxReverted, { receipt });
         }
       } catch (e) {
-        const latestResponse: TransactionResponse | undefined = responses[responses.length - 1];
         // Check if the error was a confirmation timeout.
-        if (e.message === ChainError.retryableTxErrors.ConfirmationTimeout) {
+        if (e.message === ChainError.reasons.ConfirmationTimeout) {
           // Scale up gas by percentage as specified by GAS_BUMP_PERCENT.
           this.log.info(
             { channelAddress, reason, method, methodId },
             "Tx timed out waiting for confirmation. Bumping gas price and reattempting.",
           );
-          gasPrice = gasPrice.add(gasPrice.mul(GAS_BUMP_PERCENT).div(100));
+          // From ethers docs:
+          // Generally, the new gas price should be about 50% + 1 wei more, so if a gas price
+          // of 10 gwei was used, the replacement should be 15.000000001 gwei.
+          gasPrice = gasPrice.add(gasPrice.mul(GAS_BUMP_PERCENT).div(100)).add(1);
           // if the gas price is past the max, return a failure.
           if (gasPrice.gt(BIG_GAS_PRICE)) {
             const error = new ChainError(ChainError.reasons.MaxGasPriceReached, {
@@ -460,7 +476,6 @@ export class EthereumChainService extends EthereumChainReader implements IVector
               methodId,
               channelAddress,
               reason,
-              latestResponse,
               receipt,
               error,
               "Max gas price reached",
@@ -476,7 +491,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
             error = new ChainError(ChainError.reasons.NotEnoughFunds);
           }
           // Don't save tx if it failed to submit (i.e. never received response), only if it fails to mine.
-          if (latestResponse) {
+          if (responses.length > 0) {
             // If we get any other error here, we classify this event as a tx failure.
             await this.handleTxFail(
               onchainTransactionId,
@@ -484,7 +499,6 @@ export class EthereumChainService extends EthereumChainReader implements IVector
               methodId,
               channelAddress,
               reason,
-              latestResponse,
               receipt,
               e,
               "Tx reverted",
@@ -555,7 +569,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
 
     // If there is no receipt, we timed out in our polling operation.
     if (!receipt) {
-      throw new ChainError(ChainError.retryableTxErrors.ConfirmationTimeout);
+      throw new ChainError(ChainError.reasons.ConfirmationTimeout);
     }
 
     return receipt;
