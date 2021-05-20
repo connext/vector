@@ -268,7 +268,7 @@ builder: $(shell find ops/builder)
 
 node-modules: builder package.json $(shell ls modules/*/package.json)
 	$(log_start)
-	$(docker_run) "lerna bootstrap --hoist --no-progress"
+	$(docker_run) "lerna bootstrap --hoist --no-progress --mutex network"
 	$(log_finish) && mv -f $(totalTime) .flags/$@
 
 ########################################
