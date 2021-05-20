@@ -37,7 +37,7 @@ let sendTxWithRetriesMock: SinonStub;
 let approveMock: SinonStub;
 let getCodeMock: SinonStub;
 let getOnchainBalanceMock: SinonStub;
-let waitForConfirmation: SinonStub<[chainId: number, response: TransactionResponse], Promise<TransactionReceipt>>;
+let waitForConfirmation: SinonStub<[chainId: number, responses: TransactionResponse[]], Promise<TransactionReceipt>>;
 let getGasPrice: SinonStub<[chainId: number], Promise<Result<BigNumber, ChainError>>>;
 
 let channelState: FullChannelState;
@@ -632,7 +632,7 @@ describe("ethService unit test", () => {
 
   describe("waitForConfirmation", () => {
     it("should return an error if there is no provider for chain", async () => {
-      await expect(ethService.waitForConfirmation(111, txResponse)).to.eventually.be.rejectedWith(
+      await expect(ethService.waitForConfirmation(111, [txResponse])).to.eventually.be.rejectedWith(
         ChainError.reasons.ProviderNotFound,
       );
     });
@@ -641,14 +641,14 @@ describe("ethService unit test", () => {
       provider1337.getTransactionReceipt.onFirstCall().resolves({ ...txReceipt, confirmations: 0 });
       provider1337.getTransactionReceipt.onSecondCall().resolves({ ...txReceipt, confirmations: 0 });
       provider1337.getTransactionReceipt.onThirdCall().resolves(txReceipt);
-      const res = await ethService.waitForConfirmation(1337, txResponse);
+      const res = await ethService.waitForConfirmation(1337, [txResponse]);
       expect(res).to.deep.eq(txReceipt);
       expect(provider1337.getTransactionReceipt.callCount).to.eq(3);
     });
 
     it("should error with a timeout error if it is past the confirmation time", async () => {
       provider1337.getTransactionReceipt.onThirdCall().resolves(undefined);
-      await expect(ethService.waitForConfirmation(1337, txResponse)).to.eventually.be.rejectedWith(
+      await expect(ethService.waitForConfirmation(1337, [txResponse])).to.eventually.be.rejectedWith(
         ChainError.retryableTxErrors.ConfirmationTimeout,
       );
     });

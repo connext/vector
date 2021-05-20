@@ -170,7 +170,7 @@ export async function withdrawRetryForTransferId(
       );
     }
     logger.info(
-      { method, methodId, transactionHash: tx.getValue().transactionHash },
+      { method, methodId, transactionHash: tx.isError ? "" : tx.getValue().transactionHash },
       "Submitted unsubmitted withdrawal",
     );
     txHash = tx.getValue().transactionHash;
