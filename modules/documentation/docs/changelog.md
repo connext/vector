@@ -2,6 +2,10 @@
 
 ## Next Release
 
+## 0.2.5-beta.11
+
+- \[contracts\] Improve handling of resubmitted transactions
+
 ## 0.2.5-beta.10
 
 - \[engine\] Improve withdrawal retry logic
