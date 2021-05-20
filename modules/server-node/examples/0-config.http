@@ -3,8 +3,6 @@
 @carolUrl = http://localhost:8005
 @daveUrl = http://localhost:8006
 @rogerUrl = http://localhost:8007
-@roger1Url = http://localhost:8017
-@roger2Url = http://localhost:8027
 @aliceBobChannel = 0x47809CD3218c69aB21BeEe8ad6a7b7Ec5E026859
 @carolRogerChannel = 0x66920C67620b492C3FF7f904af6DC3a8B58D7C9C
 @daveRogerChannel = 0x7E513218D56ef4465208d587e9eff56e9035cd02
@@ -14,12 +12,11 @@
 @carolPublicIdentifier = vector8ZaxNSdUM83kLXJSsmj5jrcq17CpZUwBirmboaNPtQMEXjVNrL
 @davePublicIdentifier = vector7mAydt3S3dDPWJMYSHZPdRo16Pru145qTNQYFoS8TrpXWW8HAj
 @rogerPublicIdentifier = vector8Uz1BdpA9hV5uTm6QUv5jj1PsUyCH8m8ciA94voCzsxVmrBRor
-
 @chainId = 1337
 
 @nodeUrl = {{carolUrl}}
 @nodePublicIdentifier = {{carolPublicIdentifier}}
-@counterpartyPublicIdentifier = {{rogerPublicIdentifier}}
+@counterpartyPublicIdentifier = {{carolPublicIdentifier}}
 @channel = {{carolRogerChannel}}
 
 ##############

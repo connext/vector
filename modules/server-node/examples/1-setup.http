@@ -12,8 +12,7 @@
 @carolPublicIdentifier = vector8ZaxNSdUM83kLXJSsmj5jrcq17CpZUwBirmboaNPtQMEXjVNrL
 @davePublicIdentifier = vector7mAydt3S3dDPWJMYSHZPdRo16Pru145qTNQYFoS8TrpXWW8HAj
 @rogerPublicIdentifier = vector8Uz1BdpA9hV5uTm6QUv5jj1PsUyCH8m8ciA94voCzsxVmrBRor
-
-@chainId = 1338
+@chainId = 1337
 
 @nodeUrl = {{carolUrl}}
 @nodePublicIdentifier = {{carolPublicIdentifier}}
@@ -30,4 +29,3 @@ Content-Type: application/json
   "chainId": "{{chainId}}",
   "timeout": "100000"
 }
-

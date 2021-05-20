@@ -173,9 +173,9 @@ const RunAuctionParamsSchema = Type.Object({
   amount: TIntegerString,
   assetId: TAddress,
   chainId: TChainId,
-  recipient: Type.Optional(TPublicIdentifier),
-  recipientChainId: Type.Optional(TChainId),
-  recipientAssetId: Type.Optional(TAddress),
+  recipient: TPublicIdentifier,
+  recipientChainId: TChainId,
+  recipientAssetId: TAddress,
 });
 
 //////////////////

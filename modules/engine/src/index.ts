@@ -46,6 +46,7 @@ import Ajv from "ajv";
 import { Evt } from "evt";
 
 import { version } from "../package.json";
+import { v4 } from "uuid";
 
 import { DisputeError, IsAliveError, RestoreError, AuctionError, RpcError } from "./errors";
 import {
@@ -68,8 +69,6 @@ export class VectorEngine implements IVectorEngine {
   private readonly evts: EngineEvtContainer = getEngineEvtContainer();
 
   private readonly restoreLocks: { [channelAddress: string]: string } = {};
-
-  private auctionResponses: Array<NodeResponses.RunAuction> = [];
 
   private constructor(
     private readonly signer: IChannelSigner,
@@ -1554,20 +1553,15 @@ export class VectorEngine implements IVectorEngine {
     };
     this.evts[EngineEvents.RUN_AUCTION_EVENT].post(payload);
 
-    const inbox = getRandomBytes32();
+    const inbox = v4();
     const from = this.signer.publicIdentifier;
+    let auctionResponses: Array<NodeResponses.RunAuction> = [];
 
     // Call onReceiveAuctionMessage to listen on unique INBOX and collect responses for 5 seconds (will tweak and tune this number).
     // Maybe something like wait for 5 responses or 5 seconds? Watch out for race conditions of setting listener after message is already sent.
     try {
       //Call publishStartAuction with provided data.
       this.messaging.publishStartAuction(from, from, Result.ok(params), inbox);
-
-      function waitForRespones(t) {
-        return new Promise(function (resolve) {
-          setTimeout(resolve, t);
-        });
-      }
 
       await this.messaging.onReceiveAuctionMessage(this.publicIdentifier, inbox, (runAuction, from, inbox) => {
         const method = "onReceiveAuctionMessage";
@@ -1578,35 +1572,34 @@ export class VectorEngine implements IVectorEngine {
           return;
         }
         const res = runAuction.getValue();
-        this.auctionResponses.push(res);
+        auctionResponses.push(res);
       });
 
       // wait for 5 responses or 3 secs
-      if (this.auctionResponses.length < 5) {
-        await waitForRespones(3000);
+      if (auctionResponses.length < 5) {
+        await delay(3000);
       }
 
-      this.logger.info(this.auctionResponses, "Router Responses");
+      this.logger.info(auctionResponses, "Router Responses");
 
-      if (this.auctionResponses.length == 0) {
+      if (auctionResponses.length === 0) {
         // TODO: Add error cases (reasons) to Error Class
         return Result.fail(new AuctionError(AuctionError.reasons.NoResponses, this.publicIdentifier, params, {}));
       }
 
       // compare fees and return cheapest option
       // TODO: compare swapRates also
-      let lowestFee = parseInt(this.auctionResponses[0].totalFee);
+      let lowestFee = parseInt(auctionResponses[0].totalFee);
       let lowestFeeIndex = 0;
 
-      for (const [i, elem] of this.auctionResponses.entries()) {
-        // console.log("totalFee elem:", elem.totalFee, "lowestFee:", lowestFee);
+      for (const [i, elem] of auctionResponses.entries()) {
         if (parseInt(elem.totalFee) < lowestFee) {
           lowestFee = parseInt(elem.totalFee);
           lowestFeeIndex = i;
         }
       }
-      this.logger.info(this.auctionResponses[lowestFeeIndex], "Chosen Router");
-      return Result.ok(this.auctionResponses[lowestFeeIndex]);
+      this.logger.info(auctionResponses[lowestFeeIndex], "Chosen Router");
+      return Result.ok(auctionResponses[lowestFeeIndex]);
     } catch (err) {
       return Result.fail(
         new RpcError(RpcError.reasons.InvalidParams, "", this.publicIdentifier, {
@@ -1615,7 +1608,8 @@ export class VectorEngine implements IVectorEngine {
         }),
       );
     } finally {
-      this.auctionResponses = [];
+      auctionResponses = [];
+      this.messaging.unsubscribe(inbox);
     }
   }
 
