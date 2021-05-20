@@ -6,7 +6,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "build": "prisma generate --schema prisma-sqlite/schema.prisma && rm -rf dist && tsc",
+    "build": "rm -rf src/generated && prisma generate --schema prisma-sqlite/schema.prisma && rm -rf dist && tsc",
     "build-bundle": "webpack --config ops/webpack.config.js",
     "start": "prisma migrate dev --preview-feature --schema prisma-sqlite/schema.prisma && node dist/index.js",
     "test": "bash ops/test.sh",
@@ -14,12 +14,12 @@
     "migration:generate:sqlite": "prisma migrate dev --create-only --preview-feature --schema prisma-sqlite/schema.prisma"
   },
   "dependencies": {
-    "@connext/vector-contracts": "0.2.5-alpha.3",
-    "@connext/vector-engine": "0.2.5-alpha.3",
-    "@connext/vector-types": "0.2.5-alpha.3",
-    "@connext/vector-utils": "0.2.5-alpha.3",
+    "@connext/vector-contracts": "0.2.5-beta.12",
+    "@connext/vector-engine": "0.2.5-beta.12",
+    "@connext/vector-types": "0.2.5-beta.12",
+    "@connext/vector-utils": "0.2.5-beta.12",
     "@ethersproject/wallet": "5.1.0",
-    "@prisma/client": "2.18.0",
+    "@prisma/client": "2.22.0",
     "@sinclair/typebox": "0.12.7",
     "ajv": "6.12.6",
     "axios": "0.21.1",
@@ -29,7 +29,7 @@
     "fastify-oas": "3.0.8",
     "pg": "8.5.1",
     "pino": "6.11.1",
-    "prisma": "2.18.0",
+    "prisma": "2.22.0",
     "regenerator-runtime": "0.13.7",
     "sqlite3": "5.0.2",
     "ts-nats": "1.2.15"

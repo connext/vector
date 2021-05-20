@@ -376,6 +376,18 @@ const PostWithdrawTransferResponseSchema = {
   }),
 };
 
+const PostWithdrawRetryTransferBodySchema = Type.Intersect([
+  EngineParams.WithdrawRetrySchema,
+  Type.Object({ publicIdentifier: TPublicIdentifier }),
+]);
+
+const PostWithdrawRetryTransferResponseSchema = {
+  200: Type.Object({
+    channelAddress: TAddress,
+    transferId: TBytes32,
+    transactionHash: Type.Optional(TBytes32),
+  }),
+};
 // POST SIGN UTILITY MESSAGE
 const PostSignUtilityMessageBodySchema = Type.Intersect([
   EngineParams.SignUtilityMessageSchema,
@@ -426,31 +438,6 @@ const PostAdminBodySchema = Type.Object({
 const PostAdminResponseSchema = {
   200: Type.Object({
     message: Type.String(),
-  }),
-};
-
-// SPEED UP TX
-const PostAdminSpeedUpTxBodySchema = Type.Intersect([
-  PostAdminBodySchema,
-  Type.Object({ transactionHash: Type.String(), publicIdentifier: TPublicIdentifier }),
-]);
-
-const PostAdminSpeedUpTxResponseSchema = {
-  200: Type.Object({
-    transactionHash: Type.String(),
-  }),
-};
-
-// RETRY SUBMITTING WITHDRAWAL TRANSACTION
-const PostAdminRetryWithdrawTransactionBodySchema = Type.Object({
-  adminToken: Type.String(),
-  transferId: TBytes32,
-});
-
-const PostAdminRetryWithdrawTransactionResponseSchema = {
-  200: Type.Object({
-    transferId: TBytes32,
-    transactionHash: Type.String(),
   }),
 };
 
@@ -661,6 +648,9 @@ export namespace NodeParams {
   export const WithdrawSchema = PostWithdrawTransferBodySchema;
   export type Withdraw = Static<typeof WithdrawSchema>;
 
+  export const WithdrawRetrySchema = PostWithdrawRetryTransferBodySchema;
+  export type WithdrawRetry = Static<typeof WithdrawRetrySchema>;
+
   export const RegisterListenerSchema = PostRegisterListenerBodySchema;
   export type RegisterListener = Static<typeof RegisterListenerSchema>;
 
@@ -672,9 +662,6 @@ export namespace NodeParams {
 
   export const AdminSchema = PostAdminBodySchema;
   export type Admin = Static<typeof AdminSchema>;
-
-  export const SpeedUpTxSchema = PostAdminSpeedUpTxBodySchema;
-  export type SpeedUpTx = Static<typeof SpeedUpTxSchema>;
 
   export const CreateNodeSchema = PostCreateNodeBodySchema;
   export type CreateNode = Static<typeof CreateNodeSchema>;
@@ -702,9 +689,6 @@ export namespace NodeParams {
 
   export const SendIsAliveSchema = PostSendIsAliveBodySchema;
   export type SendIsAlive = Static<typeof SendIsAliveSchema>;
-
-  export const RetryWithdrawTransactionSchema = PostAdminRetryWithdrawTransactionBodySchema;
-  export type RetryWithdrawTransaction = Static<typeof RetryWithdrawTransactionSchema>;
 
   export const SubmitWithdrawalsSchema = PostAdminSubmitWithdrawalsBodySchema;
   export type SubmitWithdrawals = Static<typeof SubmitWithdrawalsSchema>;
@@ -794,6 +778,9 @@ export namespace NodeResponses {
   export const WithdrawSchema = PostWithdrawTransferResponseSchema;
   export type Withdraw = Static<typeof WithdrawSchema["200"]>;
 
+  export const WithdrawRetrySchema = PostWithdrawRetryTransferResponseSchema;
+  export type WithdrawRetry = Static<typeof WithdrawRetrySchema["200"]>;
+
   export const RegisterListenerSchema = PostRegisterListenerResponseSchema;
   export type RegisterListener = Static<typeof RegisterListenerSchema["200"]>;
 
@@ -805,9 +792,6 @@ export namespace NodeResponses {
 
   export const AdminSchema = PostAdminResponseSchema;
   export type Admin = Static<typeof AdminSchema["200"]>;
-
-  export const SpeedUpTxSchema = PostAdminSpeedUpTxResponseSchema;
-  export type SpeedUpTx = Static<typeof PostAdminSpeedUpTxResponseSchema["200"]>;
 
   export const CreateNodeSchema = PostCreateNodeResponseSchema;
   export type CreateNode = Static<typeof CreateNodeSchema["200"]>;
@@ -835,9 +819,6 @@ export namespace NodeResponses {
 
   export const SendIsAliveSchema = PostSendIsAliveResponseSchema;
   export type SendIsAlive = Static<typeof PostSendIsAliveResponseSchema["200"]>;
-
-  export const RetryWithdrawTransactionSchema = PostAdminRetryWithdrawTransactionResponseSchema;
-  export type RetryWithdrawTransaction = Static<typeof PostAdminRetryWithdrawTransactionResponseSchema["200"]>;
 
   export const SubmitWithdrawalsSchema = PostAdminSubmitWithdrawalsResponseSchema;
   export type SubmitWithdrawals = Static<typeof PostAdminSubmitWithdrawalsResponseSchema["200"]>;

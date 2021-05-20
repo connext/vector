@@ -2,6 +2,64 @@
 
 ## Next Release
 
+## 0.2.5-beta.12
+
+- \[contracts\] hotfix of race condition of resubmitted transactions
+
+## 0.2.5-beta.11
+
+- \[contracts\] Improve handling of resubmitted transactions
+
+## 0.2.5-beta.10
+
+- \[engine\] Improve withdrawal retry logic
+
+## 0.2.5-beta.9
+
+- \[server-node\] Store resilient to restarts
+
+## 0.2.5-beta.8
+
+- \[server-node, browser-node\] Schema/migration fixes
+
+## 0.2.5-beta.7
+
+- \[contracts\] Tx service schema updates
+
+## 0.2.5-beta.6
+
+- \[utils\] Add FTM chain
+
+## 0.2.5-beta.5
+
+- \[utils\] Add PlotX token
+
+## 0.2.5-beta.4
+
+- \[utils\] Bump non-mainnet confirmations from 3 to 10
+
+## 0.2.5-beta.3
+
+- \[contracts\] Don't revitalize tx
+- \[tests\] Fix integration tests with new default configs
+
+## 0.2.5-beta.2
+
+- \[all\] upgrade prisma
+- \[router\] Fix router reclaim
+
+## 0.2.5-beta.1
+
+- \[contracts\] tx service hotfixes
+
+## 0.2.5-beta.0
+
+- \[contracts\] robust tx service
+
+## 0.2.5-alpha.4
+
+- \[router\] fix adjustCollateral for receiver channel.
+
 ## 0.2.5-alpha.3
 
 - \[router\] add adjustCollateral for receiver channel.
