@@ -430,6 +430,7 @@ describe("applyUpdate", () => {
         expect(applyResult.getError()).to.be.undefined;
         const { updatedChannel, updatedTransfer, updatedActiveTransfers } = applyResult.getValue();
         expect(updatedChannel).to.containSubset(expected.channel);
+        expect(updatedChannel.latestUpdate).to.be.deep.eq(update);
 
         // Validate the updated active transfer
         if (updateType !== UpdateType.create && updateType !== UpdateType.resolve) {

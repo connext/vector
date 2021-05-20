@@ -260,6 +260,25 @@ export class MemoryMessagingService implements IMessagingService {
     throw new Error("Method not implemented.");
   }
 
+  publishWithdrawalSubmittedMessage(
+    to: string,
+    from: string,
+    data: Result<{ txHash: string; transferId: string }, VectorError>,
+  ): Promise<void> {
+    throw new Error("Method not implemented.");
+  }
+
+  onReceiveWithdrawalSubmittedMessage(
+    myPublicIdentifier: string,
+    callback: (
+      submitted: Result<{ txHash: string; transferId: string; channelAddress: string }, NodeError>,
+      from: string,
+      inbox: string,
+    ) => void,
+  ): Promise<void> {
+    throw new Error("Method not implemented.");
+  }
+
   async subscribe(subject: string, callback: (data: any) => void): Promise<void> {
     throw new Error("Method not implemented.");
   }

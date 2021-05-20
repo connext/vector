@@ -1030,56 +1030,30 @@ server.post<{ Body: NodeParams.SubmitWithdrawals }>(
   },
 );
 
-server.post<{ Body: NodeParams.RetryWithdrawTransaction }>(
+server.post<{ Body: NodeParams.WithdrawRetry }>(
   "/withdraw/retry",
   {
     schema: {
-      body: NodeParams.RetryWithdrawTransactionSchema,
-      response: NodeResponses.RetryWithdrawTransactionSchema,
+      body: NodeParams.WithdrawRetrySchema,
+      response: NodeResponses.WithdrawRetrySchema,
     },
   },
   async (request, reply) => {
-    if (request.body.adminToken !== config.adminToken) {
+    const engine = getNode(request.body.publicIdentifier);
+    if (!engine) {
       return reply
-        .status(401)
-        .send(new ServerNodeError(ServerNodeError.reasons.Unauthorized, "", request.body).toJson());
+        .status(400)
+        .send(
+          jsonifyError(
+            new ServerNodeError(ServerNodeError.reasons.NodeNotFound, request.body.publicIdentifier, request.body),
+          ),
+        );
     }
+
+    const rpc = constructRpcRequest(ChannelRpcMethods.chan_withdrawRetry, request.body);
     try {
-      const json = await store.getWithdrawalCommitment(request.body.transferId);
-      if (!json) {
-        return reply
-          .status(404)
-          .send(new ServerNodeError(ServerNodeError.reasons.CommitmentNotFound, "", request.body).toJson());
-      }
-      const commitment = await WithdrawCommitment.fromJson(json);
-      const channel = await store.getChannelState(json.channelAddress);
-      if (!channel) {
-        return reply
-          .status(404)
-          .send(new ServerNodeError(ServerNodeError.reasons.ChannelNotFound, "", request.body).toJson());
-      }
-      if (!json.bobSignature || !json.aliceSignature) {
-        return reply
-          .status(400)
-          .send(new ServerNodeError(ServerNodeError.reasons.CommitmentSingleSigned, "", request.body).toJson());
-      }
-      const chainService = getChainService(channel.aliceIdentifier) ?? getChainService(channel.bobIdentifier);
-      if (!chainService) {
-        return reply
-          .status(404)
-          .send(new ServerNodeError(ServerNodeError.reasons.ChainServiceNotFound, "", request.body).toJson());
-      }
-      const tx = await chainService.sendWithdrawTx(channel, commitment.getSignedTransaction());
-      if (tx.isError) {
-        return reply.status(500).send(jsonifyError(tx.getError()!));
-      }
-      commitment!.addTransaction(tx.getValue().transactionHash);
-      await store.saveWithdrawalCommitment(request.body.transferId, commitment!.toJson());
-      return reply.status(200).send({
-        transactionHash: tx.getValue().transactionHash,
-        transferId: request.body.transferId,
-        channelAddress: channel.channelAddress,
-      });
+      const res = await engine.request<typeof ChannelRpcMethods.chan_withdrawRetry>(rpc);
+      return reply.status(200).send(res);
     } catch (e) {
       return reply.status(500).send(jsonifyError(e));
     }
@@ -1339,60 +1313,6 @@ server.post<{ Body: NodeParams.SendExitChannelTx }>(
     }
   },
 );
-
-server.post<{ Body: NodeParams.SpeedUpTx }>("/speed-up", async (request, reply) => {
-  if (request.body.adminToken !== config.adminToken) {
-    return reply.status(401).send({ message: "Unauthorized" });
-  }
-
-  const chainService = getChainService(request.body.publicIdentifier);
-  if (!chainService) {
-    return reply
-      .status(404)
-      .send(
-        new ServerNodeError(
-          ServerNodeError.reasons.ChainServiceNotFound,
-          request.body.publicIdentifier,
-          request.body,
-        ).toJson(),
-      );
-  }
-
-  let record: StoredTransaction | undefined;
-  try {
-    record = await store.getTransactionByHash(request.body.transactionHash);
-  } catch (e) {
-    return reply.status(500).send(
-      new ServerNodeError(ServerNodeError.reasons.StoreMethodFailed, request.body.publicIdentifier, request.body, {
-        storeError: e.message,
-        storeMethod: "getTransactionByHash",
-      }).toJson(),
-    );
-  }
-
-  if (!record) {
-    return reply
-      .status(404)
-      .send(
-        new ServerNodeError(
-          ServerNodeError.reasons.TransactionNotFound,
-          request.body.publicIdentifier,
-          request.body,
-        ).toJson(),
-      );
-  }
-  const result = await chainService.speedUpTx(record.chainId, {
-    to: record.to,
-    data: record.data,
-    value: record.value,
-    nonce: record.nonce,
-    transactionHash: record.transactionHash,
-  });
-  if (result.isError) {
-    return reply.status(500).send(jsonifyError(result.getError()!));
-  }
-  return reply.status(200).send({ transactionHash: result.getValue().transactionHash });
-});
 
 server.post<{ Body: NodeParams.SendExitChannelTx }>("/sync-disputes", async (request, reply) => {
   const engine = getNode(request.body.publicIdentifier);

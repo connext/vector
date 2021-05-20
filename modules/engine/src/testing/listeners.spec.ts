@@ -71,10 +71,10 @@ import { WithdrawQuoteError } from "../errors";
 const testName = "Engine listeners unit";
 const { log } = getTestLoggers(testName, env.logLevel);
 console.log("env.logLevel: ", env.logLevel);
+const chainId = parseInt(Object.keys(env.chainProviders)[0]);
 
 describe(testName, () => {
   // Get env constants
-  const chainId = parseInt(Object.keys(env.chainProviders)[0]);
   const withdrawAddress = mkAddress("0xdefff");
   const chainAddresses: ChainAddresses = {
     [chainId]: {
@@ -381,7 +381,7 @@ describe(testName, () => {
       const isAlice = signer.address === updatedChannelState.alice;
 
       // Verify the store calls were correctly executed
-      expect(store.saveWithdrawalCommitment.callCount).to.be.eq(isWithdrawalInitiator ? 0 : 1);
+      expect(store.saveWithdrawalCommitment.callCount).to.be.eq(isAlice ? 2 : 1);
       // If the call was executed, verify arguments
       if (store.saveWithdrawalCommitment.callCount) {
         const [storeTransferId, withdrawCommitment] = store.saveWithdrawalCommitment.args[0];
@@ -409,8 +409,6 @@ describe(testName, () => {
         expect(channelAddress).to.be.eq(updatedChannelState.channelAddress);
         expect(transferId).to.be.eq(transfer.transferId);
         // Verify transaction hash in meta if withdraw attempted
-        chainService.sendWithdrawTx.callCount &&
-          expect(meta).to.containSubset({ transactionHash: withdrawTransactionHash });
       }
     };
 
@@ -566,7 +564,7 @@ describe(testName, () => {
         chainService as IVectorChainService,
         getEngineEvtContainer(),
         log,
-        50,
+        messaging,
       );
 
       expect(vector.resolve.getCall(0).args[0]).to.containSubset({
