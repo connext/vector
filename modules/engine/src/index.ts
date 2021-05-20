@@ -29,11 +29,8 @@ import {
   MinimalTransaction,
   WITHDRAWAL_RESOLVED_EVENT,
   VectorErrorJson,
-<<<<<<< HEAD
   getConfirmationsForChain,
   NodeResponses,
-=======
->>>>>>> main
 } from "@connext/vector-types";
 import {
   generateMerkleTreeData,

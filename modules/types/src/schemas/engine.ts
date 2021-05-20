@@ -167,7 +167,6 @@ const WithdrawParamsSchema = Type.Object({
   initiatorSubmits: Type.Optional(Type.Boolean()),
 });
 
-<<<<<<< HEAD
 // Run Auction Params
 
 const RunAuctionParamsSchema = Type.Object({
@@ -177,12 +176,12 @@ const RunAuctionParamsSchema = Type.Object({
   recipient: TPublicIdentifier,
   recipientChainId: TChainId,
   recipientAssetId: TAddress,
-=======
+});
+
 // Withdraw Retry engine
 const WithdrawRetryParamsSchema = Type.Object({
   channelAddress: TAddress,
   transferId: TBytes32,
->>>>>>> main
 });
 
 //////////////////

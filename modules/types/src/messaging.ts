@@ -189,7 +189,6 @@ export interface IMessagingService extends IBasicMessaging {
     ) => void,
   ): Promise<void>;
 
-<<<<<<< HEAD
   publishStartAuction(
     to: string,
     from: string,
@@ -201,7 +200,8 @@ export interface IMessagingService extends IBasicMessaging {
     myPublicIdentifier: string,
     inbox,
     callback: (runAuction: Result<NodeResponses.RunAuction, NodeError>, from: string, inbox: string) => void,
-=======
+  ): Promise<void>;
+
   publishWithdrawalSubmittedMessage(
     to: string,
     from: string,
@@ -214,6 +214,5 @@ export interface IMessagingService extends IBasicMessaging {
       from: string,
       inbox: string,
     ) => void,
->>>>>>> main
   ): Promise<void>;
 }
