@@ -454,14 +454,15 @@ export class EthereumChainService extends EthereumChainReader implements IVector
         // Check if the error was a confirmation timeout.
         if (e.message === ChainError.reasons.ConfirmationTimeout) {
           // Scale up gas by percentage as specified by GAS_BUMP_PERCENT.
-          this.log.info(
-            { channelAddress, reason, method, methodId },
-            "Tx timed out waiting for confirmation. Bumping gas price and reattempting.",
-          );
           // From ethers docs:
           // Generally, the new gas price should be about 50% + 1 wei more, so if a gas price
           // of 10 gwei was used, the replacement should be 15.000000001 gwei.
-          gasPrice = gasPrice.add(gasPrice.mul(GAS_BUMP_PERCENT).div(100)).add(1);
+          const bumpedGasPrice = gasPrice.add(gasPrice.mul(GAS_BUMP_PERCENT).div(100)).add(1);
+          this.log.info(
+            { channelAddress, reason, method, methodId, gasPrice, bumpedGasPrice },
+            "Tx timed out waiting for confirmation. Bumping gas price and reattempting.",
+          );
+          gasPrice = bumpedGasPrice;
           // if the gas price is past the max, return a failure.
           if (gasPrice.gt(BIG_GAS_PRICE)) {
             const error = new ChainError(ChainError.reasons.MaxGasPriceReached, {
