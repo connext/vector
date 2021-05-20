@@ -431,7 +431,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
             )
           ) {
             this.log.info(
-              { method, methodId, channelAddress, reason },
+              { method, methodId, channelAddress, reason, error },
               "Nonce already used: proceeding to check for confirmation in previous transactions.",
             );
           } else {
