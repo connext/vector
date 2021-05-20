@@ -42,7 +42,6 @@ import { ChannelFactory, VectorChannel } from "../artifacts";
 import { EthereumChainReader } from "./ethReader";
 import { parseUnits } from "ethers/lib/utils";
 
-export const EXTRA_GAS = 50_000;
 // The amount of time (ms) to wait before a confirmation polling period times out,
 // indiciating we should resubmit tx with higher gas if the tx is not confirmed.
 export const CONFIRMATION_TIMEOUT = 45_000;
@@ -459,7 +458,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
           // of 10 gwei was used, the replacement should be 15.000000001 gwei.
           const bumpedGasPrice = gasPrice.add(gasPrice.mul(GAS_BUMP_PERCENT).div(100)).add(1);
           this.log.info(
-            { channelAddress, reason, method, methodId, gasPrice, bumpedGasPrice },
+            { channelAddress, reason, method, methodId, gasPrice: gasPrice.toString(), bumpedGasPrice: bumpedGasPrice.toString() },
             "Tx timed out waiting for confirmation. Bumping gas price and reattempting.",
           );
           gasPrice = bumpedGasPrice;
