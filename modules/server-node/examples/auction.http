@@ -20,7 +20,7 @@
 
 @nodeUrl = {{carolUrl}}
 @nodePublicIdentifier = {{carolPublicIdentifier}}
-@counterpartyPublicIdentifier = {{carolPublicIdentifier}}
+@counterpartyPublicIdentifier = {{rogerPublicIdentifier}}
 @channel = {{carolRogerChannel}}
 
 ##############
@@ -97,9 +97,7 @@ Content-Type: application/json
   "timeout": "100000"
 }
 
-@nodeUrl = {{carolUrl}}
-@nodePublicIdentifier = {{carolPublicIdentifier}}
-@counterpartyPublicIdentifier = {{rogerPublicIdentifier}}
+
 
 ##############
 ### Setup Channel
@@ -107,8 +105,71 @@ POST {{nodeUrl}}/setup
 Content-Type: application/json
 
 {
-  "counterpartyIdentifier": "{{counterpartyPublicIdentifier}}",
+  "counterpartyIdentifier": "{{roger1PublicIdentifier}}",
   "publicIdentifier": "{{nodePublicIdentifier}}",
   "chainId": "{{chainId}}",
   "timeout": "100000"
 }
+
+##############
+### Setup Channel
+POST {{nodeUrl}}/setup
+Content-Type: application/json
+
+{
+  "counterpartyIdentifier": "{{roger2PublicIdentifier}}",
+  "publicIdentifier": "{{nodePublicIdentifier}}",
+  "chainId": "{{chainId}}",
+  "timeout": "100000"
+}
+##############
+### Setup Channel
+POST {{daveUrl}}/setup
+Content-Type: application/json
+
+{
+  "counterpartyIdentifier": "{{rogerPublicIdentifier}}",
+  "publicIdentifier": "{{davePublicIdentifier}}",
+  "chainId": "{{chainId}}",
+  "timeout": "100000"
+}
+
+##############
+### Setup Channel
+POST {{daveUrl}}/setup
+Content-Type: application/json
+
+{
+  "counterpartyIdentifier": "{{roger1PublicIdentifier}}",
+  "publicIdentifier": "{{davePublicIdentifier}}",
+  "chainId": "{{chainId}}",
+  "timeout": "100000"
+}
+
+##############
+### Setup Channel
+POST {{daveUrl}}/setup
+Content-Type: application/json
+
+{
+  "counterpartyIdentifier": "{{roger2PublicIdentifier}}",
+  "publicIdentifier": "{{davePublicIdentifier}}",
+  "chainId": "{{chainId}}",
+  "timeout": "100000"
+}
+
+##############
+### Start Auction
+
+POST {{carolUrl}}/run-auction
+Content-Type: application/json
+
+{
+  "amount": "1000000",
+  "publicIdentifier": "{{carolPublicIdentifier}}",
+  "assetId": "0x0000000000000000000000000000000000000000",
+  "chainId": 1337,
+  "recipient": "{{davePublicIdentifier}}",
+  "recipientAssetId": "0x0000000000000000000000000000000000000000",
+  "recipientChainId": 1337
+} 
