@@ -31,7 +31,7 @@ describe("Server node-specific methods", async () => {
     await store.disconnect();
   });
 
-  describe("should handle disconnects", () => {
+  describe.skip("should handle disconnects", () => {
     it("should handle a disconnect during `create`", async () => {
       // Save channel
       const channel1 = mkAddress("0xaaa");
