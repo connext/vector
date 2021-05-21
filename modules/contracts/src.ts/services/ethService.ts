@@ -190,7 +190,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
       async (): Promise<Result<TransactionResponse | undefined, Error>> => {
         try {
           // Send transaction using the passed in callback.
-          const actualNonce: number = nonce ? nonce : await signer.getTransactionCount();
+          const actualNonce: number = nonce ?? (await signer.getTransactionCount());
           const response: TransactionResponse | undefined = await txFn(gasPrice, actualNonce);
           return Result.ok(response);
         } catch (e) {
@@ -396,17 +396,14 @@ export class EthereumChainService extends EthereumChainReader implements IVector
           } else {
             // If response returns undefined, we assume the tx was not sent. This will happen if some logic was
             // passed into txFn to bail out at the time of sending.
-            this.log.warn(
-              { method, methodId, channelAddress, reason },
-              "Did not attempt tx."
-            );
+            this.log.warn({ method, methodId, channelAddress, reason }, "Did not attempt tx.");
             if (responses.length === 0) {
               // Iff this is the only iteration, then we want to go ahead return w/o saving anything.
               return Result.ok(undefined);
             } else {
               this.log.info(
                 { method, methodId, channelAddress, reason },
-                `txFn returned undefined on try ${tryNumber}. Proceeding to confirmation step.`
+                `txFn returned undefined on try ${tryNumber}. Proceeding to confirmation step.`,
               );
             }
           }
@@ -417,15 +414,13 @@ export class EthereumChainService extends EthereumChainReader implements IVector
           // we attempted here was a duplicate with bumped gas. Assuming we're on a subsuquent attempt,
           // handle this by simply proceeding to confirm (each prev tx) without throwing.
           if (
-            responses.length >= 1
-            && (
-              error.message.includes("nonce has already been used")
+            responses.length >= 1 &&
+            (error.message.includes("nonce has already been used") ||
               // If we get a 'nonce is too low' message, a previous tx has been mined, and ethers thought
               // we were making another tx attempt with the same nonce.
-              || error.message.includes("Transaction nonce is too low.")
+              error.message.includes("Transaction nonce is too low.") ||
               // Another ethers message that we could potentially be getting back.
-              || error.message.includes("There is another transaction with same nonce in the queue.")
-            )
+              error.message.includes("There is another transaction with same nonce in the queue."))
           ) {
             this.log.info(
               { method, methodId, channelAddress, reason, nonce, error },
@@ -434,8 +429,8 @@ export class EthereumChainService extends EthereumChainReader implements IVector
           } else {
             this.log.error(
               { method, methodId, channelAddress, reason, nonce, error },
-              "Error occurred while executing tx submit."
-            )
+              "Error occurred while executing tx submit.",
+            );
             throw error;
           }
         }
@@ -456,7 +451,14 @@ export class EthereumChainService extends EthereumChainReader implements IVector
           // of 10 gwei was used, the replacement should be 15.000000001 gwei.
           const bumpedGasPrice = gasPrice.add(gasPrice.mul(GAS_BUMP_PERCENT).div(100)).add(1);
           this.log.info(
-            { channelAddress, reason, method, methodId, gasPrice: gasPrice.toString(), bumpedGasPrice: bumpedGasPrice.toString() },
+            {
+              channelAddress,
+              reason,
+              method,
+              methodId,
+              gasPrice: gasPrice.toString(),
+              bumpedGasPrice: bumpedGasPrice.toString(),
+            },
             "Tx timed out waiting for confirmation. Bumping gas price and reattempting.",
           );
           gasPrice = bumpedGasPrice;
