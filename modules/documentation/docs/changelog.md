@@ -2,7 +2,7 @@
 
 ## Next Release
 
-## 0.2.5-beta.15
+## 0.2.5-beta.14
 
 - \[contracts\] Add additional error message for nonce handling
 
