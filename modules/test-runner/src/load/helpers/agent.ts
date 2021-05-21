@@ -26,7 +26,7 @@ import { logger } from "./setupServer";
 const chainId = parseInt(Object.keys(env.chainProviders)[0]);
 const provider = new providers.JsonRpcProvider(env.chainProviders[chainId]);
 const wallet = Wallet.fromMnemonic(env.sugarDaddy).connect(provider);
-const transferAmount = utils.parseEther("0.00001").toString();
+const transferAmount = "1"; //utils.parseEther("0.00001").toString();
 const agentBalance = utils.parseEther("5").toString();
 
 const walletQueue = new PriorityQueue({ concurrency: 1 });
