@@ -48,7 +48,7 @@ export const CONFIRMATION_TIMEOUT = 45_000;
 // The min percentage to bump gas.
 export const GAS_BUMP_PERCENT = 20;
 // 1M gas should cover all Connext txs. Gas won't exceed this amount.
-export const BIG_GAS_LIMIT = BigNumber.from(1_000_000);
+export const BIG_GAS_LIMIT = BigNumber.from(2_000_000);
 // nothing should ever be this expensive... _should_
 export const BIG_GAS_PRICE = parseUnits("1500", "gwei");
 
