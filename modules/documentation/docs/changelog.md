@@ -2,6 +2,10 @@
 
 ## Next Release
 
+## 0.2.5-beta.14
+
+- \[contracts\] Add additional error message for nonce handling
+
 ## 0.2.5-beta.13
 
 - \[engine\] hotfix for withdraw retry schema
