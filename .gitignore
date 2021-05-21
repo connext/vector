@@ -15,6 +15,7 @@ modules/browser-node-test-ui/config-node.json
 *.docker-compose.yml
 docker-compose.yml
 modules/*/package-lock.json
+package-lock.json
 config-prod.json
 
 # Cache
