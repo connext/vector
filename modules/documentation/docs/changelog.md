@@ -2,6 +2,10 @@
 
 ## Next Release
 
+## 0.2.5-beta.15
+
+- \[contracts\] Bump gas limit
+
 ## 0.2.5-beta.14
 
 - \[contracts\] Add additional error message for nonce handling
