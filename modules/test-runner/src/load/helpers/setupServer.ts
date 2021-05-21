@@ -7,6 +7,10 @@ import {
   DepositReconciledPayload,
   EngineEvents,
   ChainServiceEvents,
+  WithdrawalCreatedPayload,
+  WithdrawalReconciledPayload,
+  WithdrawalResolvedPayload,
+  ConditionalTransferRoutingCompletePayload,
 } from "@connext/vector-types";
 
 import { env } from "../../utils";
@@ -14,17 +18,29 @@ import { env } from "../../utils";
 const serverBase = `http://${env.testerName}:${env.port}`;
 const conditionalTransferCreatedPath = "/conditional-transfer-created";
 const conditionalTransferResolvedPath = "/conditional-transfer-resolved";
+const conditionalTransferForwardedPath = "/conditional-transfer-forwarded";
 const depositReconciledPath = "/deposit-reconciled";
+const withdrawalCreatedPath = "/withdrawal-created";
+const withdrawalResolvedPath = "/withdrawal-resolved";
+const withdrawalReconciledPath = "/withdrawal-reconciled";
 
 export const carolEvts = {
   [EngineEvents.IS_ALIVE]: {},
   [EngineEvents.SETUP]: {},
-  [EngineEvents.WITHDRAWAL_CREATED]: {},
-  [EngineEvents.WITHDRAWAL_RESOLVED]: {},
-  [EngineEvents.WITHDRAWAL_RECONCILED]: {},
+  [EngineEvents.WITHDRAWAL_CREATED]: {
+    evt: Evt.create<WithdrawalCreatedPayload>(),
+    url: `${serverBase}${withdrawalCreatedPath}`,
+  },
+  [EngineEvents.WITHDRAWAL_RESOLVED]: {
+    evt: Evt.create<WithdrawalResolvedPayload>(),
+    url: `${serverBase}${withdrawalResolvedPath}`,
+  },
+  [EngineEvents.WITHDRAWAL_RECONCILED]: {
+    evt: Evt.create<WithdrawalReconciledPayload>(),
+    url: `${serverBase}${withdrawalReconciledPath}`,
+  },
   [EngineEvents.REQUEST_COLLATERAL]: {},
   [EngineEvents.RESTORE_STATE_EVENT]: {},
-  [EngineEvents.CONDITIONAL_TRANSFER_ROUTING_COMPLETE]: {},
   [EngineEvents.CONDITIONAL_TRANSFER_CREATED]: {
     evt: Evt.create<ConditionalTransferCreatedPayload>(),
     url: `${serverBase}${conditionalTransferCreatedPath}`,
@@ -32,6 +48,10 @@ export const carolEvts = {
   [EngineEvents.CONDITIONAL_TRANSFER_RESOLVED]: {
     evt: Evt.create<ConditionalTransferResolvedPayload>(),
     url: `${serverBase}${conditionalTransferResolvedPath}`,
+  },
+  [EngineEvents.CONDITIONAL_TRANSFER_ROUTING_COMPLETE]: {
+    evt: Evt.create<ConditionalTransferRoutingCompletePayload>(),
+    url: `${serverBase}${conditionalTransferForwardedPath}`,
   },
   [EngineEvents.DEPOSIT_RECONCILED]: {
     evt: Evt.create<DepositReconciledPayload>(),
