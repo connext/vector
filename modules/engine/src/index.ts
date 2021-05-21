@@ -52,7 +52,7 @@ import {
   convertWithdrawParams,
 } from "./paramConverter";
 import { setupEngineListeners } from "./listeners";
-import { getEngineEvtContainer } from "./utils";
+import { getEngineEvtContainer, withdrawRetryForTransferId } from "./utils";
 import { sendIsAlive } from "./isAlive";
 import { WithdrawCommitment } from "@connext/vector-contracts";
 
@@ -952,23 +952,17 @@ export class VectorEngine implements IVectorEngine {
     const initiatorSubmits = createParams.meta.initiatorSubmits ?? false;
 
     // set up event listeners before sending request
-    const timeout = 90_000;
-    const resolvedReconciled = (_transferId) =>
-      Promise.all([
-        // resolved should always happen
-        this.evts[WITHDRAWAL_RESOLVED_EVENT].waitFor(
-          (data) => data.channelAddress === params.channelAddress && data.transfer.transferId === _transferId,
-          timeout,
-        ),
-        // reconciling (submission to chain) may not happen (i.e. holding
-        // mainnet withdrawals for lower gas)
-        Promise.race([
-          this.evts[WITHDRAWAL_RECONCILED_EVENT].waitFor(
-            (data) => data.channelAddress === params.channelAddress && data.transferId === _transferId,
-          ),
-          delay(timeout),
-        ]),
-      ]);
+    const timeout = 300_000;
+    const resolved = (_transferId: string) =>
+      this.evts[WITHDRAWAL_RESOLVED_EVENT].waitFor(
+        (data) => data.channelAddress === params.channelAddress && data.transfer.transferId === _transferId,
+        timeout,
+      );
+    const reconciled = (_transferId: string) =>
+      this.evts[WITHDRAWAL_RECONCILED_EVENT].waitFor(
+        (data) => data.channelAddress === params.channelAddress && data.transferId === _transferId,
+        timeout,
+      );
 
     // create withdrawal transfer
     const protocolRes = await this.vector.create(createParams);
@@ -979,12 +973,18 @@ export class VectorEngine implements IVectorEngine {
     const transferId = res.latestUpdate.details.transferId;
     this.logger.info({ channelAddress: params.channelAddress, transferId }, "Withdraw transfer created");
 
-    let transactionHash: string | undefined = undefined;
-    let transaction: MinimalTransaction | undefined = undefined;
+    let transactionHash: string | undefined;
+    let transaction: MinimalTransaction | undefined;
     try {
-      const [resolved, reconciled] = await resolvedReconciled(transferId);
-      transactionHash = typeof reconciled === "object" ? reconciled.transactionHash : undefined;
-      transaction = resolved.transaction;
+      // wait for resolution either way
+      const _resolved = await resolved(transferId);
+
+      // if we arent explicitly submitting, wait for counterparty to submit
+      if (!initiatorSubmits) {
+        const _reconciled = await reconciled(transferId);
+        transactionHash = typeof _reconciled === "object" ? _reconciled.transactionHash : undefined;
+      }
+      transaction = _resolved.transaction;
     } catch (e) {
       this.logger.warn(
         { channelAddress: params.channelAddress, transferId, timeout, initiatorSubmits },
@@ -1007,6 +1007,66 @@ export class VectorEngine implements IVectorEngine {
 
     this.logger.info({ channel: res, method, methodId, transactionHash, transaction }, "Method complete");
     return Result.ok({ channel: res, transactionHash, transaction: transaction! });
+  }
+
+  private async withdrawRetry(
+    params: EngineParams.WithdrawRetry,
+  ): Promise<Result<ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_withdrawRetry], EngineError>> {
+    const method = "withdrawRetry";
+    const methodId = getRandomBytes32();
+    this.logger.info({ params, method, methodId }, "Method started");
+    const validate = ajv.compile(EngineParams.WithdrawRetrySchema);
+    const valid = validate(params);
+    if (!valid) {
+      return Result.fail(
+        new RpcError(RpcError.reasons.InvalidParams, params.channelAddress ?? "", this.publicIdentifier, {
+          invalidParamsError: validate.errors?.map((e) => e.message).join(","),
+          invalidParams: params,
+        }),
+      );
+    }
+
+    const channelRes = await this.getChannelState({ channelAddress: params.channelAddress });
+    if (channelRes.isError) {
+      return Result.fail(channelRes.getError()!);
+    }
+    const channel = channelRes.getValue();
+    if (!channel) {
+      return Result.fail(
+        new RpcError(RpcError.reasons.ChannelNotFound, params.channelAddress, this.publicIdentifier, {
+          transferId: params.transferId,
+        }),
+      );
+    }
+
+    const res = await withdrawRetryForTransferId(
+      params.transferId,
+      channel,
+      this.store,
+      this.chainService,
+      this.logger,
+      this.messaging,
+      this.publicIdentifier,
+    );
+
+    if (res.isError) {
+      return Result.fail(res.getError()!);
+    }
+
+    const withdrawRetryRes = res.getValue();
+
+    this.logger.info(
+      {
+        channel: channel,
+        method,
+        methodId,
+        txHash: withdrawRetryRes.transactionHash,
+        channelAddress: withdrawRetryRes.channelAddress,
+      },
+      "Method complete",
+    );
+
+    return Result.ok(withdrawRetryRes);
   }
 
   private async decrypt(encrypted: string): Promise<Result<string, EngineError>> {

@@ -41,12 +41,12 @@ import {
 import { getRandomBytes32, hashWithdrawalQuote, mkSig } from "@connext/vector-utils";
 import { getAddress } from "@ethersproject/address";
 import { BigNumber } from "@ethersproject/bignumber";
-import { AddressZero, HashZero, Zero } from "@ethersproject/constants";
+import { Zero } from "@ethersproject/constants";
 import Pino, { BaseLogger } from "pino";
 
 import { IsAliveError, RestoreError, WithdrawQuoteError } from "./errors";
-
 import { EngineEvtContainer } from "./index";
+import { submitUnsubmittedWithdrawals } from "./utils";
 
 export async function setupEngineListeners(
   evts: EngineEvtContainer,
@@ -144,7 +144,7 @@ export async function setupEngineListeners(
         chainAddresses,
         chainService,
         logger,
-        gasSubsidyPercentage,
+        messaging,
       ),
     (event) => {
       const {
@@ -331,21 +331,19 @@ export async function setupEngineListeners(
       // handle hanging withdrawals
       // do NOT await this -- could involve 2+ onchain transactions:
       // one to deploy a channel and one to submit tx for each commitment
-      resolveExistingWithdrawals(
-        channel,
-        signer,
-        store,
-        vector,
-        chainAddresses,
-        chainService,
-        evts,
-        logger,
-        gasSubsidyPercentage,
-      );
+      resolveExistingWithdrawals(channel, signer, store, vector, chainAddresses, chainService, evts, logger, messaging);
 
       // if channel is not a mainnet channel and user is alice, we can attempt to resubmit unsubmitted withdrawals
       if (channel.networkContext.chainId !== 1 && signer.publicIdentifier === channel.aliceIdentifier) {
-        submitUnsubmittedWithdrawals(channel, store, chainAddresses, chainService, logger);
+        submitUnsubmittedWithdrawals(
+          channel,
+          store,
+          chainAddresses,
+          chainService,
+          logger,
+          messaging,
+          signer.publicIdentifier,
+        );
       }
 
       // respond if necessary
@@ -429,6 +427,38 @@ export async function setupEngineListeners(
     // send a message back to our previous leg sender
   });
 
+  // receive this message when withdraw tx is received
+  await messaging.onReceiveWithdrawalSubmittedMessage(signer.publicIdentifier, async (data) => {
+    const { channelAddress, transferId, txHash } = data.getValue();
+    const commitment = await store.getWithdrawalCommitment(transferId);
+    if (!commitment) {
+      logger.error(
+        {
+          method: "onReceiveWithdrawalSubmittedMessage",
+          transferId,
+          txHash,
+        },
+        "No commitment in store",
+      );
+      return;
+    }
+    const wc = await WithdrawCommitment.fromJson(commitment);
+    wc.addTransaction(txHash);
+    await store.saveWithdrawalCommitment(transferId, wc.toJson());
+    const channel = await store.getChannelState(channelAddress);
+    const transfer = await store.getTransferState(transferId);
+    // Withdrawal resolution meta will include the transaction hash,
+    // post to EVT here
+    evts[WITHDRAWAL_RECONCILED_EVENT].post({
+      aliceIdentifier: channel!.aliceIdentifier,
+      bobIdentifier: channel!.bobIdentifier,
+      channelAddress,
+      transferId,
+      transactionHash: txHash,
+      meta: transfer?.meta,
+    });
+  });
+
   ////////////////////////////
   /// CHAIN SERVICE EVENTS
   chainService.on(EngineEvents.TRANSACTION_SUBMITTED, (data) => {
@@ -508,7 +538,7 @@ export async function resolveExistingWithdrawals(
   chainService: IVectorChainService,
   evts: EngineEvtContainer,
   logger: BaseLogger,
-  gasSubsidyPercentage: number,
+  messaging: IMessagingService,
 ): Promise<void> {
   const method = "resolveExistingWithdrawals";
   const methodId = getRandomBytes32();
@@ -531,98 +561,10 @@ export async function resolveExistingWithdrawals(
   await Promise.all(
     withdrawalsToComplete.map(async (transfer) => {
       logger.info({ method, methodId, transfer: transfer!.transferId }, "Found withdrawal to handle");
-      await resolveWithdrawal(
-        channel,
-        transfer!,
-        vector,
-        evts,
-        store,
-        signer,
-        chainService,
-        logger,
-        gasSubsidyPercentage,
-      );
+      await resolveWithdrawal(channel, transfer!, vector, evts, store, signer, chainService, logger, messaging);
       logger.info({ method, methodId, transfer: transfer!.transferId }, "Resolved withdrawal");
     }),
   );
-}
-
-export async function submitUnsubmittedWithdrawals(
-  channel: FullChannelState,
-  store: IEngineStore,
-  chainAddresses: ChainAddresses,
-  chainService: IVectorChainService,
-  logger: BaseLogger,
-): Promise<void> {
-  const method = "submitUnsubmittedWithdrawals";
-  const methodId = getRandomBytes32();
-
-  const withdrawInfo = await chainService.getRegisteredTransferByName(
-    TransferNames.Withdraw,
-    chainAddresses[channel.networkContext.chainId].transferRegistryAddress,
-    channel.networkContext.chainId,
-  );
-  if (withdrawInfo.isError) {
-    logger.error(
-      { method, methodId, error: withdrawInfo.getError()?.toJson() },
-      "Error in chainService.getRegisteredTransferByName",
-    );
-  }
-
-  const unsubmitted = await store.getUnsubmittedWithdrawals(channel.channelAddress, withdrawInfo.getValue().definition);
-  for (const u of unsubmitted) {
-    logger.info({ method, methodId, transferId: u.transfer.transferId }, "Submitting unsubmitted withdrawal");
-    try {
-      const commitment = await WithdrawCommitment.fromJson(u.commitment);
-
-      // before submitting, check status
-      const wasSubmitted = await chainService.getWithdrawalTransactionRecord(
-        u.commitment,
-        channel.channelAddress,
-        channel.networkContext.chainId,
-      );
-      if (wasSubmitted.isError) {
-        logger.error(
-          { method, methodId, error: jsonifyError(wasSubmitted.getError()!) },
-          "Could not check submission status",
-        );
-        continue;
-      }
-      const noOp = commitment.amount === "0" && commitment.callTo === AddressZero;
-      if (wasSubmitted.getValue() || noOp) {
-        logger.info(
-          {
-            transferId: u.transfer.transferId,
-            channelAddress: channel.channelAddress,
-            commitment: u.commitment,
-            wasSubmitted: wasSubmitted.getValue(),
-            noOp,
-          },
-          "Previously submitted / no-op",
-        );
-        commitment.addTransaction(HashZero);
-      } else {
-        const tx = await chainService.sendWithdrawTx(channel, commitment.getSignedTransaction());
-        if (tx.isError) {
-          logger.error(
-            { method, methodId, error: tx.getError()?.toJson(), commitment: u },
-            "Error in chainService.sendWithdrawTx",
-          );
-        }
-        logger.info(
-          { method, methodId, transactionHash: tx.getValue().transactionHash },
-          "Submitted unsubmitted withdrawal",
-        );
-        commitment.addTransaction(tx.getValue().transactionHash);
-      }
-      await store.saveWithdrawalCommitment(u.transfer.transferId, commitment.toJson());
-    } catch (e) {
-      logger.error(
-        { method, methodId, error: jsonifyError(e), commitment: u },
-        "Error submitting unsubmitted withdrawal",
-      );
-    }
-  }
 }
 
 function handleSetup(
@@ -877,7 +819,7 @@ async function handleWithdrawalTransferCreation(
   chainAddresses: ChainAddresses,
   chainService: IVectorChainService,
   logger: Pino.BaseLogger,
-  gasSubsidyPercentage: number,
+  messaging: IMessagingService,
 ): Promise<void> {
   const isWithdrawRes = await isWithdrawTransfer(event.updatedTransfer!, chainAddresses, chainService);
   if (isWithdrawRes.isError) {
@@ -899,7 +841,7 @@ async function handleWithdrawalTransferCreation(
     signer,
     chainService,
     logger,
-    gasSubsidyPercentage,
+    messaging,
   );
 }
 
@@ -1029,16 +971,6 @@ export async function handleWithdrawalTransferResolution(
   if (signer.address !== alice) {
     // Store the double signed commitment
     await store.saveWithdrawalCommitment(transferId, commitment!.toJson());
-    // Withdrawal resolution meta will include the transaction hash,
-    // post to EVT here
-    evts[WITHDRAWAL_RECONCILED_EVENT].post({
-      aliceIdentifier,
-      bobIdentifier,
-      channelAddress,
-      transferId,
-      transactionHash: meta?.transactionHash,
-      meta: event.updatedTransfer.meta,
-    });
     logger.info({ method, methodId, withdrawalAmount: withdrawalAmount.toString(), assetId }, "Completed");
     return;
   }
@@ -1113,7 +1045,7 @@ export const resolveWithdrawal = async (
   signer: IChannelSigner,
   chainService: IVectorChainService,
   logger: BaseLogger,
-  gasSubsidyPercentage: number,
+  messaging: IMessagingService,
 ): Promise<void> => {
   const method = "resolveWithdrawal";
   const methodId = getRandomBytes32();
@@ -1193,11 +1125,38 @@ export const resolveWithdrawal = async (
   const responderSignature = await signer.signMessage(commitment.hashToSign());
   await commitment.addSignatures(initiatorSignature, responderSignature);
 
+  // Store the double signed commitment
+  await store.saveWithdrawalCommitment(transfer.transferId, commitment.toJson());
+
+  // Resolve withdrawal from counterparty
+  // See note above re: fees + injected validation
+  const resolveRes = await vector.resolve({
+    transferResolver: { responderSignature },
+    transferId,
+    channelAddress,
+    meta,
+  });
+
+  // Handle the error
+  if (resolveRes.isError) {
+    logger.error(
+      {
+        method,
+        error: resolveRes.getError()!.message,
+        transferId,
+        channelAddress,
+      },
+      "Failed to resolve",
+    );
+    return;
+  }
+
+  // Withdrawal successfully resolved
+  logger.info({ method, amount: withdrawalAmount.toString(), assetId: transfer.assetId, fee }, "Withdrawal resolved");
+
   // Assume that only alice will try to submit the withdrawal to chain.
   // Alice may or may not charge a fee for this service, and both parties
   // are welcome to submit the commitment if the other party does not.
-
-  let transactionHash: string | undefined = undefined;
   if (signer.address === alice && !initiatorSubmits) {
     // Submit withdrawal to chain
     logger.info(
@@ -1209,8 +1168,18 @@ export const resolveWithdrawal = async (
     // IFF the withdrawal was successfully submitted, resolve the transfer
     // with the transactionHash in the meta
     if (!withdrawalResponse.isError) {
-      transactionHash = withdrawalResponse.getValue()!.transactionHash;
+      const transactionHash = withdrawalResponse.getValue()!.transactionHash;
       logger.info({ method, transactionHash }, "Submitted tx");
+      commitment.addTransaction(transactionHash);
+      await store.saveWithdrawalCommitment(transfer.transferId, commitment.toJson());
+
+      // publish to counterparty
+      await messaging.publishWithdrawalSubmittedMessage(
+        bobIdentifier,
+        aliceIdentifier,
+        Result.ok({ transferId, txHash: transactionHash, channelAddress }),
+      );
+
       // Post to reconciliation evt on submission
       evts[WITHDRAWAL_RECONCILED_EVENT].post({
         aliceIdentifier,
@@ -1224,38 +1193,4 @@ export const resolveWithdrawal = async (
       logger.error({ error: withdrawalResponse.getError()!.message, method }, "Failed to submit tx");
     }
   }
-  commitment.addTransaction(transactionHash);
-  // Store the double signed commitment
-  await store.saveWithdrawalCommitment(transfer.transferId, commitment.toJson());
-
-  // Resolve withdrawal from counterparty
-  // See note above re: fees + injected validation
-  const resolveMeta = { transactionHash, ...(meta ?? {}) };
-  const resolveRes = await vector.resolve({
-    transferResolver: { responderSignature },
-    transferId,
-    channelAddress,
-    meta: resolveMeta,
-  });
-
-  // Handle the error
-  if (resolveRes.isError) {
-    logger.error(
-      {
-        method,
-        error: resolveRes.getError()!.message,
-        transferId,
-        channelAddress,
-        transactionHash,
-      },
-      "Failed to resolve",
-    );
-    return;
-  }
-
-  // Withdrawal successfully resolved
-  logger.info(
-    { method, amount: withdrawalAmount.toString(), assetId: transfer.assetId, fee, transactionHash },
-    "Withdrawal resolved",
-  );
 };

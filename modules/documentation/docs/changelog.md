@@ -2,6 +2,34 @@
 
 ## Next Release
 
+## 0.2.5-beta.15
+
+- \[contracts\] Bump gas limit
+
+## 0.2.5-beta.14
+
+- \[contracts\] Add additional error message for nonce handling
+
+## 0.2.5-beta.13
+
+- \[engine\] hotfix for withdraw retry schema
+
+## 0.2.5-beta.12
+
+- \[contracts\] hotfix of race condition of resubmitted transactions
+
+## 0.2.5-beta.11
+
+- \[contracts\] Improve handling of resubmitted transactions
+
+## 0.2.5-beta.10
+
+- \[engine\] Improve withdrawal retry logic
+
+## 0.2.5-beta.9
+
+- \[server-node\] Store resilient to restarts
+
 ## 0.2.5-beta.8
 
 - \[server-node, browser-node\] Schema/migration fixes

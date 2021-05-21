@@ -36,6 +36,7 @@ import {
   TransferDispute as TransferDisputeEntity,
   OnchainTransactionReceipt,
   OnchainTransactionAttempt,
+  PrismaPromise,
 } from "../generated/db-client";
 
 const convertOnchainTransactionEntityToTransaction = (
@@ -69,7 +70,7 @@ const convertOnchainTransactionEntityToTransaction = (
     value: onchainEntity.value!,
     error: onchainEntity.error ?? undefined,
     receipt: receipt
-      ? {
+      ? ({
           blockHash: receipt.blockHash!,
           blockNumber: receipt.blockNumber!,
           contractAddress: receipt.contractAddress!,
@@ -82,7 +83,7 @@ const convertOnchainTransactionEntityToTransaction = (
           logs: receipt.logs ?? undefined,
           root: receipt.root ?? undefined,
           status: receipt.status ?? undefined,
-        } as StoredTransactionReceipt
+        } as StoredTransactionReceipt)
       : undefined,
   };
 };
@@ -474,9 +475,9 @@ export class PrismaStore implements IServerNodeStore {
       where: {
         onchainTransaction: {
           receipt: {
-            transactionHash: transactionHash
-          }
-        }
+            transactionHash,
+          },
+        },
       },
       include: { channel: true, createUpdate: true, resolveUpdate: true, onchainTransaction: true },
     });
@@ -533,8 +534,8 @@ export class PrismaStore implements IServerNodeStore {
     const record = await this.prisma.onchainTransaction.findFirst({
       where: {
         receipt: {
-          transactionHash: withdrawCommitment.transactionHash
-        }
+          transactionHash: withdrawCommitment.transactionHash,
+        },
       },
     });
     if (!record) {
@@ -564,7 +565,7 @@ export class PrismaStore implements IServerNodeStore {
     const entities = await this.prisma.transfer.findMany({
       where: {
         channelAddressId: channelAddress,
-        onchainTransactionId: null,
+        transactionHash: null,
         resolveUpdateChannelAddressId: channelAddress,
         createUpdate: { transferDefinition: withdrawalDefinition },
       },
@@ -690,240 +691,240 @@ export class PrismaStore implements IServerNodeStore {
   }
 
   async saveChannelState(channelState: FullChannelState, transfer?: FullTransferState): Promise<void> {
-    const createTransferEntity: Prisma.TransferCreateWithoutChannelInput | undefined =
-      channelState.latestUpdate.type === UpdateType.create
-        ? {
-            channelAddressId: channelState.channelAddress,
-            transferId: transfer!.transferId,
-            routingId: transfer!.meta?.routingId ?? getRandomBytes32(),
-            amountA: transfer!.balance.amount[0],
-            toA: transfer!.balance.to[0],
-            amountB: transfer!.balance.amount[1],
-            toB: transfer!.balance.to[1],
-            initialStateHash: transfer!.initialStateHash,
-            channelNonce: transfer!.channelNonce,
-          }
-        : undefined;
-
-    const activeTransfers: Prisma.TransferUpdateManyWithoutChannelInput | undefined =
-      channelState.latestUpdate.type === UpdateType.create
-        ? {
-            connectOrCreate: {
-              where: {
-                transferId: createTransferEntity!.transferId,
-              },
-              create: createTransferEntity!,
-            },
-          }
-        : channelState.latestUpdate.type === UpdateType.resolve
-        ? {
-            disconnect: {
-              transferId: (channelState.latestUpdate!.details as ResolveUpdateDetails).transferId,
-            },
-          }
-        : undefined;
-    // create the latest update db structure from the input data
-    let latestUpdateModel: Prisma.UpdateCreateInput | undefined;
-    if (channelState.latestUpdate) {
-      latestUpdateModel = {
-        channelAddressId: channelState.channelAddress,
-        fromIdentifier: channelState.latestUpdate!.fromIdentifier,
-        toIdentifier: channelState.latestUpdate!.toIdentifier,
-        nonce: channelState.latestUpdate!.nonce,
-        signatureA: channelState.latestUpdate?.aliceSignature,
-        signatureB: channelState.latestUpdate?.bobSignature,
-        amountA: channelState.latestUpdate!.balance.amount[0],
-        amountB: channelState.latestUpdate!.balance.amount[1],
-        toA: channelState.latestUpdate!.balance.to[0],
-        toB: channelState.latestUpdate!.balance.to[1],
-        type: channelState.latestUpdate!.type,
-        assetId: channelState.latestUpdate!.assetId,
-
-        // details
-        // deposit
-        totalDepositsAlice: (channelState.latestUpdate!.details as DepositUpdateDetails).totalDepositsAlice,
-        totalDepositsBob: (channelState.latestUpdate!.details as DepositUpdateDetails).totalDepositsBob,
-
-        // create transfer
-        transferInitialState: (channelState.latestUpdate!.details as CreateUpdateDetails).transferInitialState
-          ? JSON.stringify((channelState.latestUpdate!.details as CreateUpdateDetails).transferInitialState)
-          : undefined,
-
-        transferAmountA: (channelState.latestUpdate!.details as CreateUpdateDetails).balance?.amount[0] ?? undefined,
-        transferToA: (channelState.latestUpdate!.details as CreateUpdateDetails).balance?.to[0] ?? undefined,
-        transferAmountB: (channelState.latestUpdate!.details as CreateUpdateDetails).balance?.amount[1] ?? undefined,
-        transferToB: (channelState.latestUpdate!.details as CreateUpdateDetails).balance?.to[1] ?? undefined,
-        merkleRoot: (channelState.latestUpdate!.details as CreateUpdateDetails).merkleRoot,
-        merkleProofData: (channelState.latestUpdate!.details as CreateUpdateDetails).merkleProofData?.join(),
-        transferDefinition: (channelState.latestUpdate!.details as CreateUpdateDetails).transferDefinition,
-        transferEncodings: (channelState.latestUpdate!.details as CreateUpdateDetails).transferEncodings
-          ? (channelState.latestUpdate!.details as CreateUpdateDetails).transferEncodings.join("$") // comma separation doesnt work
-          : undefined,
-        transferId: (channelState.latestUpdate!.details as CreateUpdateDetails).transferId,
-        transferTimeout: (channelState.latestUpdate!.details as CreateUpdateDetails).transferTimeout,
-        meta: (channelState.latestUpdate!.details as CreateUpdateDetails).meta
-          ? JSON.stringify((channelState.latestUpdate!.details as CreateUpdateDetails).meta)
-          : undefined,
-
-        // resolve transfer
-        transferResolver: (channelState.latestUpdate!.details as ResolveUpdateDetails).transferResolver
-          ? JSON.stringify((channelState.latestUpdate!.details as ResolveUpdateDetails).transferResolver)
-          : undefined,
-
-        // if create, add createdTransfer
-        createdTransfer:
-          channelState.latestUpdate.type === UpdateType.create
-            ? {
-                connectOrCreate: {
-                  where: {
-                    transferId: transfer!.transferId,
-                  },
-                  create: createTransferEntity!,
-                },
-              }
-            : undefined,
-
-        // if resolve, add resolvedTransfer by transferId
-        resolvedTransfer:
-          channelState.latestUpdate.type === UpdateType.resolve
-            ? {
-                connect: {
-                  transferId: (channelState.latestUpdate!.details as ResolveUpdateDetails).transferId,
-                },
-              }
-            : undefined,
-      };
-    }
-
     // use the inputted assetIds to preserve order
     const assetIds = channelState.assetIds.join(",");
 
-    // create the rest of the channel
-    // use upsert so that it can be idempotent
-    await this.prisma.channel.upsert({
+    // create the writes that must be executed
+    // 1. channel
+    const channelWrite = this.prisma.channel.upsert({
       where: { channelAddress: channelState.channelAddress },
       create: {
-        assetIds,
-        activeTransfers: {
-          ...activeTransfers,
-          disconnect: undefined,
-        } as any,
-        chainId: channelState.networkContext.chainId.toString(),
         channelAddress: channelState.channelAddress,
-        channelFactoryAddress: channelState.networkContext.channelFactoryAddress,
-        transferRegistryAddress: channelState.networkContext.transferRegistryAddress,
-        merkleRoot: channelState.merkleRoot,
-        nonce: channelState.nonce,
-        participantA: channelState.alice,
-        participantB: channelState.bob,
         publicIdentifierA: channelState.aliceIdentifier,
         publicIdentifierB: channelState.bobIdentifier,
+        participantA: channelState.alice,
+        participantB: channelState.bob,
+        assetIds,
         timeout: channelState.timeout,
-        balances: {
-          create: channelState.assetIds.reduce(
-            (create: Prisma.BalanceCreateWithoutChannelInput[], assetId: string, index: number) => {
-              return [
-                ...create,
-                {
-                  amount: channelState.balances[index].amount[0],
-                  participant: channelState.alice,
-                  to: channelState.balances[index].to[0],
-                  assetId,
-                  processedDeposit: channelState.processedDepositsA[index],
-                  defundNonce: channelState.defundNonces[index],
-                },
-                {
-                  amount: channelState.balances[index].amount[1],
-                  participant: channelState.bob,
-                  to: channelState.balances[index].to[1],
-                  assetId,
-                  processedDeposit: channelState.processedDepositsB[index],
-                  defundNonce: channelState.defundNonces[index],
-                },
-              ];
-            },
-            [],
-          ),
-        },
-        latestUpdate: {
-          create: channelState.latestUpdate ? latestUpdateModel : undefined,
-        },
+        nonce: channelState.nonce,
+        merkleRoot: channelState.merkleRoot,
+        channelFactoryAddress: channelState.networkContext.channelFactoryAddress,
+        transferRegistryAddress: channelState.networkContext.transferRegistryAddress,
+        chainId: channelState.networkContext.chainId.toString(),
       },
       update: {
         assetIds,
-        activeTransfers,
-        merkleRoot: channelState.merkleRoot,
         nonce: channelState.nonce,
-        channelFactoryAddress: channelState.networkContext.channelFactoryAddress,
-        latestUpdate: {
-          connectOrCreate: {
-            where: {
-              channelAddressId_nonce: {
-                channelAddressId: channelState.channelAddress,
-                nonce: channelState.latestUpdate!.nonce,
-              },
-            },
-            create: latestUpdateModel!,
-          },
-        },
-        balances: {
-          upsert: channelState.assetIds.reduce(
-            (upsert: Prisma.BalanceUpsertWithWhereUniqueWithoutChannelInput[], assetId: string, index: number) => {
-              return [
-                ...upsert,
-                {
-                  create: {
-                    amount: channelState.balances[index].amount[0],
-                    participant: channelState.alice,
-                    to: channelState.balances[index].to[0],
-                    processedDeposit: channelState.processedDepositsA[index],
-                    defundNonce: channelState.defundNonces[index],
-                    assetId,
-                  },
-                  update: {
-                    amount: channelState.balances[index].amount[0],
-                    to: channelState.balances[index].to[0],
-                    processedDeposit: channelState.processedDepositsA[index],
-                    defundNonce: channelState.defundNonces[index],
-                  },
-                  where: {
-                    participant_channelAddress_assetId: {
-                      participant: channelState.alice,
-                      channelAddress: channelState.channelAddress,
-                      assetId,
-                    },
-                  },
-                },
-                {
-                  create: {
-                    amount: channelState.balances[index].amount[1],
-                    participant: channelState.bob,
-                    to: channelState.balances[index].to[1],
-                    processedDeposit: channelState.processedDepositsB[index],
-                    defundNonce: channelState.defundNonces[index],
-                    assetId,
-                  },
-                  update: {
-                    amount: channelState.balances[index].amount[1],
-                    to: channelState.balances[index].to[1],
-                    processedDeposit: channelState.processedDepositsB[index],
-                    defundNonce: channelState.defundNonces[index],
-                  },
-                  where: {
-                    participant_channelAddress_assetId: {
-                      participant: channelState.bob,
-                      channelAddress: channelState.channelAddress,
-                      assetId,
-                    },
-                  },
-                },
-              ];
-            },
-            [],
-          ),
-        },
+        merkleRoot: channelState.merkleRoot,
       },
     });
+
+    // 2. balance
+    let balanceWrites: PrismaPromise<any>[] = [];
+    channelState.assetIds.forEach((assetId, index) => {
+      const balanceToWrite = channelState.balances[index];
+      const aliceWrite = this.prisma.balance.upsert({
+        where: {
+          participant_channelAddress_assetId: {
+            assetId,
+            channelAddress: channelState.channelAddress,
+            participant: channelState.alice,
+          },
+        },
+        create: {
+          amount: balanceToWrite.amount[0],
+          participant: channelState.alice,
+          to: balanceToWrite.to[0],
+          assetId,
+          processedDeposit: channelState.processedDepositsA[index],
+          defundNonce: channelState.defundNonces[index],
+          channelAddress: channelState.channelAddress,
+        },
+        update: {
+          amount: balanceToWrite.amount[0],
+          processedDeposit: channelState.processedDepositsA[index],
+          defundNonce: channelState.defundNonces[index],
+          to: balanceToWrite.to[0],
+        },
+      });
+      const bobWrite = this.prisma.balance.upsert({
+        where: {
+          participant_channelAddress_assetId: {
+            assetId,
+            channelAddress: channelState.channelAddress,
+            participant: channelState.bob,
+          },
+        },
+        create: {
+          amount: balanceToWrite.amount[1],
+          participant: channelState.bob,
+          to: balanceToWrite.to[1],
+          assetId,
+          processedDeposit: channelState.processedDepositsB[index],
+          defundNonce: channelState.defundNonces[index],
+          channelAddress: channelState.channelAddress,
+        },
+        update: {
+          amount: balanceToWrite.amount[1],
+          processedDeposit: channelState.processedDepositsB[index],
+          defundNonce: channelState.defundNonces[index],
+          to: balanceToWrite.to[1],
+        },
+      });
+      balanceWrites.push(aliceWrite);
+      balanceWrites.push(bobWrite);
+    });
+
+    // 3. update
+    const updateWrite = !channelState.latestUpdate
+      ? undefined
+      : this.prisma.update.upsert({
+          where: {
+            channelAddressId_nonce: {
+              channelAddressId: channelState.channelAddress,
+              nonce: channelState.latestUpdate.nonce,
+            },
+          },
+          update: {
+            channelAddressId: channelState.channelAddress,
+            channel: { connect: { channelAddress: channelState.channelAddress } },
+            fromIdentifier: channelState.latestUpdate.fromIdentifier,
+            toIdentifier: channelState.latestUpdate.toIdentifier,
+            nonce: channelState.latestUpdate!.nonce,
+            signatureA: channelState.latestUpdate?.aliceSignature,
+            signatureB: channelState.latestUpdate?.bobSignature,
+            amountA: channelState.latestUpdate!.balance.amount[0],
+            amountB: channelState.latestUpdate!.balance.amount[1],
+            toA: channelState.latestUpdate!.balance.to[0],
+            toB: channelState.latestUpdate!.balance.to[1],
+            type: channelState.latestUpdate!.type,
+            assetId: channelState.latestUpdate!.assetId,
+
+            // details
+            // deposit
+            totalDepositsAlice: (channelState.latestUpdate!.details as DepositUpdateDetails).totalDepositsAlice,
+            totalDepositsBob: (channelState.latestUpdate!.details as DepositUpdateDetails).totalDepositsBob,
+
+            // create
+            transferInitialState: (channelState.latestUpdate!.details as CreateUpdateDetails).transferInitialState
+              ? JSON.stringify((channelState.latestUpdate!.details as CreateUpdateDetails).transferInitialState)
+              : undefined,
+            transferAmountA:
+              (channelState.latestUpdate!.details as CreateUpdateDetails).balance?.amount[0] ?? undefined,
+            transferToA: (channelState.latestUpdate!.details as CreateUpdateDetails).balance?.to[0] ?? undefined,
+            transferAmountB:
+              (channelState.latestUpdate!.details as CreateUpdateDetails).balance?.amount[1] ?? undefined,
+            transferToB: (channelState.latestUpdate!.details as CreateUpdateDetails).balance?.to[1] ?? undefined,
+            merkleRoot: (channelState.latestUpdate!.details as CreateUpdateDetails).merkleRoot,
+            merkleProofData: (channelState.latestUpdate!.details as CreateUpdateDetails).merkleProofData?.join(),
+            transferDefinition: (channelState.latestUpdate!.details as CreateUpdateDetails).transferDefinition,
+            transferEncodings: (channelState.latestUpdate!.details as CreateUpdateDetails).transferEncodings
+              ? (channelState.latestUpdate!.details as CreateUpdateDetails).transferEncodings.join("$") // comma separation doesnt work
+              : undefined,
+            transferId: (channelState.latestUpdate!.details as CreateUpdateDetails).transferId,
+            transferTimeout: (channelState.latestUpdate!.details as CreateUpdateDetails).transferTimeout,
+            meta: (channelState.latestUpdate!.details as CreateUpdateDetails).meta
+              ? JSON.stringify((channelState.latestUpdate!.details as CreateUpdateDetails).meta)
+              : undefined,
+
+            // resolve
+            transferResolver: (channelState.latestUpdate!.details as ResolveUpdateDetails).transferResolver
+              ? JSON.stringify((channelState.latestUpdate!.details as ResolveUpdateDetails).transferResolver)
+              : undefined,
+          },
+          create: {
+            channelAddressId: channelState.channelAddress,
+            channel: { connect: { channelAddress: channelState.channelAddress } },
+            fromIdentifier: channelState.latestUpdate.fromIdentifier,
+            toIdentifier: channelState.latestUpdate.toIdentifier,
+            nonce: channelState.latestUpdate!.nonce,
+            signatureA: channelState.latestUpdate?.aliceSignature,
+            signatureB: channelState.latestUpdate?.bobSignature,
+            amountA: channelState.latestUpdate!.balance.amount[0],
+            amountB: channelState.latestUpdate!.balance.amount[1],
+            toA: channelState.latestUpdate!.balance.to[0],
+            toB: channelState.latestUpdate!.balance.to[1],
+            type: channelState.latestUpdate!.type,
+            assetId: channelState.latestUpdate!.assetId,
+
+            // details
+            // deposit
+            totalDepositsAlice: (channelState.latestUpdate!.details as DepositUpdateDetails).totalDepositsAlice,
+            totalDepositsBob: (channelState.latestUpdate!.details as DepositUpdateDetails).totalDepositsBob,
+
+            // create
+            transferInitialState: (channelState.latestUpdate!.details as CreateUpdateDetails).transferInitialState
+              ? JSON.stringify((channelState.latestUpdate!.details as CreateUpdateDetails).transferInitialState)
+              : undefined,
+
+            transferAmountA:
+              (channelState.latestUpdate!.details as CreateUpdateDetails).balance?.amount[0] ?? undefined,
+            transferToA: (channelState.latestUpdate!.details as CreateUpdateDetails).balance?.to[0] ?? undefined,
+            transferAmountB:
+              (channelState.latestUpdate!.details as CreateUpdateDetails).balance?.amount[1] ?? undefined,
+            transferToB: (channelState.latestUpdate!.details as CreateUpdateDetails).balance?.to[1] ?? undefined,
+            merkleRoot: (channelState.latestUpdate!.details as CreateUpdateDetails).merkleRoot,
+            merkleProofData: (channelState.latestUpdate!.details as CreateUpdateDetails).merkleProofData?.join(),
+            transferDefinition: (channelState.latestUpdate!.details as CreateUpdateDetails).transferDefinition,
+            transferEncodings: (channelState.latestUpdate!.details as CreateUpdateDetails).transferEncodings
+              ? (channelState.latestUpdate!.details as CreateUpdateDetails).transferEncodings.join("$") // comma separation doesnt work
+              : undefined,
+            transferId: (channelState.latestUpdate!.details as CreateUpdateDetails).transferId,
+            transferTimeout: (channelState.latestUpdate!.details as CreateUpdateDetails).transferTimeout,
+            meta: (channelState.latestUpdate!.details as CreateUpdateDetails).meta
+              ? JSON.stringify((channelState.latestUpdate!.details as CreateUpdateDetails).meta)
+              : undefined,
+
+            // resolve
+            transferResolver: (channelState.latestUpdate!.details as ResolveUpdateDetails).transferResolver
+              ? JSON.stringify((channelState.latestUpdate!.details as ResolveUpdateDetails).transferResolver)
+              : undefined,
+          },
+        });
+
+    // 4. transfer
+    let transferWrite = undefined;
+    if (channelState.latestUpdate?.type === UpdateType.create) {
+      transferWrite = this.prisma.transfer.create({
+        data: {
+          channelAddressId: channelState.channelAddress,
+          transferId: transfer!.transferId,
+          routingId: transfer!.meta?.routingId ?? getRandomBytes32(),
+          amountA: transfer!.balance.amount[0],
+          toA: transfer!.balance.to[0],
+          amountB: transfer!.balance.amount[1],
+          toB: transfer!.balance.to[1],
+          initialStateHash: transfer!.initialStateHash,
+          channelNonce: transfer!.channelNonce,
+          channel: { connect: { channelAddress: channelState.channelAddress } },
+          createUpdate: {
+            connect: {
+              channelAddressId_nonce: { channelAddressId: transfer!.channelAddress, nonce: channelState.nonce },
+            },
+          },
+        },
+      });
+    } else if (channelState.latestUpdate?.type === UpdateType.resolve) {
+      transferWrite = this.prisma.transfer.update({
+        where: { transferId: transfer!.transferId },
+        data: {
+          amountA: transfer!.balance.amount[0],
+          toA: transfer!.balance.to[0],
+          amountB: transfer!.balance.amount[1],
+          toB: transfer!.balance.to[1],
+          channel: { disconnect: true },
+          resolveUpdate: {
+            connect: {
+              channelAddressId_nonce: { channelAddressId: transfer!.channelAddress, nonce: channelState.nonce },
+            },
+          },
+        },
+      });
+    }
+
+    await this.prisma.$transaction(
+      [channelWrite, ...balanceWrites, updateWrite, transferWrite].filter((x) => !!x) as PrismaPromise<any>[],
+    );
   }
 
   async saveChannelStateAndTransfers(
