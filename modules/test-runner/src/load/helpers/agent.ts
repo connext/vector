@@ -279,14 +279,12 @@ export class AgentManager {
   static async connect(agentService: RestServerNodeService): Promise<AgentManager> {
     // First, create + fund roger onchain
     logger.debug({ url: env.rogerUrl });
-    logger.warn("Connecting router");
     const routerService = await RestServerNodeService.connect(
       env.rogerUrl,
       logger.child({ module: "Router" }),
       undefined,
       0,
     );
-    logger.warn("Getting config");
     const routerConfig = await routerService.getConfig();
     if (routerConfig.isError) {
       throw routerConfig.getError()!;
@@ -294,12 +292,10 @@ export class AgentManager {
     const { signerAddress: router, publicIdentifier: routerIdentifier } = routerConfig.getValue()[0];
 
     // Fund roger
-    logger.warn("Funding router");
     await fundAddressToTarget(router, constants.AddressZero, parseEther("50"));
 
     // Create all agents needed
     // First, get all nodes that are active on the server
-    logger.warn("Getting initial agents");
     const initialAgents = await agentService.getConfig();
     if (initialAgents.isError) {
       throw initialAgents.getError()!;
@@ -307,7 +303,6 @@ export class AgentManager {
     const registeredAgents = initialAgents.getValue();
 
     let indices: number[] = [];
-    logger.warn("Determining how many more agents to add");
     if (registeredAgents.length > config.numAgents) {
       // Too many agents already registered on service
       // only use a portion of the registered agents
@@ -319,15 +314,12 @@ export class AgentManager {
       // indices = Array(config.numAgents).fill(0).map(getRandomIndex);
     }
 
-    logger.warn("Connecting agents");
     const agents = await Promise.all(indices.map((i) => Agent.connect(agentService, routerIdentifier, i)));
 
     // Create the manager
-    logger.warn("Creating new manager");
     const manager = new AgentManager(router, routerIdentifier, routerService, agents, agentService);
 
     // Automatically resolve any created transfers
-    logger.warn("Setting up automatic resolution");
     manager.setupAutomaticResolve();
 
     return manager;
