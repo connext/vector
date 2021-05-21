@@ -181,7 +181,7 @@ export function createTestChannelState<T extends UpdateType = typeof UpdateType.
   type: T,
   overrides: PartialFullChannelState<T> = {},
   transferOverrides: Partial<FullTransferState> = {},
-): { channel: FullChannelState; transfer: FullTransferState } {
+): { channel: FullChannelState<T>; transfer: FullTransferState } {
   // Get some default values that should be consistent between
   // the channel state and the channel update
   const publicIdentifiers = [
@@ -228,6 +228,8 @@ export function createTestChannelState<T extends UpdateType = typeof UpdateType.
     transfer = createTestFullHashlockTransferState();
     transfer.balance = latestUpdate.balance ?? transfer.balance;
     transfer.meta = type === "create" ? (latestUpdate.details as any).meta : undefined;
+    transfer.transferDefinition =
+      type === "create" ? (latestUpdate.details as CreateUpdateDetails).transferDefinition : undefined;
     (latestUpdate.details as CreateUpdateDetails).meta =
       type === "create" ? (latestUpdate.details as any).meta : undefined;
     transfer.channelFactoryAddress = networkContext.channelFactoryAddress ?? transfer.channelFactoryAddress;

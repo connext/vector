@@ -1,6 +1,6 @@
 {
   "name": "@connext/vector-utils",
-  "version": "0.2.2-beta.2",
+  "version": "0.2.5-beta.13",
   "description": "Crypto & other utils for vector state channels",
   "main": "dist/index.js",
   "files": [
@@ -13,7 +13,7 @@
     "test": "nyc ts-mocha --check-leaks --exit 'src/**/*.spec.ts'"
   },
   "dependencies": {
-    "@connext/vector-types": "0.2.2-beta.2",
+    "@connext/vector-types": "0.2.5-beta.13",
     "@ethersproject/abi": "5.1.0",
     "@ethersproject/abstract-provider": "5.1.0",
     "@ethersproject/abstract-signer": "5.1.0",
@@ -28,6 +28,7 @@
     "@ethersproject/units": "5.1.0",
     "@ethersproject/wallet": "5.1.0",
     "@ethereum-waffle/chai": "3.3.0",
+    "ajv": "6.12.6",
     "async-mutex": "0.3.1",
     "axios": "0.21.1",
     "bs58check": "2.1.2",
@@ -36,9 +37,10 @@
     "chai-as-promised": "7.1.1",
     "chai-subset": "1.6.0",
     "eccrypto-js": "5.4.0",
+    "ethereumjs-util": "7.0.10",
     "eth-crypto": "1.8.0",
     "evt": "1.9.12",
-    "merkletreejs": "0.2.13",
+    "merkletreejs": "0.2.18",
     "pino": "6.11.1",
     "pino-pretty": "4.6.0",
     "ts-natsutil": "1.1.1"
@@ -52,8 +54,8 @@
     "@types/node": "14.14.31",
     "mocha": "8.3.0",
     "nyc": "15.1.0",
-    "sinon": "9.2.4",
+    "sinon": "10.0.0",
     "ts-mocha": "8.0.0",
-    "typescript": "4.2.2"
+    "typescript": "4.2.4"
   }
 }

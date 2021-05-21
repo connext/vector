@@ -19,7 +19,6 @@ import { BigNumber, constants, providers, utils, Wallet } from "ethers";
 
 import { env } from "./env";
 import { getOnchainBalance } from "./ethereum";
-import { waitForTransaction } from "@connext/vector-contracts";
 
 export const chainId1 = parseInt(Object.keys(env.chainProviders)[0]);
 export const provider1 = new providers.JsonRpcProvider(env.chainProviders[chainId1]);
@@ -113,7 +112,21 @@ export const requestCollateral = async (
 
   const counterpartyAfter = getBalanceForAssetId(requesterChannel, assetId, counterpartyAliceOrBob);
   expect(requesterChannel).to.deep.eq(counterpartyChannel);
+
   if (requestedAmount && requestedAmount.lte(counterpartyBefore)) {
+    // should not collateralize
+    expect(BigNumber.from(counterpartyAfter).eq(counterpartyBefore)).to.be.true;
+    return requesterChannel;
+  }
+  const profile = env.config.rebalanceProfiles.find(
+    (prof) => prof.assetId === assetId && prof.chainId === requesterChannel.networkContext.chainId,
+  );
+  if (!profile) {
+    // should not collateralize
+    expect(BigNumber.from(counterpartyAfter).eq(counterpartyBefore)).to.be.true;
+    return requesterChannel;
+  }
+  if (profile && requestedAmount && requestedAmount.gt(profile.reclaimThreshold)) {
     // should not collateralize
     expect(BigNumber.from(counterpartyAfter).eq(counterpartyBefore)).to.be.true;
     return requesterChannel;
@@ -254,6 +267,8 @@ export const transfer = async (
 
   const senderCreatePromise = sender.waitFor(EngineEvents.CONDITIONAL_TRANSFER_CREATED, 30_000);
   const receiverCreatePromise = receiver.waitFor(EngineEvents.CONDITIONAL_TRANSFER_CREATED, 30_000);
+  const senderRoutingCompletePromise = sender.waitFor(EngineEvents.CONDITIONAL_TRANSFER_ROUTING_COMPLETE, 30_000);
+  const receiverRoutingCompletePromise = receiver.waitFor(EngineEvents.CONDITIONAL_TRANSFER_ROUTING_COMPLETE, 30_000);
   const transferRes = await sender.conditionalTransfer(params);
   expect(transferRes.getError()).to.not.be.ok;
 
@@ -270,6 +285,15 @@ export const transfer = async (
   expect(receiverCreate).to.be.ok;
   expect(senderCreate?.transfer.balance.amount).to.be.deep.eq([amount.toString(), "0"]);
   expect(receiverCreate?.transfer.balance.amount).to.be.deep.eq([amountForwarded.toString(), "0"]);
+  // check event if transfer is forwarded
+  if (senderChannelAddress !== receiverChannelAddress) {
+    const [senderRoutingComplete, receiverRoutingComplete] = await Promise.all([
+      senderRoutingCompletePromise,
+      receiverRoutingCompletePromise,
+    ]);
+    expect(senderRoutingComplete).to.be.ok;
+    expect(receiverRoutingComplete).to.be.ok;
+  }
 
   const receiverTransferRes = await receiver.getTransferByRoutingId({
     channelAddress: receiverChannel.channelAddress,
@@ -355,7 +379,7 @@ export const withdraw = async (
   if (initiatorSubmits) {
     const { transaction } = withdrawalRes.getValue();
     expect(transaction).to.be.ok;
-    expect({ ...resolvedEvent!.transaction, value: resolvedEvent!.transaction.value.toString() }).to.be.deep.eq(
+    expect({ ...resolvedEvent!.transaction, value: resolvedEvent!.transaction!.value.toString() }).to.be.deep.eq(
       transaction,
     );
     // submit to chain
@@ -364,7 +388,6 @@ export const withdraw = async (
   } else {
     const { transactionHash } = withdrawalRes.getValue()!;
     expect(transactionHash).to.be.ok;
-    const receipt = await provider.waitForTransaction(transactionHash!);
   }
 
   const postWithdrawChannel = (await withdrawer.getStateChannel({ channelAddress })).getValue()! as FullChannelState;
@@ -374,8 +397,9 @@ export const withdraw = async (
 
   // Verify balance changes
   expect(BigNumber.from(preWithdrawCarol).sub(amount)).to.be.eq(postWithdrawBalance);
-  // using gte here because roger could collateralize
-  expect(postWithdrawMultisig.gte(BigNumber.from(preWithdrawMultisig).sub(amountWithdrawn))).to.be.true;
+  // using gte here because roger could (de)collateralize
+  const diff = preWithdrawMultisig.sub(postWithdrawMultisig);
+  expect(diff.gte(amountWithdrawn)).to.be.true;
   if (
     withdrawerAliceOrBob === "alice" &&
     withdrawRecipient.toLowerCase() === preWithdrawChannel.alice.toLowerCase() &&
@@ -401,13 +425,10 @@ export const disputeChannel = async (
 
   const disputeRes = await disputer.sendDisputeChannelTx({ channelAddress });
   expect(disputeRes.isError).to.be.false;
-  const [transaction] = await Promise.all([
-    waitForTransaction(provider, disputeRes.getValue().transactionHash),
-    delay(8_000),
-  ]);
 
   // Verify stored disputes
-  const block = await provider.getBlock(transaction.getValue().blockNumber);
+  const tx = await provider.getTransactionReceipt(disputeRes.getValue().transactionHash);
+  const block = await provider.getBlock(tx.blockNumber);
   const [disputerRecord, counterpartyRecord] = await Promise.all([
     disputer.getChannelDispute({ channelAddress }),
     counterparty.getChannelDispute({ channelAddress }),
@@ -435,24 +456,15 @@ export const disputeChannel = async (
   // expect(counterpartyChannel.getValue()?.inDispute).to.be.true;
 };
 
-export const defundChannel = async (
-  defunder: INodeService,
-  channelAddress: string,
-  provider: providers.JsonRpcProvider,
-) => {
+export const defundChannel = async (defunder: INodeService, channelAddress: string) => {
   const defundRes = await defunder.sendDefundChannelTx({ channelAddress });
   expect(defundRes.isError).to.be.false;
-  const [transaction] = await Promise.all([
-    waitForTransaction(provider, defundRes.getValue().transactionHash),
-    delay(5_000),
-  ]);
 
   // Verify event payload
   const channel = (await defunder.getStateChannel({ channelAddress })).getValue()!;
   expect(channel).to.be.ok;
   const dispute = await defunder.getChannelDispute({ channelAddress });
   expect(dispute.getValue()).to.be.ok;
-  expect(transaction.isError).to.be.false;
 };
 
 export const exitAssets = async (
@@ -488,10 +500,6 @@ export const exitAssets = async (
     expect(result.transactionHash).to.be.ok;
     expect(result.assetId).to.be.eq(assetIds[idx]);
     expect(result.error).to.be.undefined;
-  });
-  const txs = await Promise.all(results.map((r) => waitForTransaction(provider, r.transactionHash!)));
-  txs.map((tx) => {
-    expect(tx.isError).to.be.false;
   });
 
   const recipientPostExit = await Promise.all(

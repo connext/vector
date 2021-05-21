@@ -19,10 +19,8 @@ import {
 import { BigNumber, BigNumberish } from "@ethersproject/bignumber";
 import { AddressZero, HashZero, Zero } from "@ethersproject/constants";
 import { Contract } from "@ethersproject/contracts";
-import { keccak256 } from "@ethersproject/keccak256";
 import { parseEther } from "@ethersproject/units";
 import { deployments } from "hardhat";
-import { MerkleTree } from "merkletreejs";
 
 import { bob, alice, defaultLogLevel, networkName, provider, rando } from "../../constants";
 import { advanceBlocktime, createChannel, getContract } from "../../utils";
@@ -71,7 +69,7 @@ describe("CMCAdjudicator.sol", async function () {
   const verifyTransferDispute = async (cts: FullTransferState, disputeBlockNumber: number) => {
     const { timestamp } = await provider.getBlock(disputeBlockNumber);
     const transferDispute = await channel.getTransferDispute(cts.transferId);
-    expect(transferDispute.transferStateHash).to.be.eq(hashCoreTransferState(cts));
+    expect(transferDispute.transferStateHash).to.be.eq(`0x` + hashCoreTransferState(cts).toString("hex"));
     expect(transferDispute.isDefunded).to.be.false;
     expect(transferDispute.transferDisputeExpiry).to.be.eq(BigNumber.from(timestamp).add(cts.transferTimeout));
   };
@@ -117,14 +115,14 @@ describe("CMCAdjudicator.sol", async function () {
   };
 
   // Get merkle proof of transfer
-  const getMerkleProof = (cts: FullTransferState = transferState) => {
-    const { proof } = generateMerkleTreeData([cts], cts);
-    return proof;
+  const getMerkleProof = (cts: FullTransferState[] = [transferState], toProve: string = transferState.transferId) => {
+    const { tree } = generateMerkleTreeData(cts);
+    return tree.getHexProof(hashCoreTransferState(cts.find((t) => t.transferId === toProve)!));
   };
 
   // Helper to dispute transfers + bring to defund phase
   const disputeTransfer = async (cts: FullTransferState = transferState) => {
-    await (await channel.disputeTransfer(cts, getMerkleProof(cts))).wait();
+    await (await channel.disputeTransfer(cts, getMerkleProof([cts], cts.transferId))).wait();
   };
 
   // Helper to defund channels and verify transfers
@@ -222,6 +220,7 @@ describe("CMCAdjudicator.sol", async function () {
       transferTimeout: "3",
       initialStateHash: hashTransferState(state, HashlockTransferStateEncoding),
     });
+    const { root } = generateMerkleTreeData([transferState]);
     channelState = createTestChannelStateWithSigners([aliceSigner, bobSigner], "create", {
       channelAddress: channel.address,
       assetIds: [AddressZero],
@@ -230,7 +229,7 @@ describe("CMCAdjudicator.sol", async function () {
       processedDepositsB: ["62"],
       timeout: "20",
       nonce: 3,
-      merkleRoot: new MerkleTree([hashCoreTransferState(transferState)], keccak256).getHexRoot(),
+      merkleRoot: root,
     });
     const channelHash = hashChannelCommitment(channelState);
     aliceSignature = await aliceSigner.signMessage(channelHash);
@@ -585,6 +584,31 @@ describe("CMCAdjudicator.sol", async function () {
       const tx = await channel.disputeTransfer(transferState, getMerkleProof());
       const { blockNumber } = await tx.wait();
       await verifyTransferDispute(transferState, blockNumber);
+    });
+
+    it("should work for multiple transfers", async function () {
+      if (nonAutomining) {
+        this.skip();
+      }
+      const transfers = [
+        transferState,
+        { ...transferState, transferId: getRandomBytes32() },
+        { ...transferState, transferId: getRandomBytes32() },
+        { ...transferState, transferId: getRandomBytes32() },
+        { ...transferState, transferId: getRandomBytes32() },
+      ];
+      const { root, tree } = generateMerkleTreeData(transfers);
+
+      const newState = { ...channelState, merkleRoot: root };
+      await disputeChannel(newState);
+
+      const txs = [];
+      for (const t of transfers) {
+        const tx = await channel.disputeTransfer(t, tree.getHexProof(hashCoreTransferState(t)));
+        txs.push(tx);
+      }
+      const receipts = await Promise.all(txs.map((tx) => tx.wait()));
+      await Promise.all(transfers.map((t, i) => verifyTransferDispute(t, receipts[i].blockNumber)));
     });
   });
 

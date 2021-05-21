@@ -5,10 +5,8 @@ import {
   NodeResponses,
   IVectorChainReader,
   jsonifyError,
-  getConfirmationsForChain,
 } from "@connext/vector-types";
 import { getBalanceForAssetId, getRandomBytes32, getParticipant } from "@connext/vector-utils";
-import { waitForTransaction } from "@connext/vector-contracts";
 import { getAddress } from "@ethersproject/address";
 import { BigNumber } from "@ethersproject/bignumber";
 import { BaseLogger } from "pino";
@@ -16,7 +14,6 @@ import { BaseLogger } from "pino";
 import { CollateralError } from "../errors";
 
 import { getRebalanceProfile } from "./config";
-import { Zero } from "@ethersproject/constants";
 
 /**
  * This function should be called before a transfer is created/forwarded.
@@ -376,30 +373,8 @@ export const requestCollateral = async (
         ),
       );
     }
-
-    const tx = txRes.getValue();
-    logger.info({ method, methodId, txHash: tx.txHash }, "Submitted deposit tx");
-    const receipt = await waitForTransaction(
-      provider,
-      tx.txHash,
-      getConfirmationsForChain(channel.networkContext.chainId),
-    );
-    if (receipt.isError) {
-      return Result.fail(
-        new CollateralError(
-          CollateralError.reasons.UnableToCollateralize,
-          channel.channelAddress,
-          assetId,
-          profile,
-          requestedAmount,
-          {
-            error: jsonifyError(receipt.getError()!),
-          },
-        ),
-      );
-    }
-    logger.info({ method, methodId, txHash: tx.txHash }, "Tx mined");
-    logger.debug({ method, methodId, txHash: tx.txHash, logs: receipt.getValue().logs }, "Tx mined");
+    const receipt = txRes.getValue();
+    logger.info({ method, methodId, txHash: receipt.txHash }, "Tx mined");
   } else {
     logger.info(
       {

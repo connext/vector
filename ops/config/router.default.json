@@ -23,30 +23,30 @@
     {
       "chainId": 1337,
       "assetId": "0x0000000000000000000000000000000000000000",
-      "reclaimThreshold": "200000000000000000",
-      "target": "100000000000000000",
-      "collateralizeThreshold": "50000000000000000"
+      "reclaimThreshold": "1",
+      "target": "0",
+      "collateralizeThreshold": "0"
     },
     {
       "chainId": 1338,
       "assetId": "0x0000000000000000000000000000000000000000",
-      "reclaimThreshold": "200000000000000000",
-      "target": "100000000000000000",
-      "collateralizeThreshold": "50000000000000000"
+      "reclaimThreshold": "1",
+      "target": "0",
+      "collateralizeThreshold": "0"
     },
     {
       "chainId": 1337,
       "assetId": "0x9FBDa871d559710256a2502A2517b794B482Db40",
-      "reclaimThreshold": "2000000000000000000",
-      "target": "1000000000000000000",
-      "collateralizeThreshold": "500000000000000000"
+      "reclaimThreshold": "1",
+      "target": "0",
+      "collateralizeThreshold": "0"
     },
     {
       "chainId": 1338,
       "assetId": "0x9FBDa871d559710256a2502A2517b794B482Db40",
-      "reclaimThreshold": "2000000000000000000",
-      "target": "1000000000000000000",
-      "collateralizeThreshold": "500000000000000000"
+      "reclaimThreshold": "1",
+      "target": "0",
+      "collateralizeThreshold": "0"
     }
   ]
 }

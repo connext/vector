@@ -17,6 +17,7 @@ import {
   GetTransfersFilterOpts,
   GetTransfersFilterOptsSchema,
   VectorErrorJson,
+  StoredTransaction,
 } from "@connext/vector-types";
 import { constructRpcRequest, getPublicIdentifierFromPublicKey, hydrateProviders } from "@connext/vector-utils";
 import { WithdrawCommitment } from "@connext/vector-contracts";
@@ -611,7 +612,7 @@ server.post<{ Body: NodeParams.SendDepositTx }>(
       }
       return reply.status(500).send(jsonifyError(depositRes.getError()!));
     }
-    return reply.status(200).send({ txHash: depositRes.getValue().hash });
+    return reply.status(200).send({ txHash: depositRes.getValue().transactionHash });
   },
 );
 
@@ -1029,54 +1030,30 @@ server.post<{ Body: NodeParams.SubmitWithdrawals }>(
   },
 );
 
-server.post<{ Body: NodeParams.RetryWithdrawTransaction }>(
+server.post<{ Body: NodeParams.WithdrawRetry }>(
   "/withdraw/retry",
   {
     schema: {
-      body: NodeParams.RetryWithdrawTransactionSchema,
-      response: NodeResponses.RetryWithdrawTransactionSchema,
+      body: NodeParams.WithdrawRetrySchema,
+      response: NodeResponses.WithdrawRetrySchema,
     },
   },
   async (request, reply) => {
-    if (request.body.adminToken !== config.adminToken) {
+    const engine = getNode(request.body.publicIdentifier);
+    if (!engine) {
       return reply
-        .status(401)
-        .send(new ServerNodeError(ServerNodeError.reasons.Unauthorized, "", request.body).toJson());
+        .status(400)
+        .send(
+          jsonifyError(
+            new ServerNodeError(ServerNodeError.reasons.NodeNotFound, request.body.publicIdentifier, request.body),
+          ),
+        );
     }
+
+    const rpc = constructRpcRequest(ChannelRpcMethods.chan_withdrawRetry, request.body);
     try {
-      const json = await store.getWithdrawalCommitment(request.body.transferId);
-      if (!json) {
-        return reply
-          .status(404)
-          .send(new ServerNodeError(ServerNodeError.reasons.CommitmentNotFound, "", request.body).toJson());
-      }
-      const commitment = await WithdrawCommitment.fromJson(json);
-      const channel = await store.getChannelState(json.channelAddress);
-      if (!channel) {
-        return reply
-          .status(404)
-          .send(new ServerNodeError(ServerNodeError.reasons.ChannelNotFound, "", request.body).toJson());
-      }
-      if (!json.bobSignature || !json.aliceSignature) {
-        return reply
-          .status(400)
-          .send(new ServerNodeError(ServerNodeError.reasons.CommitmentSingleSigned, "", request.body).toJson());
-      }
-      const chainService = getChainService(channel.aliceIdentifier) ?? getChainService(channel.bobIdentifier);
-      if (!chainService) {
-        return reply
-          .status(404)
-          .send(new ServerNodeError(ServerNodeError.reasons.ChainServiceNotFound, "", request.body).toJson());
-      }
-      const tx = await chainService.sendWithdrawTx(channel, commitment.getSignedTransaction());
-      if (tx.isError) {
-        return reply.status(500).send(jsonifyError(tx.getError()!));
-      }
-      return reply.status(200).send({
-        transactionHash: tx.getValue().hash,
-        transferId: request.body.transferId,
-        channelAddress: channel.channelAddress,
-      });
+      const res = await engine.request<typeof ChannelRpcMethods.chan_withdrawRetry>(rpc);
+      return reply.status(200).send(res);
     } catch (e) {
       return reply.status(500).send(jsonifyError(e));
     }

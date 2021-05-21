@@ -2,10 +2,149 @@
 
 ## Next Release
 
+## 0.2.5-beta.13
+
+- \[engine\] hotfix for withdraw retry schema
+
+## 0.2.5-beta.12
+
+- \[contracts\] hotfix of race condition of resubmitted transactions
+
+## 0.2.5-beta.11
+
+- \[contracts\] Improve handling of resubmitted transactions
+
+## 0.2.5-beta.10
+
+- \[engine\] Improve withdrawal retry logic
+
+## 0.2.5-beta.9
+
+- \[server-node\] Store resilient to restarts
+
+## 0.2.5-beta.8
+
+- \[server-node, browser-node\] Schema/migration fixes
+
+## 0.2.5-beta.7
+
+- \[contracts\] Tx service schema updates
+
+## 0.2.5-beta.6
+
+- \[utils\] Add FTM chain
+
+## 0.2.5-beta.5
+
+- \[utils\] Add PlotX token
+
+## 0.2.5-beta.4
+
+- \[utils\] Bump non-mainnet confirmations from 3 to 10
+
+## 0.2.5-beta.3
+
+- \[contracts\] Don't revitalize tx
+- \[tests\] Fix integration tests with new default configs
+
+## 0.2.5-beta.2
+
+- \[all\] upgrade prisma
+- \[router\] Fix router reclaim
+
+## 0.2.5-beta.1
+
+- \[contracts\] tx service hotfixes
+
+## 0.2.5-beta.0
+
+- \[contracts\] robust tx service
+
+## 0.2.5-alpha.4
+
+- \[router\] fix adjustCollateral for receiver channel.
+
+## 0.2.5-alpha.3
+
+- \[router\] add adjustCollateral for receiver channel.
+- \[contracts\] Add `ethReader` tests, Add min gas price, 
+- \[utils\] use static json provider
+
+## 0.2.5-alpha.2
+
+- \[router\] fix router build error.
+
+## 0.2.5-alpha.1
+
+- \[router\] fix amm config params.
+
+## 0.2.5-alpha.0
+
+- \[router\] AMM implementation to get swap rate.
+- \[contracts\] AMM contracts for swap rate.
+- \[server-node\] Resave transaction hash for admin function
+
+## 0.2.4-beta.3
+
+- \[server-node\] Improve withdrawal commitment retrieval
+
+## 0.2.4-beta.2
+
+- \[engine\] TRANSFER_ROUTING_COMPLETE event emitted through to original sender.
+- \[router\] Improvements to `autoRebalance` for better state machine. Separate sending tx and waiting for confirmation. Store tx hashes after tx submit.
+
+## 0.2.4-beta.1
+
+- \[iframe\] Catch sig undefined error and propogate
+
+## 0.2.3
+
+- \[utils\] Improve merkle tree
+- \[router\] Add support for basis fees
+
+## 0.2.3-beta.1
+
+- \[router\] Broadcast global metrics
+- \[contracts\] Add `ethService` tests
+
+## 0.2.2
+
+- \[utils\] Improve merkle root generation
+
+## 0.2.2-beta.8
+
+- \[iframe\] Isolate signing to iframe
+
+## 0.2.2-beta.7
+
+- \[router\] Convert `PROCESSING` status to in memory flag
+
+## 0.2.2-beta.6
+
+- \[router\] Add `isAlive` tests
+- \[router\] Properly handle cancelled withdrawals
+
+## 0.2.2-beta.5
+
+- \[iframe\] Require iframe signature
+- \[router\] Add 5min timeout to non-mainnet chains
+- \[ops\] Remove the `server-node/src/generated` directory in `make clean`
+
+## 0.2.2-beta.4
+
+- \[engine\] Handle cancelled withdrawals
+- \[iframe\] Improved signature handling for deterministic keys
+- \[utils\] Add to `chains.json`
+
+## 0.2.2-beta.3
+
 - \[protocol\] Don't sync disputes
 - \[node\] Expose sync dispute method
+- \[utils\] Add HUSD and Huobi chain to `chains.json`
+- \[contract,server-node\] Add `speedUp` method to resend transaction with higher gas
 
 ## 0.2.2-beta.2
+
 - \[browser-node\] Fix dev-dependency
 
 ## 0.2.2-beta.1

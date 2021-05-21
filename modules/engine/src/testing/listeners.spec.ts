@@ -24,6 +24,8 @@ import {
   ChainError,
   EngineParams,
   WithdrawalResolvedPayload,
+  RouterSchemas,
+  ConditionalTransferRoutingCompletePayload,
 } from "@connext/vector-types";
 import {
   getTestLoggers,
@@ -45,14 +47,22 @@ import {
 } from "@connext/vector-utils";
 import { Vector } from "@connext/vector-protocol";
 import { Evt } from "evt";
-import Sinon from "sinon";
-import { AddressZero, Zero } from "@ethersproject/constants";
+import Sinon, { stub } from "sinon";
+import { AddressZero } from "@ethersproject/constants";
 import { BigNumber } from "@ethersproject/bignumber";
 import { hexlify } from "@ethersproject/bytes";
 import { randomBytes } from "@ethersproject/random";
 
-import { getWithdrawalQuote, resolveExistingWithdrawals, setupEngineListeners } from "../listeners";
+import {
+  getWithdrawalQuote,
+  handleConditionalTransferCreation,
+  handleWithdrawalTransferResolution,
+  resolveExistingWithdrawals,
+  setupEngineListeners,
+} from "../listeners";
 import * as utils from "../utils";
+import * as listeners from "../listeners";
+
 const { getEngineEvtContainer } = utils;
 
 import { env } from "./env";
@@ -60,10 +70,11 @@ import { WithdrawQuoteError } from "../errors";
 
 const testName = "Engine listeners unit";
 const { log } = getTestLoggers(testName, env.logLevel);
+console.log("env.logLevel: ", env.logLevel);
+const chainId = parseInt(Object.keys(env.chainProviders)[0]);
 
 describe(testName, () => {
   // Get env constants
-  const chainId = parseInt(Object.keys(env.chainProviders)[0]);
   const withdrawAddress = mkAddress("0xdefff");
   const chainAddresses: ChainAddresses = {
     [chainId]: {
@@ -111,8 +122,7 @@ describe(testName, () => {
     chainService = Sinon.createStubInstance(VectorChainService, {
       sendWithdrawTx: Promise.resolve(
         Result.ok({
-          hash: withdrawTransactionHash,
-          wait: () => Promise.resolve({ transactionHash: withdrawTransactionHash }),
+          transactionHash: withdrawTransactionHash,
         }),
       ) as any,
       getRegisteredTransferByName: Promise.resolve(Result.ok(withdrawRegisteredInfo)),
@@ -162,15 +172,40 @@ describe(testName, () => {
     it("should work if responder is alice (submit withdraw to chain + resolve transfer)", () => {});
     it("should work if responder is bob (DONT submit withdraw to chain + resolve transfer)", () => {});
   });
-  describe.skip("withdrawal resolution", () => {
-    it("should not handle transfers", () => {});
-    it("should fail if getting transfer from store fails", () => {});
-    it("should fail if there is no transfer in store", () => {});
-    it("should work for initiator", () => {});
-    it("should fail if responder cannot addSignatures to commitment", () => {});
-    it("should fail if responder cannot save commitment", () => {});
-    it("should should work if responder is alice (submit withdraw to chain)", () => {});
-    it("should should work if responder is bob (DONT submit withdraw to chain)", () => {});
+
+  describe("withdrawal resolution", () => {
+    it("should not create commitments for cancelled withdrawals", async () => {
+      const alice = getRandomChannelSigner();
+      const bob = getRandomChannelSigner();
+      const test = createTestChannelState("create", { alice: alice.address, bob: bob.address });
+      test.transfer.transferState.fee = "0";
+      test.transfer.transferState.nonce = "0";
+      test.transfer.transferState.initiatorSignature = mkSig("0xabc");
+      test.transfer.transferResolver = { responderSignature: mkSig("0x0") };
+      Sinon.stub(listeners, "isWithdrawTransfer").resolves(Result.ok(true));
+
+      await handleWithdrawalTransferResolution(
+        {
+          updatedChannelState: test.channel,
+          updatedTransfer: test.transfer,
+        },
+        alice,
+        store,
+        getEngineEvtContainer(),
+        {},
+        chainService as any,
+        log,
+      );
+      expect(store.saveWithdrawalCommitment.callCount).to.eq(0);
+    });
+    it.skip("should not handle transfers", () => {});
+    it.skip("should fail if getting transfer from store fails", () => {});
+    it.skip("should fail if there is no transfer in store", () => {});
+    it.skip("should work for initiator", () => {});
+    it.skip("should fail if responder cannot addSignatures to commitment", () => {});
+    it.skip("should fail if responder cannot save commitment", () => {});
+    it.skip("should should work if responder is alice (submit withdraw to chain)", () => {});
+    it.skip("should should work if responder is bob (DONT submit withdraw to chain)", () => {});
   });
 
   describe("withdrawals", () => {
@@ -348,7 +383,7 @@ describe(testName, () => {
       const isAlice = signer.address === updatedChannelState.alice;
 
       // Verify the store calls were correctly executed
-      expect(store.saveWithdrawalCommitment.callCount).to.be.eq(isWithdrawalInitiator ? 0 : 1);
+      expect(store.saveWithdrawalCommitment.callCount).to.be.eq(isAlice ? 2 : 1);
       // If the call was executed, verify arguments
       if (store.saveWithdrawalCommitment.callCount) {
         const [storeTransferId, withdrawCommitment] = store.saveWithdrawalCommitment.args[0];
@@ -376,8 +411,6 @@ describe(testName, () => {
         expect(channelAddress).to.be.eq(updatedChannelState.channelAddress);
         expect(transferId).to.be.eq(transfer.transferId);
         // Verify transaction hash in meta if withdraw attempted
-        chainService.sendWithdrawTx.callCount &&
-          expect(meta).to.containSubset({ transactionHash: withdrawTransactionHash });
       }
     };
 
@@ -463,7 +496,7 @@ describe(testName, () => {
           value: 0,
         },
       });
-      expect(emitted.transaction.data).to.be.ok;
+      expect(emitted.transaction!.data).to.be.ok;
 
       // When getting resolve events, withdrawers will always save the
       // double signed commitment to their store. If the withdrawer is
@@ -535,7 +568,7 @@ describe(testName, () => {
         chainService as IVectorChainService,
         getEngineEvtContainer(),
         log,
-        50,
+        messaging,
       );
 
       expect(vector.resolve.getCall(0).args[0]).to.containSubset({
@@ -706,6 +739,135 @@ describe(testName, () => {
         ...request,
         fee: "0",
       });
+    });
+  });
+
+  describe("handleConditionalTransferCreation", () => {
+    beforeEach(() => {
+      stub(listeners, "isWithdrawTransfer").resolves(Result.ok(false));
+      chainService.getRegisteredTransferByDefinition.resolves(
+        Result.ok({
+          definition: AddressZero,
+          name: "foo",
+          encodedCancel: "0x",
+          resolverEncoding: "bar",
+          stateEncoding: "baz",
+        }),
+      );
+    });
+
+    it("should emit CONDITIONAL_TRANSFER_ROUTING_COMPLETE for the end recipient", async () => {
+      return new Promise((res, rej) => {
+        const signer = getRandomChannelSigner();
+        const test = createTestChannelState("create", { networkContext: { chainId } });
+        const meta = {
+          routingId: mkHash("0xaaa"),
+          path: [
+            {
+              recipient: signer.publicIdentifier,
+              recipientAssetId: AddressZero,
+              recipientChainId: chainId,
+            },
+          ],
+        } as RouterSchemas.RouterMeta;
+        test.channel.latestUpdate.details.meta = meta;
+        test.transfer.responderIdentifier = signer.publicIdentifier;
+        test.transfer.meta = meta;
+        const event: ChannelUpdateEvent = {
+          updatedChannelState: test.channel,
+          updatedTransfer: test.transfer,
+        };
+        const evts = getEngineEvtContainer();
+
+        evts.CONDITIONAL_TRANSFER_ROUTING_COMPLETE.attachOnce((data) => {
+          expect(data).to.deep.eq({
+            publicIdentifier: signer.publicIdentifier,
+            initiatorIdentifier: test.transfer.initiatorIdentifier,
+            responderIdentifier: test.transfer.responderIdentifier,
+            routingId: test.transfer.meta.routingId,
+            meta: test.transfer.meta,
+          } as ConditionalTransferRoutingCompletePayload);
+          res();
+        });
+        handleConditionalTransferCreation(
+          event,
+          store,
+          chainService as any,
+          chainAddresses,
+          evts,
+          log,
+          signer,
+          messaging,
+        ).catch(rej);
+      });
+    });
+
+    it("should pass message back to sender as the exit router", async () => {
+      const signer = getRandomChannelSigner();
+      const test = createTestChannelState("create", { networkContext: { chainId } });
+      const meta = {
+        routingId: mkHash("0xaaa"),
+        path: [
+          {
+            recipient: bob.publicIdentifier,
+            recipientAssetId: AddressZero,
+            recipientChainId: chainId,
+          },
+        ],
+      } as RouterSchemas.RouterMeta;
+      test.channel.latestUpdate.details.meta = meta;
+      test.transfer.initiatorIdentifier = signer.publicIdentifier;
+      test.transfer.responderIdentifier = bob.publicIdentifier;
+      test.transfer.meta = meta;
+
+      const event: ChannelUpdateEvent = {
+        updatedChannelState: test.channel,
+        updatedTransfer: test.transfer,
+      };
+      const evts = getEngineEvtContainer();
+
+      // resolve to
+      store.getTransfersByRoutingId.resolves([
+        test.transfer,
+        { ...test.transfer, initiatorIdentifier: alice.publicIdentifier, responderIdentifier: signer.publicIdentifier },
+      ]);
+
+      const promise = new Promise((resolve) => {
+        evts.CONDITIONAL_TRANSFER_ROUTING_COMPLETE.attachOnce((data) => {
+          expect(data).to.deep.eq({
+            publicIdentifier: signer.publicIdentifier,
+            initiatorIdentifier: test.transfer.initiatorIdentifier,
+            responderIdentifier: test.transfer.responderIdentifier,
+            routingId: test.transfer.meta.routingId,
+            meta: test.transfer.meta,
+          } as ConditionalTransferRoutingCompletePayload);
+          resolve(undefined);
+        });
+      });
+
+      await handleConditionalTransferCreation(
+        event,
+        store,
+        chainService as any,
+        chainAddresses,
+        evts,
+        log,
+        signer,
+        messaging,
+      );
+      expect(messaging.publishTransferRoutingCompleteMessage.callCount).to.eq(1);
+      const call = messaging.publishTransferRoutingCompleteMessage.getCall(0);
+      expect(call.args[0]).to.eq(alice.publicIdentifier);
+      expect(call.args[1]).to.eq(signer.publicIdentifier);
+      expect(call.args[2]).to.deep.eq(
+        Result.ok({
+          initiatorIdentifier: test.transfer.initiatorIdentifier,
+          responderIdentifier: test.transfer.responderIdentifier,
+          routingId: test.transfer.meta.routingId,
+          meta: test.transfer.meta,
+        } as ConditionalTransferRoutingCompletePayload),
+      );
+      await promise;
     });
   });
 });

@@ -10,6 +10,8 @@ export const DEFAULT_CHANNEL_TIMEOUT = DEFAULT_TRANSFER_TIMEOUT * 2; // 48 hrs
 export const MINIMUM_CHANNEL_TIMEOUT = DEFAULT_CHANNEL_TIMEOUT / 2; // 24 hrs
 export const MAXIMUM_CHANNEL_TIMEOUT = DEFAULT_CHANNEL_TIMEOUT * 7; // 336 hrs
 
+export const DEFAULT_ROUTER_MAX_SAFE_PRICE_IMPACT = "15"; // 15 percent
+
 export const TRANSFER_DECREMENT = 60 * 72; // 72 mins, must be greater than min which means we can have up to 10 hops.
 
 // Get max int for offchain ensuring there is no timeout overflow during
@@ -28,7 +30,7 @@ export const REDUCED_GAS_PRICE = parseUnits("125", "gwei");
 export const DEFAULT_FEE_EXPIRY = 300_000;
 
 // number of confirmations for non-mainnet chains
-export const NUM_CONFIRMATIONS = 3;
+export const NUM_CONFIRMATIONS = 10;
 // TODO: need to stop using random chainIds in our testing, these could eventually be real chains...
 export const CHAINS_WITH_ONE_CONFIRMATION = [1, 1337, 1338, 1340, 1341, 1342];
 export const getConfirmationsForChain = (chainId: number): number => {

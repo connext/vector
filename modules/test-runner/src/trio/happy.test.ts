@@ -2,9 +2,8 @@ import { delay, expect, getRandomBytes32, RestServerNodeService } from "@connext
 import { Wallet, utils, constants } from "ethers";
 import pino from "pino";
 import { EngineEvents, INodeService, TransferNames } from "@connext/vector-types";
-import { waitForTransaction } from "@connext/vector-contracts";
 
-import { env, fundIfBelow, getOnchainBalance, getRandomIndex } from "../utils";
+import { env, fundIfBelow, getRandomIndex } from "../utils";
 import {
   advanceBlocktime,
   chainId1,
@@ -140,7 +139,7 @@ describe(testName, () => {
 
     await advanceBlocktime(parseInt(carolRogerPostSetup.timeout) + 5_000);
 
-    await defundChannel(rogerService, carolRogerPostDeposit.channelAddress, provider1);
+    await defundChannel(rogerService, carolRogerPostDeposit.channelAddress);
 
     // exit carol (only one with balance)
     await exitAssets(

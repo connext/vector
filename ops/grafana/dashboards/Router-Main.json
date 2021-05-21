@@ -15,75 +15,20 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
-  "id": 1,
+  "id": 8,
   "links": [],
   "panels": [
     {
       "columns": [],
       "datasource": "Prometheus",
       "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "custom": {
-            "align": null,
-            "filterable": false
-          },
-          "mappings": [
-            {
-              "from": "",
-              "id": 1,
-              "text": "",
-              "to": "",
-              "type": 1
-            }
-          ],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          }
-        },
-        "overrides": [
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Token Address"
-            },
-            "properties": [
-              {
-                "id": "unit",
-                "value": "string"
-              },
-              {
-                "id": "custom.width",
-                "value": 391
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Chain Id"
-            },
-            "properties": [
-              {
-                "id": "custom.width",
-                "value": 117
-              }
-            ]
-          }
-        ]
+        "defaults": {},
+        "overrides": []
       },
       "fontSize": "100%",
       "gridPos": {
-        "h": 7,
-        "w": 15,
+        "h": 10,
+        "w": 12,
         "x": 0,
         "y": 0
       },
@@ -204,42 +149,20 @@
           }
         }
       ],
-      "type": "table"
+      "type": "table-old"
     },
     {
       "columns": [],
       "datasource": "Prometheus",
       "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "custom": {
-            "align": null,
-            "filterable": false
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          }
-        },
+        "defaults": {},
         "overrides": []
       },
       "fontSize": "100%",
       "gridPos": {
-        "h": 7,
+        "h": 10,
         "w": 5,
-        "x": 15,
+        "x": 12,
         "y": 0
       },
       "id": 7,
@@ -308,179 +231,21 @@
           }
         }
       ],
-      "type": "table"
-    },
-    {
-      "aliasColors": {},
-      "bars": false,
-      "dashLength": 10,
-      "dashes": false,
-      "datasource": "Prometheus",
-      "fieldConfig": {
-        "defaults": {
-          "custom": {}
-        },
-        "overrides": []
-      },
-      "fill": 1,
-      "fillGradient": 0,
-      "gridPos": {
-        "h": 8,
-        "w": 11,
-        "x": 0,
-        "y": 7
-      },
-      "hiddenSeries": false,
-      "id": 4,
-      "legend": {
-        "avg": false,
-        "current": false,
-        "max": false,
-        "min": false,
-        "show": true,
-        "total": false,
-        "values": false
-      },
-      "lines": true,
-      "linewidth": 1,
-      "nullPointMode": "null",
-      "options": {
-        "alertThreshold": true,
-        "dataLinks": []
-      },
-      "percentage": false,
-      "pluginVersion": "7.4.3",
-      "pointradius": 2,
-      "points": false,
-      "renderer": "flot",
-      "seriesOverrides": [],
-      "spaceLength": 10,
-      "stack": false,
-      "steppedLine": false,
-      "targets": [
-        {
-          "expr": "router_transfer_successful",
-          "interval": "",
-          "legendFormat": "",
-          "queryType": "randomWalk",
-          "refId": "A"
-        },
-        {
-          "expr": "router_transfer_failed",
-          "interval": "",
-          "legendFormat": "",
-          "refId": "B"
-        }
-      ],
-      "thresholds": [],
-      "timeFrom": null,
-      "timeRegions": [],
-      "timeShift": null,
-      "title": "Successful vs Failed Forwarded Transfers",
-      "tooltip": {
-        "shared": true,
-        "sort": 0,
-        "value_type": "individual"
-      },
-      "type": "graph",
-      "xaxis": {
-        "buckets": null,
-        "mode": "time",
-        "name": null,
-        "show": true,
-        "values": []
-      },
-      "yaxes": [
-        {
-          "format": "short",
-          "label": null,
-          "logBase": 1,
-          "max": null,
-          "min": null,
-          "show": true
-        },
-        {
-          "format": "short",
-          "label": null,
-          "logBase": 1,
-          "max": null,
-          "min": null,
-          "show": true
-        }
-      ],
-      "yaxis": {
-        "align": false,
-        "alignLevel": null
-      }
+      "type": "table-old"
     },
     {
       "columns": [],
       "datasource": "Prometheus",
       "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "custom": {
-            "align": null,
-            "filterable": false
-          },
-          "mappings": [
-            {
-              "from": "",
-              "id": 1,
-              "text": "",
-              "to": "",
-              "type": 1
-            }
-          ],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          }
-        },
-        "overrides": [
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Token Address"
-            },
-            "properties": [
-              {
-                "id": "unit",
-                "value": "string"
-              },
-              {
-                "id": "custom.width",
-                "value": 365
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Chain Id"
-            },
-            "properties": [
-              {
-                "id": "custom.width",
-                "value": 89
-              }
-            ]
-          }
-        ]
+        "defaults": {},
+        "overrides": []
       },
       "fontSize": "100%",
       "gridPos": {
-        "h": 8,
-        "w": 9,
-        "x": 11,
-        "y": 7
+        "h": 10,
+        "w": 7,
+        "x": 17,
+        "y": 0
       },
       "id": 5,
       "options": {
@@ -553,17 +318,301 @@
           }
         }
       ],
-      "type": "table"
+      "type": "table-old"
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "links": []
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Successful: chain 1 - 0x0F5D2fB29fb7d3CFeE444a200298f468908cC942"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Successful: Mainnet Mana"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Successful: chain 1 - 0x6B175474E89094C44Da98b954EedeAC495271d0F"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Successful: Mainnet Dai"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Successful: chain 137 - 0x8f3Cf7ad23Cd3CaDbD9735AFf958023239c6A063"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Successful: Matic Dai"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Successful: chain 137 - 0xA1c57f48F0Deb89f569dFbE6E2B7f46D33606fD4"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Successfull: Matic Mana"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Failed: chain 1 - 0x0F5D2fB29fb7d3CFeE444a200298f468908cC942"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Failed: Mainnet Mana"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Failed: chain 137 - 0xA1c57f48F0Deb89f569dFbE6E2B7f46D33606fD4"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Failed: Matic Mana"
+              }
+            ]
+          }
+        ]
+      },
+      "fill": 1,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 10,
+        "w": 12,
+        "x": 0,
+        "y": 10
+      },
+      "hiddenSeries": false,
+      "id": 4,
+      "legend": {
+        "alignAsTable": true,
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "rightSide": true,
+        "show": true,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "nullPointMode": "null",
+      "options": {
+        "alertThreshold": true
+      },
+      "percentage": false,
+      "pluginVersion": "7.5.2",
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "exemplar": true,
+          "expr": "router_transfer_successful",
+          "interval": "",
+          "legendFormat": "Successful: chain {{chainId}} - {{assetId}}",
+          "queryType": "randomWalk",
+          "refId": "A"
+        },
+        {
+          "exemplar": true,
+          "expr": "router_transfer_failed",
+          "interval": "",
+          "legendFormat": "Failed: chain {{chainId}} - {{assetId}}",
+          "refId": "B"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Successful vs Failed Forwarded Transfers",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "links": []
+        },
+        "overrides": []
+      },
+      "fill": 1,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 10,
+        "w": 12,
+        "x": 12,
+        "y": 10
+      },
+      "hiddenSeries": false,
+      "id": 8,
+      "legend": {
+        "alignAsTable": true,
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "rightSide": true,
+        "show": true,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "nullPointMode": "null",
+      "options": {
+        "alertThreshold": true
+      },
+      "percentage": false,
+      "pluginVersion": "7.5.2",
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "exemplar": true,
+          "expr": "router_transaction_success",
+          "interval": "",
+          "legendFormat": "Successful: chain {{chainId}} - {{reason}}",
+          "queryType": "randomWalk",
+          "refId": "A"
+        },
+        {
+          "exemplar": true,
+          "expr": "router_transaction_failed",
+          "interval": "",
+          "legendFormat": "Failed: chain {{chainId}} - {{reason}}",
+          "refId": "B"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Onchain Transactions",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
     },
     {
       "datasource": "Prometheus",
-      "description": "Router volume over the last week",
+      "description": "Volume of router over the last 24 hours",
       "fieldConfig": {
         "defaults": {
           "color": {
             "mode": "thresholds"
           },
-          "custom": {},
           "mappings": [],
           "thresholds": {
             "mode": "absolute",
@@ -577,130 +626,6 @@
                 "value": 80
               }
             ]
-          }
-        },
-        "overrides": [
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "{assetId=\"0x0F5D2fB29fb7d3CFeE444a200298f468908cC942\", chainId=\"1\", instance=\"router:8000\", job=\"router\"}"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "Mainnet Mana"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "{assetId=\"0x8f3Cf7ad23Cd3CaDbD9735AFf958023239c6A063\", chainId=\"137\", instance=\"router:8000\", job=\"router\"}"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "Matic Dai"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "{assetId=\"0xA1c57f48F0Deb89f569dFbE6E2B7f46D33606fD4\", chainId=\"137\", instance=\"router:8000\", job=\"router\"}"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "Matic Mana"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "{assetId=\"0x6B175474E89094C44Da98b954EedeAC495271d0F\", chainId=\"1\", instance=\"router:8000\", job=\"router\"}"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "Mainnet Dai"
-              }
-            ]
-          }
-        ]
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 15
-      },
-      "id": 14,
-      "options": {
-        "colorMode": "value",
-        "fieldOptions": {
-          "calcs": [
-            "mean"
-          ],
-          "defaults": {
-            "mappings": [],
-            "thresholds": {
-              "mode": "absolute",
-              "steps": [
-                {
-                  "color": "green",
-                  "value": null
-                },
-                {
-                  "color": "red",
-                  "value": 80
-                }
-              ]
-            }
-          },
-          "overrides": [],
-          "values": false
-        },
-        "graphMode": "area",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "text": {},
-        "textMode": "auto"
-      },
-      "pluginVersion": "6.7.6",
-      "targets": [
-        {
-          "expr": "increase(router_transfer_volume[7d])",
-          "interval": "",
-          "legendFormat": "",
-          "queryType": "randomWalk",
-          "refId": "A"
-        }
-      ],
-      "title": "Weekly Volume",
-      "type": "stat"
-    },
-    {
-      "datasource": "Prometheus",
-      "description": "Volume of router over the last 24 hours",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "custom": {},
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": []
           },
           "unit": "short"
         },
@@ -708,7 +633,7 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "{assetId=\"0x6B175474E89094C44Da98b954EedeAC495271d0F\", chainId=\"1\", instance=\"router:8000\", job=\"router\"}"
+              "options": "chain 1 - 0x6B175474E89094C44Da98b954EedeAC495271d0F"
             },
             "properties": [
               {
@@ -720,7 +645,7 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "{assetId=\"0x0F5D2fB29fb7d3CFeE444a200298f468908cC942\", chainId=\"1\", instance=\"router:8000\", job=\"router\"}"
+              "options": "chain 1 - 0x0F5D2fB29fb7d3CFeE444a200298f468908cC942"
             },
             "properties": [
               {
@@ -732,7 +657,7 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "{assetId=\"0x8f3Cf7ad23Cd3CaDbD9735AFf958023239c6A063\", chainId=\"137\", instance=\"router:8000\", job=\"router\"}"
+              "options": "chain 137 - 0x8f3Cf7ad23Cd3CaDbD9735AFf958023239c6A063"
             },
             "properties": [
               {
@@ -744,7 +669,7 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "{assetId=\"0xA1c57f48F0Deb89f569dFbE6E2B7f46D33606fD4\", chainId=\"137\", instance=\"router:8000\", job=\"router\"}"
+              "options": "chain 137 - 0xA1c57f48F0Deb89f569dFbE6E2B7f46D33606fD4"
             },
             "properties": [
               {
@@ -757,42 +682,19 @@
       },
       "gridPos": {
         "h": 8,
-        "w": 10,
-        "x": 12,
-        "y": 15
+        "w": 24,
+        "x": 0,
+        "y": 20
       },
       "id": 12,
       "options": {
         "colorMode": "value",
-        "fieldOptions": {
-          "calcs": [
-            "mean"
-          ],
-          "defaults": {
-            "mappings": [],
-            "thresholds": {
-              "mode": "absolute",
-              "steps": [
-                {
-                  "color": "green",
-                  "value": null
-                },
-                {
-                  "color": "red",
-                  "value": 80
-                }
-              ]
-            }
-          },
-          "overrides": [],
-          "values": false
-        },
         "graphMode": "area",
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
           "calcs": [
-            "lastNotNull"
+            "mean"
           ],
           "fields": "",
           "values": false
@@ -800,13 +702,14 @@
         "text": {},
         "textMode": "auto"
       },
-      "pluginVersion": "6.7.6",
+      "pluginVersion": "7.5.2",
       "targets": [
         {
+          "exemplar": true,
           "expr": "increase(router_transfer_volume[24h])",
           "instant": false,
           "interval": "",
-          "legendFormat": "",
+          "legendFormat": "chain {{chainId}} - {{assetId}}",
           "queryType": "randomWalk",
           "refId": "A"
         }
@@ -817,16 +720,12 @@
       "type": "stat"
     },
     {
-      "columns": [],
       "datasource": "Prometheus",
+      "description": "Router volume over the last week",
       "fieldConfig": {
         "defaults": {
           "color": {
             "mode": "thresholds"
-          },
-          "custom": {
-            "align": null,
-            "filterable": false
           },
           "mappings": [],
           "thresholds": {
@@ -843,14 +742,106 @@
             ]
           }
         },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "chain 1 - 0x0F5D2fB29fb7d3CFeE444a200298f468908cC942"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Mainnet Mana"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "chain 137 - 0x8f3Cf7ad23Cd3CaDbD9735AFf958023239c6A063"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Matic Dai"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "chain 137 - 0xA1c57f48F0Deb89f569dFbE6E2B7f46D33606fD4"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Matic Mana"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "chain 1 - 0x6B175474E89094C44Da98b954EedeAC495271d0F"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Mainnet Dai"
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 28
+      },
+      "id": 14,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "mean"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "text": {},
+        "textMode": "auto"
+      },
+      "pluginVersion": "7.5.2",
+      "targets": [
+        {
+          "exemplar": true,
+          "expr": "increase(router_transfer_volume[7d])",
+          "interval": "",
+          "legendFormat": "chain {{chainId}} - {{assetId}}",
+          "queryType": "randomWalk",
+          "refId": "A"
+        }
+      ],
+      "title": "Weekly Volume",
+      "type": "stat"
+    },
+    {
+      "columns": [],
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {},
         "overrides": []
       },
       "fontSize": "100%",
       "gridPos": {
-        "h": 8,
-        "w": 10,
+        "h": 5,
+        "w": 12,
         "x": 0,
-        "y": 23
+        "y": 36
       },
       "id": 10,
       "options": {
@@ -915,114 +906,11 @@
           }
         }
       ],
-      "type": "table"
-    },
-    {
-      "aliasColors": {},
-      "bars": false,
-      "dashLength": 10,
-      "dashes": false,
-      "datasource": "Prometheus",
-      "fieldConfig": {
-        "defaults": {
-          "custom": {}
-        },
-        "overrides": []
-      },
-      "fill": 1,
-      "fillGradient": 0,
-      "gridPos": {
-        "h": 8,
-        "w": 10,
-        "x": 10,
-        "y": 23
-      },
-      "hiddenSeries": false,
-      "id": 8,
-      "legend": {
-        "avg": false,
-        "current": false,
-        "max": false,
-        "min": false,
-        "show": true,
-        "total": false,
-        "values": false
-      },
-      "lines": true,
-      "linewidth": 1,
-      "nullPointMode": "null",
-      "options": {
-        "alertThreshold": true,
-        "dataLinks": []
-      },
-      "percentage": false,
-      "pluginVersion": "7.4.3",
-      "pointradius": 2,
-      "points": false,
-      "renderer": "flot",
-      "seriesOverrides": [],
-      "spaceLength": 10,
-      "stack": false,
-      "steppedLine": false,
-      "targets": [
-        {
-          "expr": "router_transaction_success",
-          "interval": "",
-          "legendFormat": "",
-          "queryType": "randomWalk",
-          "refId": "A"
-        },
-        {
-          "expr": "router_transaction_failed",
-          "interval": "",
-          "legendFormat": "",
-          "refId": "B"
-        }
-      ],
-      "thresholds": [],
-      "timeFrom": null,
-      "timeRegions": [],
-      "timeShift": null,
-      "title": "Onchain Transactions",
-      "tooltip": {
-        "shared": true,
-        "sort": 0,
-        "value_type": "individual"
-      },
-      "type": "graph",
-      "xaxis": {
-        "buckets": null,
-        "mode": "time",
-        "name": null,
-        "show": true,
-        "values": []
-      },
-      "yaxes": [
-        {
-          "format": "short",
-          "label": null,
-          "logBase": 1,
-          "max": null,
-          "min": null,
-          "show": true
-        },
-        {
-          "format": "short",
-          "label": null,
-          "logBase": 1,
-          "max": null,
-          "min": null,
-          "show": true
-        }
-      ],
-      "yaxis": {
-        "align": false,
-        "alignLevel": null
-      }
+      "type": "table-old"
     }
   ],
   "refresh": false,
-  "schemaVersion": 22,
+  "schemaVersion": 27,
   "style": "dark",
   "tags": [],
   "templating": {
@@ -1048,9 +936,6 @@
   },
   "timezone": "",
   "title": "Router Main",
-  "uid": "Oe5I2JcGk",
-  "variables": {
-    "list": []
-  },
-  "version": 5
+  "uid": "Oe5I2JcGk1",
+  "version": 2
 }
