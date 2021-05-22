@@ -130,7 +130,7 @@ export class Agent {
     assetId: string,
     preImage: string = getRandomBytes32(),
     routingId: string = getRandomBytes32(),
-  ): Promise<{ channelAddress: string; transferId: string; routingId: string; preImage: string }> {
+  ): Promise<{ channelAddress: string; transferId: string; routingId: string; preImage: string; start: number }> {
     this.assertChannel();
     // Create the transfer information
     const lockHash = createlockHash(preImage);
@@ -151,7 +151,7 @@ export class Agent {
       throw createRes.getError()!;
     }
     logger.info({ ...createRes.getValue() }, "Created transfer");
-    return { ...createRes.getValue(), preImage, routingId };
+    return { ...createRes.getValue(), preImage, routingId, start: Date.now() };
   }
 
   async resolveHashlockTransfer(
@@ -263,9 +263,16 @@ export class Agent {
 }
 
 // This class manages multiple agents within the context of a test
+
+type TransferInformation = {
+  preImage: string;
+  start: number;
+  end?: number;
+  error?: string;
+};
 export class AgentManager {
-  public readonly preImages: {
-    [routingId: string]: string;
+  public readonly transferInfo: {
+    [routingId: string]: TransferInformation;
   } = {};
 
   private constructor(
@@ -276,7 +283,10 @@ export class AgentManager {
     public readonly agentService: INodeService,
   ) {}
 
-  static async connect(agentService: RestServerNodeService): Promise<AgentManager> {
+  static async connect(
+    agentService: RestServerNodeService,
+    enableAutomaticResolution: boolean = true,
+  ): Promise<AgentManager> {
     // First, create + fund roger onchain
     logger.debug({ url: env.rogerUrl });
     const routerService = await RestServerNodeService.connect(
@@ -320,7 +330,9 @@ export class AgentManager {
     const manager = new AgentManager(router, routerIdentifier, routerService, agents, agentService);
 
     // Automatically resolve any created transfers
-    manager.setupAutomaticResolve();
+    if (enableAutomaticResolution) {
+      manager.setupAutomaticResolve();
+    }
 
     return manager;
   }
@@ -358,10 +370,16 @@ export class AgentManager {
 
           // Creation comes from router forwarding, agent is responder
           // Find the preImage
-          const preImage = this.preImages[routingId];
+          const { preImage } = this.transferInfo[routingId] ?? {};
           if (!preImage) {
             logger.error(
-              { channelAddress, transferId, routingId, preImages: JSON.stringify(this.preImages), preImage },
+              {
+                channelAddress,
+                transferId,
+                routingId,
+                transferInfo: this.transferInfo,
+                preImage,
+              },
               "No preImage",
             );
             process.exit(1);
@@ -411,8 +429,8 @@ export class AgentManager {
             return;
           }
 
-          // Remove the preimage on resolution
-          delete this.preImages[routingId];
+          // Add timestamp on resolution
+          this.transferInfo[routingId].end = Date.now();
 
           const agent = this.agents.find((a) => a.channelAddress && a.channelAddress === data.channelAddress);
           if (!agent) {
@@ -440,11 +458,11 @@ export class AgentManager {
           // Create new transfer to continue cycle
           const receiver = this.getRandomAgent(agent);
           try {
-            const { preImage, routingId, transferId } = await agent.createHashlockTransfer(
+            const { preImage, routingId, transferId, start } = await agent.createHashlockTransfer(
               receiver.publicIdentifier,
               constants.AddressZero,
             );
-            this.preImages[routingId] = preImage;
+            this.transferInfo[routingId] = { ...(this.transferInfo[routingId] ?? {}), preImage, start };
             logger.info(
               { transferId, channelAddress, receiver: receiver.publicIdentifier, routingId },
               "Created transfer",
@@ -473,11 +491,11 @@ export class AgentManager {
         logger.debug({}, "Is sender, skipping");
         continue;
       }
-      const { preImage, routingId } = await sender.createHashlockTransfer(
+      const { preImage, routingId, start } = await sender.createHashlockTransfer(
         agent.publicIdentifier,
         constants.AddressZero,
       );
-      this.preImages[routingId] = preImage;
+      this.transferInfo[routingId] = { ...(this.transferInfo[routingId] ?? {}), preImage, start };
     }
 
     const kill = () =>
@@ -486,7 +504,10 @@ export class AgentManager {
           this.agentService.off(EngineEvents.CONDITIONAL_TRANSFER_CREATED);
           this.agentService.off(EngineEvents.CONDITIONAL_TRANSFER_RESOLVED);
           // Wait just in case
-          await delay(5000);
+          await delay(5_000);
+
+          this.printTransferSummary();
+
           resolve();
         } catch (e) {
           reject(e.message);
@@ -494,6 +515,25 @@ export class AgentManager {
       });
 
     return kill;
+  }
+
+  public printTransferSummary(): void {
+    const times = Object.entries(this.transferInfo)
+      .map(([routingId, transfer]) => {
+        if (!transfer.end) {
+          return undefined;
+        }
+        return transfer.end - transfer.start;
+      })
+      .filter((x) => !!x) as number[];
+    const total = times.reduce((a, b) => a + b);
+    const average = total / times.length;
+    const longest = times.sort((a, b) => b - a)[0];
+    const shortest = times.sort((a, b) => a - b)[0];
+    logger.info(
+      { average, longest, shortest, completed: times.length, agents: this.agents.length },
+      "Transfer summary",
+    );
   }
 
   public getRandomAgent(excluding?: Agent): Agent {
