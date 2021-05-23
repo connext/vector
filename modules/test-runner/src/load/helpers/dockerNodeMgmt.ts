@@ -21,12 +21,13 @@ export const d_start_router = ()=>  exec(
 )
 
 
-export const spawn_router_start = spawn('bash',["ops/start-router.sh"], {shell:true})
+// export const spawn_router_start = spawn('bash',["ops/start-router.sh"], {shell:true})
 
+export const spawn_router_start = spawn('docker',["stack", "deploy", "-c", docker_compose_configuration, "router"], {shell:true})
 
 export const  spawn_n_routers = (num_routers) => {
     // spawn('bash',["ops/start-router.sh"], {shell:true})
-    spawn('docker',["stack", "deploy", "-c", docker_compose_configuration, "router"], {shell:true})
+    // spawn('docker',["stack", "deploy", "-c", docker_compose_configuration, "router"], {shell:true})
 
     for (let i = 0; i < num_routers; i++) {
         spawn_router_start.stdout.on('data', (data) => {

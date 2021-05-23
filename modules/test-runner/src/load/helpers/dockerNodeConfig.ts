@@ -1,4 +1,9 @@
+const router_server_config = {
+    internal_port:"9002",
+    public_port:"9002",
+    public_url:`http://127.0.0.1:9002/ping`,
 
+}
 export const node_config_json =
     {
         "adminToken": "cxt1234",
