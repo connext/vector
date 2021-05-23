@@ -122,6 +122,7 @@ async function start(){
 
     //setup channel between all carols and the random node
 }
+
 // d_net_create()
 // swarm_init()
 // d_start_router()
