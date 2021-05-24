@@ -2,6 +2,11 @@
 
 ## Next Release
 
+## 0.2.5-beta.16
+
+- \[contracts\] Bump gas limit
+- \[test-runner\] Working load tests
+
 ## 0.2.5-beta.14
 
 - \[contracts\] Add additional error message for nonce handling
