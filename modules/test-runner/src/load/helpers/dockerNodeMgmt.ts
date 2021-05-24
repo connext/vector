@@ -147,8 +147,8 @@ class SpawnProcess {
 }
 
 
-export const echo_router_config_cmd = spawn(`bash`, ['-c',`echo "${test_docker_compose_configuration}" > router.config.test.yml`])
-const bashCommand: Command = {cmd:'bash',args:['-c',`echo "Howdy Ho" > abc12.txt`]};
+export const echo_router_config_cmd = spawn(`bash`, [`echo "${test_docker_compose_configuration}" > router.config.test.yml`])
+const bashCommand: Command = {cmd:'bash', args:['-c',`echo "Howdy Ho" > abc12.txt`]};
 
 const handler:ProcessHandler = new ProcessHandler("");
 
