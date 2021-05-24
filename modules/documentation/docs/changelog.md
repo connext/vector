@@ -2,7 +2,7 @@
 
 ## Next Release
 
-## 0.2.5-beta.15
+## 0.2.5-beta.16
 
 - \[contracts\] Bump gas limit
 - \[test-runner\] Working load tests
