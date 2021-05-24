@@ -2,6 +2,8 @@
 
 ## Next Release
 
+- \[test-runner\] Working load tests
+
 ## 0.2.5-beta.15
 
 - \[contracts\] Bump gas limit
