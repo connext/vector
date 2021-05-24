@@ -17,6 +17,9 @@ then
 elif [[ "$test_type" == "concurrency" ]]
 then
   test_cmd="npm run load-test-concurrency"
+elif [[ "$test_type" == "channel-bandwidth" ]]
+then
+  test_cmd="npm run load-test-channel-bandwidth"
 else
   echo "Unknown test type!"
   exit 1

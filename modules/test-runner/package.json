@@ -8,7 +8,8 @@
     "build-bundle": "webpack --config ops/webpack.config.js",
     "test": "bash ops/entry.sh",
     "load-test-cyclical": "ts-node ./src/load/start-cyclical.ts | pino-pretty -t",
-    "load-test-concurrency": "ts-node ./src/load/start-concurrency.ts | pino-pretty -t"
+    "load-test-concurrency": "ts-node ./src/load/start-concurrency.ts | pino-pretty -t",
+    "load-test-channel-bandwidth": "ts-node ./src/load/start-channel-bandwidth.ts | pino-pretty -t"
   },
   "author": "",
   "license": "ISC",

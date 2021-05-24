@@ -517,6 +517,64 @@ export class AgentManager {
     return kill;
   }
 
+  // Creates multiple transfers in a single channel
+  async createMultipleTransfersWithSameParties(): Promise<() => Promise<void>> {
+    // Create some transfers to start cycle
+    logger.info({ agents: this.agents.length, config: { ...config } }, "Starting transfer creation");
+    const agent = this.getRandomAgent();
+    const recipient = this.getRandomAgent(agent);
+
+    const transfers: { transferId: string; elapsed: number }[] = [];
+
+    this.agentService.on(
+      EngineEvents.CONDITIONAL_TRANSFER_CREATED,
+      async (data) => {
+        // Create a new transfer
+        const start = Date.now();
+        const { transferId } = await agent.createHashlockTransfer(recipient.publicIdentifier, constants.AddressZero);
+        transfers.push({ transferId, elapsed: Date.now() - start });
+      },
+      (data) => data.bobIdentifier === agent.publicIdentifier,
+      agent.publicIdentifier,
+    );
+
+    const start = Date.now();
+    const { transferId } = await agent.createHashlockTransfer(recipient.publicIdentifier, constants.AddressZero);
+    transfers.push({ transferId, elapsed: Date.now() - start });
+
+    const kill = () =>
+      new Promise<void>(async (resolve, reject) => {
+        try {
+          this.agentService.off(EngineEvents.CONDITIONAL_TRANSFER_CREATED);
+          // Wait just in case
+          await delay(5_000);
+
+          // print summary of transfers created
+          const number = transfers.length;
+          const first = transfers[0].elapsed;
+          const last = transfers[transfers.length - 1].elapsed;
+          const toLog = transfers
+            .map((info, idx) => {
+              if (idx % 20 === 0) {
+                return { active: idx, elapsed: info.elapsed };
+              }
+              return undefined;
+            })
+            .filter((x) => !!x);
+
+          logger.warn(
+            { transfers: number, latestElapsed: last, firstElapsed: first, intermittent: toLog },
+            "Transfer summary",
+          );
+          resolve();
+        } catch (e) {
+          reject(e.message);
+        }
+      });
+
+    return kill;
+  }
+
   public printTransferSummary(): void {
     const times = Object.entries(this.transferInfo)
       .map(([routingId, transfer]) => {

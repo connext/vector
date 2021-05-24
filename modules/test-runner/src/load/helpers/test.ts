@@ -1,4 +1,4 @@
-import { getRandomBytes32, RestServerNodeService } from "@connext/vector-utils";
+import { delay, getRandomBytes32, RestServerNodeService } from "@connext/vector-utils";
 import { constants } from "ethers";
 import PriorityQueue from "p-queue";
 
@@ -22,7 +22,32 @@ export const cyclicalTransferTest = async (): Promise<void> => {
   setTimeout(async () => {
     logger.warn({}, "Killing test");
     await killSwitch();
-  }, 150_000);
+    // wait 2s just in case
+    await delay(2_000);
+    process.exit(0);
+  }, 90_000);
+};
+
+/**
+ * Should create many transfers in a channel without ever
+ * resolving them.
+ */
+export const channelBandwidthTest = async (): Promise<void> => {
+  const agentService = await RestServerNodeService.connect(
+    env.carolUrl,
+    logger.child({ module: "RestServerNodeService" }),
+    carolEvts,
+    0,
+  );
+  const manager = await AgentManager.connect(agentService, false);
+
+  const killSwitch = await manager.createMultipleTransfersWithSameParties();
+
+  setTimeout(async () => {
+    logger.warn({}, "Killing test");
+    await killSwitch();
+    process.exit(0);
+  }, 90_000);
 };
 
 // Should create a bunch of transfers in the queue, with an
@@ -59,7 +84,7 @@ export const concurrencyTest = async (): Promise<void> => {
       .fill(0)
       .map((_) => {
         const [routingId, preImage] = [getRandomBytes32(), getRandomBytes32()];
-        manager.preImages[routingId] = preImage;
+        manager.transferInfo[routingId].preImage = preImage;
         return [routingId, preImage];
       });
 
