@@ -538,6 +538,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
     // We must check for confirmation in all previous transactions. Although it's most likely
     // that it's the previous one, any of them could have been confirmed.
     const pollForReceipt = async (): Promise<TransactionReceipt | undefined> => {
+      // Save all reverted receipts for a check in case our Promise.race evaluates to be undefined.
       let reverted: TransactionReceipt[] = [];
       // Make a pool of promises for resolving each receipt call (once it reaches target confirmations).
       const receipt = await Promise.race<any>(
@@ -562,6 +563,8 @@ export class EthereumChainService extends EthereumChainReader implements IVector
       if (!!receipt) {
         if (reverted.length === responses.length) {
           // We know every tx was reverted.
+          // NOTE: The first reverted receipt in the array will be entirely arbitrary.
+          // TODO: Should we return the reverted receipt belonging to the latest tx instead?
           return reverted[0];
         }
       }
