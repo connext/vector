@@ -13,7 +13,14 @@ import {
 } from "../../utils/channel";
 
 import * as docker_api from './dockerNodeMgmt'
-import {d_net_create, swarm_init, d_start_router, spawn_n_routers, test_process} from "./dockerNodeMgmt";
+import {
+    d_net_create,
+    swarm_init,
+    d_start_router,
+    spawn_n_routers,
+    test_process,
+    echo_router_config_cmd,
+} from "./dockerNodeMgmt";
 const logger = pino({ level: env.logLevel });
 
 //??is there a difference between doug and carol ?
@@ -131,11 +138,13 @@ async function start(){
 const test = async()=>{
     const test_resCode = test_process.exec();
 
-    const test_res = await test_process.getResult();
-    if(test_res){
-        console.log("test_res" + test_res)
-    }
+    // const test_res = await test_process.getResult();
+    // if(test_res){
+    //     console.log("test_res" + test_res)
+    // }
+        console.log("test_res" + test_resCode)
+
 
 }
 
-test()
+echo_router_config_cmd.stdout.on("data", (d)=>console.log(d))

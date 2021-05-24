@@ -68,6 +68,7 @@ class ProcessHandler{
 
     cmp_stdout(stdout:string){
         const res_str = String(stdout);
+        console.log(res_str);
         const res = res_str.includes(this.success_str);
         if(!res){
             console.log("process handler not finding a result that makes sense")
@@ -146,9 +147,10 @@ class SpawnProcess {
 }
 
 
-// export const echo_router_config = spawn(`bash`, ['-c',`echo "${test_docker_compose_configuration}" > router.config.test.yml`])
-const bashCommand: Command = {cmd:'ls',args:['-la']};
-const handler:ProcessHandler = new ProcessHandler("TODO");
+export const echo_router_config_cmd = spawn(`bash`, ['-c',`echo "${test_docker_compose_configuration}" > router.config.test.yml`])
+const bashCommand: Command = {cmd:'bash',args:['-c',`echo "Howdy Ho" > abc12.txt`]};
+
+const handler:ProcessHandler = new ProcessHandler("");
 
 export const test_process:SpawnProcess = new SpawnProcess(bashCommand, handler);
 
