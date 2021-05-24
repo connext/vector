@@ -133,6 +133,8 @@ async function start(){
 // d_net_create()
 // swarm_init()
 // d_start_router()
+
+// echo_router_config_cmd.stdout.on("data", (d)=>console.log(d))
 // spawn_n_routers(1)
 
 const test = async()=>{
@@ -146,5 +148,4 @@ const test = async()=>{
 
 
 }
-
-echo_router_config_cmd.stdout.on("data", (d)=>console.log(d))
+test();

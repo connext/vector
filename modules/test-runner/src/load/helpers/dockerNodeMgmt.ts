@@ -37,7 +37,7 @@ export const spawn_router_start = spawn('docker',["stack", "deploy", "-c", "rout
 
 export const  spawn_n_routers = (num_routers) => {
     // spawn('bash',["ops/start-router.sh"], {shell:true})
-    spawn('docker',["stack", "deploy", "-c", "router.config.txt", "router"], {shell:true})
+    spawn('docker',["stack", "deploy", "-c", "router.config.test.yml", "router"], {shell:true})
 
     for (let i = 0; i < num_routers; i++) {
         spawn_router_start.stdout.on('data', (data) => {
@@ -141,10 +141,9 @@ class SpawnProcess {
 
 
 export const echo_router_config_cmd = spawn(`bash`, [`echo "${test_docker_compose_configuration}" > router.config.test.yml`])
-const bashCommand: Command = {cmd:'bash', args:['-c',`echo "Howdy Ho" > abc12.txt`]};
 
+const bashCommand: Command = {cmd:'docker', args:["stack", "deploy", "-c", "router.config.test.yml", "router"]};
 const handler:ProcessHandler = new ProcessHandler("");
-
 export const test_process:SpawnProcess = new SpawnProcess(bashCommand, handler);
 
 
