@@ -99,10 +99,39 @@ const VECTOR_PG_PASSWORD_FILE = '/run/secrets/$db_secret'
 const VECTOR_PG_PORT = '5432'
 const VECTOR_PG_USERNAME = 'vector'
 
+// router_image_name="${project}_builder:$version";
+// router_image="image: '$router_image_name'
+// entrypoint: 'bash modules/router/ops/entry.sh'
+// volumes:
+//     - '$root:/app'
+// ports:
+//     - '$router_public_port:$router_internal_port'"
+// echo "${stack}_router will be exposed on *:$router_public_port"
+// fi
+// bash "$root/ops/pull-images.sh" "$router_image_name" > /dev/null
 
+
+const router_image_name = "vector_builder:0.2.2-beta.2"
+const router_image = `${router_image_name}
+entrypoint: 'bash modules/router/ops/entry.sh'
+    volumes:
+      - '$root:/app'
+    ports:
+      - ${router_server_config.public_port}:${router_server_config.internal_port}
+                    
+`
+export const pull_router_image_opts = ["./ops/pull-images.sh", `${router_image_name}`, '> /dev/null']
+
+const common = `
+    networks:
+      - '$project'
+    logging:
+      driver: 'json-file'
+      options:
+          max-size: '10m'
+`
 export const docker_compose_configuration =
-    `version: '3.4'
-
+`version: '3.4'
 networks:
   ${project}:
     external: true
@@ -127,7 +156,7 @@ services:
       VECTOR_MNEMONIC: '${eth_mnemonic}'
       VECTOR_MNEMONIC_FILE: '${eth_mnemonic_file}
       VECTOR_DATABASE_URL: ${VECTOR_DATABASE_URL}
-      VECTOR_PG_DATABASE: 
+      VECTOR_PG_DATABASE: ${project}
       VECTOR_PG_HOST: 'database-node'
       VECTOR_PG_PASSWORD: '$pg_password'
       VECTOR_PG_PASSWORD_FILE: '$pg_password_file'
@@ -135,19 +164,19 @@ services:
       VECTOR_PG_USERNAME: '$pg_user'
 
   router:
-    $common
-    $router_image
+    ${common}
+    ${router_image}
     environment:
       VECTOR_CONFIG: ${node_config_json}
       VECTOR_PROD: ${production}
       VECTOR_NODE_URL: 'http://node:$node_internal_port'
-      VECTOR_DATABASE_URL: '$database_url'
-      VECTOR_PG_DATABASE: '$pg_db'
+      VECTOR_DATABASE_URL: ${VECTOR_DATABASE_URL}
+      VECTOR_PG_DATABASE: ${project}
       VECTOR_PG_HOST: 'database-router'
-      VECTOR_PG_PASSWORD: '$pg_password'
-      VECTOR_PG_PASSWORD_FILE: '$pg_password_file'
+      VECTOR_PG_PASSWORD: ""
+      VECTOR_PG_PASSWORD_FILE: ""
       VECTOR_PG_PORT: '5432'
-      VECTOR_PG_USERNAME: '$pg_user'
+      VECTOR_PG_USERNAME: ${project}
       VECTOR_MNEMONIC: '${eth_mnemonic}'
       VECTOR_MNEMONIC_FILE: '${eth_mnemonic_file}'
 
@@ -180,3 +209,164 @@ services:
   $observability_services
 
 EOF`
+
+
+export const test_docker_compose_configuration = `version: '3.4'
+
+networks:
+  vector:
+    external: true
+
+
+
+volumes:
+  certs:
+  database_node:
+  database_router:
+  prometheus:
+  grafana:
+
+services:
+
+  node:
+    networks:
+      - 'vector'
+    logging:
+      driver: 'json-file'
+      options:
+          max-size: '10m'
+    image: 'vector_builder:latest'
+    entrypoint: 'bash modules/server-node/ops/entry.sh'
+    volumes:
+      - '/home/z/Development/vector:/app'
+    ports:
+      - '8002:8000'
+    environment:
+      VECTOR_CONFIG: '{  "adminToken": "cxt1234",  "chainAddresses": {    "1337": {      "channelFactoryAddress": "0xF12b5dd4EAD5F743C6BaA640B0216200e89B60Da",      "testTokenAddress": "0x9FBDa871d559710256a2502A2517b794B482Db40",      "transferRegistryAddress": "0x8f0483125FCb9aaAEFA9209D8E9d7b9C8B9Fb90F",      "hashlockTransferAddress": "0x345cA3e014Aaf5dcA488057592ee47305D9B3e10"    },    "1338": {      "channelFactoryAddress": "0xF12b5dd4EAD5F743C6BaA640B0216200e89B60Da",      "testTokenAddress": "0x9FBDa871d559710256a2502A2517b794B482Db40",      "transferRegistryAddress": "0x8f0483125FCb9aaAEFA9209D8E9d7b9C8B9Fb90F",      "hashlockTransferAddress": "0x345cA3e014Aaf5dcA488057592ee47305D9B3e10"    }  },  "chainProviders": {    "1337": "http://evm_1337:8545",    "1338": "http://evm_1338:8545"  },  "logLevel": "info",  "messagingUrl": "",  "production": false,  "allowedSwaps": [    {      "fromChainId": 1337,      "toChainId": 1338,      "fromAssetId": "0x0000000000000000000000000000000000000000",      "toAssetId": "0x0000000000000000000000000000000000000000",      "priceType": "hardcoded",      "hardcodedRate": "1"    },    {      "fromChainId": 1337,      "toChainId": 1338,      "fromAssetId": "0x8CdaF0CD259887258Bc13a92C0a6dA92698644C0",      "toAssetId": "0x8CdaF0CD259887258Bc13a92C0a6dA92698644C0",      "priceType": "hardcoded",      "hardcodedRate": "1"    }  ],  "rebalanceProfiles": [    {      "chainId": 1337,      "assetId": "0x0000000000000000000000000000000000000000",      "reclaimThreshold": "200000000000000000",      "target": "100000000000000000",      "collateralizeThreshold": "50000000000000000"    },    {      "chainId": 1338,      "assetId": "0x0000000000000000000000000000000000000000",      "reclaimThreshold": "200000000000000000",      "target": "100000000000000000",      "collateralizeThreshold": "50000000000000000"    },    {      "chainId": 1337,      "assetId": "0x8CdaF0CD259887258Bc13a92C0a6dA92698644C0",      "reclaimThreshold": "2000000000000000000",      "target": "1000000000000000000",      "collateralizeThreshold": "500000000000000000"    },    {      "chainId": 1338,      "assetId": "0x8CdaF0CD259887258Bc13a92C0a6dA92698644C0",      "reclaimThreshold": "2000000000000000000",      "target": "1000000000000000000",      "collateralizeThreshold": "500000000000000000"    }  ]}'
+      VECTOR_PROD: 'false'
+      VECTOR_MNEMONIC: 'candy maple cake sugar pudding cream honey rich smooth crumble sweet treat'
+      VECTOR_MNEMONIC_FILE: ''
+      VECTOR_DATABASE_URL: ''
+      VECTOR_PG_DATABASE: 'vector'
+      VECTOR_PG_HOST: 'database-node'
+      VECTOR_PG_PASSWORD: 'vector'
+      VECTOR_PG_PASSWORD_FILE: ''
+      VECTOR_PG_PORT: '5432'
+      VECTOR_PG_USERNAME: 'vector'
+
+  router:
+    networks:
+      - 'vector'
+    logging:
+      driver: 'json-file'
+      options:
+          max-size: '10m'
+    image: 'vector_builder:latest'
+    entrypoint: 'bash modules/router/ops/entry.sh'
+    volumes:
+      - '/home/z/Development/vector:/app'
+    ports:
+      - '9002:9002'
+    environment:
+      VECTOR_CONFIG: '{  "adminToken": "cxt1234",  "chainAddresses": {    "1337": {      "channelFactoryAddress": "0xF12b5dd4EAD5F743C6BaA640B0216200e89B60Da",      "testTokenAddress": "0x9FBDa871d559710256a2502A2517b794B482Db40",      "transferRegistryAddress": "0x8f0483125FCb9aaAEFA9209D8E9d7b9C8B9Fb90F",      "hashlockTransferAddress": "0x345cA3e014Aaf5dcA488057592ee47305D9B3e10"    },    "1338": {      "channelFactoryAddress": "0xF12b5dd4EAD5F743C6BaA640B0216200e89B60Da",      "testTokenAddress": "0x9FBDa871d559710256a2502A2517b794B482Db40",      "transferRegistryAddress": "0x8f0483125FCb9aaAEFA9209D8E9d7b9C8B9Fb90F",      "hashlockTransferAddress": "0x345cA3e014Aaf5dcA488057592ee47305D9B3e10"    }  },  "chainProviders": {    "1337": "http://evm_1337:8545",    "1338": "http://evm_1338:8545"  },  "logLevel": "info",  "messagingUrl": "",  "production": false,  "allowedSwaps": [    {      "fromChainId": 1337,      "toChainId": 1338,      "fromAssetId": "0x0000000000000000000000000000000000000000",      "toAssetId": "0x0000000000000000000000000000000000000000",      "priceType": "hardcoded",      "hardcodedRate": "1"    },    {      "fromChainId": 1337,      "toChainId": 1338,      "fromAssetId": "0x8CdaF0CD259887258Bc13a92C0a6dA92698644C0",      "toAssetId": "0x8CdaF0CD259887258Bc13a92C0a6dA92698644C0",      "priceType": "hardcoded",      "hardcodedRate": "1"    }  ],  "rebalanceProfiles": [    {      "chainId": 1337,      "assetId": "0x0000000000000000000000000000000000000000",      "reclaimThreshold": "200000000000000000",      "target": "100000000000000000",      "collateralizeThreshold": "50000000000000000"    },    {      "chainId": 1338,      "assetId": "0x0000000000000000000000000000000000000000",      "reclaimThreshold": "200000000000000000",      "target": "100000000000000000",      "collateralizeThreshold": "50000000000000000"    },    {      "chainId": 1337,      "assetId": "0x8CdaF0CD259887258Bc13a92C0a6dA92698644C0",      "reclaimThreshold": "2000000000000000000",      "target": "1000000000000000000",      "collateralizeThreshold": "500000000000000000"    },    {      "chainId": 1338,      "assetId": "0x8CdaF0CD259887258Bc13a92C0a6dA92698644C0",      "reclaimThreshold": "2000000000000000000",      "target": "1000000000000000000",      "collateralizeThreshold": "500000000000000000"    }  ]}'
+      VECTOR_PROD: 'false'
+      VECTOR_NODE_URL: 'http://node:8000'
+      VECTOR_DATABASE_URL: ''
+      VECTOR_PG_DATABASE: 'vector'
+      VECTOR_PG_HOST: 'database-router'
+      VECTOR_PG_PASSWORD: 'vector'
+      VECTOR_PG_PASSWORD_FILE: ''
+      VECTOR_PG_PORT: '5432'
+      VECTOR_PG_USERNAME: 'vector'
+      VECTOR_MNEMONIC: 'candy maple cake sugar pudding cream honey rich smooth crumble sweet treat'
+      VECTOR_MNEMONIC_FILE: ''
+
+  database-node:
+    networks:
+      - 'vector'
+    logging:
+      driver: 'json-file'
+      options:
+          max-size: '10m'
+    image: 'vector_database:latest'
+    ports:
+      - '5434:5432'
+    environment:
+      AWS_ACCESS_KEY_ID: ''
+      AWS_SECRET_ACCESS_KEY: ''
+      POSTGRES_DB: 'vector'
+      POSTGRES_PASSWORD: 'vector'
+      POSTGRES_PASSWORD_FILE: ''
+      POSTGRES_USER: 'vector'
+      VECTOR_ADMIN_TOKEN: 'cxt1234'
+      VECTOR_PROD: 'false'
+
+  database-router:
+    networks:
+      - 'vector'
+    logging:
+      driver: 'json-file'
+      options:
+          max-size: '10m'
+    image: 'vector_database:latest'
+    ports:
+      - '5435:5432'
+    environment:
+      AWS_ACCESS_KEY_ID: ''
+      AWS_SECRET_ACCESS_KEY: ''
+      POSTGRES_DB: 'vector'
+      POSTGRES_PASSWORD: 'vector'
+      POSTGRES_PASSWORD_FILE: ''
+      POSTGRES_USER: 'vector'
+      VECTOR_ADMIN_TOKEN: 'cxt1234'
+      VECTOR_PROD: 'false'
+
+  prometheus:
+    image: prom/prometheus:latest
+    networks:
+      - 'vector'
+    logging:
+      driver: 'json-file'
+      options:
+          max-size: '10m'
+    ports:
+      - 9090:9090
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+    volumes:
+      - /home/z/Development/vector/ops/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus:/prometheus
+
+  cadvisor:
+    networks:
+      - 'vector'
+    logging:
+      driver: 'json-file'
+      options:
+          max-size: '10m'
+    image: gcr.io/google-containers/cadvisor:latest
+    ports:
+      - 8081:8080
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:rw
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+
+  grafana:
+    image: grafana/grafana:latest
+    networks:
+      - 'vector'
+    logging:
+      driver: 'json-file'
+      options:
+          max-size: '10m'
+    networks:
+      - vector
+    ports:
+      - 3008:3000
+    volumes:
+      - /home/z/Development/vector/ops/grafana/grafana:/etc/grafana
+      - /home/z/Development/vector/ops/grafana/dashboards:/etc/dashboards
+      - grafana:/var/lib/grafana
+`

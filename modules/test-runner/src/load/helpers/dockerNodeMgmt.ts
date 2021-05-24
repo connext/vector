@@ -1,5 +1,9 @@
 import {spawn, exec} from 'child_process'
-import {docker_compose_configuration} from "./dockerNodeConfig";
+import {
+    docker_compose_configuration,
+    pull_router_image_opts,
+    test_docker_compose_configuration,
+} from "./dockerNodeConfig";
 const swarm_init_str = 'docker swarm init 2> /dev/null || true'
 const d_net_create_str = 'docker network create --attachable --driver overlay "$project" 2> /dev/null || true'
 
@@ -23,11 +27,17 @@ export const d_start_router = ()=>  exec(
 
 // export const spawn_router_start = spawn('bash',["ops/start-router.sh"], {shell:true})
 
-export const spawn_router_start = spawn('docker',["stack", "deploy", "-c", docker_compose_configuration, "router"], {shell:true})
+export const echo_router_config = spawn(`bash`, ['-c',`echo "${test_docker_compose_configuration}" > router.config.test.yml`])
+
+export const spawn_router_start = spawn('docker',["stack", "deploy", "-c", "router.config.test.yml", "router"], {shell:true})
+
+// export const pull_router_image = spawn('bash', pull_router_image_opts);
+// const spawn_router_start = spawn('bash', pull_router_image_opts);
+
 
 export const  spawn_n_routers = (num_routers) => {
     // spawn('bash',["ops/start-router.sh"], {shell:true})
-    // spawn('docker',["stack", "deploy", "-c", docker_compose_configuration, "router"], {shell:true})
+    spawn('docker',["stack", "deploy", "-c", "router.config.txt", "router"], {shell:true})
 
     for (let i = 0; i < num_routers; i++) {
         spawn_router_start.stdout.on('data', (data) => {
@@ -42,3 +52,104 @@ export const  spawn_n_routers = (num_routers) => {
         })
     }
 }
+
+interface Command {
+    cmd:string,
+    args:string[]
+}
+
+class ProcessHandler{
+    success_str: string;
+    success:boolean|undefined = undefined;
+
+    constructor(_success_str:string) {
+        this.success_str = _success_str;
+    }
+
+    cmp_stdout(stdout:string){
+        const res_str = String(stdout);
+        const res = res_str.includes(this.success_str);
+        if(!res){
+            console.log("process handler not finding a result that makes sense")
+            return this.success=false;
+        }
+        console.log("Success")
+        return this.success=true;
+    }
+
+    cb_stdout_data(data:string){
+        this.cmp_stdout(data)
+    }
+    cb_stdout_close(data:string){
+        console.log("process closed")
+        return 0;
+    }
+
+}
+
+class SpawnProcess {
+    returnCode:number|undefined = undefined;
+    command:Command;
+    handler:ProcessHandler;
+    process;
+
+    constructor(_command:Command, _handler:ProcessHandler){
+        this.command = _command;
+        this.handler = _handler;
+
+    }
+
+    register_events(){
+            try {
+                this.process.stderr.on('data', (event_data) => {
+                    console.log("got err data" + event_data)
+                })
+            }catch(e){
+                console.log("couldnt register to stderr")
+            }
+
+            try {
+                this.process.stdout.on('data', (event_data) => {
+                    console.log("got stdout data" + event_data)
+                    this.handler.cb_stdout_data(event_data)
+                })
+                this.process.stdout.on('close', (event_data) => {
+                    console.log("got event close" + event_data)
+                    this.returnCode = this.handler.cb_stdout_close(event_data)
+                })
+            }catch(e){
+                console.log("couldnt register to stdout")
+            }
+    }
+
+    exec(){
+        this.process = spawn(this.command.cmd, this.command.args, {shell:true})
+        this.register_events()
+    }
+
+    async getResult():Promise<boolean|undefined>{
+        const delay = (ms)=>{
+            return new Promise<void>((resolve)=>
+                setTimeout(function(){
+                    console.log("waiting for process to resolve");
+                    resolve();
+                },ms))
+
+        }
+        while(this.handler.success === undefined){
+            await delay(400);
+
+        }
+       return this.handler.success;
+    }
+
+}
+
+
+// export const echo_router_config = spawn(`bash`, ['-c',`echo "${test_docker_compose_configuration}" > router.config.test.yml`])
+const bashCommand: Command = {cmd:'ls',args:['-la']};
+const handler:ProcessHandler = new ProcessHandler("TODO");
+
+export const test_process:SpawnProcess = new SpawnProcess(bashCommand, handler);
+
+
