@@ -101,15 +101,11 @@ class SpawnProcess {
     }
 
     register_events(){
-            try {
+
                 this.process.stderr.on('data', (event_data) => {
                     console.log("got err data" + event_data)
                 })
-            }catch(e){
-                console.log("couldnt register to stderr")
-            }
 
-            try {
                 this.process.stdout.on('data', (event_data) => {
                     console.log("got stdout data" + event_data)
                     this.handler.cb_stdout_data(event_data)
@@ -118,9 +114,6 @@ class SpawnProcess {
                     console.log("got event close" + event_data)
                     this.returnCode = this.handler.cb_stdout_close(event_data)
                 })
-            }catch(e){
-                console.log("couldnt register to stdout")
-            }
     }
 
     exec(){
