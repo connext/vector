@@ -206,6 +206,7 @@ export class RestServerNodeService implements INodeService {
       params,
       NodeParams.CreateNodeSchema,
     );
+
     if (res.isError) {
       return res;
     }
@@ -654,6 +655,7 @@ export class RestServerNodeService implements INodeService {
           ...(e.response?.data ?? { stack: jsonErr.stack ?? "" }),
         },
       );
+
       return Result.fail(toThrow);
     }
   }
