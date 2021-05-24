@@ -10,6 +10,10 @@ docker network create --attachable --driver overlay "$project" 2> /dev/null || t
 
 test_type="${1:-cyclical}"
 num_agents="${2:-5}"
+# how long cyclical/channel tests last in sec
+test_duration="${3:-90}"
+max_concurrency="${4:-10}"
+queued_payments="${5:-25}"
 
 if [[ "$test_type" == "cyclical" ]]
 then
@@ -24,7 +28,11 @@ else
   echo "Unknown test type!"
   exit 1
 fi
-echo "Running $test_type test with $num_agents agents"
+echo "Running $test_type test with:"
+echo "  - num_agents: ${num_agents}"
+echo "  - test_duration: ${test_duration}"
+echo "  - max_concurrency: ${max_concurrency}"
+echo "  - queued_payments: ${queued_payments}"
 
 # If file descriptors 0-2 exist, then we're prob running via interactive shell instead of on CD/CI
 if [[ -t 0 && -t 1 && -t 2 ]]
@@ -82,9 +90,12 @@ common=(
   "--env=VECTOR_MESSAGING_URL=http://messaging"
   "--env=VECTOR_ROGER_URL=http://roger:8000"
   "--env=VECTOR_ROUTER_URL=http://router:8000"
-  "--env=VECTOR_NUM_AGENTS=${num_agents}"
   "--env=VECTOR_PROD=${production}"
   "--env=VECTOR_TESTER_NAME=$tester_name"
+  "--env=NUM_AGENTS=${num_agents}"
+  "--env=TEST_DURATION=${test_duration}"
+  "--env=MAX_CONCURRENCY=${max_concurrency}"
+  "--env=QUEUED_PAYMENTS=${queued_payments}"
   "--name=$tester_name"
   "--network=$project"
   "--rm"
