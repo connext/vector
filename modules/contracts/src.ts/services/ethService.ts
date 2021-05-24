@@ -52,6 +52,7 @@ export const BIG_GAS_LIMIT = BigNumber.from(2_000_000);
 // nothing should ever be this expensive... _should_
 export const BIG_GAS_PRICE = parseUnits("1500", "gwei");
 
+// TODO: Deprecate. Note that this is used in autoRebalance.ts.
 export const waitForTransaction = async (
   provider: JsonRpcProvider,
   transactionHash: string,
@@ -537,14 +538,19 @@ export class EthereumChainService extends EthereumChainReader implements IVector
     // We must check for confirmation in all previous transactions. Although it's most likely
     // that it's the previous one, any of them could have been confirmed.
     const pollForReceipt = async (): Promise<TransactionReceipt | undefined> => {
+      let reverted: TransactionReceipt[] = [];
       // Make a pool of promises for resolving each receipt call (once it reaches target confirmations).
-      const response = await Promise.race<any>(
+      const receipt = await Promise.race<any>(
         responses
           .map((response) => {
             return new Promise(async (resolve) => {
               const r = await provider.getTransactionReceipt(response.hash);
-              if (r && r.confirmations >= numConfirmations) {
-                return resolve(r);
+              if (r) {
+                if (r.status === 0) {
+                  reverted.push(r);
+                } else if (r.confirmations >= numConfirmations) {
+                  return resolve(r);
+                }
               }
             });
           })
@@ -553,7 +559,13 @@ export class EthereumChainService extends EthereumChainReader implements IVector
           // and/or none of them have the number of confirmations we want.
           .concat(delay(2_000)),
       );
-      return response;
+      if (!!receipt) {
+        if (reverted.length === responses.length) {
+          // We know every tx was reverted.
+          return reverted[0];
+        }
+      }
+      return receipt;
     };
 
     // Poll for receipt.
