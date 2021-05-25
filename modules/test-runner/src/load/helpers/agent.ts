@@ -62,10 +62,11 @@ const fundAddress = async (address: string, assetId: string, value: BigNumber): 
   const tx = await walletQueue.add(async () => {
     logger.debug({ address, assetId, value: formatEther(value) }, "Funding onchain");
     const gasPrice = (await provider.getGasPrice()).add(parseUnits("20", "wei"));
+    const nonce = await wallet.getTransactionCount("pending");
     const request: providers.TransactionResponse =
       assetId === constants.AddressZero
-        ? await wallet.sendTransaction({ to: address, value, gasPrice })
-        : await new Contract(assetId, TestToken.abi, wallet).transfer(address, value, { gasPrice });
+        ? await wallet.sendTransaction({ to: address, value, gasPrice, nonce })
+        : await new Contract(assetId, TestToken.abi, wallet).transfer(address, value, { gasPrice, nonce });
     logger.info({ nonce: request.nonce?.toString() }, "Sent");
     return request;
   });
@@ -327,12 +328,7 @@ export class AgentManager {
       // indices = Array(config.numAgents).fill(0).map(getRandomIndex);
     }
 
-    let agents: Agent[] = [];
-    for (const i of indices) {
-      const agent = await Agent.connect(agentService, routerIdentifier, i);
-      agents.push(agent);
-    }
-    // const agents = await Promise.all(indices.map((i) => Agent.connect(agentService, routerIdentifier, i)));
+    const agents = await Promise.all(indices.map((i) => Agent.connect(agentService, routerIdentifier, i)));
 
     // Create the manager
     const manager = new AgentManager(router, routerIdentifier, routerService, agents, agentService);
@@ -601,7 +597,7 @@ export class AgentManager {
         return transfer.end - transfer.start;
       })
       .filter((x) => !!x) as number[];
-    const total = times.reduce((a, b) => a + b);
+    const total = times.reduce((a, b) => a + b, 0);
     const average = total / times.length;
     const longest = times.sort((a, b) => b - a)[0];
     const shortest = times.sort((a, b) => a - b)[0];
