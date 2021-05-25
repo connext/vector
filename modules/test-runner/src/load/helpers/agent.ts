@@ -622,11 +622,12 @@ export class AgentManager {
     logger.info(
       {
         errors: errored,
+        agents: this.agents.length,
         average,
         longest,
         shortest,
+        created: Object.entries(this.transferInfo).length,
         completed: times.length,
-        agents: this.agents.length,
         cancelled: errored.length,
       },
       "Transfer summary",
