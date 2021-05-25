@@ -386,6 +386,10 @@ export class EthereumChainService extends EthereumChainReader implements IVector
       try {
         /// SUBMIT
         // NOTE: Nonce will persist across iterations, as soon as it is defined in the first one.
+        this.log.debug(
+          { method, methodId, nonce, tryNumber, channelAddress, gasPrice: gasPrice.toString() },
+          "Attempting to send transaction",
+        );
         const result = await this.sendTx(txFn, gasPrice, signer, nonce);
         if (!result.isError) {
           const response = result.getValue();
@@ -399,7 +403,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
               // throw new ChainError(ChainError.reasons.)
             }
 
-            this.log.debug(
+            this.log.info(
               {
                 hash: response.hash,
                 gas: response.gasPrice.toString(),
@@ -420,14 +424,20 @@ export class EthereumChainService extends EthereumChainReader implements IVector
           } else {
             // If response returns undefined, we assume the tx was not sent. This will happen if some logic was
             // passed into txFn to bail out at the time of sending.
-            this.log.warn({ method, methodId, channelAddress, reason }, "Did not attempt tx.");
+            this.log.info(
+              { method, methodId, channelAddress, reason, tryNumber, nonce, gasPrice: gasPrice.toString() },
+              "Did not attempt tx.",
+            );
             if (responses.length === 0) {
               // Iff this is the only iteration, then we want to go ahead return w/o saving anything.
-              this.log.warn({ method, methodId, channelAddress }, "Tx not needed");
+              this.log.info(
+                { method, methodId, channelAddress, tryNumber, nonce, gasPrice: gasPrice.toString() },
+                "Tx not needed",
+              );
               return Result.ok(undefined);
             } else {
               this.log.info(
-                { method, methodId, channelAddress, reason, tryNumber },
+                { method, methodId, channelAddress, reason, tryNumber, nonce, gasPrice: gasPrice.toString() },
                 `txFn returned undefined, proceeding to confirmation step.`,
               );
             }
