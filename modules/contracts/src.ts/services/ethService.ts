@@ -115,7 +115,18 @@ export class EthereumChainService extends EthereumChainReader implements IVector
     reason: TransactionReason,
     response: TransactionResponse,
   ): Promise<void> {
-    this.log.info({ method, methodId, channelAddress, reason, response }, "Tx submitted.");
+    this.log.info(
+      {
+        method,
+        methodId,
+        channelAddress,
+        reason,
+        hash: response.hash,
+        gasPrice: response.gasPrice.toString(),
+        nonce: response.nonce,
+      },
+      "Tx submitted.",
+    );
     await this.store.saveTransactionAttempt(onchainTransactionId, channelAddress, reason, response);
     this.evts[ChainServiceEvents.TRANSACTION_SUBMITTED].post({
       response: Object.fromEntries(
@@ -192,6 +203,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
         try {
           // Send transaction using the passed in callback.
           const actualNonce: number = nonce ?? (await signer.getTransactionCount());
+          this.log.info({ nonce: actualNonce, gasPrice: gasPrice.toString() }, "Executing txFn");
           const response: TransactionResponse | undefined = await txFn(gasPrice, actualNonce);
           return Result.ok(response);
         } catch (e) {
@@ -387,6 +399,17 @@ export class EthereumChainService extends EthereumChainReader implements IVector
               // throw new ChainError(ChainError.reasons.)
             }
 
+            this.log.debug(
+              {
+                hash: response.hash,
+                gas: response.gasPrice.toString(),
+                channelAddress,
+                method,
+                methodId,
+                nonce: response.nonce,
+              },
+              "Tx submitted",
+            );
             // Add this response to our local response history.
             responses.push(response);
             // NOTE: Response MUST be defined here because if it was NEVER defined (i.e. undefined on first iteration),
@@ -400,11 +423,12 @@ export class EthereumChainService extends EthereumChainReader implements IVector
             this.log.warn({ method, methodId, channelAddress, reason }, "Did not attempt tx.");
             if (responses.length === 0) {
               // Iff this is the only iteration, then we want to go ahead return w/o saving anything.
+              this.log.warn({ method, methodId, channelAddress }, "Tx not needed");
               return Result.ok(undefined);
             } else {
               this.log.info(
-                { method, methodId, channelAddress, reason },
-                `txFn returned undefined on try ${tryNumber}. Proceeding to confirmation step.`,
+                { method, methodId, channelAddress, reason, tryNumber },
+                `txFn returned undefined, proceeding to confirmation step.`,
               );
             }
           }
@@ -424,12 +448,12 @@ export class EthereumChainService extends EthereumChainReader implements IVector
               error.message.includes("There is another transaction with same nonce in the queue."))
           ) {
             this.log.info(
-              { method, methodId, channelAddress, reason, nonce, error },
+              { method, methodId, channelAddress, reason, nonce, error: error.message },
               "Nonce already used: proceeding to check for confirmation in previous transactions.",
             );
           } else {
             this.log.error(
-              { method, methodId, channelAddress, reason, nonce, error },
+              { method, methodId, channelAddress, reason, nonce, tryNumber, gasPrice, error },
               "Error occurred while executing tx submit.",
             );
             throw error;
