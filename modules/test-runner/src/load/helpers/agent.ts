@@ -435,6 +435,19 @@ export class AgentManager {
           // Add timestamp on resolution
           this.transferInfo[routingId].end = Date.now();
 
+          // If it was cancelled, mark as failure
+          if (Object.values(data.transfer.transferResolver)[0] === constants.HashZero) {
+            logger.warn(
+              {
+                transferId: transfer.transferId,
+                channelAddress,
+                cancellationReason: transfer.meta.cancellationReason,
+              },
+              "Transfer cancelled",
+            );
+            this.transferInfo[routingId].error = transfer.meta.cancellationReason ?? "Cancelled";
+          }
+
           const agent = this.agents.find((a) => a.channelAddress && a.channelAddress === data.channelAddress);
           if (!agent) {
             logger.error(
@@ -591,8 +604,24 @@ export class AgentManager {
     const average = total / times.length;
     const longest = times.sort((a, b) => b - a)[0];
     const shortest = times.sort((a, b) => a - b)[0];
+    const errored = Object.entries(this.transferInfo)
+      .map(([routingId, transfer]) => {
+        if (transfer.error) {
+          return transfer.error;
+        }
+        return undefined;
+      })
+      .filter((x) => !!x);
     logger.info(
-      { average, longest, shortest, completed: times.length, agents: this.agents.length },
+      {
+        errors: errored,
+        average,
+        longest,
+        shortest,
+        completed: times.length,
+        agents: this.agents.length,
+        cancelled: errored.length,
+      },
       "Transfer summary",
     );
   }
