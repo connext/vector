@@ -67,6 +67,7 @@ function getConfig {
 production=$(getConfig production)
 chain_addresses=$(echo "$config" | jq '.chainAddresses' | tr -d '\n\r ')
 chain_providers=$(echo "$config" | jq '.chainProviders' | tr -d '\n\r ')
+sugar_daddy=$(echo "$config" | jq '.sugarDaddy' | tr -d '"')
 
 #################
 ## Start Deps
@@ -92,6 +93,7 @@ common=(
   "--env=VECTOR_ROUTER_URL=http://router:8000"
   "--env=VECTOR_PROD=${production}"
   "--env=VECTOR_TESTER_NAME=$tester_name"
+  "--env=SUGAR_DADDY=${sugar_daddy}"
   "--env=NUM_AGENTS=${num_agents}"
   "--env=TEST_DURATION=${test_duration}"
   "--env=MAX_CONCURRENCY=${max_concurrency}"

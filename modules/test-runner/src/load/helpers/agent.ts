@@ -7,13 +7,7 @@ import {
   NodeError,
   TransferNames,
 } from "@connext/vector-types";
-import {
-  createlockHash,
-  delay,
-  getRandomBytes32,
-  RestServerNodeService,
-  ServerNodeServiceError,
-} from "@connext/vector-utils";
+import { createlockHash, delay, getRandomBytes32, RestServerNodeService } from "@connext/vector-utils";
 import { BigNumber, constants, Contract, providers, Wallet, utils } from "ethers";
 import { formatEther, parseEther } from "ethers/lib/utils";
 import PriorityQueue from "p-queue";
@@ -27,7 +21,8 @@ const chainId = parseInt(Object.keys(env.chainProviders)[0]);
 const provider = new providers.JsonRpcProvider(env.chainProviders[chainId]);
 const wallet = Wallet.fromMnemonic(env.sugarDaddy).connect(provider);
 const transferAmount = "1"; //utils.parseEther("0.00001").toString();
-const agentBalance = utils.parseEther("5").toString();
+const agentBalance = utils.parseEther("0.0005").toString();
+const routerBalance = utils.parseEther("0.15");
 
 const walletQueue = new PriorityQueue({ concurrency: 1 });
 
@@ -45,18 +40,21 @@ const fundAddressToTarget = async (address: string, assetId: string, target: Big
   }
 
   const diff = target.sub(balance);
+  logger.info({ assetId, value: formatEther(target), address }, "Funding address");
   await fundAddress(address, assetId, diff);
 };
 
 const fundAddress = async (address: string, assetId: string, value: BigNumber): Promise<void> => {
   // Make sure wallet has sufficient funds to deposit
-  const sugarDaddy = await (assetId === constants.AddressZero
+  const maxBalance = await (assetId === constants.AddressZero
     ? provider.getBalance(wallet.address)
     : new Contract(assetId, TestToken.abi, wallet).balanceOf(wallet.address));
 
-  if (sugarDaddy.lt(value)) {
+  if (maxBalance.lt(value)) {
     throw new Error(
-      `Insufficient balance (${utils.formatEther(sugarDaddy)}) of ${assetId} to deposit ${utils.formatEther(value)}`,
+      `${wallet.address} has insufficient balance (${utils.formatEther(
+        maxBalance,
+      )}) of ${assetId} to deposit ${utils.formatEther(value)}`,
     );
   }
 
@@ -195,6 +193,7 @@ export class Agent {
     this.assertChannel();
 
     // Fund channel onchain
+    logger.info({ assetId, value: formatEther(value), channelAddress: this.channelAddress }, "Funding channel");
     await fundAddress(this.channelAddress!, assetId, value);
 
     // Reconcile deposit
@@ -302,7 +301,7 @@ export class AgentManager {
     const { signerAddress: router, publicIdentifier: routerIdentifier } = routerConfig.getValue()[0];
 
     // Fund roger
-    await fundAddressToTarget(router, constants.AddressZero, parseEther("50"));
+    await fundAddressToTarget(router, constants.AddressZero, routerBalance);
 
     // Create all agents needed
     // First, get all nodes that are active on the server
