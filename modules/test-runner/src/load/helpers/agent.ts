@@ -486,10 +486,6 @@ export class AgentManager {
               constants.AddressZero,
             );
             this.transferInfo[routingId] = { ...(this.transferInfo[routingId] ?? {}), preImage, start };
-            logger.info(
-              { transferId, channelAddress, receiver: receiver.publicIdentifier, routingId },
-              "Created transfer",
-            );
           } catch (e) {
             logger.error(
               { error: e.message, agent: agent.publicIdentifier, channelAddress },
