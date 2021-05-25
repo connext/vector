@@ -2,6 +2,8 @@
 
 ## Next Release
 
+- \[contracts\] Use pending transaction count for nonce
+
 ## 0.2.5-beta.16
 
 - \[contracts\] Bump gas limit
