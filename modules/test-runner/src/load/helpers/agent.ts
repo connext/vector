@@ -59,11 +59,13 @@ const fundAddress = async (address: string, assetId: string, value: BigNumber): 
   }
 
   // Send funds to address using queue
-  const tx = await walletQueue.add(() => {
+  const tx = await walletQueue.add(async () => {
     logger.debug({ address, assetId, value: formatEther(value) }, "Funding onchain");
-    return assetId === constants.AddressZero
-      ? wallet.sendTransaction({ to: address, value })
-      : new Contract(assetId, TestToken.abi, wallet).transfer(address, value);
+    const request =
+      assetId === constants.AddressZero
+        ? await wallet.sendTransaction({ to: address, value })
+        : await new Contract(assetId, TestToken.abi, wallet).transfer(address, value);
+    return request;
   });
 
   logger.debug({ hash: tx.hash, assetId, value: utils.formatEther(value) }, "Submitted deposit to chain");
