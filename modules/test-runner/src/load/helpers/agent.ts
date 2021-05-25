@@ -62,12 +62,10 @@ const fundAddress = async (address: string, assetId: string, value: BigNumber): 
   const tx = await walletQueue.add(async () => {
     logger.debug({ address, assetId, value: formatEther(value) }, "Funding onchain");
     const gasPrice = (await provider.getGasPrice()).add(parseUnits("20", "wei"));
-    const nonce = await wallet.getTransactionCount();
-    logger.info({ nonce: nonce.toString() }, "Sending at nonce");
     const request: providers.TransactionResponse =
       assetId === constants.AddressZero
-        ? await wallet.sendTransaction({ to: address, value, gasPrice, nonce })
-        : await new Contract(assetId, TestToken.abi, wallet).transfer(address, value, { gasPrice, nonce });
+        ? await wallet.sendTransaction({ to: address, value, gasPrice })
+        : await new Contract(assetId, TestToken.abi, wallet).transfer(address, value, { gasPrice });
     logger.info({ nonce: request.nonce?.toString() }, "Sent");
     return request;
   });
