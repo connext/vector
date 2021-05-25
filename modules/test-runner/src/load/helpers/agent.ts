@@ -329,7 +329,12 @@ export class AgentManager {
       // indices = Array(config.numAgents).fill(0).map(getRandomIndex);
     }
 
-    const agents = await Promise.all(indices.map((i) => Agent.connect(agentService, routerIdentifier, i)));
+    let agents: Agent[] = [];
+    for (const i of indices) {
+      const agent = await Agent.connect(agentService, routerIdentifier, i);
+      agents.push(agent);
+    }
+    // const agents = await Promise.all(indices.map((i) => Agent.connect(agentService, routerIdentifier, i)));
 
     // Create the manager
     const manager = new AgentManager(router, routerIdentifier, routerService, agents, agentService);
