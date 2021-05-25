@@ -26,6 +26,14 @@ const routerBalance = utils.parseEther("0.15");
 
 const walletQueue = new PriorityQueue({ concurrency: 1 });
 
+let walletNonce;
+const getWalletNonce = async () => {
+  if (!walletNonce) {
+    walletNonce = await wallet.getTransactionCount("pending");
+  }
+  return walletNonce;
+};
+
 const fundAddressToTarget = async (address: string, assetId: string, target: BigNumber): Promise<void> => {
   const balance = await (assetId === constants.AddressZero
     ? provider.getBalance(address)
@@ -62,12 +70,14 @@ const fundAddress = async (address: string, assetId: string, value: BigNumber): 
   const tx = await walletQueue.add(async () => {
     logger.debug({ address, assetId, value: formatEther(value) }, "Funding onchain");
     const gasPrice = (await provider.getGasPrice()).add(parseUnits("20", "wei"));
-    const nonce = await wallet.getTransactionCount("pending");
+    const nonce = await getWalletNonce();
     const request: providers.TransactionResponse =
       assetId === constants.AddressZero
         ? await wallet.sendTransaction({ to: address, value, gasPrice, nonce })
         : await new Contract(assetId, TestToken.abi, wallet).transfer(address, value, { gasPrice, nonce });
-    logger.info({ nonce: request.nonce?.toString() }, "Sent");
+    logger.info({ nonce: request.nonce?.toString(), walletNonce }, "Sent");
+    walletNonce++;
+    await delay(1_000);
     return request;
   });
 
