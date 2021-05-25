@@ -9,7 +9,7 @@ import {
 } from "@connext/vector-types";
 import { createlockHash, delay, getRandomBytes32, RestServerNodeService } from "@connext/vector-utils";
 import { BigNumber, constants, Contract, providers, Wallet, utils } from "ethers";
-import { formatEther, parseEther } from "ethers/lib/utils";
+import { formatEther, parseUnits } from "ethers/lib/utils";
 import PriorityQueue from "p-queue";
 
 import { env, getRandomIndex } from "../../utils";
@@ -61,10 +61,12 @@ const fundAddress = async (address: string, assetId: string, value: BigNumber): 
   // Send funds to address using queue
   const tx = await walletQueue.add(async () => {
     logger.debug({ address, assetId, value: formatEther(value) }, "Funding onchain");
-    const request =
+    const gasPrice = (await provider.getGasPrice()).add(parseUnits("20", "wei"));
+    const request: providers.TransactionResponse =
       assetId === constants.AddressZero
-        ? await wallet.sendTransaction({ to: address, value })
-        : await new Contract(assetId, TestToken.abi, wallet).transfer(address, value);
+        ? await wallet.sendTransaction({ to: address, value, gasPrice })
+        : await new Contract(assetId, TestToken.abi, wallet).transfer(address, value, { gasPrice });
+    logger.info({ nonce: request.nonce?.toString() }, "Sent");
     return request;
   });
 
