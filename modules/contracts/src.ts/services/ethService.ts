@@ -52,6 +52,7 @@ export const BIG_GAS_LIMIT = BigNumber.from(2_000_000);
 // nothing should ever be this expensive... _should_
 export const BIG_GAS_PRICE = parseUnits("1500", "gwei");
 
+// TODO: Deprecate. Note that this is used in autoRebalance.ts.
 export const waitForTransaction = async (
   provider: JsonRpcProvider,
   transactionHash: string,
@@ -190,7 +191,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
       async (): Promise<Result<TransactionResponse | undefined, Error>> => {
         try {
           // Send transaction using the passed in callback.
-          const actualNonce: number = nonce ?? (await signer.getTransactionCount());
+          const actualNonce: number = nonce ?? (await signer.getTransactionCount("pending"));
           const response: TransactionResponse | undefined = await txFn(gasPrice, actualNonce);
           return Result.ok(response);
         } catch (e) {
@@ -537,14 +538,20 @@ export class EthereumChainService extends EthereumChainReader implements IVector
     // We must check for confirmation in all previous transactions. Although it's most likely
     // that it's the previous one, any of them could have been confirmed.
     const pollForReceipt = async (): Promise<TransactionReceipt | undefined> => {
+      // Save all reverted receipts for a check in case our Promise.race evaluates to be undefined.
+      let reverted: TransactionReceipt[] = [];
       // Make a pool of promises for resolving each receipt call (once it reaches target confirmations).
-      const response = await Promise.race<any>(
+      const receipt = await Promise.race<any>(
         responses
           .map((response) => {
             return new Promise(async (resolve) => {
               const r = await provider.getTransactionReceipt(response.hash);
-              if (r && r.confirmations >= numConfirmations) {
-                return resolve(r);
+              if (r) {
+                if (r.status === 0) {
+                  reverted.push(r);
+                } else if (r.confirmations >= numConfirmations) {
+                  return resolve(r);
+                }
               }
             });
           })
@@ -553,7 +560,15 @@ export class EthereumChainService extends EthereumChainReader implements IVector
           // and/or none of them have the number of confirmations we want.
           .concat(delay(2_000)),
       );
-      return response;
+      if (!!receipt) {
+        if (reverted.length === responses.length) {
+          // We know every tx was reverted.
+          // NOTE: The first reverted receipt in the array will be entirely arbitrary.
+          // TODO: Should we return the reverted receipt belonging to the latest tx instead?
+          return reverted[0];
+        }
+      }
+      return receipt;
     };
 
     // Poll for receipt.
