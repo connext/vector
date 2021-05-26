@@ -8,7 +8,7 @@ import {
   IVectorChainReader,
   Result,
   ChainError,
-  ChainProviders,
+  ChainRpcProviders,
   RegisteredTransfer,
   TransferName,
   ChannelDispute,
@@ -26,7 +26,7 @@ import {
   CoreChannelState,
   CoreTransferState,
   TransferDispute,
-  ChainProvider,
+  ChainRpcProvider,
 } from "@connext/vector-types";
 import axios from "axios";
 import { encodeBalance, encodeTransferResolver, encodeTransferState } from "@connext/vector-utils";
@@ -61,12 +61,12 @@ export class EthereumChainReader implements IVectorChainReader {
   private contracts: Map<string, Contract> = new Map();
   constructor(
     // The chainProviders specified here are hydrated.
-    public readonly chainProviders: { [chainId: string]: ChainProvider },
+    public readonly chainProviders: { [chainId: string]: ChainRpcProvider },
     public readonly log: pino.BaseLogger,
   ) {}
 
-  getChainProviders(): Result<ChainProviders, ChainError> {
-    const ret: ChainProviders = {};
+  getChainRpcProviders(): Result<ChainRpcProviders, ChainError> {
+    const ret: ChainRpcProviders = {};
     Object.entries(this.chainProviders).forEach(([name, value]) => {
       ret[parseInt(name)] = value.providerUrls;
     });

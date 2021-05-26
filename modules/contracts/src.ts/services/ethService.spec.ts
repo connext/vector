@@ -1,6 +1,6 @@
 import {
   ChainError,
-  ChainProvider,
+  ChainRpcProvider,
   FullChannelState,
   IChainServiceStore,
   IChannelSigner,
@@ -31,8 +31,8 @@ import { BIG_GAS_PRICE, EthereumChainService } from "./ethService";
 let storeMock: SinonStubbedInstance<IChainServiceStore>;
 let signer: SinonStubbedInstance<IChannelSigner>;
 let ethService: EthereumChainService;
-let provider1337: SinonStubbedInstance<ChainProvider>;
-let provider1338: SinonStubbedInstance<ChainProvider>;
+let provider1337: SinonStubbedInstance<ChainRpcProvider>;
+let provider1338: SinonStubbedInstance<ChainRpcProvider>;
 
 let sendTxWithRetriesMock: SinonStub;
 let approveMock: SinonStub;
@@ -97,7 +97,7 @@ describe("ethService unit test", () => {
     signer.connect.returns(signer as any);
     (signer as any)._isSigner = true;
 
-    const _provider = createStubInstance(ChainProvider);
+    const _provider = createStubInstance(ChainRpcProvider);
     _provider.getTransaction.resolves(txResponse);
     provider1337 = _provider;
     provider1338 = _provider;

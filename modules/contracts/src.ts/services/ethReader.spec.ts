@@ -1,4 +1,4 @@
-import { ChainError, ChainProvider, FullChannelState, Result } from "@connext/vector-types";
+import { ChainError, ChainRpcProvider, FullChannelState, Result } from "@connext/vector-types";
 import { createTestChannelState, expect, getTestLoggers, mkHash } from "@connext/vector-utils";
 import { TransactionReceipt } from "@ethersproject/providers";
 import { AddressZero, One, Zero } from "@ethersproject/constants";
@@ -9,8 +9,8 @@ import { EthereumChainReader, MIN_GAS_PRICE, BUMP_GAS_PRICE } from "./ethReader"
 
 let ethReader: EthereumChainReader;
 let channelState: FullChannelState;
-let provider1337: SinonStubbedInstance<ChainProvider>;
-let provider1338: SinonStubbedInstance<ChainProvider>;
+let provider1337: SinonStubbedInstance<ChainRpcProvider>;
+let provider1338: SinonStubbedInstance<ChainRpcProvider>;
 
 const assertResult = (result: Result<any>, isError: boolean, unwrappedVal?: any) => {
   if (isError) {
@@ -46,7 +46,7 @@ describe("ethReader", () => {
   beforeEach(() => {
     // eth service deps
 
-    const _provider = createStubInstance(ChainProvider);
+    const _provider = createStubInstance(ChainRpcProvider);
     _provider.getTransaction.resolves(_txResponse);
     provider1337 = _provider;
     provider1338 = _provider;
@@ -70,9 +70,9 @@ describe("ethReader", () => {
     reset();
   });
 
-  describe.skip("getChainProviders", () => {
-    it("happy: getChainProvider", async () => {
-      const result = await ethReader.getChainProviders();
+  describe.skip("getChainRpcProviders", () => {
+    it("happy: getChainRpcProvider", async () => {
+      const result = await ethReader.getChainRpcProviders();
       console.log(result);
     });
   });

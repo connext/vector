@@ -29,7 +29,7 @@ describe("checkIn", () => {
     messagingService = Sinon.createStubInstance(MemoryMessagingService);
     chainService = Sinon.createStubInstance(VectorChainService);
 
-    chainService.getChainProviders.returns(Result.ok(env.chainProviders));
+    chainService.getChainRpcProviders.returns(Result.ok(env.chainProviders));
   });
 
   it("should send no checkIn messages if there are no channels", async () => {

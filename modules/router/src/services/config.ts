@@ -4,7 +4,7 @@ import {
   jsonifyError,
   IVectorChainReader,
   DEFAULT_ROUTER_MAX_SAFE_PRICE_IMPACT,
-  ChainProvider,
+  ChainRpcProvider,
 } from "@connext/vector-types";
 import { StableSwap } from "@connext/vector-contracts";
 import { getAddress } from "@ethersproject/address";
@@ -132,7 +132,7 @@ export const onSwapGivenIn = async (
   logger: BaseLogger,
 ): Promise<Result<{ priceImpact: string; amountOut: BigNumber }, ConfigServiceError>> => {
   const { stableAmmChainId, stableAmmAddress } = getConfig();
-  const stableAmmProvider: ChainProvider = new ChainProvider(stableAmmChainId!, [getConfig().chainProviders[stableAmmChainId!]]);
+  const stableAmmProvider: ChainRpcProvider = new ChainRpcProvider(stableAmmChainId!, [getConfig().chainProviders[stableAmmChainId!]]);
 
   // if there's no swap, rate is 1:1
   if (fromAssetId === toAssetId && fromChainId === toChainId) {

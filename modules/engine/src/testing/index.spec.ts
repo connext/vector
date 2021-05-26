@@ -43,7 +43,7 @@ describe("VectorEngine", () => {
     });
     chainService = Sinon.createStubInstance(VectorChainService);
 
-    chainService.getChainProviders.returns(Result.ok(env.chainProviders));
+    chainService.getChainRpcProviders.returns(Result.ok(env.chainProviders));
   });
 
   afterEach(() => Sinon.restore());

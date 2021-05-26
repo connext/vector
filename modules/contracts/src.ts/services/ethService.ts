@@ -17,7 +17,7 @@ import {
   StringifiedTransactionResponse,
   getConfirmationsForChain,
   StoredTransaction,
-  ChainProvider,
+  ChainRpcProvider,
 } from "@connext/vector-types";
 import {
   delay,
@@ -55,7 +55,7 @@ export const BIG_GAS_PRICE = parseUnits("1500", "gwei");
 
 // TODO: Deprecate. Note that this is used in autoRebalance.ts.
 export const waitForTransaction = async (
-  provider: ChainProvider,
+  provider: ChainRpcProvider,
   transactionHash: string,
   confirmations?: number,
   timeout?: number,
@@ -85,7 +85,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
   };
   constructor(
     private readonly store: IChainServiceStore,
-    chainProviders: { [chainId: string]: ChainProvider },
+    chainProviders: { [chainId: string]: ChainRpcProvider },
     signer: string | Signer,
     log: BaseLogger,
     private readonly defaultRetries = 3,

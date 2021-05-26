@@ -2,7 +2,7 @@ import { MinimalTransaction } from "./chain";
 import { FullTransferState, FullChannelState, ChainAddresses } from "./channel";
 import { ChannelDispute, TransferDispute } from "./dispute";
 import { VectorErrorJson } from "./error";
-import { ChainProviders } from "./network";
+import { ChainRpcProviders } from "./network";
 import { EngineParams, NodeResponses } from "./schemas";
 import { RegisteredTransfer } from "./transferDefinitions";
 
@@ -83,7 +83,7 @@ export type ChannelRpcMethodsPayloadMap = {
   [ChannelRpcMethods.connext_authenticate]: {
     signature?: string;
     signer?: string;
-    chainProviders: ChainProviders;
+    chainProviders: ChainRpcProviders;
     chainAddresses?: ChainAddresses;
     messagingUrl?: string;
     natsUrl?: string;

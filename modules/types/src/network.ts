@@ -5,19 +5,19 @@ import { Event } from "@ethersproject/providers/lib/base-provider";
 import { Transaction } from "@ethersproject/transactions";
 import { Deferrable } from "@ethersproject/properties";
 
-export type ChainProviders = {
+export type ChainRpcProviders = {
   [chainId: number]: string[]
 };
 
 export type HydratedProviders = {
-  [chainId: number]: ChainProvider;
+  [chainId: number]: ChainRpcProvider;
 };
 
 /* Represents an aggregate of providers for a particular chain. Leverages functionality from
 *  @ethersproject/providers/FallbackProvider in order to fallback to other providers in the
 *  event of failed requests.
 */
-export class ChainProvider implements BaseProvider {
+export class ChainRpcProvider implements BaseProvider {
   readonly chainId: number;
   readonly providerUrls: string[];
   readonly _provider: JsonRpcProvider | FallbackProvider;

@@ -1,7 +1,7 @@
 import { HDNode } from "@ethersproject/hdnode";
 import { Wallet } from "@ethersproject/wallet";
 import { JsonRpcProvider } from "@ethersproject/providers";
-import { ChainProvider } from "@connext/vector-types";
+import { ChainRpcProvider } from "@connext/vector-types";
 import { network, ethers } from "hardhat";
 import pino from "pino";
 
@@ -18,8 +18,8 @@ export const logger = pino({ level: defaultLogLevel });
 export const networkName = network.name;
 
 export const provider = urls
-  ? new ChainProvider(parseInt(chainId), (urls as string).split(","))
-  : new ChainProvider(parseInt(chainId), [ethers.provider as JsonRpcProvider]);
+  ? new ChainRpcProvider(parseInt(chainId), (urls as string).split(","))
+  : new ChainRpcProvider(parseInt(chainId), [ethers.provider as JsonRpcProvider]);
 
 const hdNode = HDNode.fromMnemonic(mnemonic).derivePath("m/44'/60'/0'/0");
 

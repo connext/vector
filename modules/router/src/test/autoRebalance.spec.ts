@@ -1,7 +1,7 @@
 import { VectorChainReader } from "@connext/vector-contracts";
 import { expect, getRandomBytes32, getTestLoggers, mkAddress, mkBytes32 } from "@connext/vector-utils";
 import Sinon from "sinon";
-import { AllowedSwap, ChainProvider, Result } from "@connext/vector-types";
+import { AllowedSwap, ChainRpcProvider, Result } from "@connext/vector-types";
 import { Wallet } from "@ethersproject/wallet";
 import { BigNumber } from "@ethersproject/bignumber";
 import { parseEther } from "@ethersproject/units";
@@ -22,7 +22,7 @@ const { log } = getTestLoggers(testName, config.logLevel as any);
 const setupForRebalance = (
   mockAxios: Sinon.SinonStubbedInstance<any>,
   wallet: Sinon.SinonStubbedInstance<Wallet>,
-  hydratedProviders: { [chainId: number]: Sinon.SinonStubbedInstance<ChainProvider> },
+  hydratedProviders: { [chainId: number]: Sinon.SinonStubbedInstance<ChainRpcProvider> },
   chainService: Sinon.SinonStubbedInstance<VectorChainReader>,
   ): {
     transaction: {
@@ -109,7 +109,7 @@ describe(testName, () => {
   describe("rebalanceIfNeeded", () => {
     let wallet: Sinon.SinonStubbedInstance<Wallet>;
     let chainService: Sinon.SinonStubbedInstance<VectorChainReader>;
-    let hydratedProviders: { [chainId: number]: Sinon.SinonStubbedInstance<ChainProvider> };
+    let hydratedProviders: { [chainId: number]: Sinon.SinonStubbedInstance<ChainRpcProvider> };
     let mockAxios: Sinon.SinonStubbedInstance<any>;
     let mockConfirmation: Sinon.SinonStubbedInstance<any>;
     let store: Sinon.SinonStubbedInstance<PrismaStore>;
@@ -129,8 +129,8 @@ describe(testName, () => {
 
       chainService = Sinon.createStubInstance(VectorChainReader);
       hydratedProviders = {
-        1337: Sinon.createStubInstance(ChainProvider),
-        1338: Sinon.createStubInstance(ChainProvider),
+        1337: Sinon.createStubInstance(ChainRpcProvider),
+        1338: Sinon.createStubInstance(ChainRpcProvider),
       };
       const parseBalanceStub = Sinon.stub(metrics, "getDecimals").resolves(18);
       hydratedProviders[1337].getGasPrice.resolves(BigNumber.from(138));

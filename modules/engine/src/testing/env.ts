@@ -1,9 +1,9 @@
-import { ChainProviders } from "@connext/vector-types";
+import { ChainRpcProviders } from "@connext/vector-types";
 import { Wallet } from "@ethersproject/wallet";
 import pino from "pino";
 
 type EngineTestEnv = {
-  chainProviders: ChainProviders;
+  chainProviders: ChainRpcProviders;
   chainAddresses: any;
   sugarDaddy: Wallet;
   logLevel?: pino.Level;

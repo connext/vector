@@ -2,7 +2,7 @@ import { deployments, VectorChainService } from "@connext/vector-contracts";
 import { VectorEngine } from "@connext/vector-engine";
 import {
   ChainAddresses,
-  ChainProviders,
+  ChainRpcProviders,
   ChannelRpcMethods,
   CreateUpdateDetails,
   EngineEvent,
@@ -35,7 +35,7 @@ export type BrowserNodeSignerConfig = {
   messagingUrl?: string;
   logger?: BaseLogger;
   signer: IChannelSigner;
-  chainProviders: ChainProviders;
+  chainProviders: ChainRpcProviders;
   chainAddresses: ChainAddresses;
 };
 
@@ -49,7 +49,7 @@ export class BrowserNode implements INodeService {
   private supportedChains: number[] = [];
   private routerPublicIdentifier?: string;
   private iframeSrc?: string;
-  private chainProviders: ChainProviders = {};
+  private chainProviders: ChainRpcProviders = {};
   private chainAddresses?: ChainAddresses;
   private messagingUrl?: string;
   private natsUrl?: string;
@@ -60,7 +60,7 @@ export class BrowserNode implements INodeService {
     routerPublicIdentifier?: string;
     supportedChains?: number[];
     iframeSrc?: string;
-    chainProviders: ChainProviders;
+    chainProviders: ChainRpcProviders;
     messagingUrl?: string;
     natsUrl?: string;
     authUrl?: string;

@@ -11,7 +11,7 @@ export async function sendIsAlive(
 ): Promise<void> {
   const method = "sendIsAlive";
   const channels = await store.getChannelStates();
-  const providers = chainService.getChainProviders();
+  const providers = chainService.getChainRpcProviders();
   if (providers.isError) {
     logger.error({ ...providers.getError(), method }, "Error getting chain providers");
     return;
