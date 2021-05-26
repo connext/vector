@@ -1,8 +1,20 @@
 import { FilterByBlockHash, BlockWithTransactions, TransactionRequest } from "@ethersproject/abstract-provider";
 import { BigNumber, BigNumberish } from "@ethersproject/bignumber";
-import { JsonRpcProvider, FallbackProvider, BaseProvider, Block, BlockTag, EventType, Filter, Formatter, Listener, Log, Network, Provider, Resolver, TransactionReceipt, TransactionResponse } from "@ethersproject/providers";
-import { Event } from "@ethersproject/providers/lib/base-provider";
-import { Transaction } from "@ethersproject/transactions";
+import {
+  JsonRpcProvider,
+  FallbackProvider,
+  Block,
+  BlockTag,
+  EventType,
+  Filter,
+  Listener,
+  Log,
+  Network,
+  Provider,
+  Resolver,
+  TransactionReceipt,
+  TransactionResponse,
+} from "@ethersproject/providers";
 import { Deferrable } from "@ethersproject/properties";
 
 export type ChainRpcProviders = {
@@ -17,7 +29,7 @@ export type HydratedProviders = {
 *  @ethersproject/providers/FallbackProvider in order to fallback to other providers in the
 *  event of failed requests.
 */
-export class ChainRpcProvider implements BaseProvider {
+export class ChainRpcProvider implements Provider {
   readonly chainId: number;
   readonly providerUrls: string[];
   readonly _provider: JsonRpcProvider | FallbackProvider;
@@ -25,18 +37,6 @@ export class ChainRpcProvider implements BaseProvider {
   _isProvider: boolean = true;
   _networkPromise: Promise<Network>;
   _network: Network;
-  _events: Event[];
-  formatter: Formatter;
-  _emitted: { [eventName: string]: number | "pending"; };
-  _pollingInterval: number;
-  _poller: NodeJS.Timer = setInterval(() => {}, this.pollingInterval);
-  _bootstrapPoll: NodeJS.Timer = setInterval(() => {}, this.pollingInterval);
-  _lastBlockNumber: number = -1;
-  _fastBlockNumber: number = -1;
-  _fastBlockNumberPromise: Promise<number> = new Promise((res, rej) => {res(-1)});
-  _fastQueryDate: number = -1;
-  _maxInternalBlockNumber: number = -1
-  _internalBlockNumber: Promise<{ blockNumber: number; reqTime: number; respTime: number; }> = new Promise((res, rej) => {});
   anyNetwork: boolean = false;
 
   constructor(chainId: number, providers: string[] | JsonRpcProvider[], stallTimeout?: number) {
@@ -74,15 +74,6 @@ export class ChainRpcProvider implements BaseProvider {
       throw new Error("At least one provider must be defined.")
     }
 
-    // @TODO: These were copied directly from BaseProvider constructor, since they are required to
-    // do an implements in this case. Is there a better way to wrap BaseProvider?
-    this._events = [];
-    this._emitted = { block: -2 };
-    this.formatter = BaseProvider.getFormatter();
-    this._maxInternalBlockNumber = -1024;
-    this._lastBlockNumber = -2;
-    this._pollingInterval = 4000;
-    this._fastQueryDate = 0;
     this._networkPromise = provider.getNetwork();
     this._network = provider.network;
 
@@ -118,21 +109,6 @@ export class ChainRpcProvider implements BaseProvider {
     return this._provider.estimateGas(transaction);
   }
 
-  _wrapTransaction(tx: Transaction, hash?: string): TransactionResponse {
-    return this._provider._wrapTransaction(tx, hash);
-  }
-
-  async _getTransactionRequest(transaction: Deferrable<TransactionRequest>): Promise<Transaction> {
-    return this._provider._getTransactionRequest(transaction);
-  }
-
-  _ready(): Promise<Network> {
-    return this._provider._ready();
-  }
- 
-  _getInternalBlockNumber(maxAge: number): Promise<number> {
-    return this._provider._getInternalBlockNumber(maxAge);
-  }
   poll(): Promise<void> {
     return this._provider.poll();
   }
@@ -143,151 +119,121 @@ export class ChainRpcProvider implements BaseProvider {
   detectNetwork(): Promise<Network> {
     return this._provider.detectNetwork();
   }
+
   getNetwork(): Promise<Network> {
     return this._provider.getNetwork();
   }
 
-  get ready(): Promise<Network> {
-    return this._provider.ready;
-  }
-  get network(): Network {
-    return this._provider.network;
-  }
-  get blockNumber(): number {
-    return this._provider.blockNumber;
-  }
-  get polling(): boolean {
-    return this._provider.polling;
-  }
-  set polling(value: boolean) {
-    this._provider.polling = value;
-  }
-  get pollingInterval(): number {
-    return this._provider ? this._provider.pollingInterval : this._pollingInterval;
-  }
-  set pollingInterval(value: number) {
-    this._pollingInterval = value;
-    this._provider.pollingInterval = value;
-  }
-
-  _getFastBlockNumber(): Promise<number> {
-    return this._provider._getFastBlockNumber();
-  }
-  _setFastBlockNumber(blockNumber: number): void {
-    return this._provider._setFastBlockNumber(blockNumber);
-  }
   waitForTransaction(transactionHash: string, confirmations?: number, timeout?: number): Promise<TransactionReceipt> {
     return this._provider.waitForTransaction(transactionHash, confirmations, timeout);
   }
+
   getBlockNumber(): Promise<number> {
     return this._provider.getBlockNumber();
   }
+
   getGasPrice(): Promise<BigNumber> {
     return this._provider.getGasPrice();
   }
+
   getBalance(addressOrName: string | Promise<string>, blockTag?: BlockTag | Promise<BlockTag>): Promise<BigNumber> {
     return this._provider.getBalance(addressOrName, blockTag);
   }
+
   getTransactionCount(addressOrName: string | Promise<string>, blockTag?: BlockTag | Promise<BlockTag>): Promise<number> {
     return this._provider.getTransactionCount(addressOrName, blockTag);
   }
+
   getCode(addressOrName: string | Promise<string>, blockTag?: BlockTag | Promise<BlockTag>): Promise<string> {
     return this._provider.getCode(addressOrName, blockTag);
   }
+
   getStorageAt(addressOrName: string | Promise<string>, position: BigNumberish | Promise<BigNumberish>, blockTag?: BlockTag | Promise<BlockTag>): Promise<string> {
     return this._provider.getStorageAt(addressOrName, position);
   }
+
   sendTransaction(signedTransaction: string | Promise<string>): Promise<TransactionResponse> {
     return this._provider.sendTransaction(signedTransaction);
   }
-  _getFilter(filter: Filter | FilterByBlockHash | Promise<Filter | FilterByBlockHash>): Promise<Filter | FilterByBlockHash> {
-    return this._provider._getFilter(filter);
-  }
-  _getAddress(addressOrName: string | Promise<string>): Promise<string> {
-    return this._provider._getAddress(addressOrName)
-  }
-  _getBlock(blockHashOrBlockTag: BlockTag | Promise<BlockTag>, includeTransactions?: boolean): Promise<Block | BlockWithTransactions> {
-    return this._provider._getBlock(blockHashOrBlockTag, includeTransactions)
-  }
+
   getBlock(blockHashOrBlockTag: BlockTag | Promise<BlockTag>): Promise<Block> {
     return this._provider.getBlock(blockHashOrBlockTag);
   }
+
   getBlockWithTransactions(blockHashOrBlockTag: BlockTag | Promise<BlockTag>): Promise<BlockWithTransactions> {
     return this._provider.getBlockWithTransactions(blockHashOrBlockTag);
   }
+
   getTransaction(transactionHash: string | Promise<string>): Promise<TransactionResponse> {
     return this._provider.getTransaction(transactionHash);
   }
+
   getTransactionReceipt(transactionHash: string | Promise<string>): Promise<TransactionReceipt> {
     return this._provider.getTransactionReceipt(transactionHash);
   }
+
   getLogs(filter: Filter | FilterByBlockHash | Promise<Filter | FilterByBlockHash>): Promise<Log[]> {
     return this._provider.getLogs(filter);
   }
+
   getEtherPrice(): Promise<number> {
     return this._provider.getEtherPrice();
   }
-  _getBlockTag(blockTag: BlockTag | Promise<BlockTag>): Promise<BlockTag> {
-    return this._provider._getBlockTag(blockTag);
-  }
+
   getResolver(name: string): Promise<Resolver> {
     return this._provider.getResolver(name);
   }
-  _getResolver(name: string): Promise<string> {
-    return this._provider._getResolver(name);
-  }
+
   resolveName(name: string | Promise<string>): Promise<string> {
     return this._provider.resolveName(name);
   }
+
   lookupAddress(address: string | Promise<string>): Promise<string> {
     return this._provider.lookupAddress(address);
   }
+
   perform(method: string, params: any): Promise<any> {
     return this._provider.perform(method, params);
   }
-  _startEvent(event: Event): void {
-    return this._provider._startEvent(event);
-  }
-  _stopEvent(event: Event): void {
-    return this._provider._stopEvent(event);
-  }
-  _addEventListener(eventName: EventType, listener: Listener, once: boolean): this {
-    this._provider._addEventListener(eventName, listener, once);
-    return this;
-  }
+
   on(eventName: EventType, listener: Listener): this {
     this._provider.on(eventName, listener);
     return this;
   }
-  once(eventName: EventType, listener: Listener): this {
-    this._provider.once(eventName, listener);
-    return this;
-  }
-  emit(eventName: EventType, ...args: any[]): boolean {
-    return this._provider.emit(eventName, ...args);
-  }
-  listenerCount(eventName?: EventType): number {
-    return this._provider.listenerCount(eventName);
-  }
-  listeners(eventName?: EventType): Listener[] {
-    return this._provider.listeners(eventName);
-  }
+
   off(eventName: EventType, listener?: Listener): this {
     this._provider.off(eventName, listener);
     return this;
   }
+
+  once(eventName: EventType, listener: Listener): this {
+    this._provider.once(eventName, listener);
+    return this;
+  }
+
+  emit(eventName: EventType, ...args: any[]): boolean {
+    return this._provider.emit(eventName, ...args);
+  }
+
+  listenerCount(eventName?: EventType): number {
+    return this._provider.listenerCount(eventName);
+  }
+
+  listeners(eventName?: EventType): Listener[] {
+    return this._provider.listeners(eventName);
+  }
+
   removeAllListeners(eventName?: EventType): this {
     this._provider.removeAllListeners(eventName);
     return this;
   }
+
   addListener(eventName: EventType, listener: Listener): Provider {
     return this._provider.addListener(eventName, listener);
   }
+
   removeListener(eventName: EventType, listener: Listener): Provider {
     return this._provider.removeListener(eventName, listener);
-  }
-  _waitForTransaction(transactionHash: string, confirmations: number, timeout: number, replaceable: { data: string; from: string; nonce: number; to: string; value: BigNumber; startBlock: number; }): Promise<TransactionReceipt> {
-    throw new Error("Method not implemented.");
   }
 
 }

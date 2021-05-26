@@ -1,17 +1,22 @@
 import { ChainRpcProviders, HydratedProviders } from "@connext/vector-types";
 import { Provider } from "@ethersproject/abstract-provider";
 import { BigNumber } from "@ethersproject/bignumber";
-import { JsonRpcProvider, StaticJsonRpcProvider } from "@ethersproject/providers";
+import { JsonRpcProvider } from "@ethersproject/providers";
 import { ChainRpcProvider } from "@connext/vector-types";
 
 const classicProviders = ["https://www.ethercluster.com/etc"];
 const classicChainIds = [61];
 const minGasPrice = BigNumber.from(1_000);
 
-export const getEthProvider = (providerUrl: string, chainId?: number): JsonRpcProvider =>
-  new JsonRpcProvider(
-    providerUrl,
-    classicProviders.includes(providerUrl) || classicChainIds.includes(chainId) ? "classic" : undefined,
+export const getEthProvider = (providerUrl: string, chainId?: number): ChainRpcProvider =>
+  new ChainRpcProvider(
+    chainId,
+    [
+      new JsonRpcProvider(
+        providerUrl,
+        classicProviders.includes(providerUrl) || classicChainIds.includes(chainId) ? "classic" : undefined,
+      )
+    ]
   );
 
 // xDai hardcoded their gas price to 0 but it's not actually zero..
