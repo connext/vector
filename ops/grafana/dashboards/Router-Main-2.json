@@ -57,7 +57,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.5",
+      "pluginVersion": "7.5.7",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -206,7 +206,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.5",
+      "pluginVersion": "7.5.7",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -306,7 +306,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.5",
+      "pluginVersion": "7.5.7",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -406,7 +406,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.5",
+      "pluginVersion": "7.5.7",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -582,7 +582,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.5",
+      "pluginVersion": "7.5.7",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -671,7 +671,7 @@
         "max": false,
         "min": false,
         "rightSide": true,
-        "show": true,
+        "show": false,
         "total": false,
         "values": false
       },
@@ -682,7 +682,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.5",
+      "pluginVersion": "7.5.7",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -693,8 +693,8 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "1 - min(router_transaction_success{chainId=\"100\"}/router_transaction_attempt{chainId=\"100\"})",
-          "hide": false,
+          "expr": "min(router_transaction_success{chainId=\"100\"}/router_transaction_attempt{chainId=\"100\"})",
+          "hide": true,
           "interval": "",
           "legendFormat": "xDai",
           "queryType": "randomWalk",
@@ -702,16 +702,16 @@
         },
         {
           "exemplar": true,
-          "expr": "1 - min(router_transaction_success{chainId=\"137\"}/router_transaction_attempt{chainId=\"137\"})",
-          "hide": false,
+          "expr": "min(router_transaction_success{chainId=\"137\"}/router_transaction_attempt{chainId=\"137\"})",
+          "hide": true,
           "interval": "",
           "legendFormat": "Polygon",
           "refId": "B"
         },
         {
           "exemplar": true,
-          "expr": "1 - min(router_transaction_success{chainId=\"56\"}/router_transaction_attempt{chainId=\"56\"})",
-          "hide": false,
+          "expr": "min(router_transaction_success{chainId=\"56\"}/router_transaction_attempt{chainId=\"56\"})",
+          "hide": true,
           "interval": "",
           "legendFormat": "BSC",
           "refId": "C"
@@ -721,7 +721,7 @@
           "expr": "1 - min(router_transaction_success/router_transaction_attempt)",
           "hide": false,
           "interval": "",
-          "legendFormat": "Sum",
+          "legendFormat": "Min",
           "refId": "D"
         }
       ],
@@ -870,22 +870,22 @@
         "colorMode": "value",
         "graphMode": "area",
         "justifyMode": "auto",
-        "orientation": "auto",
+        "orientation": "vertical",
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
           ],
-          "fields": "",
-          "values": false
+          "fields": "/^Channels$/",
+          "values": true
         },
         "text": {},
         "textMode": "auto"
       },
-      "pluginVersion": "7.5.5",
+      "pluginVersion": "7.5.7",
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum(router_channels)",
+          "expr": "increase(router_channels[10y])",
           "format": "table",
           "instant": true,
           "interval": "",
@@ -1136,7 +1136,7 @@
     "list": []
   },
   "time": {
-    "from": "now-7d",
+    "from": "now-30d",
     "to": "now"
   },
   "timepicker": {
@@ -1156,5 +1156,5 @@
   "timezone": "",
   "title": "Router Main 2",
   "uid": "WjcJZy9Gz",
-  "version": 3
+  "version": 4
 }
