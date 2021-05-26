@@ -1071,7 +1071,7 @@ export class VectorEngine implements IVectorEngine {
 
   private async addTransactionToCommitment(
     params: EngineParams.AddTransactionToCommitment,
-  ): Promise<Result<void, EngineError>> {
+  ): Promise<Result<ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_addTransactionToCommitment], EngineError>> {
     const method = "addTransactionToCommitment";
     const methodId = getRandomBytes32();
     this.logger.info({ params, method, methodId }, "Method started");
