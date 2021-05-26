@@ -138,7 +138,7 @@ export type ChannelRpcMethodsResponsesMap = {
     transaction: MinimalTransaction;
   };
   [ChannelRpcMethods.chan_withdrawRetry]: NodeResponses.WithdrawRetry;
-  [ChannelRpcMethods.chan_addTransactionToCommitment]: void;
+  [ChannelRpcMethods.chan_addTransactionToCommitment]: any;
   [ChannelRpcMethods.chan_subscribe]: any;
   [ChannelRpcMethods.chan_unsubscribeAll]: any;
   [ChannelRpcMethods.connext_authenticate]: {
