@@ -191,7 +191,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
       async (): Promise<Result<TransactionResponse | undefined, Error>> => {
         try {
           // Send transaction using the passed in callback.
-          const actualNonce: number = nonce ?? (await signer.getTransactionCount());
+          const actualNonce: number = nonce ?? (await signer.getTransactionCount("pending"));
           const response: TransactionResponse | undefined = await txFn(gasPrice, actualNonce);
           return Result.ok(response);
         } catch (e) {
