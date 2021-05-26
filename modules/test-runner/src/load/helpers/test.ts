@@ -5,7 +5,7 @@ import PriorityQueue from "p-queue";
 import { env } from "../../utils";
 
 import { config } from "./config";
-import { AgentManager } from "./agent";
+import { AgentManager, TransferCompletedPayload } from "./agent";
 import { carolEvts, logger } from "./setupServer";
 
 export const cyclicalTransferTest = async (): Promise<void> => {
@@ -92,21 +92,29 @@ export const concurrencyTest = async (): Promise<void> => {
   // Create tasks to fill queue with (25 random payments)
   const createTasks = () => {
     const paymentData = createPaymentData();
-    return Array(queuedPayments)
+    const tasks: [() => Promise<void>, Promise<TransferCompletedPayload>][] = Array(queuedPayments)
       .fill(0)
       .map((_, idx) => {
-        return async () => {
+        const [routingId, preImage] = paymentData[idx];
+        const creation = async () => {
           // Get random sender + receiver
           const sender = manager.getRandomAgent();
           const receiver = manager.getRandomAgent(sender);
 
           // Save payment secrets to manager before creating
           // payment
-          const [routingId, preImage] = paymentData[idx];
-          await sender.createHashlockTransfer(receiver.publicIdentifier, constants.AddressZero, preImage, routingId);
+          const { start } = await sender.createHashlockTransfer(
+            receiver.publicIdentifier,
+            constants.AddressZero,
+            preImage,
+            routingId,
+          );
           // NOTE: receiver will automatically resolve
         };
+        const completion = manager.transfersCompleted.waitFor((data) => data.routingId === routingId);
+        return [creation, completion];
       });
+    return tasks;
   };
   let concurrency = 1;
   for (const _ of Array(maxConcurrency).fill(0)) {
@@ -117,11 +125,25 @@ export const concurrencyTest = async (): Promise<void> => {
     const queue = new PriorityQueue({ concurrency });
     concurrency += 1;
 
-    const promises = createTasks().map((t) => queue.add(t));
+    logger.info({ transferInfo: manager.transferInfo }, "Transfer info pre-creation");
+    const info = createTasks();
+    const creations = info.map(([t]) => queue.add(t));
 
-    await Promise.all(promises);
-    logger.info({}, "Test complete, increasing concurrency");
+    await Promise.all(creations);
+    logger.info({}, "Transfer creation complete, waiting for resolutions");
+
+    const completed = await Promise.all(info.map(([_, complete]) => complete));
+    const cancelled = completed.filter((c) => c.cancelled);
+    logger.info(
+      {
+        cancellationReasons: cancelled.map((c) => c.cancellationReason),
+        cancelled: cancelled.length,
+        completed: completed.length,
+        concurrency,
+      },
+      "Transfers resolved, increasing concurrency",
+    );
   }
-  logger.info({ concurrency: maxConcurrency, queuedPayments }, "Tests finished");
+  logger.info({ concurrency: maxConcurrency, queuedPayments }, "Concurrency test finished");
   process.exit(0);
 };

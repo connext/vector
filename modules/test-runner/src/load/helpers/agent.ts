@@ -10,6 +10,7 @@ import {
 import { createlockHash, delay, getRandomBytes32, RestServerNodeService } from "@connext/vector-utils";
 import { BigNumber, constants, Contract, providers, Wallet, utils } from "ethers";
 import { formatEther, parseUnits } from "ethers/lib/utils";
+import { Evt } from "evt";
 import PriorityQueue from "p-queue";
 
 import { env, getRandomIndex } from "../../utils";
@@ -161,7 +162,9 @@ export class Agent {
       meta: { routingId },
     });
     if (createRes.isError) {
-      throw createRes.getError()!;
+      logger.error({ creationError: createRes.getError() }, "Failed to create transfer");
+      process.exit(1);
+      // throw createRes.getError()!;
     }
     logger.info({ ...createRes.getValue() }, "Created transfer");
     return { ...createRes.getValue(), preImage, routingId, start: Date.now() };
@@ -284,10 +287,20 @@ type TransferInformation = {
   end?: number;
   error?: string;
 };
+
+export type TransferCompletedPayload = {
+  cancelled: boolean;
+  transferId: string;
+  routingId: string;
+  sendingAgent: string;
+  cancellationReason?: string;
+};
 export class AgentManager {
   public readonly transferInfo: {
     [routingId: string]: TransferInformation;
   } = {};
+
+  public transfersCompleted: Evt<TransferCompletedPayload> = Evt.create<TransferCompletedPayload>();
 
   private constructor(
     public readonly roger: string,
@@ -348,7 +361,55 @@ export class AgentManager {
       manager.setupAutomaticResolve();
     }
 
+    // Setup transfer completed payload
+    manager.setupCompletedCallback();
+
     return manager;
+  }
+
+  private setupCompletedCallback(): void {
+    this.agents.map((agent) => {
+      this.agentService.on(
+        EngineEvents.CONDITIONAL_TRANSFER_RESOLVED,
+        async (data) => {
+          const {
+            channelAddress,
+            transfer: { meta, initiator, transferId },
+          } = data;
+          const { routingId } = meta ?? {};
+          // Make sure there is a routingID
+          if (!routingId) {
+            logger.warn({ ...(meta ?? {}) }, "No routingId");
+            return;
+          }
+          if (agent.channelAddress !== channelAddress) {
+            logger.error(
+              { agent: agent.channelAddress, channelAddress },
+              "Agent does not match data, should not happen!",
+            );
+            process.exit(1);
+          }
+          if (initiator !== agent.signerAddress) {
+            logger.debug(
+              { initiator, agent: agent.signerAddress, channelAddress, transferId, routingId },
+              "Not initiator, not resolved",
+            );
+            return;
+          }
+          // Transfer was completed, post to evt
+          const cancelled = Object.values(data.transfer.transferResolver)[0] === constants.HashZero;
+          this.transfersCompleted.post({
+            routingId,
+            sendingAgent: agent.publicIdentifier,
+            transferId,
+            cancelled,
+            cancellationReason: cancelled ? meta.cancellationReason : undefined,
+          });
+        },
+        (data) => this.agents.map((a) => a.channelAddress).includes(data.channelAddress),
+        agent.publicIdentifier,
+      );
+    });
   }
 
   private setupAutomaticResolve(): void {
@@ -485,7 +546,7 @@ export class AgentManager {
           // Create new transfer to continue cycle
           const receiver = this.getRandomAgent(agent);
           try {
-            const { preImage, routingId, transferId, start } = await agent.createHashlockTransfer(
+            const { preImage, routingId, start } = await agent.createHashlockTransfer(
               receiver.publicIdentifier,
               constants.AddressZero,
             );
