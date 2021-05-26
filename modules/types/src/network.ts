@@ -110,7 +110,6 @@ export class ChainProvider implements BaseProvider {
     }
   }
 
-
   async call(transaction: Deferrable<TransactionRequest>, blockTag?: BlockTag | Promise<BlockTag>): Promise<string> {
     return this._provider.call(transaction, blockTag);
   }
@@ -130,9 +129,7 @@ export class ChainProvider implements BaseProvider {
   _ready(): Promise<Network> {
     return this._provider._ready();
   }
-  get ready(): Promise<Network> {
-    return this._provider.ready;
-  }
+ 
   _getInternalBlockNumber(maxAge: number): Promise<number> {
     return this._provider._getInternalBlockNumber(maxAge);
   }
@@ -142,14 +139,19 @@ export class ChainProvider implements BaseProvider {
   resetEventsBlock(blockNumber: number): void {
     return this._provider.resetEventsBlock(blockNumber);
   }
-  get network(): Network {
-    return this._provider.network;
-  }
+  
   detectNetwork(): Promise<Network> {
     return this._provider.detectNetwork();
   }
   getNetwork(): Promise<Network> {
     return this._provider.getNetwork();
+  }
+
+  get ready(): Promise<Network> {
+    return this._provider.ready;
+  }
+  get network(): Network {
+    return this._provider.network;
   }
   get blockNumber(): number {
     return this._provider.blockNumber;
@@ -167,6 +169,7 @@ export class ChainProvider implements BaseProvider {
     this._pollingInterval = value;
     this._provider.pollingInterval = value;
   }
+
   _getFastBlockNumber(): Promise<number> {
     return this._provider._getFastBlockNumber();
   }
@@ -282,6 +285,9 @@ export class ChainProvider implements BaseProvider {
   }
   removeListener(eventName: EventType, listener: Listener): Provider {
     return this._provider.removeListener(eventName, listener);
+  }
+  _waitForTransaction(transactionHash: string, confirmations: number, timeout: number, replaceable: { data: string; from: string; nonce: number; to: string; value: BigNumber; startBlock: number; }): Promise<TransactionReceipt> {
+    throw new Error("Method not implemented.");
   }
 
 }
