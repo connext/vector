@@ -9,6 +9,7 @@ import {
   jsonifyError,
 } from "@connext/vector-types";
 import { decodeTransferResolver, getRandomBytes32, ServerNodeServiceError } from "@connext/vector-utils";
+import { AddressZero } from "@ethersproject/constants";
 import { BaseLogger } from "pino";
 
 import { ForwardTransferCreationError, ForwardTransferCreationErrorContext } from "../errors";
@@ -179,24 +180,74 @@ export const attemptTransferWithCollateralization = async (
       // safe to create transfer
       const transfer = await nodeService.conditionalTransfer(params);
       logger.debug({ method, methodId }, "Method complete");
-      return transfer.isError
-        ? Result.fail(
-            new ForwardTransferCreationError(
-              ForwardTransferCreationError.reasons.ErrorForwardingTransfer,
-              routingId,
-              senderChannel,
-              senderTransfer,
-              recipientChannel.channelAddress,
-              {
-                transferError: jsonifyError(transfer.getError()!),
-                // if its a timeout, could be withholding sig, so do not cancel
-                // sender transfer
-                shouldCancelSender: false,
-                params,
-              },
-            ),
-          )
-        : (transfer as Result<NodeResponses.ConditionalTransfer>);
+      if (!transfer.isError) {
+        return transfer as Result<NodeResponses.ConditionalTransfer>;
+      }
+      // handle the withholding sig case by coming to consensus on
+      // merkle root before cancelling sender transfer
+      const generateError = (
+        shouldCancelSender: boolean,
+      ): Result<NodeResponses.ConditionalTransfer, ForwardTransferCreationError> => {
+        return Result.fail(
+          new ForwardTransferCreationError(
+            ForwardTransferCreationError.reasons.ErrorForwardingTransfer,
+            routingId,
+            senderChannel,
+            senderTransfer,
+            recipientChannel.channelAddress,
+            {
+              transferError: jsonifyError(transfer.getError()!),
+              // could be withholding sig, so do not cancel
+              // sender transfer
+              shouldCancelSender,
+              params,
+            },
+          ),
+        );
+      };
+      const reconcile = await nodeService.reconcileDeposit({
+        publicIdentifier: routerPublicIdentifier,
+        channelAddress: recipientChannel.channelAddress,
+        assetId: AddressZero,
+      });
+      if (reconcile.isError) {
+        logger.warn(
+          {
+            method,
+            methodId,
+            routingId,
+            senderChannel: senderChannel.channelAddress,
+            recipientChannel: recipientChannel.channelAddress,
+            senderTransfer: senderTransfer.transferId,
+            error: reconcile.getError()?.message,
+          },
+          "Cannot come to consensus on merkleRoot",
+        );
+        return generateError(false);
+      }
+      const transfers = await nodeService.getTransfersByRoutingId({
+        routingId,
+        publicIdentifier: routerPublicIdentifier,
+      });
+      if (transfers.isError) {
+        logger.warn(
+          {
+            method,
+            methodId,
+            routingId,
+            senderChannel: senderChannel.channelAddress,
+            recipientChannel: recipientChannel.channelAddress,
+            senderTransfer: senderTransfer.transferId,
+            error: transfers.getError()?.message,
+          },
+          "Cannot get transfers by routingId",
+        );
+        return generateError(false);
+      }
+      const receiverTransfer = transfers.getValue().find((t) => {
+        return t.initiatorIdentifier === routerPublicIdentifier;
+      });
+      return generateError(receiverTransfer === undefined);
     },
   );
 };

@@ -660,7 +660,7 @@ export const handleRouterDroppedTransfers = async (
   chainReader: IVectorChainReader,
   logger: BaseLogger,
 ): Promise<Result<undefined, CheckInError>> => {
-  const method = "handleRouterDroppedUpdates";
+  const method = "handleRouterDroppedTransfers";
   const methodId = getRandomBytes32();
   logger.debug(
     {
