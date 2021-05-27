@@ -176,20 +176,34 @@ export async function withdrawRetryForTransferId(
       "Submitted unsubmitted withdrawal",
     );
     txHash = tx.getValue().transactionHash;
-    await messaging.publishWithdrawalSubmittedMessage(
-      getParticipant(channel, publicIdentifier) === "alice" ? channel.bobIdentifier : channel.aliceIdentifier,
-      publicIdentifier,
-      Result.ok({ txHash: tx.getValue().transactionHash, transferId, channelAddress: channel.channelAddress }),
-    );
   }
-  commitment.addTransaction(txHash);
-  await store.saveWithdrawalCommitment(transferId, commitment.toJson());
+  await addTransactionToCommitment(txHash, transferId, commitment, messaging, channel, store, publicIdentifier);
 
   return Result.ok({
     transactionHash: txHash,
     transferId: transferId,
     channelAddress: channel.channelAddress,
   });
+}
+
+export async function addTransactionToCommitment(
+  transactionHash: string,
+  transferId: string,
+  commitment: WithdrawCommitment,
+  messaging: IMessagingService,
+  channel: FullChannelState,
+  store: IEngineStore,
+  publicIdentifier: string,
+): Promise<void> {
+  if (transactionHash !== HashZero) {
+    await messaging.publishWithdrawalSubmittedMessage(
+      getParticipant(channel, publicIdentifier) === "alice" ? channel.bobIdentifier : channel.aliceIdentifier,
+      publicIdentifier,
+      Result.ok({ txHash: transactionHash, transferId, channelAddress: channel.channelAddress }),
+    );
+  }
+  commitment.addTransaction(transactionHash);
+  await store.saveWithdrawalCommitment(transferId, commitment.toJson());
 }
 
 export async function submitUnsubmittedWithdrawals(

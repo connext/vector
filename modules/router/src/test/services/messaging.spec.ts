@@ -13,6 +13,7 @@ describe("messaging.ts", () => {
   let messaging: NatsMessagingService;
   let router: IChannelSigner;
   let signer: IChannelSigner;
+  const inbox = "mock_inbox";
 
   beforeEach(async () => {
     signer = getRandomChannelSigner();
@@ -56,5 +57,45 @@ describe("messaging.ts", () => {
     );
     expect(res.isError).to.be.false;
     expect(res.getValue()).to.be.deep.eq(configResponse);
+  });
+
+  // TODO: replace hardcoded swapRate
+  it("should properly respond with auction response when requested", async () => {
+    const auctionResponse = {
+      routerPublicIdentifier: router.publicIdentifier,
+      swapRate: "1",
+      totalFee: config.baseFlatFee as string,
+    };
+
+    await routerMessaging.onReceiveStartAuction(
+      router.publicIdentifier,
+      async (result: Result<any, any>, from: string, inbox: string) => {
+        expect(result.isError).to.not.be.ok;
+        expect(result.getValue()).to.not.be.ok;
+        expect(inbox).to.be.a("string");
+        expect(from).to.be.eq(signer.publicIdentifier);
+        await routerMessaging.respondToAuctionMessage(inbox, Result.ok(auctionResponse));
+      },
+    );
+
+    await messaging.publishStartAuction(
+      signer.publicIdentifier,
+      signer.publicIdentifier,
+      Result.ok({
+        amount: "1",
+        assetId: "0x000",
+        chainId: 1,
+        recipient: signer.publicIdentifier,
+        recipientChainId: 1,
+        recipientAssetId: "0x000",
+      }),
+      inbox,
+    );
+
+    await delay(1_000);
+    await messaging.onReceiveAuctionMessage(signer.publicIdentifier, inbox, (runAuction) => {
+      expect(runAuction.isError).to.be.false;
+      expect(runAuction.getValue()).to.be.deep.eq(auctionResponse);
+    });
   });
 });
