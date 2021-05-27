@@ -9,6 +9,7 @@ import {
   jsonifyError,
 } from "@connext/vector-types";
 import { decodeTransferResolver, getRandomBytes32, ServerNodeServiceError } from "@connext/vector-utils";
+import { AddressZero } from "@ethersproject/constants";
 import { BaseLogger } from "pino";
 
 import { ForwardTransferCreationError, ForwardTransferCreationErrorContext } from "../errors";
@@ -16,6 +17,7 @@ import { ForwardTransferCreationError, ForwardTransferCreationErrorContext } fro
 import { justInTimeCollateral } from "./collateral";
 import { queueTransferCreation } from "./creationQueue";
 import { IRouterStore, RouterUpdateType } from "./store";
+import { wasSingleSignedTransferProcessed } from "./utils";
 
 /**
  * Will check liveness and queue transfer if recipient is not online.
@@ -179,24 +181,63 @@ export const attemptTransferWithCollateralization = async (
       // safe to create transfer
       const transfer = await nodeService.conditionalTransfer(params);
       logger.debug({ method, methodId }, "Method complete");
-      return transfer.isError
-        ? Result.fail(
-            new ForwardTransferCreationError(
-              ForwardTransferCreationError.reasons.ErrorForwardingTransfer,
-              routingId,
-              senderChannel,
-              senderTransfer,
-              recipientChannel.channelAddress,
-              {
-                transferError: jsonifyError(transfer.getError()!),
-                // if its a timeout, could be withholding sig, so do not cancel
-                // sender transfer
-                shouldCancelSender: false,
-                params,
-              },
-            ),
-          )
-        : (transfer as Result<NodeResponses.ConditionalTransfer>);
+      if (!transfer.isError) {
+        return transfer as Result<NodeResponses.ConditionalTransfer>;
+      }
+      // handle the withholding sig case by coming to consensus on
+      // merkle root before cancelling sender transfer
+      const wasProcessed = await wasSingleSignedTransferProcessed(
+        routerPublicIdentifier,
+        routingId,
+        recipientChannel.channelAddress,
+        nodeService,
+      );
+      if (wasProcessed.isError) {
+        logger.warn(
+          {
+            method,
+            methodId,
+            routingId,
+            senderChannel: senderChannel?.channelAddress,
+            recipientChannel: recipientChannel?.channelAddress,
+            senderTransfer: senderTransfer?.transferId,
+            error: wasProcessed.getError()?.message,
+          },
+          "Cannot come to consensus on merkleRoot",
+        );
+        return Result.fail(
+          new ForwardTransferCreationError(
+            ForwardTransferCreationError.reasons.ErrorForwardingTransfer,
+            routingId,
+            senderChannel,
+            senderTransfer,
+            recipientChannel.channelAddress,
+            {
+              transferError: jsonifyError(transfer.getError()!),
+              // could be withholding sig, so do not cancel
+              // sender transfer
+              shouldCancelSender: false,
+              params,
+            },
+          ),
+        );
+      }
+      return Result.fail(
+        new ForwardTransferCreationError(
+          ForwardTransferCreationError.reasons.ErrorForwardingTransfer,
+          routingId,
+          senderChannel,
+          senderTransfer,
+          recipientChannel.channelAddress,
+          {
+            transferError: jsonifyError(transfer.getError()!),
+            // could be withholding sig, so do not cancel
+            // sender transfer
+            shouldCancelSender: !wasProcessed.getValue().receiverTransfer,
+            params,
+          },
+        ),
+      );
     },
   );
 };
