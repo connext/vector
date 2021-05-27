@@ -34,7 +34,7 @@ log_finish=@echo $$((`date "+%s"` - `cat $(startTime)`)) > $(totalTime); rm $(st
 # Build Shortcuts
 
 default: dev
-dev: messaging node router duet trio test-runner-js
+dev: messaging node router duet trio auction test-runner-js
 prod: messaging-prod node-prod router-prod test-runner
 all: dev prod iframe-app
 
@@ -49,6 +49,7 @@ router-prod: node-prod router-img
 
 duet: messaging server-node-js
 trio: messaging server-node-js router-js
+auction: messaging server-node-js router-js
 
 ########################################
 # Command & Control Shortcuts
@@ -84,6 +85,13 @@ restart-trio: stop-trio
 	@bash ops/start-trio.sh
 stop-trio:
 	@bash ops/stop.sh trio
+
+start-auction: auction
+	@bash ops/start-auction.sh
+restart-auction: stop-auction
+	@bash ops/start-auction.sh
+stop-auction:
+	@bash ops/stop.sh auction	
 
 start-chains: ethprovider
 	@bash ops/start-chains.sh

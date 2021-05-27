@@ -603,6 +603,18 @@ export class BrowserNode implements INodeService {
     }
   }
 
+  async runAuction(
+    params: OptionalPublicIdentifier<NodeParams.RunAuction>,
+  ): Promise<Result<NodeResponses.RunAuction, BrowserNodeError>> {
+    const rpc = constructRpcRequest(ChannelRpcMethods.chan_runAuction, params);
+    try {
+      const { routerPublicIdentifier, swapRate, totalFee } = await this.send(rpc);
+      return Result.ok({ routerPublicIdentifier, swapRate, totalFee });
+    } catch (e) {
+      return Result.fail(e);
+    }
+  }
+
   async send(payload: EngineParams.RpcRequest): Promise<any> {
     return this.channelProvider!.send(payload);
   }

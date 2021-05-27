@@ -284,6 +284,18 @@ export class MemoryMessagingService implements IMessagingService {
     throw new Error("Method not implemented.");
   }
 
+  publishStartAuction(to: string, from: string, data: Result<EngineParams.RunAuction, NodeError>): Promise<void> {
+    throw new Error("Method not implemented.");
+  }
+
+  onReceiveAuctionMessage(
+    myPublicIdentifier: string,
+    inbox,
+    callback: (runAuction: Result<NodeResponses.RunAuction, NodeError>, from: string, inbox: string) => void,
+  ): Promise<void> {
+    throw new Error("Method not implemented.");
+  }
+
   publishWithdrawalSubmittedMessage(
     to: string,
     from: string,

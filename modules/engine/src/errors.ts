@@ -170,3 +170,21 @@ export class WithdrawQuoteError extends EngineError {
     super(message, request.channelAddress, publicIdentifier, context, WithdrawQuoteError.type);
   }
 }
+export class AuctionError extends EngineError {
+  static readonly type = "AuctionError";
+
+  static readonly reasons = {
+    NoResponses: "No responses from routers",
+    ExchangeRateError: "Calculating exchange failed",
+    SignatureFailure: "Signing quote failed",
+  } as const;
+
+  constructor(
+    public readonly message: Values<typeof AuctionError.reasons>,
+    publicIdentifier: string,
+    request: EngineParams.RunAuction,
+    context: any = {},
+  ) {
+    super(message, request.amount, publicIdentifier, context, AuctionError.type);
+  }
+}

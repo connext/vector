@@ -48,6 +48,7 @@ export const ChannelRpcMethods = {
   chan_syncDisputes: "chan_syncDisputes",
   chan_decrypt: "chan_decrypt",
   chan_subscription: "chan_subscription",
+  chan_runAuction: "chan_runAuction",
 } as const;
 export type ChannelRpcMethod = typeof ChannelRpcMethods[keyof typeof ChannelRpcMethods];
 
@@ -104,6 +105,7 @@ export type ChannelRpcMethodsPayloadMap = {
     subscription: string;
     data: any;
   };
+  [ChannelRpcMethods.chan_runAuction]: EngineParams.RunAuction;
 };
 
 export type ChannelRpcMethodsResponsesMap = {
@@ -155,4 +157,5 @@ export type ChannelRpcMethodsResponsesMap = {
   [ChannelRpcMethods.chan_syncDisputes]: any;
   [ChannelRpcMethods.chan_decrypt]: string;
   [ChannelRpcMethods.chan_subscription]: any;
+  [ChannelRpcMethods.chan_runAuction]: NodeResponses.RunAuction;
 };
