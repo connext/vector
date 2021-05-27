@@ -132,6 +132,7 @@ export const onSwapGivenIn = async (
   logger: BaseLogger,
 ): Promise<Result<{ priceImpact: string; amountOut: BigNumber }, ConfigServiceError>> => {
   const { stableAmmChainId, stableAmmAddress } = getConfig();
+  console.log("TEST", stableAmmChainId!, [getConfig().chainProviders[stableAmmChainId!]])
   const stableAmmProvider: ChainRpcProvider = new ChainRpcProvider(
     stableAmmChainId!, [getConfig().chainProviders[stableAmmChainId!]]
   );

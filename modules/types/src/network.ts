@@ -42,8 +42,8 @@ export class ChainRpcProvider implements Provider {
 
   constructor(chainId: number, providers: string[] | JsonRpcProvider[], stallTimeout?: number) {
     // We'll collect all the provider URLs as we hydrate each provider.
-    var providerUrls: string[] = [];
-    var provider: JsonRpcProvider | FallbackProvider;
+    let providerUrls: string[] = [];
+    let provider: JsonRpcProvider | FallbackProvider;
     if (providers.length > 1) {
       provider = new FallbackProvider(
         // Map the provider URLs into JsonRpcProviders 
@@ -71,6 +71,7 @@ export class ChainRpcProvider implements Provider {
     } else if (providers.length === 1) {
       const singleProvider = providers[0];
       provider = (typeof(singleProvider) === "string") ? new JsonRpcProvider(singleProvider, chainId) : singleProvider;
+      providerUrls = [provider.connection.url];
     } else {
       throw new Error("At least one provider must be defined.")
     }
@@ -87,8 +88,13 @@ export class ChainRpcProvider implements Provider {
     if (this._provider instanceof JsonRpcProvider) {
       return (this._provider as JsonRpcProvider).send(method, params);
     } else {
+      // NOTE: The Promise.race below is a substitute for the target functionality of FallbackProvider. In any other method
+      // call in this class, we literally just call the underlying provider. FallbackProvider does this sort of 'race-like'
+      // operation we see here internally, under the hood.
       const providers = (this._provider as FallbackProvider).providerConfigs.map(p => p.provider as JsonRpcProvider);
-      var errors: Error[] = [];
+      let errors: Error[] = [];
+      // We execute the RPC send call on every child provider (AS JsonRpcProvider) belonging to our FallbackProvider.
+      // Race below should return fastest RPC response.
       return Promise.race<any>(
         providers.map(provider => {
           return new Promise(async (resolve, reject) => {
