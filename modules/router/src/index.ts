@@ -137,7 +137,7 @@ const evts: EventCallbackConfig = {
 
 export const signer = new ChannelSigner(Wallet.fromMnemonic(config.mnemonic).privateKey);
 
-const logger = pino({ name: signer.publicIdentifier, level: config.logLevel });
+const logger = pino({ name: signer.publicIdentifier, level: config.logLevel ?? "info" });
 logger.info("Loaded config from environment");
 const server = fastify({
   logger,

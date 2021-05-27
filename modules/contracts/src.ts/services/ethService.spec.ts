@@ -540,7 +540,7 @@ describe("ethService unit test", () => {
     it("retries transaction with higher gas price", async () => {
       const newTx = { ...txResponse, hash: mkHash("0xddd") }; // change hash to simulate higher gas and new hash
       const newReceipt = { ...txReceipt, transactionHash: newTx.hash };
-      waitForConfirmation.onFirstCall().rejects(new ChainError(ChainError.retryableTxErrors.ConfirmationTimeout));
+      waitForConfirmation.onFirstCall().rejects(new ChainError(ChainError.reasons.ConfirmationTimeout));
       waitForConfirmation.onSecondCall().resolves(newReceipt);
 
       let receivedNonce: number = -1;
@@ -588,7 +588,7 @@ describe("ethService unit test", () => {
 
     it("stops trying to send if at max gas price", async () => {
       getGasPrice.resolves(Result.ok(BIG_GAS_PRICE.sub(1)));
-      waitForConfirmation.onFirstCall().rejects(new ChainError(ChainError.retryableTxErrors.ConfirmationTimeout));
+      waitForConfirmation.onFirstCall().rejects(new ChainError(ChainError.reasons.ConfirmationTimeout));
 
       const result = await ethService.sendAndConfirmTx(AddressZero, 1337, "allowance", async () => {
         return txResponse;
@@ -649,7 +649,7 @@ describe("ethService unit test", () => {
     it("should error with a timeout error if it is past the confirmation time", async () => {
       provider1337.getTransactionReceipt.onThirdCall().resolves(undefined);
       await expect(ethService.waitForConfirmation(1337, [txResponse])).to.eventually.be.rejectedWith(
-        ChainError.retryableTxErrors.ConfirmationTimeout,
+        ChainError.reasons.ConfirmationTimeout,
       );
     });
   });

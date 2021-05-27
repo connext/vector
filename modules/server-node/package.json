@@ -18,7 +18,7 @@
     "@connext/vector-engine": "0.3.0-dev.0",
     "@connext/vector-types": "0.3.0-dev.0",
     "@connext/vector-utils": "0.3.0-dev.0",
-    "@ethersproject/wallet": "5.1.0",
+    "@ethersproject/wallet": "5.2.0",
     "@prisma/client": "2.22.0",
     "@sinclair/typebox": "0.12.7",
     "ajv": "6.12.6",
