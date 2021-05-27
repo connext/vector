@@ -1,6 +1,6 @@
 import {spawn, exec} from 'child_process'
 import {
-    docker_compose_configuration,
+    messaging_config,
     pull_router_image_opts,
     test_docker_compose_configuration,
 } from "./dockerNodeConfig";
@@ -131,7 +131,7 @@ class SpawnProcess {
 
         }
         while(this.handler.success === undefined){
-            await delay(400);
+            await delay(20);
 
         }
        return this.handler.success;
@@ -140,10 +140,15 @@ class SpawnProcess {
 }
 
 
-export const echo_router_config_cmd = spawn(`bash`, [`echo "${test_docker_compose_configuration}" > router.config.test.yml`])
+// export const echo_router_config_cmd = spawn(`bash`, ['-c', `echo "${test_docker_compose_configuration}" > router.config.test.yml`])
+// export const echo_messaging_config_cmd = spawn(`bash`, ['-c',`echo "${messaging_config}" > messaging.config.test.yml`])
 
-const bashCommand: Command = {cmd:'docker', args:["stack", "deploy", "-c", "router.config.test.yml", "router"]};
-const handler:ProcessHandler = new ProcessHandler("");
-export const test_process:SpawnProcess = new SpawnProcess(bashCommand, handler);
+const messagingStart: Command = {cmd:'docker', args:["stack", "deploy", "-c", "messaging.config.test.yml", "messaging"]};
+const messaging_handler:ProcessHandler = new ProcessHandler("");
+export const start_messaging:SpawnProcess = new SpawnProcess(messagingStart, messaging_handler);
+
+const routerStart: Command = {cmd:'docker', args:["stack", "deploy", "-c", "simnet_compose.yml", "router"]};
+const test_handler:ProcessHandler = new ProcessHandler("");
+export const test_process:SpawnProcess = new SpawnProcess(routerStart, test_handler);
 
 

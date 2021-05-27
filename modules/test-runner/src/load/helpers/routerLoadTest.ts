@@ -1,12 +1,12 @@
-import { Wallet, utils, constants } from "ethers";
+import { Wallet, utils, constants, providers } from "ethers";
 import {env, fundIfBelow, getRandomIndex} from "../../utils";
 import { EngineEvents, INodeService, TransferNames } from "@connext/vector-types";
 import {RestServerNodeService} from "@connext/vector-utils";
 import pino from "pino";
 import {carolEvts} from "./setupServer";
 import {
-    chainId1,
-    deposit,
+    chainId1, chainId2,
+    deposit, provider2,
     setup,
     wallet1,
     wallet2,
@@ -18,15 +18,15 @@ import {
     swarm_init,
     d_start_router,
     spawn_n_routers,
-    test_process,
-    echo_router_config_cmd,
+    start_messaging,
+    test_process
 } from "./dockerNodeMgmt";
 const logger = pino({ level: env.logLevel });
 
 //??is there a difference between doug and carol ?
 
 const testName:string = 'Router Load Test'
-const rogerURL:string = "localhost?"
+const rogerURL:string = "http://localhost:8014"
 const carolURL:string = "localhost??"
 
 
@@ -49,10 +49,13 @@ async function setupRoger() {
     )
     //fund roger
     // Default collateral is 0.1 ETH
-    await fundIfBelow(roger.signerAddress, constants.AddressZero, min.mul(15), wallet1);
-    if (wallet2) {
-        await fundIfBelow(roger.signerAddress, constants.AddressZero, min.mul(15), wallet2);
-    }
+    const provider2 = new providers.JsonRpcProvider("https://rinkeby.infura.io/v3/af2f28bdb95d40edb06226a46106f5f9");
+    const w = Wallet.fromMnemonic(env.sugarDaddy!).connect(provider2);
+    console.log(w)
+    // await fundIfBelow(roger.signerAddress, constants.AddressZero, min.mul(15), w);
+    // if (wallet2) {
+    //     await fundIfBelow(roger.signerAddress, constants.AddressZero, min.mul(15), wallet2);
+    // }
 
     return roger
 }
@@ -130,22 +133,22 @@ async function start(){
     //setup channel between all carols and the random node
 }
 
+
+
 // d_net_create()
 // swarm_init()
 // d_start_router()
-
-// echo_router_config_cmd.stdout.on("data", (d)=>console.log(d))
 // spawn_n_routers(1)
 
 const test = async()=>{
-    const test_resCode = test_process.exec();
-
-    // const test_res = await test_process.getResult();
-    // if(test_res){
-    //     console.log("test_res" + test_res)
-    // }
-        console.log("test_res" + test_resCode)
-
-
+    const messaging = start_messaging.exec();
+    const router_a = test_process.exec();
 }
-test();
+
+// test();
+
+const setupR = async()=> {
+    const roger = await setupRoger();
+    console.log(roger)
+}
+setupR()
