@@ -25,14 +25,6 @@ export type HydratedProviders = {
   [chainId: number]: ChainRpcProvider;
 };
 
-// export type ChainRpcProviders = {
-//   [chainId: number]: string[]
-// };
-
-// export type HydratedProviders = {
-//   [chainId: number]: ChainRpcProvider;
-// };
-
 /* Represents an aggregate of providers for a particular chain. Leverages functionality from
 *  @ethersproject/providers/FallbackProvider in order to fallback to other providers in the
 *  event of failed requests.
