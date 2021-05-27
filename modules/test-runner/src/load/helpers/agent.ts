@@ -12,6 +12,7 @@ import { BigNumber, constants, Contract, providers, Wallet, utils } from "ethers
 import { formatEther, parseUnits } from "ethers/lib/utils";
 import { Evt } from "evt";
 import PriorityQueue from "p-queue";
+import { jsonifyError } from "../../../../types/dist/src";
 
 import { env, getRandomIndex } from "../../utils";
 
@@ -467,7 +468,7 @@ export class AgentManager {
             logger.info({ transferId, channelAddress, agent: agent.publicIdentifier, routingId }, "Resolved transfer");
           } catch (e) {
             logger.error(
-              { transferId, channelAddress, agent: agent.publicIdentifier, error: e.message },
+              { transferId, channelAddress, agent: agent.publicIdentifier, error: e },
               "Failed to resolve transfer",
             );
             process.exit(1);
