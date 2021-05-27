@@ -18,11 +18,11 @@ import {
 import { Deferrable } from "@ethersproject/properties";
 
 export type ChainProviders = {
-  [chainId: number]: string;
+  [chainId: number]: string[];
 };
 
 export type HydratedProviders = {
-  [chainId: number]: JsonRpcProvider;
+  [chainId: number]: ChainRpcProvider;
 };
 
 // export type ChainRpcProviders = {

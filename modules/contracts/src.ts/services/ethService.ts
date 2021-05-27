@@ -17,6 +17,7 @@ import {
   StringifiedTransactionResponse,
   getConfirmationsForChain,
   StoredTransaction,
+  ChainRpcProvider,
 } from "@connext/vector-types";
 import {
   delay,
@@ -29,7 +30,7 @@ import {
 import { Signer } from "@ethersproject/abstract-signer";
 import { BigNumber } from "@ethersproject/bignumber";
 import { Contract } from "@ethersproject/contracts";
-import { JsonRpcProvider, TransactionReceipt, TransactionResponse } from "@ethersproject/providers";
+import { TransactionReceipt, TransactionResponse } from "@ethersproject/providers";
 import { Wallet } from "@ethersproject/wallet";
 import { BaseLogger } from "pino";
 import PriorityQueue from "p-queue";
@@ -54,7 +55,7 @@ export const BIG_GAS_PRICE = parseUnits("1500", "gwei");
 
 // TODO: Deprecate. Note that this is used in autoRebalance.ts.
 export const waitForTransaction = async (
-  provider: JsonRpcProvider,
+  provider: ChainRpcProvider,
   transactionHash: string,
   confirmations?: number,
   timeout?: number,
@@ -84,7 +85,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
   };
   constructor(
     private readonly store: IChainServiceStore,
-    chainProviders: { [chainId: string]: JsonRpcProvider },
+    chainProviders: { [chainId: string]: ChainRpcProvider },
     signer: string | Signer,
     log: BaseLogger,
     private readonly defaultRetries = 3,
@@ -528,7 +529,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
    * the tx will be resubmitted at the same nonce.
    */
   public async waitForConfirmation(chainId: number, responses: TransactionResponse[]): Promise<TransactionReceipt> {
-    const provider: JsonRpcProvider = this.chainProviders[chainId];
+    const provider = this.chainProviders[chainId];
     if (!provider) {
       throw new ChainError(ChainError.reasons.ProviderNotFound);
     }
