@@ -90,6 +90,7 @@ export const concurrencyTest = async (): Promise<void> => {
       });
 
   // Create tasks to fill queue with (25 random payments)
+  const minutesToWait = 20;
   const createTasks = () => {
     const paymentData = createPaymentData();
     const tasks: [() => Promise<void>, Promise<TransferCompletedPayload | void>][] = Array(queuedPayments)
@@ -107,7 +108,7 @@ export const concurrencyTest = async (): Promise<void> => {
         // wait 10min for completion
         const completion = Promise.race([
           manager.transfersCompleted.waitFor((data) => data.routingId === routingId),
-          delay(10 * 60 * 1000),
+          delay(minutesToWait * 60 * 1000),
         ]);
         return [creation, completion];
       });
@@ -139,7 +140,10 @@ export const concurrencyTest = async (): Promise<void> => {
       concurrency,
     };
     if (completed.length > resolved.length) {
-      logger.warn({ ...loopStats, concurrency }, "Router can no longer forward within 10 min");
+      logger.warn(
+        { ...loopStats, concurrency, completed: completed.length },
+        `Router can no longer forward within ${minutesToWait}min`,
+      );
       break;
     }
     logger.info(loopStats, "Transfers resolved, increasing concurrency");
