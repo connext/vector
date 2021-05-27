@@ -19,8 +19,8 @@ export const logAxiosError = (
     };
   } else if (error.request) {
     // The request was made but no response was received
-    // `error.request` is an instance of XMLHttpRequest in the browser and an instance of
-    // http.ClientRequest in node.js
+    // `error.request` is an instance of XMLHttpRequest in the browser and an
+    // instance of http.ClientRequest in node.js
     errorObj = { ...errorObj, request: "Error in request" };
   }
   logger.error({ ...errorObj, ...additionalContext, config: error.config }, message);
