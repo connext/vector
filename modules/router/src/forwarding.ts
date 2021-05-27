@@ -26,7 +26,6 @@ import {
   recoverAddressFromChannelMessage,
   ServerNodeServiceError,
 } from "@connext/vector-utils";
-import { AddressZero } from "@ethersproject/constants";
 import { getAddress } from "@ethersproject/address";
 
 import { getSwappedAmount } from "./services/swap";
@@ -39,6 +38,7 @@ import {
 } from "./services/transfer";
 import { inProgressCreations } from "./services/creationQueue";
 import { shouldChargeFees } from "./services/config";
+import { wasSingleSignedTransferProcessed } from "./services/utils";
 
 const ajv = new Ajv();
 
@@ -935,20 +935,6 @@ export const handleUnverifiedUpdates = async (
 
     logger.info({ method, methodId, updateType: update.type, updateId: update.id }, "Processing unverified update");
 
-    // First, reconcile deposit on the channel to come to consensus on the
-    // merkle root
-    const reconcile = await nodeService.reconcileDeposit({
-      publicIdentifier: routerPublicIdentifier,
-      channelAddress: data.channelAddress,
-      assetId: AddressZero,
-    });
-    if (reconcile.isError) {
-      await handleUpdateErr(update, "Could not reconcile deposit", {
-        reconcileError: jsonifyError(reconcile.getError()!),
-      });
-      continue;
-    }
-
     // If transfer was created (included in root), mark update as processed
     // and continue
     const routingId = (update as RouterStoredUpdate<"TRANSFER_CREATION">).payload.meta?.routingId;
@@ -957,21 +943,17 @@ export const handleUnverifiedUpdates = async (
       await handleUpdateErr(update, "No routingId in update.payload.meta");
       continue;
     }
-    const transfers = await nodeService.getTransfersByRoutingId({
+    const wasProcessed = await wasSingleSignedTransferProcessed(
+      routerPublicIdentifier,
       routingId,
-      publicIdentifier: routerPublicIdentifier,
-    });
-    if (transfers.isError) {
-      await handleUpdateErr(update, "Could not get transfers by routingId", {
-        routingId,
-        transfersError: jsonifyError(transfers.getError()!),
-      });
+      data.channelAddress,
+      nodeService,
+    );
+    if (wasProcessed.isError) {
+      await handleUpdateErr(update, "Cannot come to consensus on merkle root");
       continue;
     }
-    const receiverTransfer = transfers.getValue().find((t) => {
-      return t.initiatorIdentifier === routerPublicIdentifier;
-    });
-    if (receiverTransfer) {
+    if (wasProcessed.getValue().receiverTransfer) {
       try {
         await store.setUpdateStatus(
           update.id,
@@ -1027,19 +1009,16 @@ export const handleUnverifiedUpdates = async (
     }
 
     // cancel sender transfer
-    const senderTransfer = transfers.getValue().find((t) => {
-      return t.responderIdentifier === routerPublicIdentifier;
-    });
-    if (!senderTransfer) {
+    if (!wasProcessed.getValue().senderTransfer) {
       await handleUpdateErr(update, "No sender transfer to cancel", {
-        transfers,
+        ...wasProcessed.getValue(),
       });
       continue;
     }
 
     const cancelRes = await cancelCreatedTransfer(
       "Receiver offline",
-      senderTransfer,
+      wasProcessed.getValue().senderTransfer,
       routerPublicIdentifier,
       nodeService,
       store,

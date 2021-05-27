@@ -17,6 +17,7 @@ import { ForwardTransferCreationError, ForwardTransferCreationErrorContext } fro
 import { justInTimeCollateral } from "./collateral";
 import { queueTransferCreation } from "./creationQueue";
 import { IRouterStore, RouterUpdateType } from "./store";
+import { wasSingleSignedTransferProcessed } from "./utils";
 
 /**
  * Will check liveness and queue transfer if recipient is not online.
@@ -185,9 +186,25 @@ export const attemptTransferWithCollateralization = async (
       }
       // handle the withholding sig case by coming to consensus on
       // merkle root before cancelling sender transfer
-      const generateError = (
-        shouldCancelSender: boolean,
-      ): Result<NodeResponses.ConditionalTransfer, ForwardTransferCreationError> => {
+      const wasProcessed = await wasSingleSignedTransferProcessed(
+        routerPublicIdentifier,
+        routingId,
+        recipientChannel.channelAddress,
+        nodeService,
+      );
+      if (wasProcessed.isError) {
+        logger.warn(
+          {
+            method,
+            methodId,
+            routingId,
+            senderChannel: senderChannel?.channelAddress,
+            recipientChannel: recipientChannel?.channelAddress,
+            senderTransfer: senderTransfer?.transferId,
+            error: wasProcessed.getError()?.message,
+          },
+          "Cannot come to consensus on merkleRoot",
+        );
         return Result.fail(
           new ForwardTransferCreationError(
             ForwardTransferCreationError.reasons.ErrorForwardingTransfer,
@@ -199,55 +216,28 @@ export const attemptTransferWithCollateralization = async (
               transferError: jsonifyError(transfer.getError()!),
               // could be withholding sig, so do not cancel
               // sender transfer
-              shouldCancelSender,
+              shouldCancelSender: false,
               params,
             },
           ),
         );
-      };
-      const reconcile = await nodeService.reconcileDeposit({
-        publicIdentifier: routerPublicIdentifier,
-        channelAddress: recipientChannel.channelAddress,
-        assetId: AddressZero,
-      });
-      if (reconcile.isError) {
-        logger.warn(
-          {
-            method,
-            methodId,
-            routingId,
-            senderChannel: senderChannel.channelAddress,
-            recipientChannel: recipientChannel.channelAddress,
-            senderTransfer: senderTransfer.transferId,
-            error: reconcile.getError()?.message,
-          },
-          "Cannot come to consensus on merkleRoot",
-        );
-        return generateError(false);
       }
-      const transfers = await nodeService.getTransfersByRoutingId({
-        routingId,
-        publicIdentifier: routerPublicIdentifier,
-      });
-      if (transfers.isError) {
-        logger.warn(
+      return Result.fail(
+        new ForwardTransferCreationError(
+          ForwardTransferCreationError.reasons.ErrorForwardingTransfer,
+          routingId,
+          senderChannel,
+          senderTransfer,
+          recipientChannel.channelAddress,
           {
-            method,
-            methodId,
-            routingId,
-            senderChannel: senderChannel.channelAddress,
-            recipientChannel: recipientChannel.channelAddress,
-            senderTransfer: senderTransfer.transferId,
-            error: transfers.getError()?.message,
+            transferError: jsonifyError(transfer.getError()!),
+            // could be withholding sig, so do not cancel
+            // sender transfer
+            shouldCancelSender: !wasProcessed.getValue().receiverTransfer,
+            params,
           },
-          "Cannot get transfers by routingId",
-        );
-        return generateError(false);
-      }
-      const receiverTransfer = transfers.getValue().find((t) => {
-        return t.initiatorIdentifier === routerPublicIdentifier;
-      });
-      return generateError(receiverTransfer === undefined);
+        ),
+      );
     },
   );
 };
