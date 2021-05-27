@@ -1,6 +1,7 @@
 import { HDNode } from "@ethersproject/hdnode";
 import { Wallet } from "@ethersproject/wallet";
 import { JsonRpcProvider } from "@ethersproject/providers";
+import { ChainRpcProvider } from "@connext/vector-types";
 import { network, ethers }from "hardhat";
 import pino from "pino";
 
