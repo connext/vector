@@ -92,7 +92,7 @@ export const concurrencyTest = async (): Promise<void> => {
   // Create tasks to fill queue with (25 random payments)
   const createTasks = () => {
     const paymentData = createPaymentData();
-    const tasks: [() => Promise<void>, Promise<TransferCompletedPayload>][] = Array(queuedPayments)
+    const tasks: [() => Promise<void>, Promise<TransferCompletedPayload | void>][] = Array(queuedPayments)
       .fill(0)
       .map((_, idx) => {
         const [routingId, preImage] = paymentData[idx];
@@ -101,31 +101,28 @@ export const concurrencyTest = async (): Promise<void> => {
           const sender = manager.getRandomAgent();
           const receiver = manager.getRandomAgent(sender);
 
-          // Save payment secrets to manager before creating
-          // payment
-          const { start } = await sender.createHashlockTransfer(
-            receiver.publicIdentifier,
-            constants.AddressZero,
-            preImage,
-            routingId,
-          );
+          await sender.createHashlockTransfer(receiver.publicIdentifier, constants.AddressZero, preImage, routingId);
           // NOTE: receiver will automatically resolve
         };
-        const completion = manager.transfersCompleted.waitFor((data) => data.routingId === routingId);
+        // wait 10min for completion
+        const completion = Promise.race([
+          manager.transfersCompleted.waitFor((data) => data.routingId === routingId),
+          delay(10 * 60 * 1000),
+        ]);
         return [creation, completion];
       });
     return tasks;
   };
-  let concurrency = 1;
+  let concurrency = 0;
+  let loopStats;
   for (const _ of Array(maxConcurrency).fill(0)) {
     // For loop runs one iteration of the test, with increasing
     // concurrency
+    concurrency += 1;
     logger.info({ concurrency }, "Beginning concurrency test");
     // Create a queue
     const queue = new PriorityQueue({ concurrency });
-    concurrency += 1;
 
-    logger.info({ transferInfo: manager.transferInfo }, "Transfer info pre-creation");
     const info = createTasks();
     const creations = info.map(([t]) => queue.add(t));
 
@@ -133,17 +130,20 @@ export const concurrencyTest = async (): Promise<void> => {
     logger.info({}, "Transfer creation complete, waiting for resolutions");
 
     const completed = await Promise.all(info.map(([_, complete]) => complete));
-    const cancelled = completed.filter((c) => c.cancelled);
-    logger.info(
-      {
-        cancellationReasons: cancelled.map((c) => c.cancellationReason),
-        cancelled: cancelled.length,
-        completed: completed.length,
-        concurrency,
-      },
-      "Transfers resolved, increasing concurrency",
-    );
+    const resolved = completed.filter((x) => !!x) as TransferCompletedPayload[];
+    const cancelled = resolved.filter((c) => c.cancelled);
+    loopStats = {
+      cancellationReasons: cancelled.map((c) => c.cancellationReason),
+      cancelled: cancelled.length,
+      resolved: resolved.length,
+      concurrency,
+    };
+    if (completed.length > resolved.length) {
+      logger.warn({ ...loopStats, concurrency }, "Router can no longer forward within 10 min");
+      break;
+    }
+    logger.info(loopStats, "Transfers resolved, increasing concurrency");
   }
-  logger.info({ concurrency: maxConcurrency, queuedPayments }, "Concurrency test finished");
+  logger.info({ concurrency, maxConcurrency, queuedPayments, finalLoopStats: loopStats }, "Concurrency test finished");
   process.exit(0);
 };

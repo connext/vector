@@ -464,7 +464,7 @@ export class AgentManager {
           try {
             logger.debug({ agent: agent.signerAddress, preImage, transfer: transferId }, "Resolving transfer");
             await agent.resolveHashlockTransfer(transferId, preImage);
-            logger.info({ transferId, channelAddress, agent: agent.publicIdentifier }, "Resolved transfer");
+            logger.info({ transferId, channelAddress, agent: agent.publicIdentifier, routingId }, "Resolved transfer");
           } catch (e) {
             logger.error(
               { transferId, channelAddress, agent: agent.publicIdentifier, error: e.message },
