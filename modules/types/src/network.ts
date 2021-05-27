@@ -34,6 +34,7 @@ export class ChainRpcProvider implements Provider {
   readonly providerUrls: string[];
   readonly _provider: JsonRpcProvider | FallbackProvider;
 
+  RPC_TIMEOUT: number = 10_000;
   _isProvider: boolean = true;
   _networkPromise: Promise<Network>;
   _network: Network;
@@ -86,18 +87,30 @@ export class ChainRpcProvider implements Provider {
     if (this._provider instanceof JsonRpcProvider) {
       return (this._provider as JsonRpcProvider).send(method, params);
     } else {
-      const providers = (this._provider as FallbackProvider).providerConfigs.map(p => p.provider);
-      return new Promise((resolve, reject) => {
-        var errors: any[] = [];
-        for (let i = 0; i < providers.length; i++) {
-          try {
-            resolve((providers[i] as JsonRpcProvider).send(method, params));
-          } catch (e) {
-            errors.push(e);
-          }
-        }
-        reject(errors);
-      });
+      const providers = (this._provider as FallbackProvider).providerConfigs.map(p => p.provider as JsonRpcProvider);
+      var errors: Error[] = [];
+      return Promise.race<any>(
+        providers.map(provider => {
+          return new Promise(async (resolve, reject) => {
+            try {
+              const result = await provider.send(method, params);
+              resolve(result);
+            } catch (e) {
+              errors.push(e);
+              // If this was the last request, and we've gotten all errors, let's reject.
+              if (errors.length === providers.length) {
+                reject(errors);
+              }
+            }
+          });
+        })
+        .concat(
+          // Ten second timeout to reject with errors.
+          new Promise((_, reject) => {
+            setTimeout(() => reject(errors), this.RPC_TIMEOUT)
+          })
+        )
+      );
     }
   }
 
@@ -112,6 +125,7 @@ export class ChainRpcProvider implements Provider {
   poll(): Promise<void> {
     return this._provider.poll();
   }
+
   resetEventsBlock(blockNumber: number): void {
     return this._provider.resetEventsBlock(blockNumber);
   }
