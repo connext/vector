@@ -7,7 +7,13 @@ import {
   NodeError,
   TransferNames,
 } from "@connext/vector-types";
-import { createlockHash, delay, getRandomBytes32, RestServerNodeService } from "@connext/vector-utils";
+import {
+  createlockHash,
+  delay,
+  getRandomBytes32,
+  RestServerNodeService,
+  ServerNodeServiceError,
+} from "@connext/vector-utils";
 import { BigNumber, constants, Contract, providers, Wallet, utils } from "ethers";
 import { formatEther, parseEther } from "ethers/lib/utils";
 import PriorityQueue from "p-queue";
@@ -20,7 +26,7 @@ import { logger } from "./setupServer";
 const chainId = parseInt(Object.keys(env.chainProviders)[0]);
 const provider = new providers.JsonRpcProvider(env.chainProviders[chainId]);
 const wallet = Wallet.fromMnemonic(env.sugarDaddy).connect(provider);
-const transferAmount = utils.parseEther("0.00001").toString();
+const transferAmount = "1"; //utils.parseEther("0.00001").toString();
 const agentBalance = utils.parseEther("5").toString();
 
 const walletQueue = new PriorityQueue({ concurrency: 1 });
@@ -98,8 +104,12 @@ export class Agent {
     // Create node on server at idx
     // NOTE: can safely be called multiple times
     const nodeRes = await nodeService.createNode({ index });
+
     if (nodeRes.isError) {
       throw nodeRes.getError()!;
+    }
+    if (nodeRes == undefined) {
+      throw Error("Node res undefined");
     }
     const { publicIdentifier, signerAddress } = nodeRes.getValue();
 
@@ -120,7 +130,7 @@ export class Agent {
     assetId: string,
     preImage: string = getRandomBytes32(),
     routingId: string = getRandomBytes32(),
-  ): Promise<{ channelAddress: string; transferId: string; routingId: string; preImage: string }> {
+  ): Promise<{ channelAddress: string; transferId: string; routingId: string; preImage: string; start: number }> {
     this.assertChannel();
     // Create the transfer information
     const lockHash = createlockHash(preImage);
@@ -140,8 +150,8 @@ export class Agent {
     if (createRes.isError) {
       throw createRes.getError()!;
     }
-    logger.debug({ ...createRes.getValue() }, "Created transfer");
-    return { ...createRes.getValue(), preImage, routingId };
+    logger.info({ ...createRes.getValue() }, "Created transfer");
+    return { ...createRes.getValue(), preImage, routingId, start: Date.now() };
   }
 
   async resolveHashlockTransfer(
@@ -224,11 +234,10 @@ export class Agent {
       error = e;
     }
 
-    if (error && !error.message.includes("404")) {
+    if (error && error.message !== "Channel not found") {
       // Unknown error, do not setup
-      throw error!;
+      throw error;
     }
-
     // Setup the channel, did not exist previously
     const setup = await this.nodeService.setup({
       counterpartyIdentifier: this.rogerIdentifier,
@@ -254,9 +263,16 @@ export class Agent {
 }
 
 // This class manages multiple agents within the context of a test
+
+type TransferInformation = {
+  preImage: string;
+  start: number;
+  end?: number;
+  error?: string;
+};
 export class AgentManager {
-  public readonly preImages: {
-    [routingId: string]: string;
+  public readonly transferInfo: {
+    [routingId: string]: TransferInformation;
   } = {};
 
   private constructor(
@@ -267,7 +283,10 @@ export class AgentManager {
     public readonly agentService: INodeService,
   ) {}
 
-  static async connect(agentService: RestServerNodeService): Promise<AgentManager> {
+  static async connect(
+    agentService: RestServerNodeService,
+    enableAutomaticResolution: boolean = true,
+  ): Promise<AgentManager> {
     // First, create + fund roger onchain
     logger.debug({ url: env.rogerUrl });
     const routerService = await RestServerNodeService.connect(
@@ -311,7 +330,9 @@ export class AgentManager {
     const manager = new AgentManager(router, routerIdentifier, routerService, agents, agentService);
 
     // Automatically resolve any created transfers
-    manager.setupAutomaticResolve();
+    if (enableAutomaticResolution) {
+      manager.setupAutomaticResolve();
+    }
 
     return manager;
   }
@@ -349,10 +370,16 @@ export class AgentManager {
 
           // Creation comes from router forwarding, agent is responder
           // Find the preImage
-          const preImage = this.preImages[routingId];
+          const { preImage } = this.transferInfo[routingId] ?? {};
           if (!preImage) {
             logger.error(
-              { channelAddress, transferId, routingId, preImages: JSON.stringify(this.preImages), preImage },
+              {
+                channelAddress,
+                transferId,
+                routingId,
+                transferInfo: this.transferInfo,
+                preImage,
+              },
               "No preImage",
             );
             process.exit(1);
@@ -383,63 +410,78 @@ export class AgentManager {
   async startCyclicalTransfers(): Promise<() => Promise<void>> {
     // Register listener that will resolve transfers once it is
     // created
-    this.agentService.on(
-      EngineEvents.CONDITIONAL_TRANSFER_RESOLVED,
-      async (data) => {
-        // Create a new transfer to a random agent
-        const { channelAddress, transfer } = data;
-
-        // Find the agent from the recipient in routing meta
-        const { routingId } = transfer.meta;
-        // Make sure there is a routingID
-        if (!routingId) {
-          logger.debug({}, "No routingId");
-          return;
-        }
-
-        // Remove the preimage on resolution
-        delete this.preImages[routingId];
-
-        const agent = this.agents.find((a) => a.channelAddress && a.channelAddress === data.channelAddress);
-        if (!agent) {
-          logger.error(
-            { channelAddress, agents: this.agents.map((a) => a.channelAddress).join(",") },
-            "No agent found to resolve",
-          );
-          process.exit(1);
-        }
-
-        // Only create a new transfer IFF you resolved it
-        if (agent.signerAddress === transfer.initiator) {
+    this.agents.map((_agent) => {
+      this.agentService.on(
+        EngineEvents.CONDITIONAL_TRANSFER_RESOLVED,
+        async (data) => {
           logger.debug(
-            { transfer: transfer.transferId, agent: agent.signerAddress },
-            "Agent is initiator, doing nothing",
+            { transferId: data.transfer.transferId, channelAddress: data.channelAddress },
+            "Caught conditional transfer resolved event",
           );
-          return;
-        }
+          // Create a new transfer to a random agent
+          const { channelAddress, transfer } = data;
 
-        // Create new transfer to continue cycle
-        const receiver = this.getRandomAgent(agent);
-        try {
-          const { preImage, routingId, transferId } = await agent.createHashlockTransfer(
-            receiver.publicIdentifier,
-            constants.AddressZero,
-          );
-          this.preImages[routingId] = preImage;
-          logger.info(
-            { transferId, channelAddress, receiver: receiver.publicIdentifier, routingId },
-            "Created transfer",
-          );
-        } catch (e) {
-          logger.error(
-            { error: e.message, agent: agent.publicIdentifier, channelAddress },
-            "Failed to create new transfer",
-          );
-          process.exit(1);
-        }
-      },
-      (data) => this.agents.map((a) => a.channelAddress).includes(data.channelAddress),
-    );
+          // Find the agent from the recipient in routing meta
+          const { routingId } = transfer.meta;
+          // Make sure there is a routingID
+          if (!routingId) {
+            logger.debug({}, "No routingId");
+            return;
+          }
+
+          // Add timestamp on resolution
+          this.transferInfo[routingId].end = Date.now();
+
+          const agent = this.agents.find((a) => a.channelAddress && a.channelAddress === data.channelAddress);
+          if (!agent) {
+            logger.error(
+              { channelAddress, agents: this.agents.map((a) => a.channelAddress).join(",") },
+              "No agent found to resolve",
+            );
+            process.exit(1);
+          }
+
+          // Only create a new transfer IFF you resolved it
+          if (agent.signerAddress === transfer.initiator) {
+            logger.debug(
+              {
+                transfer: transfer.transferId,
+                initiator: transfer.initiator,
+                responder: transfer.responder,
+                agent: agent.signerAddress,
+              },
+              "Agent is initiator, doing nothing",
+            );
+            return;
+          }
+
+          // Create new transfer to continue cycle
+          const receiver = this.getRandomAgent(agent);
+          try {
+            const { preImage, routingId, transferId, start } = await agent.createHashlockTransfer(
+              receiver.publicIdentifier,
+              constants.AddressZero,
+            );
+            this.transferInfo[routingId] = { ...(this.transferInfo[routingId] ?? {}), preImage, start };
+            logger.info(
+              { transferId, channelAddress, receiver: receiver.publicIdentifier, routingId },
+              "Created transfer",
+            );
+          } catch (e) {
+            logger.error(
+              { error: e.message, agent: agent.publicIdentifier, channelAddress },
+              "Failed to create new transfer",
+            );
+            process.exit(1);
+          }
+        },
+        (data) => {
+          const channels = this.agents.map((a) => a.channelAddress);
+          return channels.includes(data.channelAddress);
+        },
+        _agent.publicIdentifier,
+      );
+    });
 
     // Create some transfers to start cycle
     logger.info({ agents: this.agents.length, config: { ...config } }, "Starting transfers");
@@ -449,11 +491,11 @@ export class AgentManager {
         logger.debug({}, "Is sender, skipping");
         continue;
       }
-      const { preImage, routingId } = await sender.createHashlockTransfer(
+      const { preImage, routingId, start } = await sender.createHashlockTransfer(
         agent.publicIdentifier,
         constants.AddressZero,
       );
-      this.preImages[routingId] = preImage;
+      this.transferInfo[routingId] = { ...(this.transferInfo[routingId] ?? {}), preImage, start };
     }
 
     const kill = () =>
@@ -462,7 +504,10 @@ export class AgentManager {
           this.agentService.off(EngineEvents.CONDITIONAL_TRANSFER_CREATED);
           this.agentService.off(EngineEvents.CONDITIONAL_TRANSFER_RESOLVED);
           // Wait just in case
-          await delay(5000);
+          await delay(5_000);
+
+          this.printTransferSummary();
+
           resolve();
         } catch (e) {
           reject(e.message);
@@ -470,6 +515,83 @@ export class AgentManager {
       });
 
     return kill;
+  }
+
+  // Creates multiple transfers in a single channel
+  async createMultipleTransfersWithSameParties(): Promise<() => Promise<void>> {
+    // Create some transfers to start cycle
+    logger.info({ agents: this.agents.length, config: { ...config } }, "Starting transfer creation");
+    const agent = this.getRandomAgent();
+    const recipient = this.getRandomAgent(agent);
+
+    const transfers: { transferId: string; elapsed: number }[] = [];
+
+    this.agentService.on(
+      EngineEvents.CONDITIONAL_TRANSFER_CREATED,
+      async (data) => {
+        // Create a new transfer
+        const start = Date.now();
+        const { transferId } = await agent.createHashlockTransfer(recipient.publicIdentifier, constants.AddressZero);
+        transfers.push({ transferId, elapsed: Date.now() - start });
+      },
+      (data) => data.bobIdentifier === agent.publicIdentifier,
+      agent.publicIdentifier,
+    );
+
+    const start = Date.now();
+    const { transferId } = await agent.createHashlockTransfer(recipient.publicIdentifier, constants.AddressZero);
+    transfers.push({ transferId, elapsed: Date.now() - start });
+
+    const kill = () =>
+      new Promise<void>(async (resolve, reject) => {
+        try {
+          this.agentService.off(EngineEvents.CONDITIONAL_TRANSFER_CREATED);
+          // Wait just in case
+          await delay(5_000);
+
+          // print summary of transfers created
+          const number = transfers.length;
+          const first = transfers[0].elapsed;
+          const last = transfers[transfers.length - 1].elapsed;
+          const toLog = transfers
+            .map((info, idx) => {
+              if (idx % 20 === 0) {
+                return { active: idx, elapsed: info.elapsed };
+              }
+              return undefined;
+            })
+            .filter((x) => !!x);
+
+          logger.warn(
+            { transfers: number, latestElapsed: last, firstElapsed: first, intermittent: toLog },
+            "Transfer summary",
+          );
+          resolve();
+        } catch (e) {
+          reject(e.message);
+        }
+      });
+
+    return kill;
+  }
+
+  public printTransferSummary(): void {
+    const times = Object.entries(this.transferInfo)
+      .map(([routingId, transfer]) => {
+        if (!transfer.end) {
+          return undefined;
+        }
+        return transfer.end - transfer.start;
+      })
+      .filter((x) => !!x) as number[];
+    const total = times.reduce((a, b) => a + b);
+    const average = total / times.length;
+    const longest = times.sort((a, b) => b - a)[0];
+    const shortest = times.sort((a, b) => a - b)[0];
+    logger.info(
+      { average, longest, shortest, completed: times.length, agents: this.agents.length },
+      "Transfer summary",
+    );
   }
 
   public getRandomAgent(excluding?: Agent): Agent {
