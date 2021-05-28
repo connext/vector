@@ -31,22 +31,10 @@ export const DEFAULT_FEE_EXPIRY = 300_000;
 
 // number of confirmations for non-mainnet chains
 export const NUM_CONFIRMATIONS = 10;
+export const CHAINS_WITH_ONE_CONFIRMATION = [1, 1337, 1338, 1340, 1341, 1342];
 // TODO: need to stop using random chainIds in our testing, these could eventually be real chains...
 export const getConfirmationsForChain = (chainId: number): number => {
-  switch (chainId) {
-    // Hardhat changes
-    case 1337:
-    case 1338:
-    case 1340:
-    case 1341:
-    case 1342:
-      return 0;
-    // Mainnet
-    case 1:
-      return 1;
-    default:
-      return NUM_CONFIRMATIONS;
-  }
+  return CHAINS_WITH_ONE_CONFIRMATION.includes(chainId) ? 1 : NUM_CONFIRMATIONS;
 };
 
 // ETH Reader - how many attempts / retries will we do upon failure?

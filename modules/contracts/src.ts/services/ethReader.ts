@@ -58,20 +58,11 @@ export class EthereumChainReader implements IVectorChainReader {
     [ChainReaderEvents.TRANSFER_DISPUTED]: new Evt(),
     [ChainReaderEvents.TRANSFER_DEFUNDED]: new Evt(),
   };
-  private safeBlocks: Map<string, number> = new Map();
   private contracts: Map<string, Contract> = new Map();
   constructor(
     public readonly chainProviders: { [chainId: string]: JsonRpcProvider },
     public readonly log: pino.BaseLogger,
-  ) {
-    // setup listeners for each chain to set latest safe block
-    Object.entries(this.chainProviders).forEach(([chainId, provider]) => {
-      provider.on("block", (blockNumber) => {
-        const safe = blockNumber - getConfirmationsForChain(parseInt(chainId));
-        this.safeBlocks.set(chainId, safe < 0 ? 0 : safe);
-      });
-    });
-  }
+  ) {}
 
   getChainProviders(): Result<ChainProviders, ChainError> {
     const ret: ChainProviders = {};
@@ -326,6 +317,7 @@ export class EthereumChainReader implements IVectorChainReader {
     }
     const block = blockTag ?? (await this.getSafeBlockNumber(chainId));
     if (block.isError) {
+      console.log("***** failed to fetch block");
       return Result.fail(block.getError()!);
     }
     return await this.retryWrapper<BigNumber>(chainId, async () => {
@@ -552,6 +544,7 @@ export class EthereumChainReader implements IVectorChainReader {
         const code = await provider.getCode(address, block.getValue());
         return Result.ok(code);
       } catch (e) {
+        console.log("****** failed to get code");
         return Result.fail(e);
       }
     });
@@ -972,9 +965,6 @@ export class EthereumChainReader implements IVectorChainReader {
   }
 
   private async getSafeBlockNumber(chainId: number): Promise<Result<number, ChainError>> {
-    if (this.safeBlocks.has(chainId.toString())) {
-      return Result.ok(this.safeBlocks.get(chainId.toString())!);
-    }
     // Doesn't have block
     const latest = await this.getBlockNumber(chainId);
     if (latest.isError) {
@@ -982,7 +972,6 @@ export class EthereumChainReader implements IVectorChainReader {
     }
     const safe = latest.getValue() - getConfirmationsForChain(chainId);
     const positiveSafe = safe < 0 ? 0 : safe;
-    this.safeBlocks.set(chainId.toString(), positiveSafe);
     return Result.ok(positiveSafe);
   }
 
