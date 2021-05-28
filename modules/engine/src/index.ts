@@ -578,8 +578,9 @@ export class VectorEngine implements IVectorEngine {
     if (setupParamsResult.isError) {
       return Result.fail(setupParamsResult.getError()!);
     }
-    const setupRes = await this.runProtocolMethodWithRetries<FullChannelState>(() =>
-      this.vector.setup(setupParamsResult.getValue()),
+    const setupRes = await this.runProtocolMethodWithRetries<FullChannelState>(
+      () => this.vector.setup(setupParamsResult.getValue()),
+      "",
     );
 
     if (setupRes.isError) {
@@ -682,7 +683,10 @@ export class VectorEngine implements IVectorEngine {
     //    leaving all 8 out of the channel.
 
     // This race condition should be handled by the protocol retries
-    const depositRes = await this.runProtocolMethodWithRetries<FullChannelState>(() => this.vector.deposit(params));
+    const depositRes = await this.runProtocolMethodWithRetries<FullChannelState>(
+      () => this.vector.deposit(params),
+      params.channelAddress,
+    );
     this.logger.info(
       {
         result: depositRes.isError ? jsonifyError(depositRes.getError()!) : depositRes.getValue().channelAddress,
@@ -782,8 +786,9 @@ export class VectorEngine implements IVectorEngine {
     }
     const createParams = createResult.getValue();
     this.logger.info({ transferParams: createParams, method, methodId }, "Created conditional transfer params");
-    const protocolRes = await this.runProtocolMethodWithRetries<FullChannelState>(() =>
-      this.vector.create(createParams),
+    const protocolRes = await this.runProtocolMethodWithRetries<FullChannelState>(
+      () => this.vector.create(createParams),
+      createParams.channelAddress,
     );
     if (protocolRes.isError) {
       return Result.fail(protocolRes.getError()!);
@@ -830,8 +835,9 @@ export class VectorEngine implements IVectorEngine {
       return Result.fail(resolveResult.getError()!);
     }
     const resolveParams = resolveResult.getValue();
-    const protocolRes = await this.runProtocolMethodWithRetries<FullChannelState>(() =>
-      this.vector.resolve(resolveParams),
+    const protocolRes = await this.runProtocolMethodWithRetries<FullChannelState>(
+      () => this.vector.resolve(resolveParams),
+      resolveParams.channelAddress,
     );
     if (protocolRes.isError) {
       return Result.fail(protocolRes.getError()!);
@@ -896,8 +902,9 @@ export class VectorEngine implements IVectorEngine {
       );
 
     // create withdrawal transfer
-    const protocolRes = await this.runProtocolMethodWithRetries<FullChannelState>(() =>
-      this.vector.create(createParams),
+    const protocolRes = await this.runProtocolMethodWithRetries<FullChannelState>(
+      () => this.vector.create(createParams),
+      createParams.channelAddress,
     );
     if (protocolRes.isError) {
       return Result.fail(protocolRes.getError()!);
@@ -1506,14 +1513,18 @@ export class VectorEngine implements IVectorEngine {
     }
   }
 
-  private async runProtocolMethodWithRetries<T = any>(fn: () => Promise<Result<T, ProtocolError>>, retryCount = 5) {
+  private async runProtocolMethodWithRetries<T = any>(
+    fn: () => Promise<Result<T, ProtocolError>>,
+    channelAddress: string,
+    retryCount = 5,
+  ) {
     let result: Result<T> | undefined;
     for (let i = 0; i < retryCount; i++) {
       result = await fn();
       if (!result.isError) {
         return result;
       }
-      this.logger.warn({ attempt: i, error: result.getError().message }, "Protocol method failed");
+      this.logger.warn({ attempt: i, error: result.getError().message, channelAddress }, "Protocol method failed");
       await delay(500);
     }
     return result as Result<T, ProtocolError>;
