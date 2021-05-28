@@ -1,14 +1,14 @@
-import { TransferNames, RegisteredTransfer } from "@connext/vector-types";
-import { expect } from "@connext/vector-utils";
-import { AddressZero, Zero } from "@ethersproject/constants";
+import { TransferNames, RegisteredTransfer, jsonifyError, FullTransferState } from "@connext/vector-types";
+import { createTestFullHashlockTransferState, expect } from "@connext/vector-utils";
+import { AddressZero, HashZero } from "@ethersproject/constants";
 import { Contract } from "@ethersproject/contracts";
 import { deployments } from "hardhat";
 import pino from "pino";
 
 import { alice, bob, chainIdReq, provider } from "../../constants";
 import { getContract, createChannel } from "../../utils";
-
 import { EthereumChainReader } from "../../services/ethReader";
+import { deployments as vectorDeployments } from "../../deployments";
 
 // TODO: check whether result is valid, not just whether it exists #432
 describe("EthereumChainReader", function () {
@@ -90,6 +90,62 @@ describe("EthereumChainReader", function () {
     const result = await chainReader.getRegisteredTransfers(transferRegistry.address, chainId);
     expect(result.getError()).to.be.undefined;
     expect(result.getValue()).to.be.deep.eq(cleaned);
+  });
+
+  describe("create", () => {
+    let transfer: FullTransferState;
+    let bytecode: string;
+    beforeEach(async () => {
+      transfer = createTestFullHashlockTransferState();
+      const hashlock = await getContract("HashlockTransfer", alice);
+      transfer.transferDefinition = hashlock.address;
+      bytecode = vectorDeployments["4"].HashlockTransfer.deployedBytecode;
+    });
+
+    it("should not use pure-evm if expiry > 0", async () => {
+      transfer.transferState.expiry = "10";
+      const res = await chainReader.create(
+        transfer.transferState,
+        transfer.balance,
+        transfer.transferDefinition,
+        transferRegistry.address,
+        chainId,
+        bytecode,
+      );
+
+      expect(res.isError).to.be.true;
+      expect(res.getError()?.message).to.contain("Could not execute rpc method");
+    });
+
+    it("happy: should verify a hashlock transfer update with pureevm if possible", async () => {
+      const res = await chainReader.create(
+        transfer.transferState,
+        transfer.balance,
+        transfer.transferDefinition,
+        transferRegistry.address,
+        chainId,
+        bytecode,
+      );
+
+      console.log("res: ", res.isError ? jsonifyError(res.getError()!) : res.getValue());
+      expect(res.getValue()).to.be.true;
+    });
+
+    it.only("happy: should not verify an invalid hashlock transfer update with pureevm", async () => {
+      console.log("transfer.transferState: ", transfer.transferState);
+      transfer.transferState.lockHash = HashZero;
+      const res = await chainReader.create(
+        transfer.transferState,
+        transfer.balance,
+        transfer.transferDefinition,
+        transferRegistry.address,
+        chainId,
+        bytecode,
+      );
+
+      console.log("res.getValue(): ", res.getValue());
+      expect(res.getValue()).to.be.true;
+    });
   });
 
   it.skip("create", async () => {
