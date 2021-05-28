@@ -67,7 +67,7 @@ export class EthereumChainReader implements IVectorChainReader {
     // setup listeners for each chain to set latest safe block
     Object.entries(this.chainProviders).forEach(([chainId, provider]) => {
       provider.on("block", (blockNumber) => {
-        const safe = blockNumber - getConfirmationsForChain(chainId);
+        const safe = blockNumber - getConfirmationsForChain(parseInt(chainId));
         this.safeBlocks.set(chainId, safe < 0 ? 0 : safe);
       });
     });
