@@ -186,19 +186,56 @@ export class Vector implements IVectorProtocol {
           });
         }
       });
+      this.logger.error(
+        {
+          time: Date.now(),
+          params: initiated.params,
+          role: "outbound",
+          channelAddress: initiated.params.channelAddress,
+        },
+        "Beginning race",
+      );
       const res = (await Promise.race([outboundPromise, cancelPromise])) as {
         cancelled: boolean;
         value: unknown | Result<SelfUpdateResult>;
       };
       if (res.cancelled) {
+        this.logger.error(
+          {
+            time: Date.now(),
+            params: initiated.params,
+            role: "outbound",
+            channelAddress: initiated.params.channelAddress,
+          },
+          "Cancelling update",
+        );
         return undefined;
       }
       const value = res.value as Result<SelfUpdateResult>;
       if (value.isError) {
+        this.logger.error(
+          {
+            time: Date.now(),
+            params: initiated.params,
+            role: "outbound",
+            channelAddress: initiated.params.channelAddress,
+          },
+          "Update failed",
+        );
         return res.value as Result<SelfUpdateResult>;
       }
       // Save all information returned from the sync result
       const { updatedChannel, updatedTransfer, successfullyApplied } = value.getValue();
+      this.logger.error(
+        {
+          time: Date.now(),
+          params: initiated.params,
+          role: "outbound",
+          channelAddress: initiated.params.channelAddress,
+          updatedChannel,
+        },
+        "Update succeeded",
+      );
       const saveRes = await persistChannel(this.storeService, updatedChannel, updatedTransfer);
       if (saveRes.isError) {
         return Result.fail(
@@ -283,27 +320,59 @@ export class Vector implements IVectorProtocol {
         }
       });
 
+      this.logger.error(
+        {
+          time: Date.now(),
+          update: received.update,
+          role: "inbound",
+          channelAddress: received.update.channelAddress,
+        },
+        "Beginning race",
+      );
       const res = (await Promise.race([inboundPromise, cancelPromise])) as {
         cancelled: boolean;
         value: unknown | Result<OtherUpdateResult>;
       };
 
       if (res.cancelled) {
+        this.logger.error(
+          {
+            time: Date.now(),
+            update: received.update,
+            role: "inbound",
+            channelAddress: received.update.channelAddress,
+          },
+          "Cancelling update",
+        );
         await returnError(QueuedUpdateError.reasons.Cancelled, channelState);
         return undefined;
       }
       const value = res.value as Result<OtherUpdateResult>;
       if (value.isError) {
+        this.logger.error(
+          {
+            time: Date.now(),
+            update: received.update,
+            role: "inbound",
+            channelAddress: received.update.channelAddress,
+          },
+          "Update failed",
+        );
         const error = value.getError() as QueuedUpdateError;
         const { state } = error.context;
         return returnError(error.message, state ?? channelState, undefined, error);
       }
       // Save the newly signed update to your channel
       const { updatedChannel, updatedTransfer } = value.getValue();
-      await this.messagingService.respondToProtocolMessage(
-        received.inbox,
-        updatedChannel.latestUpdate,
-        (channelState as FullChannelState | undefined)?.latestUpdate,
+      this.logger.error(
+        {
+          time: Date.now(),
+          update: received.update,
+          role: "inbound",
+          channelAddress: received.update.channelAddress,
+          updatedChannel,
+        },
+        "Update succeeded",
       );
       const saveRes = await persistChannel(this.storeService, updatedChannel, updatedTransfer);
       if (saveRes.isError) {
@@ -311,6 +380,11 @@ export class Vector implements IVectorProtocol {
           saveError: saveRes.getError().message,
         });
       }
+      await this.messagingService.respondToProtocolMessage(
+        received.inbox,
+        updatedChannel.latestUpdate,
+        (channelState as FullChannelState | undefined)?.latestUpdate,
+      );
       return value;
     };
     const queue = new SerializedQueue<SelfUpdateResult, OtherUpdateResult>(
