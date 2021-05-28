@@ -38,8 +38,6 @@ async function setupRoger() {
     //verify below
     // const routerIndex = 0;
     const events = undefined;
-    const min = utils.parseEther("0.1");
-
 
     const roger = await RestServerNodeService.connect(
         rogerURL,
@@ -49,13 +47,8 @@ async function setupRoger() {
     )
     //fund roger
     // Default collateral is 0.1 ETH
-    const provider2 = new providers.JsonRpcProvider("https://rinkeby.infura.io/v3/af2f28bdb95d40edb06226a46106f5f9");
-    const w = Wallet.fromMnemonic(env.sugarDaddy!).connect(provider2);
-    console.log(w)
-    // await fundIfBelow(roger.signerAddress, constants.AddressZero, min.mul(15), w);
-    // if (wallet2) {
-    //     await fundIfBelow(roger.signerAddress, constants.AddressZero, min.mul(15), wallet2);
-    // }
+    const provider2 = new providers.JsonRpcProvider("https://goerli.infura.io/v3/af2f28bdb95d40edb06226a46106f5f9");
+    const w = Wallet.fromMnemonic('program biology gasp gentle describe boring suspect raven favorite uphold salon crater').connect(provider2);
 
     return roger
 }
@@ -140,15 +133,78 @@ async function start(){
 // d_start_router()
 // spawn_n_routers(1)
 
-const test = async()=>{
+const start_stack = async()=>{
     const messaging = start_messaging.exec();
     const router_a = test_process.exec();
 }
 
-// test();
 
-const setupR = async()=> {
-    const roger = await setupRoger();
-    console.log(roger)
+const r0Address = '0x36e6dEdC5554b2e1fedFb1627Be4D703f0da2B6D'
+const r1Address = '0xE3E44bd168C03393d9Ef2E8B304686023E2ca233';
+const daveAddress = '0xA383539Ae895Db1ABF4F6381eB082455366CF93c';
+const carolAddress = '0x6D9B09e55e6341B019eB5CB05067d51cb058D788';
+
+const g_provider = new providers.JsonRpcProvider("https://goerli.infura.io/v3/af2f28bdb95d40edb06226a46106f5f9");
+const r_provider = new providers.JsonRpcProvider("https://rinkeby.infura.io/v3/af2f28bdb95d40edb06226a46106f5f9");
+
+const getBalances = async function(provider){
+    const addressesToCheck = [r0Address,r1Address,daveAddress,carolAddress];
+
+    let allAddressesHaveETH = true;
+    for(let i=0; i<addressesToCheck.length; i++) {
+        const bal = await g_provider.getBalance(addressesToCheck[i])
+        if (bal.toString() === "0")
+        {
+            //compare balance to 0
+            allAddressesHaveETH = false;
+        }
+        console.log(bal.toString())
+    }
+    return allAddressesHaveETH;
 }
-setupR()
+const carolNodeURL = '8004'
+const daveNodeURL = '8005'
+const r0NodeUrl = '8002'
+const r1Nodeurl = '8014'
+
+
+
+const main = async function(){
+    const participantsHaveETH = await getBalances(g_provider)
+
+    if(!participantsHaveETH){return;}
+    const urlBase = "http://localhost:"
+
+    const index = 6969
+    const daveService = await RestServerNodeService.connect(
+        urlBase + daveNodeURL,
+        logger.child({testName, name:"Dave"}),
+        undefined,
+        index)
+
+
+    const carolService = await RestServerNodeService.connect(
+        urlBase + carolNodeURL,
+        logger.child({testName, name:"Carol"}),
+        undefined,
+        index)
+
+
+    const r0Service = await RestServerNodeService.connect(
+        urlBase + r0NodeUrl,
+        logger.child({ testName, name: "Roger" }),
+        undefined,
+        0,
+    );
+
+    // const net = await g_provider.getNetwork()
+    // const chainId = net.chainId;
+
+    const cr0Post = await setup(carolService, r0Service, 5)
+
+    console.log("C=>R0 Setup: ", cr0Post)
+
+}
+// start_stack()
+
+main()
