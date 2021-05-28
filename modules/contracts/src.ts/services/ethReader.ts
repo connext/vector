@@ -26,6 +26,7 @@ import {
   CoreChannelState,
   CoreTransferState,
   TransferDispute,
+  getConfirmationsForChain,
 } from "@connext/vector-types";
 import axios from "axios";
 import { encodeBalance, encodeTransferResolver, encodeTransferState } from "@connext/vector-utils";
@@ -113,13 +114,19 @@ export class EthereumChainReader implements IVectorChainReader {
   async getChannelDispute(
     channelAddress: string,
     chainId: number,
+    blockTag?: Result<number>,
   ): Promise<Result<ChannelDispute | undefined, ChainError>> {
     const provider = this.chainProviders[chainId];
     if (!provider) {
       return Result.fail(new ChainError(ChainError.reasons.ProviderNotFound));
     }
 
-    const code = await this.getCode(channelAddress, chainId);
+    const block = blockTag ?? (await this.getSafeBlockNumber(chainId));
+    if (block.isError) {
+      return Result.fail(block.getError()!);
+    }
+
+    const code = await this.getCode(channelAddress, chainId, block);
     if (code.isError) {
       return Result.fail(code.getError()!);
     }
@@ -130,7 +137,9 @@ export class EthereumChainReader implements IVectorChainReader {
     }
     return await this.retryWrapper<ChannelDispute | undefined>(chainId, async () => {
       try {
-        const dispute = await new Contract(channelAddress, VectorChannel.abi, provider).getChannelDispute();
+        const dispute = await new Contract(channelAddress, VectorChannel.abi, provider).getChannelDispute({
+          blockTag: block.getValue(),
+        });
         if (dispute.channelStateHash === HashZero) {
           return Result.ok(undefined);
         }
@@ -152,12 +161,17 @@ export class EthereumChainReader implements IVectorChainReader {
     transferRegistry: string,
     chainId: number,
     bytecode?: string,
+    blockTag?: Result<number>,
   ): Promise<Result<RegisteredTransfer, ChainError>> {
+    const block = blockTag ?? (await this.getSafeBlockNumber(chainId));
+    if (block.isError) {
+      return Result.fail(block.getError()!);
+    }
     return await this.retryWrapper<RegisteredTransfer>(chainId, async () => {
       let registry = this.transferRegistries.get(chainId.toString())!;
       if (!this.transferRegistries.has(chainId.toString())) {
         // Registry for chain not loaded, load into memory
-        const loadRes = await this.loadRegistry(transferRegistry, chainId, bytecode);
+        const loadRes = await this.loadRegistry(transferRegistry, chainId, bytecode, block);
         if (loadRes.isError) {
           return Result.fail(loadRes.getError()!);
         }
@@ -183,12 +197,17 @@ export class EthereumChainReader implements IVectorChainReader {
     transferRegistry: string,
     chainId: number,
     bytecode?: string,
+    blockTag?: Result<number>,
   ): Promise<Result<RegisteredTransfer, ChainError>> {
+    const block = blockTag ?? (await this.getSafeBlockNumber(chainId));
+    if (block.isError) {
+      return Result.fail(block.getError()!);
+    }
     return await this.retryWrapper<RegisteredTransfer>(chainId, async () => {
       let registry = this.transferRegistries.get(chainId.toString());
       if (!registry) {
         // Registry for chain not loaded, load into memory
-        const loadRes = await this.loadRegistry(transferRegistry, chainId, bytecode);
+        const loadRes = await this.loadRegistry(transferRegistry, chainId, bytecode, block);
         if (loadRes.isError) {
           return Result.fail(loadRes.getError()!);
         }
@@ -213,12 +232,17 @@ export class EthereumChainReader implements IVectorChainReader {
     transferRegistry: string,
     chainId: number,
     bytecode?: string,
+    blockTag?: Result<number>,
   ): Promise<Result<RegisteredTransfer[], ChainError>> {
+    const block = blockTag ?? (await this.getSafeBlockNumber(chainId));
+    if (block.isError) {
+      return Result.fail(block.getError()!);
+    }
     return await this.retryWrapper<RegisteredTransfer[]>(chainId, async () => {
       let registry = this.transferRegistries.get(chainId.toString());
       if (!registry) {
         // Registry for chain not loaded, load into memory
-        const loadRes = await this.loadRegistry(transferRegistry, chainId, bytecode);
+        const loadRes = await this.loadRegistry(transferRegistry, chainId, bytecode, block);
         if (loadRes.isError) {
           return Result.fail(loadRes.getError()!);
         }
@@ -228,15 +252,25 @@ export class EthereumChainReader implements IVectorChainReader {
     });
   }
 
-  async getChannelFactoryBytecode(channelFactoryAddress: string, chainId: number): Promise<Result<string, ChainError>> {
+  async getChannelFactoryBytecode(
+    channelFactoryAddress: string,
+    chainId: number,
+    blockTag?: Result<number>,
+  ): Promise<Result<string, ChainError>> {
     const provider = this.chainProviders[chainId];
     if (!provider) {
       return Result.fail(new ChainError(ChainError.reasons.ProviderNotFound));
     }
+    const block = blockTag ?? (await this.getSafeBlockNumber(chainId));
+    if (block.isError) {
+      return Result.fail(block.getError()!);
+    }
     return await this.retryWrapper<string>(chainId, async () => {
       try {
         const factory = new Contract(channelFactoryAddress, ChannelFactory.abi, provider);
-        const proxyBytecode = await factory.getProxyCreationCode();
+        const proxyBytecode = await factory.getProxyCreationCode({
+          blockTag: block.getValue(),
+        });
         return Result.ok(proxyBytecode);
       } catch (e) {
         return Result.fail(e);
@@ -247,15 +281,23 @@ export class EthereumChainReader implements IVectorChainReader {
   async getChannelMastercopyAddress(
     channelFactoryAddress: string,
     chainId: number,
+    blockTag?: Result<number>,
   ): Promise<Result<string, ChainError>> {
     const provider = this.chainProviders[chainId];
     if (!provider) {
       return Result.fail(new ChainError(ChainError.reasons.ProviderNotFound));
     }
+    const block = blockTag ?? (await this.getSafeBlockNumber(chainId));
+    if (block.isError) {
+      return Result.fail(block.getError()!);
+    }
+
     return await this.retryWrapper<string>(chainId, async () => {
       try {
         const factory = new Contract(channelFactoryAddress, ChannelFactory.abi, provider);
-        const mastercopy = await factory.getMastercopy();
+        const mastercopy = await factory.getMastercopy({
+          blockTag: block.getValue(),
+        });
         return Result.ok(mastercopy);
       } catch (e) {
         return Result.fail(e);
@@ -267,13 +309,18 @@ export class EthereumChainReader implements IVectorChainReader {
     channelAddress: string,
     chainId: number,
     assetId: string,
+    blockTag?: Result<number>,
   ): Promise<Result<BigNumber, ChainError>> {
     const provider = this.chainProviders[chainId];
     if (!provider) {
       return Result.fail(new ChainError(ChainError.reasons.ProviderNotFound));
     }
+    const block = blockTag ?? (await this.getSafeBlockNumber(chainId));
+    if (block.isError) {
+      return Result.fail(block.getError()!);
+    }
     return await this.retryWrapper<BigNumber>(chainId, async () => {
-      const code = await this.getCode(channelAddress, chainId);
+      const code = await this.getCode(channelAddress, chainId, block);
       if (code.isError) {
         return Result.fail(code.getError()!);
       }
@@ -284,7 +331,9 @@ export class EthereumChainReader implements IVectorChainReader {
 
       const channelContract = new Contract(channelAddress, ChannelMastercopy.abi, provider);
       try {
-        const totalDepositsAlice = await channelContract.getTotalDepositsAlice(assetId);
+        const totalDepositsAlice = await channelContract.getTotalDepositsAlice(assetId, {
+          blockTag: block.getValue(),
+        });
         return Result.ok(totalDepositsAlice);
       } catch (e) {
         return Result.fail(e);
@@ -296,24 +345,31 @@ export class EthereumChainReader implements IVectorChainReader {
     channelAddress: string,
     chainId: number,
     assetId: string,
+    blockTag?: Result<number>,
   ): Promise<Result<BigNumber, ChainError>> {
     const provider = this.chainProviders[chainId];
     if (!provider) {
       return Result.fail(new ChainError(ChainError.reasons.ProviderNotFound));
     }
+    const block = blockTag ?? (await this.getSafeBlockNumber(chainId));
+    if (block.isError) {
+      return Result.fail(block.getError()!);
+    }
     return await this.retryWrapper<BigNumber>(chainId, async () => {
-      const code = await this.getCode(channelAddress, chainId);
+      const code = await this.getCode(channelAddress, chainId, block);
       if (code.isError) {
         return Result.fail(code.getError()!);
       }
       if (code.getValue() === "0x") {
         // all balance at channel address *must* be for bob
-        return this.getOnchainBalance(assetId, channelAddress, chainId);
+        return this.getOnchainBalance(assetId, channelAddress, chainId, block);
       }
 
       const channelContract = new Contract(channelAddress, ChannelMastercopy.abi, provider);
       try {
-        const totalDepositsBob = await channelContract.getTotalDepositsBob(assetId);
+        const totalDepositsBob = await channelContract.getTotalDepositsBob(assetId, {
+          blockTag: block.getValue(),
+        });
         return Result.ok(totalDepositsBob);
       } catch (e) {
         return Result.fail(e);
@@ -328,10 +384,15 @@ export class EthereumChainReader implements IVectorChainReader {
     transferRegistryAddress: string,
     chainId: number,
     bytecode?: string,
+    blockTag?: Result<number>,
   ): Promise<Result<boolean, ChainError>> {
     const provider = this.chainProviders[chainId];
     if (!provider) {
       return Result.fail(new ChainError(ChainError.reasons.ProviderNotFound));
+    }
+    const block = blockTag ?? (await this.getSafeBlockNumber(chainId));
+    if (block.isError) {
+      return Result.fail(block.getError()!);
     }
     return await this.retryWrapper<boolean>(chainId, async () => {
       // Get encoding
@@ -340,6 +401,7 @@ export class EthereumChainReader implements IVectorChainReader {
         transferRegistryAddress,
         chainId,
         bytecode,
+        block,
       );
       if (registryRes.isError) {
         return Result.fail(registryRes.getError()!);
@@ -371,7 +433,7 @@ export class EthereumChainReader implements IVectorChainReader {
         "Calling create onchain",
       );
       try {
-        const valid = await contract.create(encodedBalance, encodedState);
+        const valid = await contract.create(encodedBalance, encodedState, { blockTag: block.getValue() });
         return Result.ok(valid);
       } catch (e) {
         return Result.fail(e);
@@ -379,10 +441,19 @@ export class EthereumChainReader implements IVectorChainReader {
     });
   }
 
-  async resolve(transfer: FullTransferState, chainId: number, bytecode?: string): Promise<Result<Balance, ChainError>> {
+  async resolve(
+    transfer: FullTransferState,
+    chainId: number,
+    bytecode?: string,
+    blockTag?: Result<number>,
+  ): Promise<Result<Balance, ChainError>> {
     const provider = this.chainProviders[chainId];
     if (!provider) {
       return Result.fail(new ChainError(ChainError.reasons.ProviderNotFound));
+    }
+    const block = blockTag ?? (await this.getSafeBlockNumber(chainId));
+    if (block.isError) {
+      return Result.fail(block.getError()!);
     }
     return await this.retryWrapper<Balance>(chainId, async () => {
       // Try to encode
@@ -417,7 +488,9 @@ export class EthereumChainReader implements IVectorChainReader {
         "Calling resolve onchain",
       );
       try {
-        const ret = await contract.resolve(encodedBalance, encodedState, encodedResolver);
+        const ret = await contract.resolve(encodedBalance, encodedState, encodedResolver, {
+          blockTag: block.getValue(),
+        });
         return Result.ok({
           to: ret.to,
           amount: ret.amount.map((a: BigNumber) => a.toString()),
@@ -433,15 +506,22 @@ export class EthereumChainReader implements IVectorChainReader {
     bob: string,
     channelFactoryAddress: string,
     chainId: number,
+    blockTag?: Result<number>,
   ): Promise<Result<string, ChainError>> {
     const provider = this.chainProviders[chainId];
     if (!provider) {
       return Result.fail(new ChainError(ChainError.reasons.ProviderNotFound));
     }
+    const block = blockTag ?? (await this.getSafeBlockNumber(chainId));
+    if (block.isError) {
+      return Result.fail(block.getError()!);
+    }
     return await this.retryWrapper<string>(chainId, async () => {
       const channelFactory = new Contract(channelFactoryAddress, ChannelFactory.abi, provider);
       try {
-        const derivedAddress = await channelFactory.getChannelAddress(alice, bob);
+        const derivedAddress = await channelFactory.getChannelAddress(alice, bob, {
+          blockTag: block.getValue(),
+        });
         return Result.ok(derivedAddress);
       } catch (e) {
         return Result.fail(e);
@@ -449,14 +529,18 @@ export class EthereumChainReader implements IVectorChainReader {
     });
   }
 
-  async getCode(address: string, chainId: number): Promise<Result<string, ChainError>> {
+  async getCode(address: string, chainId: number, blockTag?: Result<number>): Promise<Result<string, ChainError>> {
     const provider = this.chainProviders[chainId];
     if (!provider) {
       return Result.fail(new ChainError(ChainError.reasons.ProviderNotFound));
     }
+    const block = blockTag ?? (await this.getSafeBlockNumber(chainId));
+    if (block.isError) {
+      return Result.fail(block.getError()!);
+    }
     return await this.retryWrapper<string>(chainId, async () => {
       try {
-        const code = await provider.getCode(address);
+        const code = await provider.getCode(address, block.getValue());
         return Result.ok(code);
       } catch (e) {
         return Result.fail(e);
@@ -530,15 +614,20 @@ export class EthereumChainReader implements IVectorChainReader {
     owner: string,
     spender: string,
     chainId: number,
+    blockTag?: Result<number>,
   ): Promise<Result<BigNumber, ChainError>> {
     const provider = this.chainProviders[chainId];
     if (!provider) {
       return Result.fail(new ChainError(ChainError.reasons.ProviderNotFound));
     }
+    const block = blockTag ?? (await this.getSafeBlockNumber(chainId));
+    if (block.isError) {
+      return Result.fail(block.getError()!);
+    }
     return await this.retryWrapper<BigNumber>(chainId, async () => {
       const erc20 = new Contract(tokenAddress, ERC20Abi, provider);
       try {
-        const res = await erc20.allowance(owner, spender);
+        const res = await erc20.allowance(owner, spender, { blockTag: block.getValue() });
         return Result.ok(res);
       } catch (e) {
         return Result.fail(e);
@@ -546,17 +635,26 @@ export class EthereumChainReader implements IVectorChainReader {
     });
   }
 
-  async getOnchainBalance(assetId: string, balanceOf: string, chainId: number): Promise<Result<BigNumber, ChainError>> {
+  async getOnchainBalance(
+    assetId: string,
+    balanceOf: string,
+    chainId: number,
+    blockTag?: Result<number>,
+  ): Promise<Result<BigNumber, ChainError>> {
     const provider = this.chainProviders[chainId];
     if (!provider) {
       return Result.fail(new ChainError(ChainError.reasons.ProviderNotFound));
+    }
+    const block = blockTag ?? (await this.getSafeBlockNumber(chainId));
+    if (block.isError) {
+      return Result.fail(block.getError()!);
     }
     return await this.retryWrapper<BigNumber>(chainId, async () => {
       try {
         const onchainBalance =
           assetId === AddressZero
-            ? await provider.getBalance(balanceOf)
-            : await new Contract(assetId, ERC20Abi, provider).balanceOf(balanceOf);
+            ? await provider.getBalance(balanceOf, block.getValue())
+            : await new Contract(assetId, ERC20Abi, provider).balanceOf(balanceOf, { blockTag: block.getValue() });
         return Result.ok(onchainBalance);
       } catch (e) {
         return Result.fail(e);
@@ -564,14 +662,21 @@ export class EthereumChainReader implements IVectorChainReader {
     });
   }
 
-  async getDecimals(assetId: string, chainId: number): Promise<Result<number, ChainError>> {
+  async getDecimals(assetId: string, chainId: number, blockTag?: Result<number>): Promise<Result<number, ChainError>> {
     const provider = this.chainProviders[chainId];
     if (!provider) {
       return Result.fail(new ChainError(ChainError.reasons.ProviderNotFound));
     }
+    const block = blockTag ?? (await this.getSafeBlockNumber(chainId));
+    if (block.isError) {
+      return Result.fail(block.getError()!);
+    }
     return await this.retryWrapper<number>(chainId, async () => {
       try {
-        const decimals = assetId === AddressZero ? 18 : await new Contract(assetId, ERC20Abi, provider).decimals();
+        const decimals =
+          assetId === AddressZero
+            ? 18
+            : await new Contract(assetId, ERC20Abi, provider).decimals({ blockTag: block.getValue() });
         return Result.ok(decimals);
       } catch (e) {
         return Result.fail(e);
@@ -583,14 +688,19 @@ export class EthereumChainReader implements IVectorChainReader {
     withdrawData: WithdrawCommitmentJson,
     channelAddress: string,
     chainId: number,
+    blockTag?: Result<number>,
   ): Promise<Result<boolean, ChainError>> {
     const provider = this.chainProviders[chainId];
     if (!provider) {
       return Result.fail(new ChainError(ChainError.reasons.ProviderNotFound));
     }
+    const block = blockTag ?? (await this.getSafeBlockNumber(chainId));
+    if (block.isError) {
+      return Result.fail(block.getError()!);
+    }
     return await this.retryWrapper<boolean>(chainId, async () => {
       // check if it was deployed
-      const code = await this.getCode(channelAddress, chainId);
+      const code = await this.getCode(channelAddress, chainId, block);
       if (code.isError) {
         return Result.fail(code.getError()!);
       }
@@ -601,15 +711,18 @@ export class EthereumChainReader implements IVectorChainReader {
       }
       const channel = new Contract(channelAddress, VectorChannel.abi, provider);
       try {
-        const record = await channel.getWithdrawalTransactionRecord({
-          channelAddress,
-          assetId: withdrawData.assetId,
-          recipient: withdrawData.recipient,
-          amount: withdrawData.amount,
-          nonce: withdrawData.nonce,
-          callTo: withdrawData.callTo,
-          callData: withdrawData.callData,
-        });
+        const record = await channel.getWithdrawalTransactionRecord(
+          {
+            channelAddress,
+            assetId: withdrawData.assetId,
+            recipient: withdrawData.recipient,
+            amount: withdrawData.amount,
+            nonce: withdrawData.nonce,
+            callTo: withdrawData.callTo,
+            callData: withdrawData.callData,
+          },
+          { blockTag: block.getValue() },
+        );
         return Result.ok(record);
       } catch (e) {
         return Result.fail(e);
@@ -805,11 +918,17 @@ export class EthereumChainReader implements IVectorChainReader {
     transferRegistry: string,
     chainId: number,
     bytecode?: string,
+    blockTag?: Result<number>,
   ): Promise<Result<RegisteredTransfer[], ChainError>> {
     const provider = this.chainProviders[chainId];
     if (!provider) {
       return Result.fail(new ChainError(ChainError.reasons.ProviderNotFound));
     }
+    const block = blockTag ?? (await this.getSafeBlockNumber(chainId));
+    if (block.isError) {
+      return Result.fail(block.getError()!);
+    }
+
     // Registry for chain not loaded, load into memory
     const registry = new Contract(transferRegistry, TransferRegistry.abi, provider);
     let registered;
@@ -825,7 +944,7 @@ export class EthereumChainReader implements IVectorChainReader {
     }
     if (!registered) {
       try {
-        registered = await registry.getTransferDefinitions();
+        registered = await registry.getTransferDefinitions({ blockTag: block.getValue() });
       } catch (e) {
         return Result.fail(new ChainError(e.message, { chainId, transferRegistry }));
       }
@@ -841,6 +960,24 @@ export class EthereumChainReader implements IVectorChainReader {
     });
     this.transferRegistries.set(chainId.toString(), cleaned);
     return Result.ok(cleaned);
+  }
+
+  private async getSafeBlockNumber(chainId: number): Promise<Result<number, ChainError>> {
+    const provider = this.chainProviders[chainId];
+    if (!provider) {
+      return Result.fail(
+        new ChainError(ChainError.reasons.ProviderNotFound, { chainId, supported: Object.keys(this.chainProviders) }),
+      );
+    }
+    const safe = await this.retryWrapper<number>(chainId, async () => {
+      try {
+        const { number } = await provider.getBlock("latest");
+        return Result.ok(number - getConfirmationsForChain(chainId));
+      } catch (e) {
+        return Result.fail(e);
+      }
+    });
+    return safe;
   }
 
   private async retryWrapper<T>(
