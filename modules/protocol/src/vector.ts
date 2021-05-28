@@ -300,17 +300,17 @@ export class Vector implements IVectorProtocol {
       }
       // Save the newly signed update to your channel
       const { updatedChannel, updatedTransfer } = value.getValue();
+      await this.messagingService.respondToProtocolMessage(
+        received.inbox,
+        updatedChannel.latestUpdate,
+        (channelState as FullChannelState | undefined)?.latestUpdate,
+      );
       const saveRes = await persistChannel(this.storeService, updatedChannel, updatedTransfer);
       if (saveRes.isError) {
         return returnError(QueuedUpdateError.reasons.StoreFailure, updatedChannel, {
           saveError: saveRes.getError().message,
         });
       }
-      await this.messagingService.respondToProtocolMessage(
-        received.inbox,
-        updatedChannel.latestUpdate,
-        (channelState as FullChannelState | undefined)?.latestUpdate,
-      );
       return value;
     };
     const queue = new SerializedQueue<SelfUpdateResult, OtherUpdateResult>(
