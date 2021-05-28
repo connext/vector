@@ -58,11 +58,20 @@ export class EthereumChainReader implements IVectorChainReader {
     [ChainReaderEvents.TRANSFER_DISPUTED]: new Evt(),
     [ChainReaderEvents.TRANSFER_DEFUNDED]: new Evt(),
   };
+  private safeBlocks: Map<string, number> = new Map();
   private contracts: Map<string, Contract> = new Map();
   constructor(
     public readonly chainProviders: { [chainId: string]: JsonRpcProvider },
     public readonly log: pino.BaseLogger,
-  ) {}
+  ) {
+    // setup listeners for each chain to set latest safe block
+    Object.entries(this.chainProviders).forEach(([chainId, provider]) => {
+      provider.on("block", (blockNumber) => {
+        const safe = blockNumber - getConfirmationsForChain(chainId);
+        this.safeBlocks.set(chainId, safe < 0 ? 0 : safe);
+      });
+    });
+  }
 
   getChainProviders(): Result<ChainProviders, ChainError> {
     const ret: ChainProviders = {};
@@ -963,12 +972,18 @@ export class EthereumChainReader implements IVectorChainReader {
   }
 
   private async getSafeBlockNumber(chainId: number): Promise<Result<number, ChainError>> {
+    if (this.safeBlocks.has(chainId.toString())) {
+      return Result.ok(this.safeBlocks.get(chainId.toString()));
+    }
+    // Doesn't have block
     const latest = await this.getBlockNumber(chainId);
     if (latest.isError) {
       return Result.fail(latest.getError()!);
     }
     const safe = latest.getValue() - getConfirmationsForChain(chainId);
-    return Result.ok(safe < 0 ? 0 : safe);
+    const positiveSafe = safe < 0 ? 0 : safe;
+    this.safeBlocks.set(chainId.toString(), positiveSafe);
+    return Result.ok(positiveSafe);
   }
 
   private async retryWrapper<T>(
