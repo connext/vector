@@ -676,7 +676,7 @@ export class AgentManager {
     const errored = Object.entries(this.transferInfo)
       .map(([routingId, transfer]) => {
         if (transfer.error) {
-          return transfer.error;
+          return { ...transfer, routingId };
         }
         return undefined;
       })
@@ -691,6 +691,9 @@ export class AgentManager {
         created: Object.entries(this.transferInfo).length,
         completed: times.length,
         cancelled: errored.length,
+        cancellationReasons: errored.map((c) => {
+          return { routingId: c!.routingId, reason: c!.error };
+        }),
       },
       "Transfer summary",
     );
