@@ -973,7 +973,7 @@ export class EthereumChainReader implements IVectorChainReader {
 
   private async getSafeBlockNumber(chainId: number): Promise<Result<number, ChainError>> {
     if (this.safeBlocks.has(chainId.toString())) {
-      return Result.ok(this.safeBlocks.get(chainId.toString()));
+      return Result.ok(this.safeBlocks.get(chainId.toString())!);
     }
     // Doesn't have block
     const latest = await this.getBlockNumber(chainId);
