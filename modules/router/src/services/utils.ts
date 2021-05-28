@@ -3,6 +3,7 @@ import { FeeCalculationError, normalizeFee } from "@connext/vector-utils";
 import { BigNumber } from "@ethersproject/bignumber";
 import { AddressZero } from "@ethersproject/constants";
 import { BaseLogger } from "pino";
+import { v4 } from "uuid";
 
 // Yes, this is dumb. It helps with mocking because using
 // sinon to mock vector-utils functions does not work
@@ -68,4 +69,18 @@ export async function wasSingleSignedTransferProcessed(
     return t.initiatorIdentifier !== routerPublicIdentifier;
   }) as FullTransferState;
   return Result.ok({ senderTransfer, receiverTransfer });
+}
+
+// TODO: what else?
+export type RequestContext = {
+  id: string;
+  entry: string;
+};
+
+export function createRequestContext(entry: string): RequestContext {
+  const id = v4();
+  return {
+    id,
+    entry,
+  };
 }
