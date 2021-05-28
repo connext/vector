@@ -967,7 +967,8 @@ export class EthereumChainReader implements IVectorChainReader {
     if (latest.isError) {
       return Result.fail(latest.getError()!);
     }
-    return Result.ok(latest.getValue() - getConfirmationsForChain(chainId));
+    const safe = latest.getValue() - getConfirmationsForChain(chainId);
+    return Result.ok(safe < 0 ? 0 : safe);
   }
 
   private async retryWrapper<T>(
