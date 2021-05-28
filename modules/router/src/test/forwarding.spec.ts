@@ -41,6 +41,7 @@ import { getAddress } from "@ethersproject/address";
 import { PrismaStore, RouterStoredUpdate, RouterUpdateStatus, RouterUpdateType } from "../services/store";
 import * as forwarding from "../forwarding";
 import * as config from "../config";
+import * as utils from "../services/utils";
 import * as configService from "../services/config";
 import * as swapService from "../services/swap";
 import * as transferService from "../services/transfer";
@@ -73,6 +74,7 @@ describe(testName, () => {
     let justInTimeCollateral: Sinon.SinonStub;
     let getConfig: Sinon.SinonStub;
     let shouldChargeFees: Sinon.SinonStub;
+    let wasSingleSignedTransferProcessed: Sinon.SinonStub;
 
     const routerPublicIdentifier = mkPublicIdentifier("vectorRRR");
     const aliceIdentifier = mkPublicIdentifier("vectorA");
@@ -168,6 +170,8 @@ describe(testName, () => {
           routingId: senderTransfer.meta.routingId,
         }),
       );
+      // handle error case of ^ by default
+      wasSingleSignedTransferProcessed.resolves(Result.ok({ senderTransfer, receiverTransfer: undefined }));
 
       // Set mock methods for error handling
       // get registered transfer
@@ -300,6 +304,8 @@ describe(testName, () => {
 
       getConfig = Sinon.stub(config, "getConfig");
       shouldChargeFees = Sinon.stub(configService, "shouldChargeFees");
+
+      wasSingleSignedTransferProcessed = Sinon.stub(utils, "wasSingleSignedTransferProcessed");
     });
 
     afterEach(() => {
@@ -591,7 +597,7 @@ describe(testName, () => {
 
     it.skip("fails without cancellation if transferWithAutoCollateralization got receiver timeout", async () => {});
 
-    it("fails without cancellation if transfer creation fails", async () => {
+    it("fails without cancellation if transfer creation fails && receiver did install", async () => {
       const ctx = prepEnv();
       const err = new ServerNodeServiceError(ServerNodeServiceError.reasons.InternalServerError, "", "", {});
       node.conditionalTransfer.onFirstCall().resolves(Result.fail(err));
@@ -611,12 +617,37 @@ describe(testName, () => {
         result,
         ctx,
         ForwardTransferCreationError.reasons.ErrorForwardingTransfer,
-        {
-          transferError: sanitized,
-        },
-        false,
+        {},
+        true,
         undefined,
         true,
+      );
+    });
+
+    it("fails with cancellation if transfer creation fails && receiver didnt install", async () => {
+      const ctx = prepEnv();
+      const err = new ServerNodeServiceError(ServerNodeServiceError.reasons.InternalServerError, "", "", {});
+      node.conditionalTransfer.onFirstCall().resolves(Result.fail(err));
+
+      const result = await forwarding.forwardTransferCreation(
+        ctx.event,
+        routerPublicIdentifier,
+        signerAddress,
+        node as INodeService,
+        store,
+        testLog,
+        chainReader as IVectorChainReader,
+      );
+
+      const { stack, ...sanitized } = err.toJson();
+      await verifyErrorResult(
+        result,
+        ctx,
+        ForwardTransferCreationError.reasons.ErrorForwardingTransfer,
+        {},
+        false,
+        undefined,
+        false,
       );
     });
   });
@@ -803,6 +834,7 @@ describe(testName, () => {
     let chainReader: Sinon.SinonStubbedInstance<VectorChainReader>;
     let transferWithCollateralization: Sinon.SinonStub;
     let cancelCreatedTransfer: Sinon.SinonStub;
+    let wasSingleSignedTransferProcessed: Sinon.SinonStub;
 
     const setupMocks = (
       receiverInstalled: boolean = false,
@@ -848,28 +880,19 @@ describe(testName, () => {
       // Set default mocked values
       store.getQueuedUpdates.resolves(storedUpdates);
       nodeService.getStateChannel.resolves(Result.ok(channel));
-      // NOTE: return value in Result from `transferWithCollateralization`
-      // and `nodeService.resolveTransfer` are not used. Error context is
-      // the only thing if failing (set in tests themselves)
-      nodeService.reconcileDeposit.resolves(Result.ok({ channelAddress: channel.channelAddress }));
-      const transfers = [
-        createTestFullHashlockTransferState({
-          channelAddress: channel.channelAddress,
-          responderIdentifier: routerPublicIdentifier,
+      wasSingleSignedTransferProcessed.resolves(
+        Result.ok({
+          senderTransfer: createTestFullHashlockTransferState({
+            channelAddress: channel.channelAddress,
+            responderIdentifier: routerPublicIdentifier,
+          }),
+          receiverTransfer: receiverInstalled
+            ? createTestFullHashlockTransferState({
+                channelAddress: mkAddress("0xccc22222"),
+                initiatorIdentifier: routerPublicIdentifier,
+              })
+            : undefined,
         }),
-      ];
-      nodeService.getTransfersByRoutingId.resolves(
-        Result.ok(
-          receiverInstalled
-            ? [
-                ...transfers,
-                createTestFullHashlockTransferState({
-                  channelAddress: mkAddress("0xccc22222"),
-                  initiatorIdentifier: routerPublicIdentifier,
-                }),
-              ]
-            : (transfers as any),
-        ),
       );
       transferWithCollateralization.resolves(Result.ok("Yay you did it"));
       cancelCreatedTransfer.resolves(Result.ok("You did it again, superstar!"));
@@ -883,6 +906,7 @@ describe(testName, () => {
       chainReader = Sinon.createStubInstance(VectorChainReader);
       transferWithCollateralization = Sinon.stub(transferService, "transferWithCollateralization");
       cancelCreatedTransfer = Sinon.stub(transferService, "cancelCreatedTransfer");
+      wasSingleSignedTransferProcessed = Sinon.stub(utils, "wasSingleSignedTransferProcessed");
     });
 
     afterEach(() => {
@@ -958,9 +982,9 @@ describe(testName, () => {
       ]);
     });
 
-    it("should handle updates if reconciling deposits fail", async () => {
+    it("should handle updates if wasSingleSignedTransferProcessed fail", async () => {
       const { payload, storedUpdates } = setupMocks();
-      nodeService.reconcileDeposit.resolves(
+      wasSingleSignedTransferProcessed.resolves(
         Result.fail(new ServerNodeServiceError(ServerNodeServiceError.reasons.Timeout, "", "", {})),
       );
       const result = await forwarding.handleUnverifiedUpdates(
@@ -977,7 +1001,7 @@ describe(testName, () => {
       expect(store.setUpdateStatus.getCall(0).args).to.be.deep.eq([
         storedUpdates[0].id,
         RouterUpdateStatus.FAILED,
-        "Could not reconcile deposit",
+        "Cannot come to consensus on merkle root",
       ]);
     });
 
@@ -999,29 +1023,6 @@ describe(testName, () => {
         storedUpdates[0].id,
         RouterUpdateStatus.FAILED,
         "No routingId in update.payload.meta",
-      ]);
-    });
-
-    it("should handle updates if it cannot get transfers by routing id", async () => {
-      const { payload, storedUpdates } = setupMocks();
-      nodeService.getTransfersByRoutingId.resolves(
-        Result.fail(new ServerNodeServiceError(ServerNodeServiceError.reasons.Timeout, "", "", {})),
-      );
-      const result = await forwarding.handleUnverifiedUpdates(
-        payload,
-        routerPublicIdentifier,
-        nodeService as INodeService,
-        store,
-        chainReader as IVectorChainReader,
-        logger,
-      );
-      expect(result.isError).to.be.true;
-      expect(result.getError()?.message).to.be.eq(CheckInError.reasons.UpdatesFailed);
-      expect(store.setUpdateStatus.callCount).to.be.eq(1);
-      expect(store.setUpdateStatus.getCall(0).args).to.be.deep.eq([
-        storedUpdates[0].id,
-        RouterUpdateStatus.FAILED,
-        "Could not get transfers by routingId",
       ]);
     });
 
@@ -1124,7 +1125,7 @@ describe(testName, () => {
       const { payload, storedUpdates } = setupMocks();
       storedUpdates[0].payload.meta = { routingId: getRandomBytes32(), requireOnline: true };
       store.getQueuedUpdates.resolves(storedUpdates);
-      nodeService.getTransfersByRoutingId.resolves(Result.ok([]));
+      wasSingleSignedTransferProcessed.resolves(Result.ok({ senderTransfer: undefined, receiverTransfer: undefined }));
       const result = await forwarding.handleUnverifiedUpdates(
         payload,
         routerPublicIdentifier,

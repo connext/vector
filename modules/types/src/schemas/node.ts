@@ -388,6 +388,12 @@ const PostWithdrawRetryTransferResponseSchema = {
     transactionHash: Type.Optional(TBytes32),
   }),
 };
+
+const PostAddTransactionToCommitmentTransferBodySchema = Type.Intersect([
+  EngineParams.AddTransactionToCommitmentSchema,
+  Type.Object({ publicIdentifier: TPublicIdentifier }),
+]);
+
 // POST SIGN UTILITY MESSAGE
 const PostSignUtilityMessageBodySchema = Type.Intersect([
   EngineParams.SignUtilityMessageSchema,
@@ -664,6 +670,9 @@ export namespace NodeParams {
 
   export const WithdrawRetrySchema = PostWithdrawRetryTransferBodySchema;
   export type WithdrawRetry = Static<typeof WithdrawRetrySchema>;
+
+  export const AddTransactionToCommitmentSchema = PostAddTransactionToCommitmentTransferBodySchema;
+  export type AddTransactionToCommitment = Static<typeof AddTransactionToCommitmentSchema>;
 
   export const RegisterListenerSchema = PostRegisterListenerBodySchema;
   export type RegisterListener = Static<typeof RegisterListenerSchema>;

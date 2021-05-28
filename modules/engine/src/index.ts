@@ -675,7 +675,11 @@ export class VectorEngine implements IVectorEngine {
     const receipt = deployRes.getValue();
     this.logger.debug({ chainId: channel.networkContext.chainId, hash: receipt.transactionHash }, "Deploy tx mined");
     this.logger.info(
-      { result: setupRes.isError ? jsonifyError(setupRes.getError()!) : setupRes.getValue(), method, methodId },
+      {
+        result: setupRes.isError ? jsonifyError(setupRes.getError()!) : setupRes.getValue().channelAddress,
+        method,
+        methodId,
+      },
       "Method complete",
     );
     return setupRes;
@@ -702,7 +706,7 @@ export class VectorEngine implements IVectorEngine {
       this.publicIdentifier,
     );
     this.logger.info(
-      { result: res.isError ? jsonifyError(res.getError()!) : res.getValue(), method, methodId },
+      { result: res.isError ? jsonifyError(res.getError()!) : res.getValue().channelAddress, method, methodId },
       "Method complete",
     );
     return res;
@@ -762,7 +766,7 @@ export class VectorEngine implements IVectorEngine {
     }
     this.logger.info(
       {
-        result: depositRes.isError ? jsonifyError(depositRes.getError()!) : depositRes.getValue(),
+        result: depositRes.isError ? jsonifyError(depositRes.getError()!) : depositRes.getValue().channelAddress,
         method,
         methodId,
       },
@@ -864,7 +868,7 @@ export class VectorEngine implements IVectorEngine {
       return Result.fail(protocolRes.getError()!);
     }
     const res = protocolRes.getValue();
-    this.logger.info({ channel: res, method, methodId }, "Method complete");
+    this.logger.info({ channelAddress: res.channelAddress, method, methodId }, "Method complete");
     return Result.ok(res);
   }
 
@@ -910,7 +914,7 @@ export class VectorEngine implements IVectorEngine {
       return Result.fail(protocolRes.getError()!);
     }
     const res = protocolRes.getValue();
-    this.logger.info({ channel: res, method, methodId }, "Method complete");
+    this.logger.info({ channelAddress: res.channelAddress, method, methodId }, "Method complete");
     return Result.ok(res);
   }
 
@@ -1009,7 +1013,10 @@ export class VectorEngine implements IVectorEngine {
       transaction = (await WithdrawCommitment.fromJson(commitment)).getSignedTransaction();
     }
 
-    this.logger.info({ channel: res, method, methodId, transactionHash, transaction }, "Method complete");
+    this.logger.info(
+      { channelAddress: res.channelAddress, method, methodId, transactionHash, transaction },
+      "Method complete",
+    );
     return Result.ok({ channel: res, transactionHash, transaction: transaction! });
   }
 
@@ -1218,7 +1225,7 @@ export class VectorEngine implements IVectorEngine {
         this.signer.publicIdentifier,
       );
       this.logger.info(
-        { result: res.isError ? jsonifyError(res.getError()!) : res.getValue(), method, methodId },
+        { result: res.isError ? jsonifyError(res.getError()!) : res.getValue().channelAddress, method, methodId },
         "Method complete",
       );
       return res;
