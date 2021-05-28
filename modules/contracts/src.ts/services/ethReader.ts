@@ -963,21 +963,11 @@ export class EthereumChainReader implements IVectorChainReader {
   }
 
   private async getSafeBlockNumber(chainId: number): Promise<Result<number, ChainError>> {
-    const provider = this.chainProviders[chainId];
-    if (!provider) {
-      return Result.fail(
-        new ChainError(ChainError.reasons.ProviderNotFound, { chainId, supported: Object.keys(this.chainProviders) }),
-      );
+    const latest = await this.getBlockNumber(chainId);
+    if (latest.isError) {
+      return Result.fail(latest.getError()!);
     }
-    const safe = await this.retryWrapper<number>(chainId, async () => {
-      try {
-        const { number } = await provider.getBlock("latest");
-        return Result.ok(number - getConfirmationsForChain(chainId));
-      } catch (e) {
-        return Result.fail(e);
-      }
-    });
-    return safe;
+    return Result.ok(latest.getValue() - getConfirmationsForChain(chainId));
   }
 
   private async retryWrapper<T>(
