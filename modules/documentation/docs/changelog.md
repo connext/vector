@@ -2,6 +2,8 @@
 
 ## Next Release
 
+- \[contracts\] Use confirmed block for ethReader
+
 ## 0.2.5-beta.18
 
 - \[node\] Save transaction hash to commitment properly
