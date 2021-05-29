@@ -27,6 +27,7 @@ import {
   CoreTransferState,
   TransferDispute,
   getConfirmationsForChain,
+  TEST_CHAIN_IDS,
 } from "@connext/vector-types";
 import axios from "axios";
 import { encodeBalance, encodeTransferResolver, encodeTransferState } from "@connext/vector-utils";
@@ -973,7 +974,7 @@ export class EthereumChainReader implements IVectorChainReader {
   }
 
   private async getSafeBlockNumber(chainId: number): Promise<Result<number | "latest", ChainError>> {
-    if ([1337, 1338, 1339, 1340, 1341, 1342].includes(chainId)) {
+    if (TEST_CHAIN_IDS.includes(chainId)) {
       return Result.ok("latest");
     }
 
