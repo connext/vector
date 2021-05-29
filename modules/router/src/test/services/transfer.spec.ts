@@ -28,6 +28,7 @@ import * as Sinon from "sinon";
 
 import { getConfig } from "../../config";
 import { ForwardTransferCreationError } from "../../errors";
+import * as utils from "../../services/utils";
 import { PrismaStore, RouterUpdateType } from "../../services/store";
 import { cancelCreatedTransfer, attemptTransferWithCollateralization } from "../../services/transfer";
 import * as collateral from "../../services/collateral";
@@ -46,6 +47,7 @@ describe(testName, () => {
     let store: Sinon.SinonStubbedInstance<PrismaStore>;
     let chainReader: Sinon.SinonStubbedInstance<VectorChainReader>;
     let justInTimeCollateral: Sinon.SinonStub;
+    let wasSingleSignedTransferProcessed: Sinon.SinonStub;
 
     // Declare constants
     const routerPublicIdentifier = mkPublicIdentifier("vectorIII");
@@ -80,12 +82,21 @@ describe(testName, () => {
       store = Sinon.createStubInstance(PrismaStore);
       chainReader = Sinon.createStubInstance(VectorChainReader);
       justInTimeCollateral = Sinon.stub(collateral, "justInTimeCollateral");
+      wasSingleSignedTransferProcessed = Sinon.stub(utils, "wasSingleSignedTransferProcessed");
 
       // Default all stubs to return sucessful values
       nodeService.sendIsAliveMessage.resolves(Result.ok({ channelAddress }));
       store.queueUpdate.resolves(undefined);
       justInTimeCollateral.resolves(Result.ok(undefined));
       nodeService.conditionalTransfer.resolves(Result.ok({ channelAddress, transferId, routingId }));
+      wasSingleSignedTransferProcessed.resolves(
+        Result.ok({
+          senderTransfer: createTestFullHashlockTransferState({
+            channelAddress,
+            responderIdentifier: routerPublicIdentifier,
+          }),
+        }),
+      );
     });
 
     afterEach(() => {
@@ -268,6 +279,34 @@ describe(testName, () => {
         log,
         true,
       );
+      expect(res.isError).to.be.true;
+      expect(res.getError()!.message).to.be.eq(ForwardTransferCreationError.reasons.ErrorForwardingTransfer);
+      expect(res.getError()!.context.shouldCancelSender).to.be.true;
+    });
+
+    it("should fail if wasSingleSignedTransferProcessed fails", async () => {
+      const { channel } = createTestChannelState(UpdateType.deposit, {
+        channelAddress,
+        aliceIdentifier: routerPublicIdentifier,
+        alice: routerAddr,
+        bobIdentifier: recipient,
+        bob: recipientAddr,
+        assetIds: [mkAddress()],
+        balances: [{ to: [routerAddr, recipientAddr], amount: ["0", "53"] }],
+      });
+      nodeService.conditionalTransfer.resolves(Result.fail(new ChainError("fail") as any));
+      wasSingleSignedTransferProcessed.resolves(Result.fail(new ChainError("fail")));
+      const res = await attemptTransferWithCollateralization(
+        mkParams(),
+        channel,
+        routerPublicIdentifier,
+        nodeService as INodeService,
+        store,
+        chainReader as IVectorChainReader,
+        log,
+        true,
+      );
+      expect(res.isError).to.be.true;
       expect(res.getError()!.message).to.be.eq(ForwardTransferCreationError.reasons.ErrorForwardingTransfer);
       expect(res.getError()!.context.shouldCancelSender).to.be.false;
     });

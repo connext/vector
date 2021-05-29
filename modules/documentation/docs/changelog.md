@@ -2,9 +2,18 @@
 
 ## Next Release
 
-## 0.2.5-beta.15
+## 0.2.5-beta.18
+
+- \[node\] Save transaction hash to commitment properly
+
+## 0.2.5-beta.17
+
+- \[contracts\] Use pending transaction count for nonce
+
+## 0.2.5-beta.16
 
 - \[contracts\] Bump gas limit
+- \[test-runner\] Working load tests
 
 ## 0.2.5-beta.14
 

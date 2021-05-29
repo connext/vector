@@ -52,7 +52,7 @@ import {
   convertWithdrawParams,
 } from "./paramConverter";
 import { setupEngineListeners } from "./listeners";
-import { getEngineEvtContainer, withdrawRetryForTransferId } from "./utils";
+import { getEngineEvtContainer, withdrawRetryForTransferId, addTransactionToCommitment } from "./utils";
 import { sendIsAlive } from "./isAlive";
 import { WithdrawCommitment } from "@connext/vector-contracts";
 
@@ -671,7 +671,11 @@ export class VectorEngine implements IVectorEngine {
     const receipt = deployRes.getValue();
     this.logger.debug({ chainId: channel.networkContext.chainId, hash: receipt.transactionHash }, "Deploy tx mined");
     this.logger.info(
-      { result: setupRes.isError ? jsonifyError(setupRes.getError()!) : setupRes.getValue(), method, methodId },
+      {
+        result: setupRes.isError ? jsonifyError(setupRes.getError()!) : setupRes.getValue().channelAddress,
+        method,
+        methodId,
+      },
       "Method complete",
     );
     return setupRes;
@@ -698,7 +702,7 @@ export class VectorEngine implements IVectorEngine {
       this.publicIdentifier,
     );
     this.logger.info(
-      { result: res.isError ? jsonifyError(res.getError()!) : res.getValue(), method, methodId },
+      { result: res.isError ? jsonifyError(res.getError()!) : res.getValue().channelAddress, method, methodId },
       "Method complete",
     );
     return res;
@@ -758,7 +762,7 @@ export class VectorEngine implements IVectorEngine {
     }
     this.logger.info(
       {
-        result: depositRes.isError ? jsonifyError(depositRes.getError()!) : depositRes.getValue(),
+        result: depositRes.isError ? jsonifyError(depositRes.getError()!) : depositRes.getValue().channelAddress,
         method,
         methodId,
       },
@@ -860,7 +864,7 @@ export class VectorEngine implements IVectorEngine {
       return Result.fail(protocolRes.getError()!);
     }
     const res = protocolRes.getValue();
-    this.logger.info({ channel: res, method, methodId }, "Method complete");
+    this.logger.info({ channelAddress: res.channelAddress, method, methodId }, "Method complete");
     return Result.ok(res);
   }
 
@@ -906,7 +910,7 @@ export class VectorEngine implements IVectorEngine {
       return Result.fail(protocolRes.getError()!);
     }
     const res = protocolRes.getValue();
-    this.logger.info({ channel: res, method, methodId }, "Method complete");
+    this.logger.info({ channelAddress: res.channelAddress, method, methodId }, "Method complete");
     return Result.ok(res);
   }
 
@@ -1005,7 +1009,10 @@ export class VectorEngine implements IVectorEngine {
       transaction = (await WithdrawCommitment.fromJson(commitment)).getSignedTransaction();
     }
 
-    this.logger.info({ channel: res, method, methodId, transactionHash, transaction }, "Method complete");
+    this.logger.info(
+      { channelAddress: res.channelAddress, method, methodId, transactionHash, transaction },
+      "Method complete",
+    );
     return Result.ok({ channel: res, transactionHash, transaction: transaction! });
   }
 
@@ -1067,6 +1074,76 @@ export class VectorEngine implements IVectorEngine {
     );
 
     return Result.ok(withdrawRetryRes);
+  }
+
+  private async addTransactionToCommitment(
+    params: EngineParams.AddTransactionToCommitment,
+  ): Promise<Result<ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_addTransactionToCommitment], EngineError>> {
+    const method = "addTransactionToCommitment";
+    const methodId = getRandomBytes32();
+    this.logger.info({ params, method, methodId }, "Method started");
+    const validate = ajv.compile(EngineParams.AddTransactionToCommitmentSchema);
+    const valid = validate(params);
+    if (!valid) {
+      return Result.fail(
+        new RpcError(RpcError.reasons.InvalidParams, params.channelAddress ?? "", this.publicIdentifier, {
+          invalidParamsError: validate.errors?.map((e) => e.message).join(","),
+          invalidParams: params,
+        }),
+      );
+    }
+
+    const channelRes = await this.getChannelState({ channelAddress: params.channelAddress });
+    if (channelRes.isError) {
+      return Result.fail(channelRes.getError()!);
+    }
+    const channel = channelRes.getValue();
+    if (!channel) {
+      return Result.fail(
+        new RpcError(RpcError.reasons.ChannelNotFound, params.channelAddress, this.publicIdentifier, {
+          transferId: params.transferId,
+        }),
+      );
+    }
+
+    const json = await this.store.getWithdrawalCommitment(params.transferId);
+    if (!json) {
+      return Result.fail(
+        new RpcError(RpcError.reasons.WithdrawResolutionFailed, channel.channelAddress, this.publicIdentifier ?? "", {
+          transferId: params.transferId,
+        }),
+      );
+    }
+
+    if (json.transactionHash) {
+      return Result.fail(
+        new RpcError(RpcError.reasons.TransactionFound, channel.channelAddress, this.publicIdentifier ?? "", {
+          transferId: params.transferId,
+          transactionHash: json.transactionHash,
+        }),
+      );
+    }
+
+    const commitment = await WithdrawCommitment.fromJson(json);
+
+    if (!json.bobSignature || !json.aliceSignature) {
+      return Result.fail(
+        new RpcError(RpcError.reasons.CommitmentSingleSigned, channel.channelAddress, this.publicIdentifier ?? "", {
+          transferId: params.transferId,
+        }),
+      );
+    }
+
+    await addTransactionToCommitment(
+      params.transactionHash,
+      params.transferId,
+      commitment,
+      this.messaging,
+      channel,
+      this.store,
+      this.publicIdentifier,
+    );
+    return Result.ok(undefined);
   }
 
   private async decrypt(encrypted: string): Promise<Result<string, EngineError>> {
@@ -1144,7 +1221,7 @@ export class VectorEngine implements IVectorEngine {
         this.signer.publicIdentifier,
       );
       this.logger.info(
-        { result: res.isError ? jsonifyError(res.getError()!) : res.getValue(), method, methodId },
+        { result: res.isError ? jsonifyError(res.getError()!) : res.getValue().channelAddress, method, methodId },
         "Method complete",
       );
       return res;
