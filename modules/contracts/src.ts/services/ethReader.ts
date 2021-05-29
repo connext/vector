@@ -114,7 +114,7 @@ export class EthereumChainReader implements IVectorChainReader {
   async getChannelDispute(
     channelAddress: string,
     chainId: number,
-    blockTag?: Result<number>,
+    blockTag?: Result<number | "latest">,
   ): Promise<Result<ChannelDispute | undefined, ChainError>> {
     const provider = this.chainProviders[chainId];
     if (!provider) {
@@ -161,7 +161,7 @@ export class EthereumChainReader implements IVectorChainReader {
     transferRegistry: string,
     chainId: number,
     bytecode?: string,
-    blockTag?: Result<number>,
+    blockTag?: Result<number | "latest">,
   ): Promise<Result<RegisteredTransfer, ChainError>> {
     const block = blockTag ?? (await this.getSafeBlockNumber(chainId));
     if (block.isError) {
@@ -197,7 +197,7 @@ export class EthereumChainReader implements IVectorChainReader {
     transferRegistry: string,
     chainId: number,
     bytecode?: string,
-    blockTag?: Result<number>,
+    blockTag?: Result<number | "latest">,
   ): Promise<Result<RegisteredTransfer, ChainError>> {
     const block = blockTag ?? (await this.getSafeBlockNumber(chainId));
     if (block.isError) {
@@ -232,7 +232,7 @@ export class EthereumChainReader implements IVectorChainReader {
     transferRegistry: string,
     chainId: number,
     bytecode?: string,
-    blockTag?: Result<number>,
+    blockTag?: Result<number | "latest">,
   ): Promise<Result<RegisteredTransfer[], ChainError>> {
     const block = blockTag ?? (await this.getSafeBlockNumber(chainId));
     if (block.isError) {
@@ -255,7 +255,7 @@ export class EthereumChainReader implements IVectorChainReader {
   async getChannelFactoryBytecode(
     channelFactoryAddress: string,
     chainId: number,
-    blockTag?: Result<number>,
+    blockTag?: Result<number | "latest">,
   ): Promise<Result<string, ChainError>> {
     const provider = this.chainProviders[chainId];
     if (!provider) {
@@ -281,7 +281,7 @@ export class EthereumChainReader implements IVectorChainReader {
   async getChannelMastercopyAddress(
     channelFactoryAddress: string,
     chainId: number,
-    blockTag?: Result<number>,
+    blockTag?: Result<number | "latest">,
   ): Promise<Result<string, ChainError>> {
     const provider = this.chainProviders[chainId];
     if (!provider) {
@@ -309,7 +309,7 @@ export class EthereumChainReader implements IVectorChainReader {
     channelAddress: string,
     chainId: number,
     assetId: string,
-    blockTag?: Result<number>,
+    blockTag?: Result<number | "latest">,
   ): Promise<Result<BigNumber, ChainError>> {
     const provider = this.chainProviders[chainId];
     if (!provider) {
@@ -346,7 +346,7 @@ export class EthereumChainReader implements IVectorChainReader {
     channelAddress: string,
     chainId: number,
     assetId: string,
-    blockTag?: Result<number>,
+    blockTag?: Result<number | "latest">,
   ): Promise<Result<BigNumber, ChainError>> {
     const provider = this.chainProviders[chainId];
     if (!provider) {
@@ -385,7 +385,7 @@ export class EthereumChainReader implements IVectorChainReader {
     transferRegistryAddress: string,
     chainId: number,
     bytecode?: string,
-    blockTag?: Result<number>,
+    blockTag?: Result<number | "latest">,
   ): Promise<Result<boolean, ChainError>> {
     const provider = this.chainProviders[chainId];
     if (!provider) {
@@ -446,7 +446,7 @@ export class EthereumChainReader implements IVectorChainReader {
     transfer: FullTransferState,
     chainId: number,
     bytecode?: string,
-    blockTag?: Result<number>,
+    blockTag?: Result<number | "latest">,
   ): Promise<Result<Balance, ChainError>> {
     const provider = this.chainProviders[chainId];
     if (!provider) {
@@ -507,7 +507,7 @@ export class EthereumChainReader implements IVectorChainReader {
     bob: string,
     channelFactoryAddress: string,
     chainId: number,
-    blockTag?: Result<number>,
+    blockTag?: Result<number | "latest">,
   ): Promise<Result<string, ChainError>> {
     const provider = this.chainProviders[chainId];
     if (!provider) {
@@ -530,7 +530,11 @@ export class EthereumChainReader implements IVectorChainReader {
     });
   }
 
-  async getCode(address: string, chainId: number, blockTag?: Result<number>): Promise<Result<string, ChainError>> {
+  async getCode(
+    address: string,
+    chainId: number,
+    blockTag?: Result<number | "latest">,
+  ): Promise<Result<string, ChainError>> {
     const provider = this.chainProviders[chainId];
     if (!provider) {
       return Result.fail(new ChainError(ChainError.reasons.ProviderNotFound));
@@ -616,7 +620,7 @@ export class EthereumChainReader implements IVectorChainReader {
     owner: string,
     spender: string,
     chainId: number,
-    blockTag?: Result<number>,
+    blockTag?: Result<number | "latest">,
   ): Promise<Result<BigNumber, ChainError>> {
     const provider = this.chainProviders[chainId];
     if (!provider) {
@@ -641,7 +645,7 @@ export class EthereumChainReader implements IVectorChainReader {
     assetId: string,
     balanceOf: string,
     chainId: number,
-    blockTag?: Result<number>,
+    blockTag?: Result<number | "latest">,
   ): Promise<Result<BigNumber, ChainError>> {
     const provider = this.chainProviders[chainId];
     if (!provider) {
@@ -664,7 +668,11 @@ export class EthereumChainReader implements IVectorChainReader {
     });
   }
 
-  async getDecimals(assetId: string, chainId: number, blockTag?: Result<number>): Promise<Result<number, ChainError>> {
+  async getDecimals(
+    assetId: string,
+    chainId: number,
+    blockTag?: Result<number | "latest">,
+  ): Promise<Result<number, ChainError>> {
     const provider = this.chainProviders[chainId];
     if (!provider) {
       return Result.fail(new ChainError(ChainError.reasons.ProviderNotFound));
@@ -690,7 +698,7 @@ export class EthereumChainReader implements IVectorChainReader {
     withdrawData: WithdrawCommitmentJson,
     channelAddress: string,
     chainId: number,
-    blockTag?: Result<number>,
+    blockTag?: Result<number | "latest">,
   ): Promise<Result<boolean, ChainError>> {
     const provider = this.chainProviders[chainId];
     if (!provider) {
@@ -920,7 +928,7 @@ export class EthereumChainReader implements IVectorChainReader {
     transferRegistry: string,
     chainId: number,
     bytecode?: string,
-    blockTag?: Result<number>,
+    blockTag?: Result<number | "latest">,
   ): Promise<Result<RegisteredTransfer[], ChainError>> {
     const provider = this.chainProviders[chainId];
     if (!provider) {
@@ -964,7 +972,11 @@ export class EthereumChainReader implements IVectorChainReader {
     return Result.ok(cleaned);
   }
 
-  private async getSafeBlockNumber(chainId: number): Promise<Result<number, ChainError>> {
+  private async getSafeBlockNumber(chainId: number): Promise<Result<number | "latest", ChainError>> {
+    if ([1337, 1338, 1339, 1340, 1341, 1342].includes(chainId)) {
+      return Result.ok("latest");
+    }
+
     // Doesn't have block
     const latest = await this.getBlockNumber(chainId);
     if (latest.isError) {
