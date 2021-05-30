@@ -344,7 +344,7 @@ export class Vector implements IVectorProtocol {
           },
           "Cancelling update",
         );
-        await returnError(QueuedUpdateError.reasons.Cancelled, channelState);
+        // await returnError(QueuedUpdateError.reasons.Cancelled, channelState);
         return undefined;
       }
       const value = res.value as Result<OtherUpdateResult>;
