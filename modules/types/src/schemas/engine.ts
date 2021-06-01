@@ -128,6 +128,7 @@ const RequestCollateralEngineParamsSchema = Type.Object({
   channelAddress: TAddress,
   assetId: TAddress,
   amount: Type.Optional(TIntegerString),
+  meta: Type.Optional(TBasicMeta),
 });
 
 // Create conditional transfer engine params

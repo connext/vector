@@ -25,6 +25,7 @@ import { JsonRpcProvider } from "@ethersproject/providers";
 import { BaseLogger } from "pino";
 import { BigNumber } from "@ethersproject/bignumber";
 import { HashZero } from "@ethersproject/constants";
+import { v4 } from "uuid";
 
 import { adjustCollateral, requestCollateral } from "./services/collateral";
 import { forwardTransferCreation, forwardTransferResolution, handleIsAlive } from "./forwarding";
@@ -51,6 +52,7 @@ import {
 import { calculateFeeAmount } from "./services/fees";
 import { QuoteError } from "./errors";
 import { inProgressCreations } from "./services/creationQueue";
+import { createRequestContext } from "./services/utils";
 
 const config = getConfig();
 
@@ -138,6 +140,9 @@ export async function setupListeners(
   nodeService.on(
     EngineEvents.CONDITIONAL_TRANSFER_CREATED,
     async (data: ConditionalTransferCreatedPayload) => {
+      const requestContext = createRequestContext(EngineEvents.CONDITIONAL_TRANSFER_CREATED);
+      const requestId = v4();
+      const requestLogger = logger.child({ requestContext });
       const meta = data.transfer.meta as RouterSchemas.RouterMeta;
       const assetId = meta.path[0].recipientAssetId;
       const chainId = meta.path[0].recipientChainId;
@@ -156,7 +161,7 @@ export async function setupListeners(
         routerSigner.address,
         nodeService,
         store,
-        logger,
+        requestLogger,
         chainReader,
       );
       // Remove from processing
@@ -168,13 +173,13 @@ export async function setupListeners(
           assetId,
           chainId,
         });
-        return logger.error(
+        return requestLogger.error(
           { method: "forwardTransferCreation", error: jsonifyError(res.getError()!) },
           "Error forwarding transfer",
         );
       }
       const created = res.getValue();
-      logger.info({ method: "forwardTransferCreation", result: created }, "Successfully forwarded transfer");
+      requestLogger.info({ method: "forwardTransferCreation", result: created }, "Successfully forwarded transfer");
       if (!meta.quote) {
         return;
       }

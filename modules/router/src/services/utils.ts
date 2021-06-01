@@ -74,13 +74,13 @@ export async function wasSingleSignedTransferProcessed(
 // TODO: what else?
 export type RequestContext = {
   id: string;
-  entry: string;
+  entrypoint: string;
 };
 
-export function createRequestContext(entry: string): RequestContext {
+export function createRequestContext(entrypoint: string): RequestContext {
   const id = v4();
   return {
     id,
-    entry,
+    entrypoint,
   };
 }

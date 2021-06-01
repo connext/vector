@@ -612,7 +612,8 @@ export class VectorEngine implements IVectorEngine {
   ): Promise<Result<ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_setup], VectorError>> {
     const method = "setup";
     const methodId = getRandomBytes32();
-    this.logger.info({ params, method, methodId }, "Method started");
+    const requestContext = params.meta?.requestContext;
+    this.logger.info({ params, method, methodId, requestContext }, "Method started");
     const validate = ajv.compile(EngineParams.SetupSchema);
     const valid = validate(params);
     if (!valid) {
@@ -650,7 +651,7 @@ export class VectorEngine implements IVectorEngine {
     }
 
     this.logger.info(
-      { method, chainId: channel.networkContext.chainId, channel: channel.channelAddress },
+      { method, methodId, requestContext, chainId: channel.networkContext.chainId, channel: channel.channelAddress },
       "Deploying channel multisig",
     );
 
@@ -660,6 +661,9 @@ export class VectorEngine implements IVectorEngine {
       this.logger.error(
         {
           ...(err?.context ?? {}),
+          method,
+          methodId,
+          requestContext,
           chainId: channel.networkContext.chainId,
           channel: channel.channelAddress,
           error: deployRes.getError()!.message,
@@ -669,12 +673,16 @@ export class VectorEngine implements IVectorEngine {
       return setupRes;
     }
     const receipt = deployRes.getValue();
-    this.logger.debug({ chainId: channel.networkContext.chainId, hash: receipt.transactionHash }, "Deploy tx mined");
+    this.logger.debug(
+      { method, methodId, requestContext, chainId: channel.networkContext.chainId, hash: receipt.transactionHash },
+      "Deploy tx mined",
+    );
     this.logger.info(
       {
-        result: setupRes.isError ? jsonifyError(setupRes.getError()!) : setupRes.getValue().channelAddress,
         method,
         methodId,
+        requestContext,
+        result: setupRes.isError ? jsonifyError(setupRes.getError()!) : setupRes.getValue().channelAddress,
       },
       "Method complete",
     );
@@ -684,7 +692,8 @@ export class VectorEngine implements IVectorEngine {
   private async requestSetup(params: EngineParams.Setup): Promise<Result<{ channelAddress: string }, EngineError>> {
     const method = "requestSetup";
     const methodId = getRandomBytes32();
-    this.logger.info({ params, method, methodId }, "Method started");
+    const requestContext = params.meta?.requestContext;
+    this.logger.info({ params, method, methodId, requestContext }, "Method started");
     const validate = ajv.compile(EngineParams.SetupSchema);
     const valid = validate(params);
     if (!valid) {
@@ -702,7 +711,12 @@ export class VectorEngine implements IVectorEngine {
       this.publicIdentifier,
     );
     this.logger.info(
-      { result: res.isError ? jsonifyError(res.getError()!) : res.getValue().channelAddress, method, methodId },
+      {
+        requestContext,
+        result: res.isError ? jsonifyError(res.getError()!) : res.getValue().channelAddress,
+        method,
+        methodId,
+      },
       "Method complete",
     );
     return res;
@@ -714,7 +728,8 @@ export class VectorEngine implements IVectorEngine {
     const method = "deposit";
     const timeout = 500;
     const methodId = getRandomBytes32();
-    this.logger.info({ params, method, methodId }, "Method started");
+    const requestContext = params.meta?.requestContext;
+    this.logger.info({ params, method, methodId, requestContext }, "Method started");
     const validate = ajv.compile(EngineParams.DepositSchema);
     const valid = validate(params);
     if (!valid) {
@@ -755,7 +770,10 @@ export class VectorEngine implements IVectorEngine {
       if (!recoveryFailed) {
         break;
       }
-      this.logger.warn({ attempt: count, channelAddress: params.channelAddress }, "Retrying deposit reconciliation");
+      this.logger.warn(
+        { method, methodId, requestContext, attempt: count, channelAddress: params.channelAddress },
+        "Retrying deposit reconciliation",
+      );
       depositRes = await this.vector.deposit(params);
       count++;
       await delay(timeout);
@@ -765,6 +783,7 @@ export class VectorEngine implements IVectorEngine {
         result: depositRes.isError ? jsonifyError(depositRes.getError()!) : depositRes.getValue().channelAddress,
         method,
         methodId,
+        requestContext,
       },
       "Method complete",
     );
@@ -775,7 +794,8 @@ export class VectorEngine implements IVectorEngine {
   private async requestCollateral(params: EngineParams.RequestCollateral): Promise<Result<undefined, EngineError>> {
     const method = "requestCollateral";
     const methodId = getRandomBytes32();
-    this.logger.info({ params, method, methodId }, "Method started");
+    const requestContext = params.meta?.requestContext;
+    this.logger.info({ params, method, methodId, requestContext }, "Method started");
     const validate = ajv.compile(EngineParams.RequestCollateralSchema);
     const valid = validate(params);
     if (!valid) {
@@ -813,7 +833,12 @@ export class VectorEngine implements IVectorEngine {
       this.publicIdentifier,
     );
     this.logger.info(
-      { result: request.isError ? jsonifyError(request.getError()!) : request.getValue(), method, methodId },
+      {
+        result: request.isError ? jsonifyError(request.getError()!) : request.getValue(),
+        method,
+        methodId,
+        requestContext,
+      },
       "Method complete",
     );
     return request as Result<undefined, EngineError>;
@@ -824,7 +849,8 @@ export class VectorEngine implements IVectorEngine {
   ): Promise<Result<ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_createTransfer], VectorError>> {
     const method = "createTransfer";
     const methodId = getRandomBytes32();
-    this.logger.info({ params, method, methodId }, "Method started");
+    const requestContext = params.meta?.requestContext;
+    this.logger.info({ params, method, methodId, requestContext }, "Method started");
     const validate = ajv.compile(EngineParams.ConditionalTransferSchema);
     const valid = validate(params);
     if (!valid) {
@@ -844,7 +870,7 @@ export class VectorEngine implements IVectorEngine {
     if (!channel) {
       return Result.fail(new RpcError(RpcError.reasons.ChannelNotFound, params.channelAddress, this.publicIdentifier));
     }
-    this.logger.info({ channel, method, methodId }, "Pre-transfer channel");
+    this.logger.info({ channel, method, methodId, requestContext }, "Pre-transfer channel");
 
     // First, get translated `create` params using the passed in conditional transfer ones
     const createResult = await convertConditionalTransferParams(
@@ -858,13 +884,16 @@ export class VectorEngine implements IVectorEngine {
       return Result.fail(createResult.getError()!);
     }
     const createParams = createResult.getValue();
-    this.logger.info({ transferParams: createParams, method, methodId }, "Created conditional transfer params");
+    this.logger.info(
+      { transferParams: createParams, method, methodId, requestContext },
+      "Created conditional transfer params",
+    );
     const protocolRes = await this.vector.create(createParams);
     if (protocolRes.isError) {
       return Result.fail(protocolRes.getError()!);
     }
     const res = protocolRes.getValue();
-    this.logger.info({ channelAddress: res.channelAddress, method, methodId }, "Method complete");
+    this.logger.info({ channelAddress: res.channelAddress, method, methodId, requestContext }, "Method complete");
     return Result.ok(res);
   }
 
@@ -1078,7 +1107,9 @@ export class VectorEngine implements IVectorEngine {
 
   private async addTransactionToCommitment(
     params: EngineParams.AddTransactionToCommitment,
-  ): Promise<Result<ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_addTransactionToCommitment], EngineError>> {
+  ): Promise<
+    Result<ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_addTransactionToCommitment], EngineError>
+  > {
     const method = "addTransactionToCommitment";
     const methodId = getRandomBytes32();
     this.logger.info({ params, method, methodId }, "Method started");

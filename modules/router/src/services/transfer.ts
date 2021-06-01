@@ -9,7 +9,6 @@ import {
   jsonifyError,
 } from "@connext/vector-types";
 import { decodeTransferResolver, getRandomBytes32, ServerNodeServiceError } from "@connext/vector-utils";
-import { AddressZero } from "@ethersproject/constants";
 import { BaseLogger } from "pino";
 
 import { ForwardTransferCreationError, ForwardTransferCreationErrorContext } from "../errors";
@@ -392,6 +391,7 @@ export const cancelCreatedTransfer = async (
     meta: {
       cancellationReason,
       cancellationContext: { ...context },
+      requestContext: logger.bindings().requestContext,
     },
   };
   logger.debug({ method, methodId, params: resolveParams }, "Created cancelling params");
