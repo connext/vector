@@ -233,6 +233,7 @@ export class Vector implements IVectorProtocol {
           role: "outbound",
           channelAddress: initiated.params.channelAddress,
           updatedChannel,
+          successfullyApplied,
         },
         "Update succeeded",
       );
