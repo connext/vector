@@ -1,7 +1,19 @@
-import { Wallet, utils, constants, providers } from "ethers";
+import { utils, constants, providers, BigNumber} from "ethers";
+import { getAddress } from "@ethersproject/address";
+import {ChannelFactory} from '@connext/vector-contracts'
+import {Contract} from "@ethersproject/contracts"
+import { Wallet } from "@ethersproject/wallet";
+
+
 import {env, fundIfBelow, getRandomIndex} from "../../utils";
-import { EngineEvents, INodeService, TransferNames } from "@connext/vector-types";
-import {RestServerNodeService} from "@connext/vector-utils";
+import {
+    DEFAULT_CHANNEL_TIMEOUT,
+    EngineEvents,
+    FullChannelState,
+    INodeService,
+    TransferNames
+} from "@connext/vector-types";
+import {getBalanceForAssetId, getRandomBytes32, RestServerNodeService} from "@connext/vector-utils";
 import pino from "pino";
 import {carolEvts} from "./setupServer";
 import {
@@ -27,8 +39,6 @@ const logger = pino({ level: env.logLevel });
 
 const testName:string = 'Router Load Test'
 const rogerURL:string = "http://localhost:8014"
-const carolURL:string = "localhost??"
-
 
 let routers:RestServerNodeService[] = [];
 let nodes:RestServerNodeService[] = [];
@@ -126,8 +136,6 @@ async function start(){
     //setup channel between all carols and the random node
 }
 
-
-
 // d_net_create()
 // swarm_init()
 // d_start_router()
@@ -137,7 +145,6 @@ const start_stack = async()=>{
     const messaging = start_messaging.exec();
     const router_a = test_process.exec();
 }
-
 
 const r0Address = '0x36e6dEdC5554b2e1fedFb1627Be4D703f0da2B6D'
 const r1Address = '0xE3E44bd168C03393d9Ef2E8B304686023E2ca233';
@@ -167,44 +174,199 @@ const daveNodeURL = '8005'
 const r0NodeUrl = '8002'
 const r1Nodeurl = '8014'
 
+const timeout = (ms)=> {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
 
+export const dynamicDeposit = async (
+    depositor: INodeService,
+    counterparty: INodeService,
+    channelAddress: string,
+    assetId: string,
+    amount: BigNumber,
+    provider: providers.Provider
+
+): Promise<FullChannelState> => {
+    const channelRes = await depositor.getStateChannel({ channelAddress });
+    const channel = channelRes.getValue()! as FullChannelState;
+
+    const chainId = await provider.getNetwork().then((p)=>{return p.chainId})
+
+    //get depositor balance of asset
+    const beforeDepositBalance = (channel:FullChannelState, assetId:string)=>{
+        const assetIdx = channel.assetIds.findIndex((a) => getAddress(a) === getAddress(assetId));
+        if (assetIdx === -1) {
+            return "0";
+        }
+        //todo: should we be looking for 0 or 1?
+        // return channel.balances[assetIdx].amount[participant === "alice" ? 0 : 1];
+        return channel.balances[assetIdx].amount[1];
+    }
+
+    const beforeDepositBal = beforeDepositBalance(channel,assetId);
+
+    console.log("doing a deposit for ", depositor.signerAddress)
+    const tx = await depositor.sendDepositTx({
+        amount: amount.toString(),
+        assetId,
+        chainId: chainId,
+        channelAddress,
+        publicIdentifier: depositor.publicIdentifier
+    })
+
+    const tx_receipt = await provider.waitForTransaction(tx.getValue().txHash)
+    console.log("TX RECEIPT :", tx_receipt);
+
+    const depositRes = await depositor.reconcileDeposit({
+        assetId,
+        channelAddress: channel.channelAddress,
+        publicIdentifier: depositor.publicIdentifier,
+    });
+
+    console.log("Dep RES :", depositRes.getValue()!);
+
+    const depositorChannel = (
+        await depositor.getStateChannel({
+            channelAddress: channel.channelAddress,
+            publicIdentifier: depositor.publicIdentifier,
+        })
+    ).getValue()! as FullChannelState;
+
+    const counterpartyChannel = (
+        await counterparty.getStateChannel({
+            channelAddress: channel.channelAddress,
+            publicIdentifier: counterparty.publicIdentifier,
+        })
+    ).getValue()!;
+
+
+    return depositorChannel
+
+}
 
 const main = async function(){
-    const participantsHaveETH = await getBalances(g_provider)
 
+    const participantsHaveETH = await getBalances(g_provider)
     if(!participantsHaveETH){return;}
+
     const urlBase = "http://localhost:"
 
-    const index = 6969
-    const daveService = await RestServerNodeService.connect(
-        urlBase + daveNodeURL,
-        logger.child({testName, name:"Dave"}),
-        undefined,
-        index)
-
+    const net = await g_provider.getNetwork()
+    const chainId = net.chainId;
 
     const carolService = await RestServerNodeService.connect(
         urlBase + carolNodeURL,
         logger.child({testName, name:"Carol"}),
         undefined,
-        index)
+        1)
 
+    const daveService = await RestServerNodeService.connect(
+        urlBase + daveNodeURL,
+        logger.child({testName, name:"Dave"}),
+        undefined,
+        1)
 
     const r0Service = await RestServerNodeService.connect(
         urlBase + r0NodeUrl,
         logger.child({ testName, name: "Roger" }),
         undefined,
-        0,
-    );
+        1)
 
-    // const net = await g_provider.getNetwork()
-    // const chainId = net.chainId;
+    const carolSetup = await carolService.setup({
+        counterpartyIdentifier: r0Service.publicIdentifier,
+        chainId,
+        timeout: DEFAULT_CHANNEL_TIMEOUT.toString()
+    });
 
-    const cr0Post = await setup(carolService, r0Service, 5)
+    const daveSetup = await daveService.setup({
+        counterpartyIdentifier: r0Service.publicIdentifier,
+        chainId: 4,
+        timeout: DEFAULT_CHANNEL_TIMEOUT.toString()
+    })
 
-    console.log("C=>R0 Setup: ", cr0Post)
+    const carolChannel = carolSetup.getValue();
+    const daveChannel = daveSetup.getValue();
+
+    //get carol's channel with self?
+    const carolChan = await r0Service.getStateChannel({
+        channelAddress: carolChannel.channelAddress,
+        publicIdentifier: carolService.publicIdentifier,
+    });
+
+    // r0Service.getStateChannelByParticipants()
+    const routerChan = await r0Service.getStateChannel({
+        channelAddress: carolChannel.channelAddress,
+        publicIdentifier: r0Service.publicIdentifier
+    })
+
+    const daveChan = await r0Service.getStateChannel({
+        channelAddress: daveChannel.channelAddress,
+        publicIdentifier: r0Service.publicIdentifier
+    })
+
+    //carol and router chan should deep euqal
+    const carolSetupRes = routerChan.getValue()! as FullChannelState;
+    const daveSetupRes = daveChan.getValue()! as FullChannelState;
+
+    console.log("ROUTER CHAN ", carolSetupRes)
+
+    const depositAmt = utils.parseEther(".1");
+
+    const assetId = constants.AddressZero;
+
+    const tx = await carolService.sendDepositTx({
+        amount: depositAmt.toString(),
+        assetId,
+        chainId: chainId,
+        channelAddress: carolChannel.channelAddress,
+        publicIdentifier: carolService.publicIdentifier,
+    })
+
+    const tx_wait = g_provider.waitForTransaction(tx.getValue().txHash)
+    console.log("DEPOSIT TX ", tx_wait)
+
+    const depositRes = await carolService.reconcileDeposit({
+        assetId,
+        channelAddress: carolSetupRes.channelAddress,
+        publicIdentifier: carolService.publicIdentifier,
+    })
+
+    const deposit = await depositRes.getValue()
+
+    console.log("DEPOSIT RECON RES ", deposit)
+
+    const preImage = getRandomBytes32();
+    const lockHash = utils.soliditySha256(["bytes32"], [preImage]);
+
+    const transferRes = await carolService.conditionalTransfer({
+        amount: depositAmt.toString(),
+        assetId: assetId,
+        channelAddress: carolSetupRes.channelAddress,
+        type: TransferNames.HashlockTransfer,
+        details: {
+            lockHash,
+            expiry: "0",
+        },
+        recipient: daveService.publicIdentifier,
+        recipientChainId: 4
+    })
+
+    console.log("Transfer Result Context", transferRes.getError()?.context.context)
+
+
+    //get tx event
+    // daveService.resolveTransfer(... lockHash)
+
+
 
 }
+
+async function run_all(){
+    await start_stack();
+    await timeout(45000)
+    await main()
+}
+// start_stack()
 // start_stack()
 
 main()

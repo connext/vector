@@ -24,13 +24,14 @@ export const d_start_router = ()=>  exec(
     ((e,r)=>console.log(e,r))
 )
 
-
+//Start with script
 // export const spawn_router_start = spawn('bash',["ops/start-router.sh"], {shell:true})
 
 export const echo_router_config = spawn(`bash`, ['-c',`echo "${test_docker_compose_configuration}" > router.config.test.yml`])
 
 export const spawn_router_start = spawn('docker',["stack", "deploy", "-c", "router.config.test.yml", "router"], {shell:true})
 
+//Pull images
 // export const pull_router_image = spawn('bash', pull_router_image_opts);
 // const spawn_router_start = spawn('bash', pull_router_image_opts);
 
@@ -101,17 +102,16 @@ class SpawnProcess {
     }
 
     register_events(){
-
                 this.process.stderr.on('data', (event_data) => {
-                    console.log("got err data" + event_data)
+                    console.log("STDERR: " + event_data)
                 })
 
                 this.process.stdout.on('data', (event_data) => {
-                    console.log("got stdout data" + event_data)
+                    console.log("STDOUT: " + event_data)
                     this.handler.cb_stdout_data(event_data)
                 })
                 this.process.stdout.on('close', (event_data) => {
-                    console.log("got event close" + event_data)
+                    console.log("PROCESS CLOSE: " + event_data)
                     this.returnCode = this.handler.cb_stdout_close(event_data)
                 })
     }
