@@ -508,7 +508,8 @@ export class AgentManager {
           this.transferInfo[routingId].end = Date.now();
 
           // If it was cancelled, mark as failure
-          if (Object.values(data.transfer.transferResolver)[0] === constants.HashZero) {
+          const cancelled = Object.values(data.transfer.transferResolver)[0] === constants.HashZero;
+          if (cancelled) {
             logger.warn(
               {
                 transferId: transfer.transferId,
@@ -530,7 +531,7 @@ export class AgentManager {
           }
 
           // Only create a new transfer IFF you resolved it
-          if (agent.signerAddress === transfer.initiator) {
+          if (agent.signerAddress === transfer.initiator && !cancelled) {
             logger.debug(
               {
                 transfer: transfer.transferId,
