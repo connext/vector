@@ -44,7 +44,7 @@ describe("Vector", () => {
     storeService.getChannelStates.resolves([]);
     // Mock sync outbound
     Sinon.stub(vectorSync, "outbound").resolves(
-      Result.ok({ updatedChannel: createTestChannelState(UpdateType.setup).channel, successfullyApplied: true }),
+      Result.ok({ updatedChannel: createTestChannelState(UpdateType.setup).channel, successfullyApplied: "executed" }),
     );
   });
 

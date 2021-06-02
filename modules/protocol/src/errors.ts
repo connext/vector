@@ -39,6 +39,7 @@ export class ValidationError extends ProtocolError {
     TransferTimeoutBelowMin: `Transfer timeout below minimum of ${MINIMUM_TRANSFER_TIMEOUT.toString()}s`,
     TransferTimeoutAboveMax: `Transfer timeout above maximum of ${MAXIMUM_TRANSFER_TIMEOUT.toString()}s`,
     UnrecognizedType: "Unrecognized update type",
+    UpdateIdSigInvalid: "Update id signature is invalid",
   } as const;
 
   constructor(
@@ -135,6 +136,7 @@ export class QueuedUpdateError extends ProtocolError {
     StoreFailure: "Store method failed",
     TransferNotActive: "Transfer not found in activeTransfers",
     UnhandledPromise: "Unhandled promise rejection encountered",
+    UpdateIdSigInvalid: "Update id signature is invalid",
   } as const;
 
   // TODO: improve error from result

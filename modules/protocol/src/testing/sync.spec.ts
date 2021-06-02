@@ -5,7 +5,6 @@ import {
   createTestChannelUpdateWithSigners,
   createTestChannelStateWithSigners,
   createTestFullHashlockTransferState,
-  getRandomBytes32,
   createTestUpdateParams,
   mkAddress,
   mkSig,
@@ -14,7 +13,6 @@ import {
   MemoryMessagingService,
   getTestLoggers,
   createTestChannelUpdate,
-  createTestChannelState,
 } from "@connext/vector-utils";
 import {
   UpdateType,
@@ -459,6 +457,7 @@ describe("outbound", () => {
   let validateParamsAndApplyStub: Sinon.SinonStub;
   // called during sync
   let validateAndApplyInboundStub: Sinon.SinonStub;
+  let validateUpdateIdSignatureStub: Sinon.SinonStub;
 
   beforeEach(async () => {
     signers = Array(2)
@@ -476,6 +475,9 @@ describe("outbound", () => {
 
     // Stub out all signature validation
     validateUpdateSignatureStub = Sinon.stub(vectorUtils, "validateChannelSignatures").resolves(Result.ok(undefined));
+    validateUpdateIdSignatureStub = Sinon.stub(vectorUtils, "validateChannelUpdateIdSignature").resolves(
+      Result.ok(undefined),
+    );
   });
 
   afterEach(() => {
@@ -865,9 +867,9 @@ describe("outbound", () => {
           log,
         );
 
-        // Verify the update was successfully sent + retried
+        // Verify the update was successfully sent + synced
         expect(res.getError()).to.be.undefined;
-        expect(res.getValue().successfullyApplied).to.be.false;
+        expect(res.getValue().successfullyApplied).to.be.eq("synced");
         expect(res.getValue().updatedChannel).to.be.containSubset({
           nonce: toSync.nonce,
           latestUpdate: toSync,

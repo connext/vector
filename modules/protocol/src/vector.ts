@@ -154,7 +154,11 @@ export class Vector implements IVectorProtocol {
         return resolve({ cancelled: true, value: ret });
       });
       const outboundPromise = new Promise(async (resolve) => {
-        const storeRes = await extractContextFromStore(this.storeService, initiated.params.channelAddress);
+        const storeRes = await extractContextFromStore(
+          this.storeService,
+          initiated.params.channelAddress,
+          initiated.params.id.id,
+        );
         if (storeRes.isError) {
           // Return failure
           return Result.fail(
@@ -163,7 +167,19 @@ export class Vector implements IVectorProtocol {
             }),
           );
         }
-        const { channelState, activeTransfers } = storeRes.getValue();
+        const { channelState, activeTransfers, update } = storeRes.getValue();
+        if (update && update.aliceSignature && update.bobSignature) {
+          // Update has already been executed, see explanation in
+          // types/channel.ts for `UpdateIdentifier`
+          const transfer = [UpdateType.create, UpdateType.resolve].includes(update.type)
+            ? await this.storeService.getTransferState(update.details.transferId)
+            : undefined;
+          return resolve({
+            cancelled: false,
+            value: { updatedTransfer: transfer, updatedChannel: channelState, updatedTransfers: activeTransfers },
+            successfullyApplied: "previouslyExecuted",
+          });
+        }
         try {
           const ret = await outbound(
             initiated.params,
@@ -250,11 +266,11 @@ export class Vector implements IVectorProtocol {
       }
       // If the update was not applied, but the channel was synced, return
       // undefined so that the proposed update may be re-queued
-      if (!successfullyApplied) {
-        // Merkle root changes are undone *before* syncing
+      if (successfullyApplied === "synced") {
         return undefined;
       }
-      // All is well, return value from outbound
+      // All is well, return value from outbound (applies for already executed
+      // updates as well)
       return value;
     };
 
@@ -289,13 +305,20 @@ export class Vector implements IVectorProtocol {
       });
       const inboundPromise = new Promise(async (resolve) => {
         // Pull context from store
-        const storeRes = await extractContextFromStore(this.storeService, received.update.channelAddress);
+        const storeRes = await extractContextFromStore(
+          this.storeService,
+          received.update.channelAddress,
+          received.update.id.id,
+        );
         if (storeRes.isError) {
           // Send message with error
           return returnError(QueuedUpdateError.reasons.StoreFailure, undefined, {
             storeError: storeRes.getError()?.message,
           });
         }
+        // NOTE: no need to validate that the update has already been executed
+        // because that is asserted on sync, where as an initiator you dont have
+        // that certainty
         const stored = storeRes.getValue();
         channelState = stored.channelState;
         try {

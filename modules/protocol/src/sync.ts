@@ -33,7 +33,7 @@ type UpdateResult = {
 };
 
 export type SelfUpdateResult = UpdateResult & {
-  successfullyApplied: boolean;
+  successfullyApplied: "synced" | "executed" | "previouslyExecuted";
 };
 
 export async function outbound(
@@ -178,7 +178,7 @@ export async function outbound(
       updatedChannel: syncedChannel,
       updatedActiveTransfers: syncedActiveTransfers,
       updatedTransfer: syncedTransfer,
-      successfullyApplied: false,
+      successfullyApplied: "synced",
     });
   }
 
@@ -209,7 +209,7 @@ export async function outbound(
     updatedChannel: { ...updatedChannel, latestUpdate: counterpartyUpdate },
     updatedTransfers: updatedActiveTransfers,
     updatedTransfer,
-    successfullyApplied: true,
+    successfullyApplied: "executed",
   });
 }
 
