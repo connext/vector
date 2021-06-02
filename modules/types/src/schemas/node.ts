@@ -376,6 +376,24 @@ const PostWithdrawTransferResponseSchema = {
   }),
 };
 
+const PostWithdrawRetryTransferBodySchema = Type.Intersect([
+  EngineParams.WithdrawRetrySchema,
+  Type.Object({ publicIdentifier: TPublicIdentifier }),
+]);
+
+const PostWithdrawRetryTransferResponseSchema = {
+  200: Type.Object({
+    channelAddress: TAddress,
+    transferId: TBytes32,
+    transactionHash: Type.Optional(TBytes32),
+  }),
+};
+
+const PostAddTransactionToCommitmentTransferBodySchema = Type.Intersect([
+  EngineParams.AddTransactionToCommitmentSchema,
+  Type.Object({ publicIdentifier: TPublicIdentifier }),
+]);
+
 // POST SIGN UTILITY MESSAGE
 const PostSignUtilityMessageBodySchema = Type.Intersect([
   EngineParams.SignUtilityMessageSchema,
@@ -426,19 +444,6 @@ const PostAdminBodySchema = Type.Object({
 const PostAdminResponseSchema = {
   200: Type.Object({
     message: Type.String(),
-  }),
-};
-
-// RETRY SUBMITTING WITHDRAWAL TRANSACTION
-const PostAdminRetryWithdrawTransactionBodySchema = Type.Object({
-  adminToken: Type.String(),
-  transferId: TBytes32,
-});
-
-const PostAdminRetryWithdrawTransactionResponseSchema = {
-  200: Type.Object({
-    transferId: TBytes32,
-    transactionHash: Type.String(),
   }),
 };
 
@@ -649,6 +654,12 @@ export namespace NodeParams {
   export const WithdrawSchema = PostWithdrawTransferBodySchema;
   export type Withdraw = Static<typeof WithdrawSchema>;
 
+  export const WithdrawRetrySchema = PostWithdrawRetryTransferBodySchema;
+  export type WithdrawRetry = Static<typeof WithdrawRetrySchema>;
+
+  export const AddTransactionToCommitmentSchema = PostAddTransactionToCommitmentTransferBodySchema;
+  export type AddTransactionToCommitment = Static<typeof AddTransactionToCommitmentSchema>;
+
   export const RegisterListenerSchema = PostRegisterListenerBodySchema;
   export type RegisterListener = Static<typeof RegisterListenerSchema>;
 
@@ -687,9 +698,6 @@ export namespace NodeParams {
 
   export const SendIsAliveSchema = PostSendIsAliveBodySchema;
   export type SendIsAlive = Static<typeof SendIsAliveSchema>;
-
-  export const RetryWithdrawTransactionSchema = PostAdminRetryWithdrawTransactionBodySchema;
-  export type RetryWithdrawTransaction = Static<typeof RetryWithdrawTransactionSchema>;
 
   export const SubmitWithdrawalsSchema = PostAdminSubmitWithdrawalsBodySchema;
   export type SubmitWithdrawals = Static<typeof SubmitWithdrawalsSchema>;
@@ -779,6 +787,9 @@ export namespace NodeResponses {
   export const WithdrawSchema = PostWithdrawTransferResponseSchema;
   export type Withdraw = Static<typeof WithdrawSchema["200"]>;
 
+  export const WithdrawRetrySchema = PostWithdrawRetryTransferResponseSchema;
+  export type WithdrawRetry = Static<typeof WithdrawRetrySchema["200"]>;
+
   export const RegisterListenerSchema = PostRegisterListenerResponseSchema;
   export type RegisterListener = Static<typeof RegisterListenerSchema["200"]>;
 
@@ -817,9 +828,6 @@ export namespace NodeResponses {
 
   export const SendIsAliveSchema = PostSendIsAliveResponseSchema;
   export type SendIsAlive = Static<typeof PostSendIsAliveResponseSchema["200"]>;
-
-  export const RetryWithdrawTransactionSchema = PostAdminRetryWithdrawTransactionResponseSchema;
-  export type RetryWithdrawTransaction = Static<typeof PostAdminRetryWithdrawTransactionResponseSchema["200"]>;
 
   export const SubmitWithdrawalsSchema = PostAdminSubmitWithdrawalsResponseSchema;
   export type SubmitWithdrawals = Static<typeof PostAdminSubmitWithdrawalsResponseSchema["200"]>;

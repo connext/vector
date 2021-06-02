@@ -80,12 +80,39 @@ export const TransactionReason = {
   deploy: "deploy",
   deployWithDepositAlice: "deployWithDepositAlice",
   exitChannel: "exitChannel",
+  speedUpTransaction: "speedUpTransaction",
   transferTokens: "transferTokens",
   withdraw: "withdraw",
 } as const;
 export type TransactionReason = keyof typeof TransactionReason;
 
+export type StoredTransactionAttempt = {
+  // TransactionResponse fields (defined when submitted)
+  transactionHash: string;
+  gasLimit: string;
+  gasPrice: string;
+  createdAt: Date;
+};
+
+export type StoredTransactionReceipt = {
+  // TransactionReceipt fields (defined when mined)
+  transactionHash: string;
+  contractAddress: string;
+  transactionIndex: number;
+  root?: string;
+  gasUsed: string;
+  cumulativeGasUsed: string;
+  logsBloom: string;
+  blockHash: string;
+  blockNumber: number;
+  logs?: string;
+  byzantium: boolean;
+  status?: number;
+};
+
 export type StoredTransaction = {
+  id: string;
+
   //// Helper fields
   channelAddress: string;
   status: StoredTransactionStatus;
@@ -99,28 +126,11 @@ export type StoredTransaction = {
   data: string;
   value: string;
   chainId: number;
+  nonce: number;
 
   // TransactionRequest fields (defined when tx populated)
-  nonce: number;
-  gasLimit: string;
-  gasPrice: string;
-
-  // TransactionResponse fields (defined when submitted)
-  transactionHash: string; // may be edited on mining
-  timestamp?: number;
-  raw?: string;
-  blockHash?: string; // may be edited on mining
-  blockNumber?: number; // may be edited on mining
-
-  // TransactionReceipt fields (defined when mined)
-  logs?: string;
-  contractAddress?: string;
-  transactionIndex?: number;
-  root?: string;
-  gasUsed?: string;
-  logsBloom?: string;
-  cumulativeGasUsed?: string;
-  byzantium?: boolean;
+  attempts: StoredTransactionAttempt[];
+  receipt?: StoredTransactionReceipt;
 };
 
 export interface IChainServiceStore {
@@ -130,22 +140,28 @@ export interface IChainServiceStore {
   clear(): Promise<void>;
 
   // Getters
-  getTransactionByHash(transactionHash: string): Promise<StoredTransaction | undefined>;
+  getTransactionById(onchainTransactionId: string): Promise<StoredTransaction | undefined>;
+  getActiveTransactions(): Promise<StoredTransaction[]>;
 
   // Setters
-  saveTransactionResponse(
+  saveTransactionAttempt(
+    onchainTransactionId: string,
     channelAddress: string,
     reason: TransactionReason,
-    transaction: TransactionResponse,
+    response: TransactionResponse,
   ): Promise<void>;
-  saveTransactionReceipt(channelAddress: string, transaction: TransactionReceipt): Promise<void>;
-  saveTransactionFailure(channelAddress: string, transactionHash: string, error: string): Promise<void>;
+  saveTransactionReceipt(onchainTransactionId: string, transaction: TransactionReceipt): Promise<void>;
+  saveTransactionFailure(onchainTransactionId: string, error: string, receipt?: TransactionReceipt): Promise<void>;
 }
 
 export interface IEngineStore extends IVectorStore, IChainServiceStore {
   // Getters
   getWithdrawalCommitment(transferId: string): Promise<WithdrawCommitmentJson | undefined>;
   getWithdrawalCommitmentByTransactionHash(transactionHash: string): Promise<WithdrawCommitmentJson | undefined>;
+  getUnsubmittedWithdrawals(
+    channelAddress: string,
+    withdrawalDefinition: string,
+  ): Promise<{ commitment: WithdrawCommitmentJson; transfer: FullTransferState }[]>;
 
   // NOTE: The engine does *not* care about the routingId (it is stored
   // in the meta of transfer objects), only the router module does.

@@ -1,11 +1,23 @@
 @rogerUrl = http://localhost:8007
 
 ##############
-### Restore State
+### Retry Withdrawal
 POST {{rogerUrl}}/withdraw/retry
 Content-Type: application/json
 
 {
   "adminToken": "",
-  "transferId": ""
+  "transferId": "0xf1dc51cbccbd2778de3c397aee8cd6bfaba229117a2f0d25d772902a0c9cc869"
+}
+
+
+##############
+### Speed up tx
+POST {{rogerUrl}}/speed-up
+Content-Type: application/json
+
+{
+  "adminToken": "cxt1234",
+  "transactionHash": "0x9ed0c28027a045c2de9fae61e06eade573e9ddfcbab3a6514c5662781c874104",
+  "publicIdentifier": "vector7tbbTxQp8ppEQUgPsbGiTrVdapLdU5dH7zTbVuXRf1M4CEBU9Q"
 }

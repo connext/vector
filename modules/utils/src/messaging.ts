@@ -18,6 +18,8 @@ import {
   NATS_CLUSTER_URL,
   NATS_AUTH_URL,
   NATS_WS_URL,
+  ConditionalTransferCreatedPayload,
+  ConditionalTransferRoutingCompletePayload,
 } from "@connext/vector-types";
 import axios, { AxiosResponse } from "axios";
 import pino, { BaseLogger } from "pino";
@@ -242,10 +244,7 @@ export class NatsBasicMessagingService implements IBasicMessaging {
         callback(Result.fail(new MessagingError(err)), from, msg.reply);
         return;
       }
-      const { result, parsed } = this.parseIncomingMessage<T>(msg);
-      if (!parsed.reply) {
-        return;
-      }
+      const { result } = this.parseIncomingMessage<T>(msg);
 
       callback(result, from, msg.reply);
       return;
@@ -609,6 +608,56 @@ export class NatsMessagingService extends NatsBasicMessagingService implements I
     quote: Result<NodeResponses.WithdrawalQuote, NodeError>,
   ): Promise<void> {
     return this.respondToMessage(inbox, quote, "respondToWithdrawalQuoteMessage");
+  }
+  ////////////
+
+  // ROUTING COMPLETE
+  publishTransferRoutingCompleteMessage(
+    to: string,
+    from: string,
+    data: Result<ConditionalTransferRoutingCompletePayload, VectorError>,
+  ): Promise<void> {
+    return this.publish(`${to}.${from}.transfer-routing-complete`, safeJsonStringify(data.toJson()));
+  }
+
+  onReceiveTransferRoutingCompleteMessage(
+    myPublicIdentifier: string,
+    callback: (
+      quoteRequest: Result<ConditionalTransferRoutingCompletePayload, NodeError>,
+      from: string,
+      inbox: string,
+    ) => void,
+  ): Promise<void> {
+    return this.registerCallback(
+      `${myPublicIdentifier}.*.transfer-routing-complete`,
+      callback,
+      "onReceiveForwardedTransferMessage",
+    );
+  }
+  ////////////
+
+  // WITHDRAWAL SUBMITTED
+  publishWithdrawalSubmittedMessage(
+    to: string,
+    from: string,
+    data: Result<{ channelAddress: string; txHash: string; transferId: string }, VectorError>,
+  ): Promise<void> {
+    return this.publish(`${to}.${from}.withdrawal-submitted`, safeJsonStringify(data.toJson()));
+  }
+
+  onReceiveWithdrawalSubmittedMessage(
+    myPublicIdentifier: string,
+    callback: (
+      submitted: Result<{ channelAddress: string; txHash: string; transferId: string }, NodeError>,
+      from: string,
+      inbox: string,
+    ) => void,
+  ): Promise<void> {
+    return this.registerCallback(
+      `${myPublicIdentifier}.*.withdrawal-submitted`,
+      callback,
+      "onReceiveWithdrawalSubmittedMessage",
+    );
   }
   ////////////
 }

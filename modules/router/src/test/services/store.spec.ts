@@ -95,7 +95,7 @@ describe("Router store", () => {
     });
 
     // test other statuses
-    for (const status of [RouterUpdateStatus.PROCESSING, RouterUpdateStatus.COMPLETE, RouterUpdateStatus.FAILED]) {
+    for (const status of [RouterUpdateStatus.COMPLETE, RouterUpdateStatus.FAILED]) {
       await store.setUpdateStatus(pending[0].id, status);
       const updated = await store.getQueuedUpdates(channelAddress, [status]);
       expect(updated).to.be.deep.eq([{ ...pending[0], status }]);

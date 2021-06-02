@@ -124,6 +124,7 @@ clean: stop-all
 	rm -rf modules/*/package-lock.json
 	rm -rf node_modules/@connext modules/*/node_modules/@connext
 	rm -rf node_modules/@walletconnect modules/*/node_modules/@walletconnect
+	rm -rf modules/server-node/src/generated
 
 reset: stop-all
 	docker container prune -f
@@ -238,6 +239,9 @@ test-load: test-runner trio
 
 test-concurrency: test-runner trio
 	bash ops/test-load.sh concurrency 3
+
+test-channel-bandwidth: test-runner trio
+	bash ops/test-load.sh channel-bandwidth
 
 test-node: node test-runner
 	bash ops/test-integration.sh node test

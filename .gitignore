@@ -7,14 +7,15 @@ modules/browser-node-test-ui/config-node.json
 **/*.0x
 **/.flags
 **/_build/**
-**/artifacts/**
-**/build/**
-**/dist/**
-**/node_modules/**
+**/artifacts
+**/build
+**/dist
+**/node_modules
 **/tsconfig.tsbuildinfo
 *.docker-compose.yml
 docker-compose.yml
 modules/*/package-lock.json
+package-lock.json
 config-prod.json
 
 # Cache
@@ -32,7 +33,7 @@ config-prod.json
 **/.rpt2_cache
 **/.test-store
 **/.tmp
-**/cache/**
+**/cache
 **/*.backup
 
 # Data Storage

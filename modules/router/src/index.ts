@@ -25,6 +25,7 @@ import {
   TransferDisputedPayload,
   ChannelDefundedPayload,
   ChannelDisputedPayload,
+  ConditionalTransferRoutingCompletePayload,
 } from "@connext/vector-types";
 import { collectDefaultMetrics, register } from "prom-client";
 import { Wallet } from "ethers";
@@ -36,6 +37,7 @@ import { NatsRouterMessagingService } from "./services/messaging";
 import { autoRebalanceTask, startAutoRebalanceTask } from "./services/autoRebalance";
 import { wallet } from "./metrics";
 import { ServerError } from "./errors";
+import { startMetricsBroadcastTask } from "./services/globalMetrics";
 
 const config = getConfig();
 
@@ -44,6 +46,7 @@ const isAlivePath = "/is-alive";
 const setupPath = "/setup";
 const conditionalTransferCreatedPath = "/conditional-transfer-created";
 const conditionalTransferResolvedPath = "/conditional-transfer-resolved";
+const conditionalTransferRoutingCompletePath = "/conditional-transfer-routing-complete";
 const depositReconciledPath = "/deposit-reconciled";
 const requestCollateralPath = "/request-collateral";
 const restoreStatePath = "/restore-state";
@@ -73,6 +76,10 @@ const evts: EventCallbackConfig = {
   [EngineEvents.CONDITIONAL_TRANSFER_RESOLVED]: {
     evt: Evt.create<ConditionalTransferResolvedPayload>(),
     url: `${routerBase}${conditionalTransferResolvedPath}`,
+  },
+  [EngineEvents.CONDITIONAL_TRANSFER_ROUTING_COMPLETE]: {
+    evt: Evt.create<ConditionalTransferRoutingCompletePayload>(),
+    url: `${routerBase}${conditionalTransferRoutingCompletePath}`,
   },
   [EngineEvents.DEPOSIT_RECONCILED]: {
     evt: Evt.create<DepositReconciledPayload>(),
@@ -128,9 +135,9 @@ const evts: EventCallbackConfig = {
   },
 };
 
-const signer = new ChannelSigner(Wallet.fromMnemonic(config.mnemonic).privateKey);
+export const signer = new ChannelSigner(Wallet.fromMnemonic(config.mnemonic).privateKey);
 
-const logger = pino({ name: signer.publicIdentifier, level: config.logLevel });
+const logger = pino({ name: signer.publicIdentifier, level: config.logLevel ?? "info" });
 logger.info("Loaded config from environment");
 const server = fastify({
   logger,
@@ -188,6 +195,8 @@ server.addHook("onReady", async () => {
   if (config.autoRebalanceInterval) {
     startAutoRebalanceTask(config.autoRebalanceInterval, logger, wallet, chainService, hydratedProviders, store);
   }
+
+  startMetricsBroadcastTask(1800_000, messagingService);
 });
 
 server.get("/ping", async () => {
@@ -254,6 +263,13 @@ server.post(conditionalTransferCreatedPath, async (request, response) => {
 
 server.post(conditionalTransferResolvedPath, async (request, response) => {
   evts[EngineEvents.CONDITIONAL_TRANSFER_RESOLVED].evt!.post(request.body as ConditionalTransferResolvedPayload);
+  return response.status(200).send({ message: "success" });
+});
+
+server.post(conditionalTransferRoutingCompletePath, async (request, response) => {
+  evts[EngineEvents.CONDITIONAL_TRANSFER_ROUTING_COMPLETE].evt!.post(
+    request.body as ConditionalTransferRoutingCompletePayload,
+  );
   return response.status(200).send({ message: "success" });
 });
 

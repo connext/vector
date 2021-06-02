@@ -3,6 +3,7 @@ import {
   hashTransferState,
   getTransferId,
   generateMerkleTreeData,
+  hashCoreTransferState,
 } from "@connext/vector-utils";
 import {
   UpdateType,
@@ -492,7 +493,7 @@ async function generateCreateUpdate(
     initiatorIdentifier,
     responderIdentifier: signer.publicIdentifier === initiatorIdentifier ? counterpartyId : signer.address,
   };
-  const { proof, root } = generateMerkleTreeData([...transfers, transferState], transferState);
+  const { tree, root } = generateMerkleTreeData([...transfers, transferState]);
 
   // Create the update from the user provided params
   const channelBalance = getUpdatedChannelBalance(UpdateType.create, assetId, balance, state, transferState.initiator);
@@ -507,7 +508,7 @@ async function generateCreateUpdate(
       balance,
       transferInitialState,
       transferEncodings: [stateEncoding, resolverEncoding],
-      merkleProofData: proof!,
+      merkleProofData: tree.getHexProof(hashCoreTransferState(transferState)),
       merkleRoot: root,
       meta: { ...(meta ?? {}), createdAt: Date.now() },
     },

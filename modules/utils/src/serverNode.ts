@@ -200,18 +200,16 @@ export class RestServerNodeService implements INodeService {
   }
 
   async createNode(params: NodeParams.CreateNode): Promise<Result<NodeResponses.CreateNode, ServerNodeServiceError>> {
-    let res;
-    try {
-      res = await this.executeHttpRequest<NodeResponses.CreateNode>(
-          `node`,
-          "post",
-          params,
-          NodeParams.CreateNodeSchema,
-      )
-    }catch(e){
-      console.log("there was an error " + e)
+    const res = await this.executeHttpRequest<NodeResponses.CreateNode>(
+      `node`,
+      "post",
+      params,
+      NodeParams.CreateNodeSchema,
+    );
+
+    if (res.isError) {
+      return res;
     }
-    console.log(res)
 
     if (!this.evts) {
       return res;
@@ -643,12 +641,7 @@ export class RestServerNodeService implements INodeService {
 
     // Attempt request
     try {
-      let axiosErr
-      const res = method === "get" ? await Axios.get(url).catch((e)=>{axiosErr = e; return e}) : await Axios.post(url, filled).catch((e)=>{axiosErr = e; return(Result.fail(e))});
-      if(axiosErr)
-      {
-        throw(axiosErr);
-      }
+      const res = method === "get" ? await Axios.get(url) : await Axios.post(url, filled);
       return Result.ok(res.data);
     } catch (e) {
       const jsonErr = Object.keys(e).includes("toJSON") ? e.toJSON() : e;
@@ -664,7 +657,6 @@ export class RestServerNodeService implements INodeService {
       );
 
       return Result.fail(toThrow);
-
     }
   }
 }

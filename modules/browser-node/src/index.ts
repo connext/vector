@@ -538,6 +538,33 @@ export class BrowserNode implements INodeService {
     }
   }
 
+  async withdrawRetry(
+    params: OptionalPublicIdentifier<NodeParams.WithdrawRetry>,
+  ): Promise<Result<NodeResponses.WithdrawRetry, BrowserNodeError>> {
+    try {
+      const rpc = constructRpcRequest<"chan_withdrawRetry">(ChannelRpcMethods.chan_withdrawRetry, params);
+      const res = await this.channelProvider!.send(rpc);
+      return Result.ok(res);
+    } catch (e) {
+      return Result.fail(e);
+    }
+  }
+
+  async addTransactionToCommitment(
+    params: OptionalPublicIdentifier<NodeParams.AddTransactionToCommitment>,
+  ): Promise<Result<void, BrowserNodeError>> {
+    try {
+      const rpc = constructRpcRequest<"chan_addTransactionToCommitment">(
+        ChannelRpcMethods.chan_addTransactionToCommitment,
+        params,
+      );
+      const res = await this.channelProvider!.send(rpc);
+      return Result.ok(res);
+    } catch (e) {
+      return Result.fail(e);
+    }
+  }
+
   async restoreState(
     params: OptionalPublicIdentifier<NodeParams.RestoreState>,
   ): Promise<Result<NodeResponses.RestoreState, BrowserNodeError>> {

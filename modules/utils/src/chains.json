@@ -68,6 +68,14 @@
       "0x1614f18fc94f47967a3fbe5ffcd46d4e7da3d787": {
         "symbol": "PAID",
         "mainnetEquivalent": "0x1614f18fc94f47967a3fbe5ffcd46d4e7da3d787"
+      },
+      "0x4fabb145d64652a948d72533023f6e7a623c7c53": {
+        "symbol": "BUSD",
+        "mainnetEquivalent": "0x4fabb145d64652a948d72533023f6e7a623c7c53"
+      },
+      "0x72F020f8f3E8fd9382705723Cd26380f8D0c66Bb": {
+        "symbol": "PLOTX",
+        "mainnetEquivalent": "0x72F020f8f3E8fd9382705723Cd26380f8D0c66Bb"
       }
     },
     "rpc": [
@@ -96,10 +104,6 @@
         "symbol": "MATIC",
         "mainnetEquivalent": "0x7D1AfA7B718fb893dB30A3aBc0Cfc608AaCfeBB0"
       },
-      "0x0000000000000000000000000000000000000000": {
-        "symbol": "MATIC",
-        "mainnetEquivalent": "0x7D1AfA7B718fb893dB30A3aBc0Cfc608AaCfeBB0"
-      },
       "0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174": {
         "symbol": "USDC",
         "mainnetEquivalent": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
@@ -123,6 +127,10 @@
       "0x7ceB23fD6bC0adD59E62ac25578270cFf1b9f619": {
         "symbol": "WETH (PoS)",
         "mainnetEquivalent": "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"
+      },
+      "0xe82808eaA78339b06a691fd92E1Be79671cAd8D3": {
+        "symbol": "PLOTX",
+        "mainnetEquivalent": "0x72F020f8f3E8fd9382705723Cd26380f8D0c66Bb"
       }
     },
     "rpc": ["https://rpc-mainnet.matic.network", "wss://ws-mainnet.matic.network"],
@@ -145,6 +153,14 @@
       "0x0000000000000000000000000000000000001010": {
         "symbol": "MATIC",
         "mainnetEquivalent": "0x7D1AfA7B718fb893dB30A3aBc0Cfc608AaCfeBB0"
+      },
+      "0x48987E8B356e0dE474ddE9Bc10541F8106C88A23": {
+        "symbol": "PROPS",
+        "mainnetEquivalent": "0x6fe56c0bcdd471359019fcbc48863d6c3e9d4f41"
+      },
+      "0x07DDC851a1bee757335EBcd7B14348359fDaB60f": {
+        "symbol": "PLOTX",
+        "mainnetEquivalent": "0x72F020f8f3E8fd9382705723Cd26380f8D0c66Bb"
       }
     },
     "rpc": ["https://rpc-mumbai.matic.today", "wss://ws-mumbai.matic.today"],
@@ -171,6 +187,14 @@
       "0x67e1816bEEcB2a2852f9305049483f32b5c7ef60": {
         "symbol": "PAID",
         "mainnetEquivalent": "0x1614f18fc94f47967a3fbe5ffcd46d4e7da3d787"
+      },
+      "0x4F96Fe3b7A6Cf9725f59d353F723c1bDb64CA6Aa": {
+        "symbol": "DAI",
+        "mainnetEquivalent": "0x6B175474E89094C44Da98b954EedeAC495271d0F"
+      },
+      "0x0736d0c130b2ead47476cc262dbed90d7c4eeabd": {
+        "symbol": "USDT",
+        "mainnetEquivalent": "0xdAC17F958D2ee523a2206206994597C13D831ec7"
       },
       "0x48987E8B356e0dE474ddE9Bc10541F8106C88A23": {
         "symbol": "PROPS",
@@ -211,6 +235,10 @@
       "0x7a652687E2f9167cdC9831C0f9B5C3Ff5E5Bc5C7": {
         "symbol": "PROPS",
         "mainnetEquivalent": "0x6fe56c0bcdd471359019fcbc48863d6c3e9d4f41"
+      },
+      "0x07DDC851a1bee757335EBcd7B14348359fDaB60f": {
+        "symbol": "PLOTX",
+        "mainnetEquivalent": "0x72F020f8f3E8fd9382705723Cd26380f8D0c66Bb"
       }
     },
     "rpc": ["https://rpc.goerli.mudit.blog/", "https://rpc.slock.it/goerli ", "https://goerli.prylabs.net/"],
@@ -237,6 +265,10 @@
       "0xB4a04eCF1855FBccf5C770BA6DB1dde7c96b17Be": {
         "symbol": "PAID",
         "mainnetEquivalent": "0x1614f18fc94f47967a3fbe5ffcd46d4e7da3d787"
+      },
+      "0xD92E713d051C37EbB2561803a3b5FBAbc4962431": {
+        "symbol": "USDT",
+        "mainnetEquivalent": "0xdAC17F958D2ee523a2206206994597C13D831ec7"
       }
     },
     "rpc": ["https://rinkeby.infura.io/v3/${INFURA_API_KEY}", "wss://rinkeby.infura.io/ws/v3/${INFURA_API_KEY}"],
@@ -293,6 +325,10 @@
       "0x1AF3F329e8BE154074D8769D1FFa4eE058B1DBc3": {
         "symbol": "DAI",
         "mainnetEquivalent": "0x6B175474E89094C44Da98b954EedeAC495271d0F"
+      },
+      "0xe9e7cea3dedca5984780bafc599bd69add087d56": {
+        "symbol": "BUSD",
+        "mainnetEquivalent": "0x4fabb145d64652a948d72533023f6e7a623c7c53"
       }
     },
     "rpc": [
@@ -371,6 +407,22 @@
       "0xc825e75837a3f10e6cc7bda1b85eaac572ac3b8d": {
         "symbol": "PAID",
         "mainnetEquivalent": "0x1614f18fc94f47967a3fbe5ffcd46d4e7da3d787"
+      },
+      "0xa5dd524379382a6a756920509109e078c7ba026c": {
+        "symbol": "DAI",
+        "mainnetEquivalent": "0x6B175474E89094C44Da98b954EedeAC495271d0F"
+      },
+      "0x337610d27c682e347c9cd60bd4b3b107c9d34ddd": {
+        "symbol": "USDT",
+        "mainnetEquivalent": "0xdAC17F958D2ee523a2206206994597C13D831ec7"
+      },
+      "0x9780881bf45b83ee028c4c1de7e0c168df8e9eef": {
+        "symbol": "USDC",
+        "mainnetEquivalent": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
+      },
+      "0xc74cc783ed2dbcd06e06266e72ad9d9680cf3cee": {
+        "symbol": "BUSD",
+        "mainnetEquivalent": "0x4fabb145d64652a948d72533023f6e7a623c7c53"
       }
     },
     "rpc": [
@@ -383,5 +435,58 @@
     ],
     "faucets": ["https://testnet.binance.org/faucet-smart"],
     "infoURL": "https://www.binance.org"
+  },
+  {
+    "name": "Huobi ECO Chain Mainnet",
+    "chainId": 128,
+    "shortName": "heco",
+    "chain": "Heco",
+    "network": "mainnet",
+    "networkId": 128,
+    "nativeCurrency": { "name": "Huobi ECO Chain Native Token", "symbol": "HT", "decimals": 18 },
+    "rpc": ["https://http-mainnet.hecochain.com", "wss://ws-mainnet.hecochain.com"],
+    "faucets": [],
+    "infoURL": "https://www.hecochain.com",
+    "assetId": {
+      "0x0000000000000000000000000000000000000000": {
+        "symbol": "HT",
+        "mainnetEquivalent": "0x6f259637dcD74C767781E37Bc6133cd6A68aa161"
+      },
+      "0x0298c2b32eaE4da002a15f36fdf7615BEa3DA047": {
+        "symbol": "HUSD",
+        "mainnetEquivalent": "0xdF574c24545E5FfEcb9a659c229253D4111d87e1"
+      }
+    }
+  },
+  {
+    "name": "Fantom Opera",
+    "chainId": 250,
+    "shortName": "ftm",
+    "chain": "FTM",
+    "network": "mainnet",
+    "networkId": 250,
+    "nativeCurrency": { "name": "Fantom", "symbol": "FTM", "decimals": 18 },
+    "rpc": ["https://rpcapi.fantom.network"],
+    "faucets": [],
+    "explorers": [{ "name": "ftmscan", "url": "https://ftmscan.com", "icon": "ftmscan", "standard": "EIP3091" }],
+    "infoURL": "https://fantom.foundation",
+    "assetId": {
+      "0x0000000000000000000000000000000000000000": {
+        "symbol": "FTM",
+        "mainnetEquivalent": "0x4e15361fd6b4bb609fa63c81a2be19d873717870"
+      },
+      "0x8d11ec38a3eb5e956b052f67da8bdc9bef8abf3e": {
+        "symbol": "DAI",
+        "mainnetEquivalent": "0x6B175474E89094C44Da98b954EedeAC495271d0F"
+      },
+      "0x049d68029688eabf473097a2fc38ef61633a3c7a": {
+        "symbol": "USDT",
+        "mainnetEquivalent": "0xdAC17F958D2ee523a2206206994597C13D831ec7"
+      },
+      "0x04068da6c83afcfa0e13ba15a6696662335d5b75": {
+        "symbol": "USDC",
+        "mainnetEquivalent": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
+      }
+    }
   }
 ]

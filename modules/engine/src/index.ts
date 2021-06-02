@@ -28,7 +28,6 @@ import {
   MinimalTransaction,
   WITHDRAWAL_RESOLVED_EVENT,
   VectorErrorJson,
-  getConfirmationsForChain,
 } from "@connext/vector-types";
 import {
   generateMerkleTreeData,
@@ -53,7 +52,7 @@ import {
   convertWithdrawParams,
 } from "./paramConverter";
 import { setupEngineListeners } from "./listeners";
-import { getEngineEvtContainer } from "./utils";
+import { getEngineEvtContainer, withdrawRetryForTransferId, addTransactionToCommitment } from "./utils";
 import { sendIsAlive } from "./isAlive";
 import { WithdrawCommitment } from "@connext/vector-contracts";
 
@@ -655,16 +654,7 @@ export class VectorEngine implements IVectorEngine {
       "Deploying channel multisig",
     );
 
-    const gasPriceRes = await this.chainService.getGasPrice(channel.networkContext.chainId);
-    if (gasPriceRes.isError) {
-      Result.fail(gasPriceRes.getError()!);
-    }
-    const gasPrice = gasPriceRes.getValue();
-    this.logger.info(
-      { method, chainId: channel.networkContext.chainId, channel: channel.channelAddress },
-      "Got gas price",
-    );
-    const deployRes = await this.chainService.sendDeployChannelTx(channel, gasPrice);
+    const deployRes = await this.chainService.sendDeployChannelTx(channel);
     if (deployRes.isError) {
       const err = deployRes.getError();
       this.logger.error(
@@ -678,15 +668,14 @@ export class VectorEngine implements IVectorEngine {
       );
       return setupRes;
     }
-    const tx = deployRes.getValue();
-    this.logger.info({ chainId: channel.networkContext.chainId, hash: tx.hash }, "Deploy tx broadcast");
-    const receipt = await tx.completed();
-    if (receipt.isError) {
-      return Result.fail(receipt.getError()!);
-    }
-    this.logger.debug({ chainId: channel.networkContext.chainId, hash: tx.hash }, "Deploy tx mined");
+    const receipt = deployRes.getValue();
+    this.logger.debug({ chainId: channel.networkContext.chainId, hash: receipt.transactionHash }, "Deploy tx mined");
     this.logger.info(
-      { result: setupRes.isError ? jsonifyError(setupRes.getError()!) : setupRes.getValue(), method, methodId },
+      {
+        result: setupRes.isError ? jsonifyError(setupRes.getError()!) : setupRes.getValue().channelAddress,
+        method,
+        methodId,
+      },
       "Method complete",
     );
     return setupRes;
@@ -713,7 +702,7 @@ export class VectorEngine implements IVectorEngine {
       this.publicIdentifier,
     );
     this.logger.info(
-      { result: res.isError ? jsonifyError(res.getError()!) : res.getValue(), method, methodId },
+      { result: res.isError ? jsonifyError(res.getError()!) : res.getValue().channelAddress, method, methodId },
       "Method complete",
     );
     return res;
@@ -723,6 +712,7 @@ export class VectorEngine implements IVectorEngine {
     params: EngineParams.Deposit,
   ): Promise<Result<ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_deposit], EngineError>> {
     const method = "deposit";
+    const timeout = 500;
     const methodId = getRandomBytes32();
     this.logger.info({ params, method, methodId }, "Method started");
     const validate = ajv.compile(EngineParams.DepositSchema);
@@ -768,10 +758,11 @@ export class VectorEngine implements IVectorEngine {
       this.logger.warn({ attempt: count, channelAddress: params.channelAddress }, "Retrying deposit reconciliation");
       depositRes = await this.vector.deposit(params);
       count++;
+      await delay(timeout);
     }
     this.logger.info(
       {
-        result: depositRes.isError ? jsonifyError(depositRes.getError()!) : depositRes.getValue(),
+        result: depositRes.isError ? jsonifyError(depositRes.getError()!) : depositRes.getValue().channelAddress,
         method,
         methodId,
       },
@@ -873,7 +864,7 @@ export class VectorEngine implements IVectorEngine {
       return Result.fail(protocolRes.getError()!);
     }
     const res = protocolRes.getValue();
-    this.logger.info({ channel: res, method, methodId }, "Method complete");
+    this.logger.info({ channelAddress: res.channelAddress, method, methodId }, "Method complete");
     return Result.ok(res);
   }
 
@@ -919,7 +910,7 @@ export class VectorEngine implements IVectorEngine {
       return Result.fail(protocolRes.getError()!);
     }
     const res = protocolRes.getValue();
-    this.logger.info({ channel: res, method, methodId }, "Method complete");
+    this.logger.info({ channelAddress: res.channelAddress, method, methodId }, "Method complete");
     return Result.ok(res);
   }
 
@@ -963,6 +954,21 @@ export class VectorEngine implements IVectorEngine {
     }
     const createParams = createResult.getValue();
     const initiatorSubmits = createParams.meta.initiatorSubmits ?? false;
+
+    // set up event listeners before sending request
+    const timeout = 300_000;
+    const resolved = (_transferId: string) =>
+      this.evts[WITHDRAWAL_RESOLVED_EVENT].waitFor(
+        (data) => data.channelAddress === params.channelAddress && data.transfer.transferId === _transferId,
+        timeout,
+      );
+    const reconciled = (_transferId: string) =>
+      this.evts[WITHDRAWAL_RECONCILED_EVENT].waitFor(
+        (data) => data.channelAddress === params.channelAddress && data.transferId === _transferId,
+        timeout,
+      );
+
+    // create withdrawal transfer
     const protocolRes = await this.vector.create(createParams);
     if (protocolRes.isError) {
       return Result.fail(protocolRes.getError()!);
@@ -971,27 +977,18 @@ export class VectorEngine implements IVectorEngine {
     const transferId = res.latestUpdate.details.transferId;
     this.logger.info({ channelAddress: params.channelAddress, transferId }, "Withdraw transfer created");
 
-    let transactionHash: string | undefined = undefined;
-    let transaction: MinimalTransaction | undefined = undefined;
-    const timeout = 90_000;
+    let transactionHash: string | undefined;
+    let transaction: MinimalTransaction | undefined;
     try {
-      const [resolved, reconciled] = await Promise.all([
-        // resolved should always happen
-        this.evts[WITHDRAWAL_RESOLVED_EVENT].waitFor(
-          (data) => data.channelAddress === params.channelAddress && data.transfer.transferId === transferId,
-          timeout,
-        ),
-        // reconciling (submission to chain) may not happen (i.e. holding
-        // mainnet withdrawals for lower gas)
-        Promise.race([
-          this.evts[WITHDRAWAL_RECONCILED_EVENT].waitFor(
-            (data) => data.channelAddress === params.channelAddress && data.transferId === transferId,
-          ),
-          delay(timeout),
-        ]),
-      ]);
-      transactionHash = typeof reconciled === "object" ? reconciled.transactionHash : undefined;
-      transaction = resolved.transaction;
+      // wait for resolution either way
+      const _resolved = await resolved(transferId);
+
+      // if we arent explicitly submitting, wait for counterparty to submit
+      if (!initiatorSubmits) {
+        const _reconciled = await reconciled(transferId);
+        transactionHash = typeof _reconciled === "object" ? _reconciled.transactionHash : undefined;
+      }
+      transaction = _resolved.transaction;
     } catch (e) {
       this.logger.warn(
         { channelAddress: params.channelAddress, transferId, timeout, initiatorSubmits },
@@ -1012,8 +1009,141 @@ export class VectorEngine implements IVectorEngine {
       transaction = (await WithdrawCommitment.fromJson(commitment)).getSignedTransaction();
     }
 
-    this.logger.info({ channel: res, method, methodId, transactionHash, transaction }, "Method complete");
+    this.logger.info(
+      { channelAddress: res.channelAddress, method, methodId, transactionHash, transaction },
+      "Method complete",
+    );
     return Result.ok({ channel: res, transactionHash, transaction: transaction! });
+  }
+
+  private async withdrawRetry(
+    params: EngineParams.WithdrawRetry,
+  ): Promise<Result<ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_withdrawRetry], EngineError>> {
+    const method = "withdrawRetry";
+    const methodId = getRandomBytes32();
+    this.logger.info({ params, method, methodId }, "Method started");
+    const validate = ajv.compile(EngineParams.WithdrawRetrySchema);
+    const valid = validate(params);
+    if (!valid) {
+      return Result.fail(
+        new RpcError(RpcError.reasons.InvalidParams, params.channelAddress ?? "", this.publicIdentifier, {
+          invalidParamsError: validate.errors?.map((e) => e.message).join(","),
+          invalidParams: params,
+        }),
+      );
+    }
+
+    const channelRes = await this.getChannelState({ channelAddress: params.channelAddress });
+    if (channelRes.isError) {
+      return Result.fail(channelRes.getError()!);
+    }
+    const channel = channelRes.getValue();
+    if (!channel) {
+      return Result.fail(
+        new RpcError(RpcError.reasons.ChannelNotFound, params.channelAddress, this.publicIdentifier, {
+          transferId: params.transferId,
+        }),
+      );
+    }
+
+    const res = await withdrawRetryForTransferId(
+      params.transferId,
+      channel,
+      this.store,
+      this.chainService,
+      this.logger,
+      this.messaging,
+      this.publicIdentifier,
+    );
+
+    if (res.isError) {
+      return Result.fail(res.getError()!);
+    }
+
+    const withdrawRetryRes = res.getValue();
+
+    this.logger.info(
+      {
+        channel: channel,
+        method,
+        methodId,
+        txHash: withdrawRetryRes.transactionHash,
+        channelAddress: withdrawRetryRes.channelAddress,
+      },
+      "Method complete",
+    );
+
+    return Result.ok(withdrawRetryRes);
+  }
+
+  private async addTransactionToCommitment(
+    params: EngineParams.AddTransactionToCommitment,
+  ): Promise<Result<ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_addTransactionToCommitment], EngineError>> {
+    const method = "addTransactionToCommitment";
+    const methodId = getRandomBytes32();
+    this.logger.info({ params, method, methodId }, "Method started");
+    const validate = ajv.compile(EngineParams.AddTransactionToCommitmentSchema);
+    const valid = validate(params);
+    if (!valid) {
+      return Result.fail(
+        new RpcError(RpcError.reasons.InvalidParams, params.channelAddress ?? "", this.publicIdentifier, {
+          invalidParamsError: validate.errors?.map((e) => e.message).join(","),
+          invalidParams: params,
+        }),
+      );
+    }
+
+    const channelRes = await this.getChannelState({ channelAddress: params.channelAddress });
+    if (channelRes.isError) {
+      return Result.fail(channelRes.getError()!);
+    }
+    const channel = channelRes.getValue();
+    if (!channel) {
+      return Result.fail(
+        new RpcError(RpcError.reasons.ChannelNotFound, params.channelAddress, this.publicIdentifier, {
+          transferId: params.transferId,
+        }),
+      );
+    }
+
+    const json = await this.store.getWithdrawalCommitment(params.transferId);
+    if (!json) {
+      return Result.fail(
+        new RpcError(RpcError.reasons.WithdrawResolutionFailed, channel.channelAddress, this.publicIdentifier ?? "", {
+          transferId: params.transferId,
+        }),
+      );
+    }
+
+    if (json.transactionHash) {
+      return Result.fail(
+        new RpcError(RpcError.reasons.TransactionFound, channel.channelAddress, this.publicIdentifier ?? "", {
+          transferId: params.transferId,
+          transactionHash: json.transactionHash,
+        }),
+      );
+    }
+
+    const commitment = await WithdrawCommitment.fromJson(json);
+
+    if (!json.bobSignature || !json.aliceSignature) {
+      return Result.fail(
+        new RpcError(RpcError.reasons.CommitmentSingleSigned, channel.channelAddress, this.publicIdentifier ?? "", {
+          transferId: params.transferId,
+        }),
+      );
+    }
+
+    await addTransactionToCommitment(
+      params.transactionHash,
+      params.transferId,
+      commitment,
+      this.messaging,
+      channel,
+      this.store,
+      this.publicIdentifier,
+    );
+    return Result.ok(undefined);
   }
 
   private async decrypt(encrypted: string): Promise<Result<string, EngineError>> {
@@ -1091,7 +1221,7 @@ export class VectorEngine implements IVectorEngine {
         this.signer.publicIdentifier,
       );
       this.logger.info(
-        { result: res.isError ? jsonifyError(res.getError()!) : res.getValue(), method, methodId },
+        { result: res.isError ? jsonifyError(res.getError()!) : res.getValue().channelAddress, method, methodId },
         "Method complete",
       );
       return res;
@@ -1317,27 +1447,17 @@ export class VectorEngine implements IVectorEngine {
       return Result.fail(disputeRes.getError()!);
     }
 
-    // register saving callback
-    disputeRes
-      .getValue()
-      .completed(getConfirmationsForChain(state.networkContext.chainId))
-      .then(async (receipt) => {
-        if (receipt.isError) {
-          return;
-        }
-        // save the dispute
-        // TODO: make this event driven
-        const dispute = await this.chainService.getChannelDispute(state.channelAddress, state.networkContext.chainId);
-        if (!dispute.isError && !!dispute.getValue()) {
-          try {
-            await this.store.saveChannelDispute(state.channelAddress, dispute.getValue()!);
-          } catch (e) {
-            this.logger.error({ ...jsonifyError(e) }, "Failed to save channel dispute");
-          }
-        }
-      });
+    // save the dispute
+    const dispute = await this.chainService.getChannelDispute(state.channelAddress, state.networkContext.chainId);
+    if (!dispute.isError && !!dispute.getValue()) {
+      try {
+        await this.store.saveChannelDispute(state.channelAddress, dispute.getValue()!);
+      } catch (e) {
+        this.logger.error({ ...jsonifyError(e) }, "Failed to save channel dispute");
+      }
+    }
 
-    return Result.ok({ transactionHash: disputeRes.getValue().hash });
+    return Result.ok({ transactionHash: disputeRes.getValue().transactionHash });
   }
 
   private async defund(
@@ -1373,7 +1493,7 @@ export class VectorEngine implements IVectorEngine {
       return Result.fail(disputeRes.getError()!);
     }
 
-    return Result.ok({ transactionHash: disputeRes.getValue().hash });
+    return Result.ok({ transactionHash: disputeRes.getValue().transactionHash });
   }
 
   private async getTransferDispute(
@@ -1432,7 +1552,7 @@ export class VectorEngine implements IVectorEngine {
     if (disputeRes.isError) {
       return Result.fail(disputeRes.getError()!);
     }
-    return Result.ok({ transactionHash: disputeRes.getValue().hash });
+    return Result.ok({ transactionHash: disputeRes.getValue().transactionHash });
   }
 
   private async defundTransfer(
@@ -1474,7 +1594,7 @@ export class VectorEngine implements IVectorEngine {
     if (defundRes.isError) {
       return Result.fail(defundRes.getError()!);
     }
-    return Result.ok({ transactionHash: defundRes.getValue().hash });
+    return Result.ok({ transactionHash: defundRes.getValue().transactionHash });
   }
 
   private async exit(
@@ -1520,7 +1640,7 @@ export class VectorEngine implements IVectorEngine {
       );
       results.push({
         assetId,
-        transactionHash: result.isError ? undefined : result.getValue().hash,
+        transactionHash: result.isError ? undefined : result.getValue().transactionHash,
         error: result.isError ? jsonifyError(result.getError()!) : undefined,
       });
     }

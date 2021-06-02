@@ -16,6 +16,7 @@ import * as VectorChannel from "../artifacts/src.sol/interfaces/IVectorChannel.s
 import * as Withdraw from "../artifacts/src.sol/transferDefinitions/Withdraw.sol/Withdraw.json";
 import * as TestLibIterableMapping from "../artifacts/src.sol/testing/TestLibIterableMapping.sol/TestLibIterableMapping.json";
 import * as ReentrantToken from "../artifacts/src.sol/testing/ReentrantToken.sol/ReentrantToken.json";
+import * as StableSwap from "../artifacts/src.sol/amm/StableSwap.sol/StableSwap.json";
 
 type Abi = Array<string | FunctionFragment | EventFragment | ParamType>;
 
@@ -44,6 +45,7 @@ export const artifacts: Artifacts = {
   TransferRegistry,
   VectorChannel,
   Withdraw,
+  StableSwap,
 } as any;
 
 export {
@@ -62,4 +64,5 @@ export {
   TransferRegistry,
   VectorChannel,
   Withdraw,
+  StableSwap,
 };

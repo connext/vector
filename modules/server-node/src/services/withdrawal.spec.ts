@@ -7,6 +7,7 @@ import {
   mkHash,
   getRandomChannelSigner,
   getRandomBytes32,
+  mkSig,
 } from "@connext/vector-utils";
 import { HashZero } from "@ethersproject/constants";
 import { parseUnits } from "@ethersproject/units";
@@ -74,7 +75,7 @@ describe(testName, () => {
     store = Sinon.createStubInstance(PrismaStore);
 
     // default all mocks to be ok
-    chainService.sendWithdrawTx.resolves(Result.ok({ hash: transactionHash }) as any);
+    chainService.sendWithdrawTx.resolves(Result.ok({ transactionHash }) as any);
     chainService.getRegisteredTransferByName.resolves(Result.ok({ definition: transferDefinition }) as any);
     chainService.getWithdrawalTransactionRecord.resolves(Result.ok(false));
     store.saveWithdrawalCommitment.resolves();
@@ -261,6 +262,18 @@ describe(testName, () => {
           transferId: transfer.transferId,
         },
       ]);
+    });
+
+    it("should not submit cancelled withdrawals", async () => {
+      const { channel, transfer, commitment } = await prepEnv();
+      store.getChannelStates.resolves([channel]);
+      transfer.transferResolver = { responderSignature: mkSig("0x0") };
+      store.getUnsubmittedWithdrawals.resolves([{ commitment, transfer }]);
+      chainService.getGasPrice.resolves(Result.ok(parseUnits("100", "gwei")));
+
+      const result = await submitMainnetWithdrawalsIfNeeded([alice.publicIdentifier], store);
+      expect(result.isError).to.be.false;
+      expect(result.getValue()).to.be.deep.eq([]);
     });
   });
 });
