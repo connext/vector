@@ -79,8 +79,9 @@ model Channel {
 
 model Update {
   // COMMON PARAMS
-  id               String
-  idSignature      String
+  id               String?
+  idSignature      String?
+  // id params optional for restoring transfers (needs create update)
   channelAddress   String?
   channel          Channel? @relation(fields: [channelAddress], references: [channelAddress])
   channelAddressId String // required for ID so that relation can be removed
@@ -128,8 +129,8 @@ model Update {
   createdTransfer  Transfer? @relation("CreatedTransfer")
   resolvedTransfer Transfer? @relation("ResolvedTransfer")
 
-  @@id(id)
-  @@unique([channelAddressId, nonce])
+  @@id([channelAddressId, nonce])
+  @@unique(id)
   @@map(name: "update")
 }
 
