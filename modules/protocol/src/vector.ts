@@ -48,6 +48,9 @@ export class Vector implements IVectorProtocol {
   // Do not interact with this directly. Always use getQueueAsync()
   private queues: Map<string, Promise<SerializedQueue<SelfUpdateResult, OtherUpdateResult> | undefined>> = new Map();
 
+  // Hold a flag to indicate whether or not a channel is being restored
+  private restorations: Map<string, boolean> = new Map();
+
   // make it private so the only way to create the class is to use `connect`
   private constructor(
     private readonly messagingService: IMessagingService,
@@ -182,8 +185,23 @@ export class Vector implements IVectorProtocol {
             : undefined;
           return resolve({
             cancelled: false,
-            value: { updatedTransfer: transfer, updatedChannel: channelState, updatedTransfers: activeTransfers },
+            value: Result.ok({
+              updatedTransfer: transfer,
+              updatedChannel: channelState,
+              updatedTransfers: activeTransfers,
+            }),
             successfullyApplied: "previouslyExecuted",
+          });
+        }
+
+        // Make sure channel isnt being restored
+        if (this.restorations.get(initiated.params.channelAddress)) {
+          return resolve({
+            cancelled: false,
+            value: Result.fail(
+              new QueuedUpdateError(QueuedUpdateError.reasons.ChannelRestoring, initiated.params, channelState),
+            ),
+            successfullyApplied: "executed",
           });
         }
         try {
@@ -322,6 +340,16 @@ export class Vector implements IVectorProtocol {
             storeError: storeRes.getError()?.message,
           });
         }
+        // Make sure channel isnt being restored
+        if (this.restorations.get(received.update.channelAddress)) {
+          return resolve({
+            cancelled: false,
+            value: Result.fail(
+              new QueuedUpdateError(QueuedUpdateError.reasons.ChannelRestoring, received.update, channelState),
+            ),
+          });
+        }
+
         // NOTE: no need to validate that the update has already been executed
         // because that is asserted on sync, where as an initiator you dont have
         // that certainty
@@ -912,6 +940,9 @@ export class Vector implements IVectorProtocol {
 
     const { channel, activeTransfers } = restoreDataRes.getValue() ?? ({} as any);
 
+    // Set restoration for channel to true
+    this.restorations.set(channel.channelAddress, true);
+
     // Create helper to generate error
     const generateRestoreError = (
       error: Values<typeof RestoreError.reasons>,
@@ -923,6 +954,7 @@ export class Vector implements IVectorProtocol {
         method,
         params,
       });
+      this.restorations.set(channel.channelAddress, false);
       return Result.fail(err);
     };
 
@@ -993,6 +1025,7 @@ export class Vector implements IVectorProtocol {
       });
     }
 
+    this.restorations.set(channel.channelAddress, false);
     return Result.ok(channel);
   }
 

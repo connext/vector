@@ -144,6 +144,7 @@ export class QueuedUpdateError extends ProtocolError {
     Cancelled: "Queued update was cancelled",
     CannotSyncSetup: "Cannot sync a setup update, must restore", // TODO: remove
     ChannelNotFound: "Channel not found",
+    ChannelRestoring: "Channel is restoring, cannot update",
     CouldNotGetParams: "Could not generate params from update",
     CouldNotGetResolvedBalance: "Could not retrieve resolved balance from chain",
     CounterpartyFailure: "Counterparty failed to apply update",
