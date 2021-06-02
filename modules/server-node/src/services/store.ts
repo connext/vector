@@ -135,8 +135,8 @@ const convertUpdateEntityToChannelUpdate = (entity: Update & { channel: Channel 
   }
   return {
     id: {
-      id: entity.id,
-      signature: entity.idSignature,
+      id: entity.id!,
+      signature: entity.idSignature!,
     },
     assetId: entity.assetId,
     balance: {
@@ -1020,8 +1020,6 @@ export class PrismaStore implements IServerNodeStore {
         createUpdate: {
           create: {
             // common fields
-            id: channel.latestUpdate.id.id,
-            idSignature: channel.latestUpdate.id.signature,
             channelAddressId: transfer.channelAddress,
             fromIdentifier: transfer.initiatorIdentifier,
             toIdentifier: transfer.responderIdentifier,
