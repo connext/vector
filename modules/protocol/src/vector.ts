@@ -19,7 +19,9 @@ import {
   ProtocolError,
   jsonifyError,
   Values,
+  UpdateIdentifier,
 } from "@connext/vector-types";
+import { v4 as uuidV4 } from "uuid";
 import { getCreate2MultisigAddress, getRandomBytes32, delay } from "@connext/vector-utils";
 import { Evt } from "evt";
 import pino from "pino";
@@ -598,6 +600,14 @@ export class Vector implements IVectorProtocol {
     return this;
   }
 
+  private async generateIdentifier(): Promise<UpdateIdentifier> {
+    const id = uuidV4();
+    return {
+      id,
+      signature: await this.signer.signMessage(id),
+    };
+  }
+
   /*
    * ***************************
    * *** CORE PUBLIC METHODS ***
@@ -622,6 +632,8 @@ export class Vector implements IVectorProtocol {
       return Result.fail(error);
     }
 
+    const id = await this.generateIdentifier();
+
     const create2Res = await getCreate2MultisigAddress(
       this.publicIdentifier,
       params.counterpartyIdentifier,
@@ -633,7 +645,7 @@ export class Vector implements IVectorProtocol {
       return Result.fail(
         new QueuedUpdateError(
           QueuedUpdateError.reasons.Create2Failed,
-          { details: params, channelAddress: "", type: UpdateType.setup },
+          { details: params, channelAddress: "", type: UpdateType.setup, id },
           undefined,
           {
             create2Error: create2Res.getError()?.message,
@@ -648,6 +660,7 @@ export class Vector implements IVectorProtocol {
       channelAddress,
       details: params,
       type: UpdateType.setup,
+      id,
     };
 
     const returnVal = await this.executeUpdate(updateParams);
@@ -693,6 +706,7 @@ export class Vector implements IVectorProtocol {
       channelAddress: params.channelAddress,
       type: UpdateType.deposit,
       details: params,
+      id: await this.generateIdentifier(),
     };
 
     const returnVal = await this.executeUpdate(updateParams);
@@ -722,6 +736,7 @@ export class Vector implements IVectorProtocol {
       channelAddress: params.channelAddress,
       type: UpdateType.create,
       details: params,
+      id: await this.generateIdentifier(),
     };
 
     const returnVal = await this.executeUpdate(updateParams);
@@ -751,6 +766,7 @@ export class Vector implements IVectorProtocol {
       channelAddress: params.channelAddress,
       type: UpdateType.resolve,
       details: params,
+      id: await this.generateIdentifier(),
     };
 
     const returnVal = await this.executeUpdate(updateParams);

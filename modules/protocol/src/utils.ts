@@ -191,6 +191,7 @@ export function getParamsFromUpdate<T extends UpdateType = any>(
     channelAddress,
     type,
     details: paramDetails as UpdateParamsMap[T],
+    id: update.id,
   });
 }
 

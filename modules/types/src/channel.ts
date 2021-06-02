@@ -61,11 +61,30 @@ export interface UpdateParamsMap {
   [UpdateType.setup]: SetupParams;
 }
 
+// When generating an update from params, you need to create an
+// identifier to make sure the update remains idempotent. Imagine
+// without this and you are trying to apply a `create` update.
+// In this case, there is no way to know whether or not you have
+// already created the transfer (the `transferId` is not generated
+// until you know the nonce the proposed update is executed at).
+// This leads to an edgecase where a transfer is created by someone
+// who does not hold priority, and installed by the responder. The
+// responder then inserts their own update (thereby cancelling yours)
+// and you reinsert your "create" update into the queue (causing the
+// same transfer to be created 2x). You sign the update identifier so
+// you dont run into this problem again when syncing an update and the
+// id has been tampered with.
+export type UpdateIdentifier = {
+  id: string;
+  signature: string;
+};
+
 // Protocol update
 export type UpdateParams<T extends UpdateType = any> = {
   channelAddress: string;
   type: T;
   details: UpdateParamsMap[T];
+  id: UpdateIdentifier;
 };
 
 export type Balance = {
@@ -172,6 +191,7 @@ export type NetworkContext = ContractAddresses & {
 };
 
 export type ChannelUpdate<T extends UpdateType = any> = {
+  id: UpdateIdentifier; // signed by update.fromIdentifier
   channelAddress: string;
   fromIdentifier: string;
   toIdentifier: string;
