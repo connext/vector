@@ -72,17 +72,17 @@ export interface IMessagingService extends IBasicMessaging {
   // - counterparty responds
   // - restore-r restores
   sendRestoreStateMessage(
-    restoreData: Result<{ chainId: number }, EngineError>,
+    restoreData: Result<{ chainId: number }, ProtocolError>,
     to: string,
     from: string,
     timeout?: number,
     numRetries?: number,
   ): Promise<
-    Result<{ channel: FullChannelState; activeTransfers: FullTransferState[] } | void, EngineError | MessagingError>
+    Result<{ channel: FullChannelState; activeTransfers: FullTransferState[] } | void, ProtocolError | MessagingError>
   >;
   onReceiveRestoreStateMessage(
     publicIdentifier: string,
-    callback: (restoreData: Result<{ chainId: number }, EngineError>, from: string, inbox: string) => void,
+    callback: (restoreData: Result<{ chainId: number }, ProtocolError>, from: string, inbox: string) => void,
   ): Promise<void>;
   respondToRestoreStateMessage(
     inbox: string,

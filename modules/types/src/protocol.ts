@@ -7,6 +7,7 @@ import {
   SetupParams,
   UpdateType,
   FullChannelState,
+  RestoreParams,
 } from "./channel";
 import { ProtocolError, Result } from "./error";
 import { ProtocolEventName, ProtocolEventPayloadsMap } from "./event";
@@ -18,6 +19,7 @@ export interface IVectorProtocol {
   deposit(params: DepositParams): Promise<Result<FullChannelState, ProtocolError>>;
   create(params: CreateTransferParams): Promise<Result<FullChannelState, ProtocolError>>;
   resolve(params: ResolveTransferParams): Promise<Result<FullChannelState, ProtocolError>>;
+
   on<T extends ProtocolEventName>(
     event: T,
     callback: (payload: ProtocolEventPayloadsMap[T]) => void | Promise<void>,
@@ -41,6 +43,7 @@ export interface IVectorProtocol {
   getTransferState(transferId: string): Promise<FullTransferState | undefined>;
   getActiveTransfers(channelAddress: string): Promise<FullTransferState[]>;
   syncDisputes(): Promise<void>;
+  restoreState(params: RestoreParams): Promise<Result<FullChannelState, ProtocolError>>;
 }
 
 type VectorChannelMessageData<T extends UpdateType = any> = {

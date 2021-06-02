@@ -32,6 +32,8 @@ export interface IVectorStore {
 
   // Setters
   saveChannelState(channelState: FullChannelState, transfer?: FullTransferState): Promise<void>;
+  // Used for restore
+  saveChannelStateAndTransfers(channelState: FullChannelState, activeTransfers: FullTransferState[]): Promise<void>;
 
   /**
    * Saves information about a channel dispute from the onchain record
@@ -175,8 +177,6 @@ export interface IEngineStore extends IVectorStore, IChainServiceStore {
 
   // Setters
   saveWithdrawalCommitment(transferId: string, withdrawCommitment: WithdrawCommitmentJson): Promise<void>;
-  // Used for restore
-  saveChannelStateAndTransfers(channelState: FullChannelState, activeTransfers: FullTransferState[]): Promise<void>;
 }
 
 export interface IServerNodeStore extends IEngineStore {

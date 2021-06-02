@@ -44,7 +44,7 @@ import { BigNumber } from "@ethersproject/bignumber";
 import { Zero } from "@ethersproject/constants";
 import Pino, { BaseLogger } from "pino";
 
-import { IsAliveError, RestoreError, WithdrawQuoteError } from "./errors";
+import { IsAliveError, WithdrawQuoteError } from "./errors";
 import { EngineEvtContainer } from "./index";
 import { submitUnsubmittedWithdrawals } from "./utils";
 
@@ -166,79 +166,6 @@ export async function setupEngineListeners(
         },
       } = event;
       return type === UpdateType.resolve;
-    },
-  );
-
-  await messaging.onReceiveRestoreStateMessage(
-    signer.publicIdentifier,
-    async (restoreData: Result<{ chainId: number }, EngineError>, from: string, inbox: string) => {
-      // If it is from yourself, do nothing
-      if (from === signer.publicIdentifier) {
-        return;
-      }
-      const method = "onReceiveRestoreStateMessage";
-      logger.warn({ method, data: restoreData.toJson(), inbox }, "Handling message");
-
-      // Received error from counterparty
-      if (restoreData.isError) {
-        logger.error({ message: restoreData.getError()!.message, method }, "Error received from counterparty restore");
-        return;
-      }
-
-      const data = restoreData.getValue();
-      const [key] = Object.keys(data ?? []);
-      if (key !== "chainId") {
-        logger.error({ data }, "Message malformed");
-        return;
-      }
-
-      // Counterparty looking to initiate a restore
-      let channel: FullChannelState | undefined;
-      const sendCannotRestoreFromError = (error: Values<typeof RestoreError.reasons>, context: any = {}) => {
-        return messaging.respondToRestoreStateMessage(
-          inbox,
-          Result.fail(
-            new RestoreError(error, channel?.channelAddress ?? "", signer.publicIdentifier, { ...context, method }),
-          ),
-        );
-      };
-
-      // Get info from store to send to counterparty
-      const { chainId } = data as any;
-      try {
-        channel = await store.getChannelStateByParticipants(signer.publicIdentifier, from, chainId);
-      } catch (e) {
-        return sendCannotRestoreFromError(RestoreError.reasons.CouldNotGetChannel, {
-          storeMethod: "getChannelStateByParticipants",
-          chainId,
-          identifiers: [signer.publicIdentifier, from],
-        });
-      }
-      if (!channel) {
-        return sendCannotRestoreFromError(RestoreError.reasons.ChannelNotFound, { chainId });
-      }
-      let activeTransfers: FullTransferState[];
-      try {
-        activeTransfers = await store.getActiveTransfers(channel.channelAddress);
-      } catch (e) {
-        return sendCannotRestoreFromError(RestoreError.reasons.CouldNotGetActiveTransfers, {
-          storeMethod: "getActiveTransfers",
-          chainId,
-          channelAddress: channel.channelAddress,
-        });
-      }
-
-      // Send info to counterparty
-      logger.warn(
-        {
-          method,
-          channel: channel.channelAddress,
-          nonce: channel.nonce,
-          activeTransfers: activeTransfers.map((a) => a.transferId),
-        },
-        "Sending counterparty state to sync",
-      );
-      await messaging.respondToRestoreStateMessage(inbox, Result.ok({ channel, activeTransfers }));
     },
   );
 

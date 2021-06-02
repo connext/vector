@@ -61,6 +61,12 @@ export interface UpdateParamsMap {
   [UpdateType.setup]: SetupParams;
 }
 
+// Not exactly a channel update, but another protocol method
+export type RestoreParams = {
+  counterpartyIdentifier: string;
+  chainId: number;
+};
+
 // When generating an update from params, you need to create an
 // identifier to make sure the update remains idempotent. Imagine
 // without this and you are trying to apply a `create` update.
