@@ -74,6 +74,7 @@ export const waitForTransaction = async (
 };
 
 export class EthereumChainService extends EthereumChainReader implements IVectorChainService {
+  private nonces: Map<number, number> = new Map();
   private signers: Map<number, Signer> = new Map();
   private queue: PriorityQueue = new PriorityQueue({ concurrency: 1 });
   private evts: { [eventName in ChainServiceEvent]: Evt<ChainServiceEventMap[eventName]> } = {
@@ -195,6 +196,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
     txFn: (gasPrice: BigNumber, nonce: number) => Promise<TransactionResponse | undefined>,
     gasPrice: BigNumber,
     signer: Signer,
+    chainId: number,
     nonce?: number,
   ): Promise<Result<TransactionResponse | undefined, Error>> {
     // Queue up the execution of the transaction.
@@ -202,8 +204,11 @@ export class EthereumChainService extends EthereumChainReader implements IVector
       async (): Promise<Result<TransactionResponse | undefined, Error>> => {
         try {
           // Send transaction using the passed in callback.
-          const actualNonce: number = nonce ?? (await signer.getTransactionCount("pending"));
+          const actualNonce: number =
+            nonce ?? this.nonces.get(chainId) ?? (await signer.getTransactionCount("pending"));
           const response: TransactionResponse | undefined = await txFn(gasPrice, actualNonce);
+          // After calling tx fn, set nonce to usedNonce + 1
+          this.nonces.set(chainId, actualNonce + 1);
           return Result.ok(response);
         } catch (e) {
           return Result.fail(e);
@@ -389,7 +394,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
           { method, methodId, nonce, tryNumber, channelAddress, gasPrice: gasPrice.toString() },
           "Attempting to send transaction",
         );
-        const result = await this.sendTx(txFn, gasPrice, signer, nonce);
+        const result = await this.sendTx(txFn, gasPrice, signer, chainId, nonce);
         if (!result.isError) {
           const response = result.getValue();
           if (response) {
