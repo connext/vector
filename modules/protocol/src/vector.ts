@@ -35,7 +35,13 @@ import pino from "pino";
 import { QueuedUpdateError, RestoreError } from "./errors";
 import { Cancellable, OtherUpdate, SelfUpdate, SerializedQueue } from "./queue";
 import { outbound, inbound, OtherUpdateResult, SelfUpdateResult } from "./sync";
-import { extractContextFromStore, persistChannel, validateChannelSignatures, validateParamSchema } from "./utils";
+import {
+  extractContextFromStore,
+  getNextNonceForUpdate,
+  persistChannel,
+  validateChannelSignatures,
+  validateParamSchema,
+} from "./utils";
 
 type EvtContainer = { [K in keyof ProtocolEventPayloadsMap]: Evt<ProtocolEventPayloadsMap[K]> };
 
@@ -596,7 +602,7 @@ export class Vector implements IVectorProtocol {
           return;
         }
 
-        // TODO: why in the world is this causing it to fail
+        // // TODO: why in the world is this causing it to fail
         // // Previous update may be undefined, but if it exists, validate
         // console.log("******** validating schema");
         // const previousError = validateParamSchema(received.previousUpdate, TChannelUpdate);
@@ -940,9 +946,6 @@ export class Vector implements IVectorProtocol {
 
     const { channel, activeTransfers } = restoreDataRes.getValue() ?? ({} as any);
 
-    // Set restoration for channel to true
-    this.restorations.set(channel.channelAddress, true);
-
     // Create helper to generate error
     const generateRestoreError = (
       error: Values<typeof RestoreError.reasons>,
@@ -954,7 +957,7 @@ export class Vector implements IVectorProtocol {
         method,
         params,
       });
-      this.restorations.set(channel.channelAddress, false);
+      channel && this.restorations.set(channel.channelAddress, false);
       return Result.fail(err);
     };
 
@@ -962,6 +965,9 @@ export class Vector implements IVectorProtocol {
     if (!channel || !activeTransfers) {
       return generateRestoreError(RestoreError.reasons.NoData);
     }
+
+    // Set restoration for channel to true
+    this.restorations.set(channel.channelAddress, true);
 
     // Verify channel address is same as calculated
     const counterparty = getSignerAddressFromPublicIdentifier(counterpartyIdentifier);
@@ -1008,8 +1014,14 @@ export class Vector implements IVectorProtocol {
     // Verify nothing with a sync-able nonce exists in store
     const existing = await this.getChannelState(channel.channelAddress);
     const nonce = existing?.nonce ?? 0;
-    const diff = channel.nonce - nonce;
-    if (diff <= 1 && channel.latestUpdate.type !== UpdateType.setup) {
+    const next = getNextNonceForUpdate(nonce, channel.latestUpdate.fromIdentifier === channel.aliceIdentifier);
+    if (next === channel.nonce && channel.latestUpdate.type !== UpdateType.setup) {
+      return generateRestoreError(RestoreError.reasons.SyncableState, {
+        existing: nonce,
+        toRestore: channel.nonce,
+      });
+    }
+    if (nonce >= channel.nonce) {
       return generateRestoreError(RestoreError.reasons.SyncableState, {
         existing: nonce,
         toRestore: channel.nonce,
