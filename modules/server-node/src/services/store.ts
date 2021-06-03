@@ -18,6 +18,7 @@ import {
   GetTransfersFilterOpts,
   StoredTransactionAttempt,
   StoredTransactionReceipt,
+  ChannelUpdate,
 } from "@connext/vector-types";
 import { getRandomBytes32, getSignerAddressFromPublicIdentifier, mkSig } from "@connext/vector-utils";
 import { BigNumber } from "@ethersproject/bignumber";
@@ -88,6 +89,71 @@ const convertOnchainTransactionEntityToTransaction = (
   };
 };
 
+const convertUpdateEntityToChannelUpdate = (entity: Update & { channel: Channel | null }): ChannelUpdate => {
+  let details: SetupUpdateDetails | DepositUpdateDetails | CreateUpdateDetails | ResolveUpdateDetails | undefined;
+  switch (entity.type) {
+    case "setup":
+      details = {
+        networkContext: {
+          chainId: BigNumber.from(entity.channel!.chainId).toNumber(),
+          channelFactoryAddress: entity.channel!.channelFactoryAddress,
+          transferRegistryAddress: entity.channel!.transferRegistryAddress,
+        },
+        timeout: entity.channel!.timeout,
+      } as SetupUpdateDetails;
+      break;
+    case "deposit":
+      details = {
+        totalDepositsAlice: entity.totalDepositsAlice,
+        totalDepositsBob: entity.totalDepositsBob,
+      } as DepositUpdateDetails;
+      break;
+    case "create":
+      details = {
+        balance: {
+          to: [entity.transferToA!, entity.transferToB!],
+          amount: [entity.transferAmountA!, entity.transferAmountB!],
+        },
+        merkleRoot: entity.merkleRoot!,
+        transferDefinition: entity.transferDefinition!,
+        transferTimeout: entity.transferTimeout!,
+        transferId: entity.transferId!,
+        transferEncodings: entity.transferEncodings!.split("$"),
+        transferInitialState: JSON.parse(entity.transferInitialState!),
+        meta: entity.meta ? JSON.parse(entity.meta) : undefined,
+      } as CreateUpdateDetails;
+      break;
+    case "resolve":
+      details = {
+        merkleRoot: entity.merkleRoot!,
+        transferDefinition: entity.transferDefinition!,
+        transferId: entity.transferId!,
+        transferResolver: JSON.parse(entity.transferResolver!),
+        meta: entity.meta ? JSON.parse(entity.meta) : undefined,
+      } as ResolveUpdateDetails;
+      break;
+  }
+  return {
+    id: {
+      id: entity.id!,
+      signature: entity.idSignature!,
+    },
+    assetId: entity.assetId,
+    balance: {
+      amount: [entity.amountA, entity.amountB],
+      to: [entity.toA, entity.toB],
+    },
+    channelAddress: entity.channelAddressId,
+    details,
+    fromIdentifier: entity.fromIdentifier,
+    nonce: entity.nonce,
+    aliceSignature: entity.signatureA ?? undefined,
+    bobSignature: entity.signatureB ?? undefined,
+    toIdentifier: entity.toIdentifier,
+    type: entity.type as keyof typeof UpdateType,
+  };
+};
+
 const convertChannelEntityToFullChannelState = (
   channelEntity: Channel & {
     balances: BalanceEntity[];
@@ -119,51 +185,9 @@ const convertChannelEntityToFullChannelState = (
   });
 
   // convert db representation into details for the particular update
-  let details: SetupUpdateDetails | DepositUpdateDetails | CreateUpdateDetails | ResolveUpdateDetails | undefined;
-  if (channelEntity.latestUpdate) {
-    switch (channelEntity.latestUpdate.type) {
-      case "setup":
-        details = {
-          networkContext: {
-            chainId: BigNumber.from(channelEntity.chainId).toNumber(),
-            channelFactoryAddress: channelEntity.channelFactoryAddress,
-            transferRegistryAddress: channelEntity.transferRegistryAddress,
-          },
-          timeout: channelEntity.timeout,
-        } as SetupUpdateDetails;
-        break;
-      case "deposit":
-        details = {
-          totalDepositsAlice: channelEntity.latestUpdate.totalDepositsAlice,
-          totalDepositsBob: channelEntity.latestUpdate.totalDepositsBob,
-        } as DepositUpdateDetails;
-        break;
-      case "create":
-        details = {
-          balance: {
-            to: [channelEntity.latestUpdate.transferToA!, channelEntity.latestUpdate.transferToB!],
-            amount: [channelEntity.latestUpdate.transferAmountA!, channelEntity.latestUpdate.transferAmountB!],
-          },
-          merkleRoot: channelEntity.latestUpdate.merkleRoot!,
-          transferDefinition: channelEntity.latestUpdate.transferDefinition!,
-          transferTimeout: channelEntity.latestUpdate.transferTimeout!,
-          transferId: channelEntity.latestUpdate.transferId!,
-          transferEncodings: channelEntity.latestUpdate.transferEncodings!.split("$"),
-          transferInitialState: JSON.parse(channelEntity.latestUpdate.transferInitialState!),
-          meta: channelEntity.latestUpdate!.meta ? JSON.parse(channelEntity.latestUpdate!.meta) : undefined,
-        } as CreateUpdateDetails;
-        break;
-      case "resolve":
-        details = {
-          merkleRoot: channelEntity.latestUpdate.merkleRoot!,
-          transferDefinition: channelEntity.latestUpdate.transferDefinition!,
-          transferId: channelEntity.latestUpdate.transferId!,
-          transferResolver: JSON.parse(channelEntity.latestUpdate.transferResolver!),
-          meta: channelEntity.latestUpdate!.meta ? JSON.parse(channelEntity.latestUpdate!.meta) : undefined,
-        } as ResolveUpdateDetails;
-        break;
-    }
-  }
+  const latestUpdate = !!channelEntity.latestUpdate
+    ? convertUpdateEntityToChannelUpdate({ ...channelEntity.latestUpdate, channel: channelEntity })
+    : undefined;
 
   const channel: FullChannelState = {
     assetIds,
@@ -184,21 +208,7 @@ const convertChannelEntityToFullChannelState = (
     bob: channelEntity.participantB,
     bobIdentifier: channelEntity.publicIdentifierB,
     timeout: channelEntity.timeout,
-    latestUpdate: {
-      assetId: channelEntity.latestUpdate!.assetId,
-      balance: {
-        amount: [channelEntity.latestUpdate!.amountA, channelEntity.latestUpdate!.amountB],
-        to: [channelEntity.latestUpdate!.toA, channelEntity.latestUpdate!.toB],
-      },
-      channelAddress: channelEntity.channelAddress,
-      details,
-      fromIdentifier: channelEntity.latestUpdate!.fromIdentifier,
-      nonce: channelEntity.latestUpdate!.nonce,
-      aliceSignature: channelEntity.latestUpdate!.signatureA ?? undefined,
-      bobSignature: channelEntity.latestUpdate!.signatureB ?? undefined,
-      toIdentifier: channelEntity.latestUpdate!.toIdentifier,
-      type: channelEntity.latestUpdate!.type as "create" | "deposit" | "resolve" | "setup",
-    },
+    latestUpdate: latestUpdate as any,
     inDispute: !!channelEntity.dispute,
   };
   return channel;
@@ -641,6 +651,14 @@ export class PrismaStore implements IServerNodeStore {
     await this.prisma.$disconnect();
   }
 
+  async getUpdateById(id: string): Promise<ChannelUpdate | undefined> {
+    const entity = await this.prisma.update.findUnique({ where: { id }, include: { channel: true } });
+    if (!entity) {
+      return undefined;
+    }
+    return convertUpdateEntityToChannelUpdate(entity);
+  }
+
   async getChannelState(channelAddress: string): Promise<FullChannelState | undefined> {
     const channelEntity = await this.prisma.channel.findUnique({
       where: { channelAddress },
@@ -831,6 +849,8 @@ export class PrismaStore implements IServerNodeStore {
               : undefined,
           },
           create: {
+            id: channelState.latestUpdate.id.id,
+            idSignature: channelState.latestUpdate.id.signature,
             channelAddressId: channelState.channelAddress,
             channel: { connect: { channelAddress: channelState.channelAddress } },
             fromIdentifier: channelState.latestUpdate.fromIdentifier,
@@ -939,6 +959,8 @@ export class PrismaStore implements IServerNodeStore {
     let latestUpdateModel: Prisma.UpdateCreateInput | undefined;
     if (channel.latestUpdate) {
       latestUpdateModel = {
+        id: channel.latestUpdate.id.id,
+        idSignature: channel.latestUpdate.id.signature,
         channelAddressId: channel.channelAddress,
         fromIdentifier: channel.latestUpdate!.fromIdentifier,
         toIdentifier: channel.latestUpdate!.toIdentifier,

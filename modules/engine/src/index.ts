@@ -1014,7 +1014,9 @@ export class VectorEngine implements IVectorEngine {
 
   private async addTransactionToCommitment(
     params: EngineParams.AddTransactionToCommitment,
-  ): Promise<Result<ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_addTransactionToCommitment], EngineError>> {
+  ): Promise<
+    Result<ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_addTransactionToCommitment], EngineError>
+  > {
     const method = "addTransactionToCommitment";
     const methodId = getRandomBytes32();
     this.logger.info({ params, method, methodId }, "Method started");
@@ -1588,15 +1590,16 @@ export class VectorEngine implements IVectorEngine {
     channelAddress: string,
     retryCount = 5,
   ) {
-    let result: Result<T> | undefined;
-    for (let i = 0; i < retryCount; i++) {
-      result = await fn();
-      if (!result.isError) {
-        return result;
-      }
-      this.logger.warn({ attempt: i, error: result.getError().message, channelAddress }, "Protocol method failed");
-      await delay(500);
-    }
+    const result = await fn();
+    // let result: Result<T> | undefined;
+    // for (let i = 0; i < retryCount; i++) {
+    //   result = await fn();
+    //   if (!result.isError) {
+    //     return result;
+    //   }
+    //   this.logger.warn({ attempt: i, error: result.getError().message, channelAddress }, "Protocol method failed");
+    //   await delay(500);
+    // }
     return result as Result<T, ProtocolError>;
   }
 

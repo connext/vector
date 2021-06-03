@@ -1,5 +1,6 @@
 import {
   ChannelDispute,
+  ChannelUpdate,
   CoreChannelState,
   CoreTransferState,
   FullChannelState,
@@ -42,6 +43,7 @@ const getStoreName = (publicIdentifier: string) => {
 };
 const NON_NAMESPACED_STORE = "VectorIndexedDBDatabase";
 class VectorIndexedDBDatabase extends Dexie {
+  updates: Dexie.Table<ChannelUpdate, string>;
   channels: Dexie.Table<FullChannelState, string>;
   transfers: Dexie.Table<StoredTransfer, string>;
   transactions: Dexie.Table<StoredTransaction, string>;
@@ -111,29 +113,38 @@ class VectorIndexedDBDatabase extends Dexie {
 
     // Using a temp table (transactions2) to migrate which column is the primary key
     // (transactionHash -> id)
-    this.version(5).stores({
-      withdrawCommitment: "transferId,channelAddress,transactionHash",
-      transactions2: "id, transactionHash",
-    }).upgrade(async tx => {
-      const transactions = await tx.table("transactions").toArray();
-      await tx.table("transactions2").bulkAdd(transactions);
-    });
+    this.version(5)
+      .stores({
+        withdrawCommitment: "transferId,channelAddress,transactionHash",
+        transactions2: "id, transactionHash",
+      })
+      .upgrade(async (tx) => {
+        const transactions = await tx.table("transactions").toArray();
+        await tx.table("transactions2").bulkAdd(transactions);
+      });
 
     this.version(6).stores({
-      transactions: null
+      transactions: null,
     });
 
-    this.version(7).stores({
-      transactions: "id, transactionHash"
-    }).upgrade(async tx => {
-      const transactions2 = await tx.table("transactions2").toArray();
-      await tx.table("transactions").bulkAdd(transactions2);
-    });
+    this.version(7)
+      .stores({
+        transactions: "id, transactionHash",
+      })
+      .upgrade(async (tx) => {
+        const transactions2 = await tx.table("transactions2").toArray();
+        await tx.table("transactions").bulkAdd(transactions2);
+      });
 
     this.version(8).stores({
-      transactions2: null
+      transactions2: null,
     });
 
+    this.version(9).stores({
+      updates: "id.id, [channelAddress+nonce]",
+    });
+
+    this.updates = this.table("updates");
     this.channels = this.table("channels");
     this.transfers = this.table("transfers");
     this.transactions = this.table("transactions");
@@ -245,8 +256,9 @@ export class BrowserStore implements IEngineStore, IChainServiceStore {
   }
 
   async saveChannelState(channelState: FullChannelState, transfer?: FullTransferState): Promise<void> {
-    await this.db.transaction("rw", this.db.channels, this.db.transfers, async () => {
+    await this.db.transaction("rw", this.db.channels, this.db.transfers, this.db.updates, async () => {
       await this.db.channels.put(channelState);
+      await this.db.updates.put(channelState.latestUpdate);
       if (channelState.latestUpdate.type === UpdateType.create) {
         await this.db.transfers.put({
           ...transfer!,
@@ -262,6 +274,11 @@ export class BrowserStore implements IEngineStore, IChainServiceStore {
         } as Partial<StoredTransfer>);
       }
     });
+  }
+
+  async getUpdateById(id: string): Promise<ChannelUpdate | undefined> {
+    const update = await this.db.updates.get(id);
+    return update;
   }
 
   async getChannelStates(): Promise<FullChannelState[]> {
@@ -356,7 +373,7 @@ export class BrowserStore implements IEngineStore, IChainServiceStore {
   }
 
   async getTransactionById(onchainTransactionId: string): Promise<StoredTransaction | undefined> {
-    return await this.db.transactions.get({ id: onchainTransactionId })
+    return await this.db.transactions.get({ id: onchainTransactionId });
   }
 
   async getActiveTransactions(): Promise<StoredTransaction[]> {
@@ -383,30 +400,33 @@ export class BrowserStore implements IEngineStore, IChainServiceStore {
     attempts.push({
       // TransactionResponse fields (defined when submitted)
       gasLimit: response.gasLimit.toString(),
-      gasPrice: response.gasPrice.toString(),      
+      gasPrice: response.gasPrice.toString(),
       transactionHash: response.hash,
 
       createdAt: new Date(),
     } as StoredTransactionAttempt);
 
-    await this.db.transactions.put({
-      id: onchainTransactionId,
+    await this.db.transactions.put(
+      {
+        id: onchainTransactionId,
 
-      //// Helper fields
-      channelAddress,
-      status: StoredTransactionStatus.submitted,
-      reason,
+        //// Helper fields
+        channelAddress,
+        status: StoredTransactionStatus.submitted,
+        reason,
 
-      //// Provider fields
-      // Minimum fields (should always be defined)
-      to: response.to!,
-      from: response.from,
-      data: response.data,
-      value: response.value.toString(),
-      chainId: response.chainId,
-      nonce: response.nonce,
-      attempts,
-    } as StoredTransaction, onchainTransactionId);
+        //// Provider fields
+        // Minimum fields (should always be defined)
+        to: response.to!,
+        from: response.from,
+        data: response.data,
+        value: response.value.toString(),
+        chainId: response.chainId,
+        nonce: response.nonce,
+        attempts,
+      } as StoredTransaction,
+      onchainTransactionId,
+    );
   }
 
   async saveTransactionReceipt(onchainTransactionId: string, receipt: TransactionReceipt): Promise<void> {

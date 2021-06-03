@@ -19,7 +19,9 @@ import {
   ProtocolError,
   jsonifyError,
   Values,
+  UpdateIdentifier,
 } from "@connext/vector-types";
+import { v4 as uuidV4 } from "uuid";
 import { getCreate2MultisigAddress, getRandomBytes32, delay } from "@connext/vector-utils";
 import { Evt } from "evt";
 import pino from "pino";
@@ -152,7 +154,11 @@ export class Vector implements IVectorProtocol {
         return resolve({ cancelled: true, value: ret });
       });
       const outboundPromise = new Promise(async (resolve) => {
-        const storeRes = await extractContextFromStore(this.storeService, initiated.params.channelAddress);
+        const storeRes = await extractContextFromStore(
+          this.storeService,
+          initiated.params.channelAddress,
+          initiated.params.id.id,
+        );
         if (storeRes.isError) {
           // Return failure
           return Result.fail(
@@ -161,7 +167,19 @@ export class Vector implements IVectorProtocol {
             }),
           );
         }
-        const { channelState, activeTransfers } = storeRes.getValue();
+        const { channelState, activeTransfers, update } = storeRes.getValue();
+        if (update && update.aliceSignature && update.bobSignature) {
+          // Update has already been executed, see explanation in
+          // types/channel.ts for `UpdateIdentifier`
+          const transfer = [UpdateType.create, UpdateType.resolve].includes(update.type)
+            ? await this.storeService.getTransferState(update.details.transferId)
+            : undefined;
+          return resolve({
+            cancelled: false,
+            value: { updatedTransfer: transfer, updatedChannel: channelState, updatedTransfers: activeTransfers },
+            successfullyApplied: "previouslyExecuted",
+          });
+        }
         try {
           const ret = await outbound(
             initiated.params,
@@ -233,6 +251,7 @@ export class Vector implements IVectorProtocol {
           role: "outbound",
           channelAddress: initiated.params.channelAddress,
           updatedChannel,
+          successfullyApplied,
         },
         "Update succeeded",
       );
@@ -247,11 +266,11 @@ export class Vector implements IVectorProtocol {
       }
       // If the update was not applied, but the channel was synced, return
       // undefined so that the proposed update may be re-queued
-      if (!successfullyApplied) {
-        // Merkle root changes are undone *before* syncing
+      if (successfullyApplied === "synced") {
         return undefined;
       }
-      // All is well, return value from outbound
+      // All is well, return value from outbound (applies for already executed
+      // updates as well)
       return value;
     };
 
@@ -286,13 +305,20 @@ export class Vector implements IVectorProtocol {
       });
       const inboundPromise = new Promise(async (resolve) => {
         // Pull context from store
-        const storeRes = await extractContextFromStore(this.storeService, received.update.channelAddress);
+        const storeRes = await extractContextFromStore(
+          this.storeService,
+          received.update.channelAddress,
+          received.update.id.id,
+        );
         if (storeRes.isError) {
           // Send message with error
           return returnError(QueuedUpdateError.reasons.StoreFailure, undefined, {
             storeError: storeRes.getError()?.message,
           });
         }
+        // NOTE: no need to validate that the update has already been executed
+        // because that is asserted on sync, where as an initiator you dont have
+        // that certainty
         const stored = storeRes.getValue();
         channelState = stored.channelState;
         try {
@@ -344,7 +370,7 @@ export class Vector implements IVectorProtocol {
           },
           "Cancelling update",
         );
-        await returnError(QueuedUpdateError.reasons.Cancelled, channelState);
+        // await returnError(QueuedUpdateError.reasons.Cancelled, channelState);
         return undefined;
       }
       const value = res.value as Result<OtherUpdateResult>;
@@ -597,6 +623,14 @@ export class Vector implements IVectorProtocol {
     return this;
   }
 
+  private async generateIdentifier(): Promise<UpdateIdentifier> {
+    const id = uuidV4();
+    return {
+      id,
+      signature: await this.signer.signMessage(id),
+    };
+  }
+
   /*
    * ***************************
    * *** CORE PUBLIC METHODS ***
@@ -621,6 +655,8 @@ export class Vector implements IVectorProtocol {
       return Result.fail(error);
     }
 
+    const id = await this.generateIdentifier();
+
     const create2Res = await getCreate2MultisigAddress(
       this.publicIdentifier,
       params.counterpartyIdentifier,
@@ -632,7 +668,7 @@ export class Vector implements IVectorProtocol {
       return Result.fail(
         new QueuedUpdateError(
           QueuedUpdateError.reasons.Create2Failed,
-          { details: params, channelAddress: "", type: UpdateType.setup },
+          { details: params, channelAddress: "", type: UpdateType.setup, id },
           undefined,
           {
             create2Error: create2Res.getError()?.message,
@@ -647,6 +683,7 @@ export class Vector implements IVectorProtocol {
       channelAddress,
       details: params,
       type: UpdateType.setup,
+      id,
     };
 
     const returnVal = await this.executeUpdate(updateParams);
@@ -692,6 +729,7 @@ export class Vector implements IVectorProtocol {
       channelAddress: params.channelAddress,
       type: UpdateType.deposit,
       details: params,
+      id: await this.generateIdentifier(),
     };
 
     const returnVal = await this.executeUpdate(updateParams);
@@ -721,6 +759,7 @@ export class Vector implements IVectorProtocol {
       channelAddress: params.channelAddress,
       type: UpdateType.create,
       details: params,
+      id: await this.generateIdentifier(),
     };
 
     const returnVal = await this.executeUpdate(updateParams);
@@ -750,6 +789,7 @@ export class Vector implements IVectorProtocol {
       channelAddress: params.channelAddress,
       type: UpdateType.resolve,
       details: params,
+      id: await this.generateIdentifier(),
     };
 
     const returnVal = await this.executeUpdate(updateParams);

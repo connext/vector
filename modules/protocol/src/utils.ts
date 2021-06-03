@@ -19,6 +19,7 @@ import {
   UpdateParamsMap,
   UpdateType,
   ChainError,
+  UpdateIdentifier,
 } from "@connext/vector-types";
 import { getAddress } from "@ethersproject/address";
 import { BigNumber } from "@ethersproject/bignumber";
@@ -27,6 +28,7 @@ import {
   hashChannelCommitment,
   hashTransferState,
   validateChannelUpdateSignatures,
+  recoverAddressFromChannelMessage,
 } from "@connext/vector-utils";
 import Ajv from "ajv";
 import { BaseLogger, Level } from "pino";
@@ -73,14 +75,31 @@ export async function validateChannelSignatures(
   return validateChannelUpdateSignatures(state, aliceSignature, bobSignature, requiredSigners, logger);
 }
 
+export async function validateChannelUpdateIdSignature(
+  identifier: UpdateIdentifier,
+  initiatorIdentifier: string,
+): Promise<Result<void, Error>> {
+  try {
+    const recovered = await recoverAddressFromChannelMessage(identifier.id, identifier.signature);
+    if (recovered !== getSignerAddressFromPublicIdentifier(initiatorIdentifier)) {
+      return Result.fail(new Error(``));
+    }
+    return Result.ok(undefined);
+  } catch (e) {
+    return Result.fail(new Error(`Failed to recover signer from update id: ${e.message}`));
+  }
+}
+
 export const extractContextFromStore = async (
   storeService: IVectorStore,
   channelAddress: string,
+  updateId: string,
 ): Promise<
   Result<
     {
       activeTransfers: FullTransferState[];
       channelState: FullChannelState | undefined;
+      update: ChannelUpdate | undefined;
     },
     Error
   >
@@ -88,6 +107,7 @@ export const extractContextFromStore = async (
   // First, pull all information out from the store
   let activeTransfers: FullTransferState[];
   let channelState: FullChannelState | undefined;
+  let update: ChannelUpdate | undefined;
   let storeMethod = "getChannelState";
   try {
     // will always need the previous state
@@ -95,6 +115,8 @@ export const extractContextFromStore = async (
     // will only need active transfers for create/resolve
     storeMethod = "getActiveTransfers";
     activeTransfers = await storeService.getActiveTransfers(channelAddress);
+    storeMethod = "getUpdateById";
+    update = await storeService.getUpdateById(updateId);
   } catch (e) {
     return Result.fail(new Error(`${storeMethod} failed: ${e.message}`));
   }
@@ -102,6 +124,7 @@ export const extractContextFromStore = async (
   return Result.ok({
     activeTransfers,
     channelState,
+    update,
   });
 };
 
@@ -191,6 +214,7 @@ export function getParamsFromUpdate<T extends UpdateType = any>(
     channelAddress,
     type,
     details: paramDetails as UpdateParamsMap[T],
+    id: update.id,
   });
 }
 

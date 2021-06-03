@@ -12,7 +12,6 @@ import { BigNumber, constants, Contract, providers, Wallet, utils } from "ethers
 import { formatEther, parseUnits } from "ethers/lib/utils";
 import { Evt } from "evt";
 import PriorityQueue from "p-queue";
-import { jsonifyError } from "../../../../types/dist/src";
 
 import { env, getRandomIndex } from "../../utils";
 
@@ -24,7 +23,7 @@ const provider = new providers.JsonRpcProvider(env.chainProviders[chainId]);
 const wallet = Wallet.fromMnemonic(env.sugarDaddy).connect(provider);
 const transferAmount = "1"; //utils.parseEther("0.00001").toString();
 const agentBalance = utils.parseEther("0.0005").toString();
-const routerBalance = utils.parseEther("0.15");
+const routerBalance = utils.parseEther("0.3");
 
 const walletQueue = new PriorityQueue({ concurrency: 1 });
 
@@ -509,7 +508,8 @@ export class AgentManager {
           this.transferInfo[routingId].end = Date.now();
 
           // If it was cancelled, mark as failure
-          if (Object.values(data.transfer.transferResolver)[0] === constants.HashZero) {
+          const cancelled = Object.values(data.transfer.transferResolver)[0] === constants.HashZero;
+          if (cancelled) {
             logger.warn(
               {
                 transferId: transfer.transferId,
@@ -531,7 +531,7 @@ export class AgentManager {
           }
 
           // Only create a new transfer IFF you resolved it
-          if (agent.signerAddress === transfer.initiator) {
+          if (agent.signerAddress === transfer.initiator && !cancelled) {
             logger.debug(
               {
                 transfer: transfer.transferId,

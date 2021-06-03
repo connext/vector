@@ -35,6 +35,7 @@ import {
   getNextNonceForUpdate,
   getParamsFromUpdate,
   validateChannelSignatures,
+  validateChannelUpdateIdSignature,
   validateSchema,
 } from "./utils";
 
@@ -70,7 +71,21 @@ export async function validateUpdateParams<T extends UpdateType = any>(
     return handleError(ValidationError.reasons.InDispute);
   }
 
-  const { type, channelAddress, details } = params;
+  const { type, channelAddress, details, id } = params;
+
+  // if this is *not* the initiator, verify the update id sig.
+  // if it is, they are only hurting themselves by not providing
+  // it correctly
+  if (signer.publicIdentifier !== initiatorIdentifier) {
+    const recovered = await validateChannelUpdateIdSignature(id, initiatorIdentifier);
+    if (recovered.isError) {
+      return Result.fail(
+        new ValidationError(ValidationError.reasons.UpdateIdSigInvalid, params, previousState, {
+          recoveryError: jsonifyError(recovered.getError()!),
+        }),
+      );
+    }
+  }
 
   if (previousState && channelAddress !== previousState.channelAddress) {
     return handleError(ValidationError.reasons.InvalidChannelAddress);
@@ -406,6 +421,15 @@ export async function validateAndApplyInboundUpdate<T extends UpdateType = any>(
 
   // Handle double signed updates without validating params
   if (update.aliceSignature && update.bobSignature) {
+    // Verify the update.id.signature is correct (should be initiator)
+    const recovered = await validateChannelUpdateIdSignature(update.id, update.fromIdentifier);
+    if (recovered.isError) {
+      return Result.fail(
+        new QueuedUpdateError(QueuedUpdateError.reasons.UpdateIdSigInvalid, update, previousState, {
+          recoveryError: jsonifyError(recovered.getError()!),
+        }),
+      );
+    }
     // Get final transfer balance (required when applying resolve updates);
     let finalTransferBalance: Balance | undefined = undefined;
     if (update.type === UpdateType.resolve) {

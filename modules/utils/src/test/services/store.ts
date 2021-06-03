@@ -11,6 +11,7 @@ import {
   GetTransfersFilterOpts,
   CoreChannelState,
   CoreTransferState,
+  ChannelUpdate,
 } from "@connext/vector-types";
 import { TransactionReceipt, TransactionResponse } from "@ethersproject/abstract-provider";
 
@@ -97,6 +98,7 @@ export class MemoryStoreService implements IEngineStore {
 
   // Map<channelAddress, channelState>
   private channelStates: Map<string, FullChannelState> = new Map();
+  private updates: Map<string, ChannelUpdate> = new Map();
 
   private schemaVersion: number | undefined = undefined;
 
@@ -116,6 +118,10 @@ export class MemoryStoreService implements IEngineStore {
     this.transfersInChannel.clear();
     this.transfers.clear();
     return Promise.resolve();
+  }
+
+  getUpdateById(id: string): Promise<ChannelUpdate> {
+    return Promise.resolve(this.updates.get(id));
   }
 
   getChannelState(channelAddress: string): Promise<FullChannelState | undefined> {
@@ -142,6 +148,9 @@ export class MemoryStoreService implements IEngineStore {
   }
 
   saveChannelState(channelState: FullChannelState, transfer?: FullTransferState): Promise<void> {
+    if (channelState.latestUpdate) {
+      this.updates.set(channelState.latestUpdate.id.id, channelState.latestUpdate);
+    }
     this.channelStates.set(channelState.channelAddress, {
       ...channelState,
     });

@@ -366,6 +366,7 @@ function generateSetupUpdate(
       meta: params.details.meta ?? {},
     },
     assetId: AddressZero,
+    id: params.id,
   };
 
   return unsigned;
@@ -597,7 +598,7 @@ function generateBaseUpdate<T extends UpdateType>(
   params: UpdateParams<T>,
   signer: IChannelSigner,
   initiatorIdentifier: string,
-): Pick<ChannelUpdate<T>, "channelAddress" | "nonce" | "fromIdentifier" | "toIdentifier" | "type"> {
+): Pick<ChannelUpdate<T>, "channelAddress" | "nonce" | "fromIdentifier" | "toIdentifier" | "type" | "id"> {
   const isInitiator = signer.publicIdentifier === initiatorIdentifier;
   const counterparty = signer.publicIdentifier === state.bobIdentifier ? state.aliceIdentifier : state.bobIdentifier;
   return {
@@ -606,6 +607,7 @@ function generateBaseUpdate<T extends UpdateType>(
     type: params.type,
     fromIdentifier: initiatorIdentifier,
     toIdentifier: isInitiator ? counterparty : signer.publicIdentifier,
+    id: params.id,
   };
 }
 

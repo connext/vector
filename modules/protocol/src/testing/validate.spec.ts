@@ -49,6 +49,7 @@ describe("validateUpdateParams", () => {
 
   // Declare all mocks
   let chainReader: Sinon.SinonStubbedInstance<VectorChainReader>;
+  let validateUpdateIdSignatureStub: Sinon.SinonStub;
 
   // Create helpers to create valid contexts
   const createValidSetupContext = () => {
@@ -198,6 +199,10 @@ describe("validateUpdateParams", () => {
     chainReader = Sinon.createStubInstance(VectorChainReader);
     chainReader.getChannelAddress.resolves(Result.ok(channelAddress));
     chainReader.create.resolves(Result.ok(true));
+
+    validateUpdateIdSignatureStub = Sinon.stub(vectorUtils, "validateChannelUpdateIdSignature").resolves(
+      Result.ok(undefined),
+    );
   });
 
   afterEach(() => {
@@ -795,6 +800,7 @@ describe("validateAndApplyInboundUpdate", () => {
   let chainReader: Sinon.SinonStubbedInstance<VectorChainReader>;
   let validateParamsAndApplyUpdateStub: Sinon.SinonStub;
   let validateChannelUpdateSignaturesStub: Sinon.SinonStub;
+  let validateUpdateIdSignatureStub: Sinon.SinonStub;
   let generateSignedChannelCommitmentStub: Sinon.SinonStub;
   let applyUpdateStub: Sinon.SinonStub;
   let externalValidationStub: {
@@ -834,6 +840,7 @@ describe("validateAndApplyInboundUpdate", () => {
 
     // Need for double signed and single signed
     validateChannelUpdateSignaturesStub.resolves(Result.ok(undefined));
+    validateUpdateIdSignatureStub.resolves(Result.ok(undefined));
 
     // Needed for double signed
     chainReader.resolve.resolves(Result.ok({ to: [updatedChannel.alice, updatedChannel.bob], amount: ["10", "2"] }));
@@ -864,6 +871,9 @@ describe("validateAndApplyInboundUpdate", () => {
     chainReader = Sinon.createStubInstance(VectorChainReader);
     validateParamsAndApplyUpdateStub = Sinon.stub(validation, "validateParamsAndApplyUpdate");
     validateChannelUpdateSignaturesStub = Sinon.stub(vectorUtils, "validateChannelSignatures").resolves(
+      Result.ok(undefined),
+    );
+    validateUpdateIdSignatureStub = Sinon.stub(vectorUtils, "validateChannelUpdateIdSignature").resolves(
       Result.ok(undefined),
     );
     generateSignedChannelCommitmentStub = Sinon.stub(vectorUtils, "generateSignedChannelCommitment");
