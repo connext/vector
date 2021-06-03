@@ -234,7 +234,7 @@ export class Vector implements IVectorProtocol {
           });
         }
       });
-      this.logger.error(
+      this.logger.debug(
         {
           time: Date.now(),
           params: initiated.params,
@@ -248,7 +248,7 @@ export class Vector implements IVectorProtocol {
         value: unknown | Result<SelfUpdateResult>;
       };
       if (res.cancelled) {
-        this.logger.error(
+        this.logger.debug(
           {
             time: Date.now(),
             params: initiated.params,
@@ -261,7 +261,7 @@ export class Vector implements IVectorProtocol {
       }
       const value = res.value as Result<SelfUpdateResult>;
       if (value.isError) {
-        this.logger.error(
+        this.logger.debug(
           {
             time: Date.now(),
             params: initiated.params,
@@ -274,7 +274,7 @@ export class Vector implements IVectorProtocol {
       }
       // Save all information returned from the sync result
       const { updatedChannel, updatedTransfer, successfullyApplied } = value.getValue();
-      this.logger.error(
+      this.logger.debug(
         {
           time: Date.now(),
           params: initiated.params,
@@ -386,7 +386,7 @@ export class Vector implements IVectorProtocol {
         }
       });
 
-      this.logger.error(
+      this.logger.debug(
         {
           time: Date.now(),
           update: received.update,
@@ -401,7 +401,7 @@ export class Vector implements IVectorProtocol {
       };
 
       if (res.cancelled) {
-        this.logger.error(
+        this.logger.debug(
           {
             time: Date.now(),
             update: received.update,
@@ -415,7 +415,7 @@ export class Vector implements IVectorProtocol {
       }
       const value = res.value as Result<OtherUpdateResult>;
       if (value.isError) {
-        this.logger.error(
+        this.logger.debug(
           {
             time: Date.now(),
             update: received.update,
@@ -430,7 +430,7 @@ export class Vector implements IVectorProtocol {
       }
       // Save the newly signed update to your channel
       const { updatedChannel, updatedTransfer } = value.getValue();
-      this.logger.error(
+      this.logger.debug(
         {
           time: Date.now(),
           update: received.update,
