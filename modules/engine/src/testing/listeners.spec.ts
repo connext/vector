@@ -100,8 +100,6 @@ describe(testName, () => {
   let store: Sinon.SinonStubbedInstance<MemoryStoreService>;
   let chainService: Sinon.SinonStubbedInstance<VectorChainService>;
   let messaging: Sinon.SinonStubbedInstance<MemoryMessagingService>;
-  let acquireRestoreLockStub: Sinon.SinonStub;
-  let releaseRestoreLockStub: Sinon.SinonStub;
 
   // Create an EVT to post to, that can be aliased as a
   // vector instance
@@ -131,10 +129,6 @@ describe(testName, () => {
     vector = Sinon.createStubInstance(Vector);
     messaging = Sinon.createStubInstance(MemoryMessagingService);
     vector.on = on as any;
-
-    // By default acquire/release for restore succeeds
-    acquireRestoreLockStub = Sinon.stub().resolves(Result.ok(undefined));
-    releaseRestoreLockStub = Sinon.stub().resolves(Result.ok(undefined));
   });
 
   afterEach(() => {

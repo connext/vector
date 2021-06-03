@@ -22,14 +22,26 @@ import {
   UpdateIdentifier,
 } from "@connext/vector-types";
 import { v4 as uuidV4 } from "uuid";
-import { getCreate2MultisigAddress, getRandomBytes32, delay } from "@connext/vector-utils";
+import {
+  getCreate2MultisigAddress,
+  getRandomBytes32,
+  delay,
+  getSignerAddressFromPublicIdentifier,
+  generateMerkleRoot,
+} from "@connext/vector-utils";
 import { Evt } from "evt";
 import pino from "pino";
 
-import { QueuedUpdateError } from "./errors";
+import { QueuedUpdateError, RestoreError } from "./errors";
 import { Cancellable, OtherUpdate, SelfUpdate, SerializedQueue } from "./queue";
 import { outbound, inbound, OtherUpdateResult, SelfUpdateResult } from "./sync";
-import { extractContextFromStore, persistChannel, validateParamSchema } from "./utils";
+import {
+  extractContextFromStore,
+  getNextNonceForUpdate,
+  persistChannel,
+  validateChannelSignatures,
+  validateParamSchema,
+} from "./utils";
 
 type EvtContainer = { [K in keyof ProtocolEventPayloadsMap]: Evt<ProtocolEventPayloadsMap[K]> };
 
@@ -41,6 +53,9 @@ export class Vector implements IVectorProtocol {
   // Hold the serialized queue for each channel
   // Do not interact with this directly. Always use getQueueAsync()
   private queues: Map<string, Promise<SerializedQueue<SelfUpdateResult, OtherUpdateResult> | undefined>> = new Map();
+
+  // Hold a flag to indicate whether or not a channel is being restored
+  private restorations: Map<string, boolean> = new Map();
 
   // make it private so the only way to create the class is to use `connect`
   private constructor(
@@ -176,8 +191,23 @@ export class Vector implements IVectorProtocol {
             : undefined;
           return resolve({
             cancelled: false,
-            value: { updatedTransfer: transfer, updatedChannel: channelState, updatedTransfers: activeTransfers },
+            value: Result.ok({
+              updatedTransfer: transfer,
+              updatedChannel: channelState,
+              updatedTransfers: activeTransfers,
+            }),
             successfullyApplied: "previouslyExecuted",
+          });
+        }
+
+        // Make sure channel isnt being restored
+        if (this.restorations.get(initiated.params.channelAddress)) {
+          return resolve({
+            cancelled: false,
+            value: Result.fail(
+              new QueuedUpdateError(QueuedUpdateError.reasons.ChannelRestoring, initiated.params, channelState),
+            ),
+            successfullyApplied: "executed",
           });
         }
         try {
@@ -316,6 +346,16 @@ export class Vector implements IVectorProtocol {
             storeError: storeRes.getError()?.message,
           });
         }
+        // Make sure channel isnt being restored
+        if (this.restorations.get(received.update.channelAddress)) {
+          return resolve({
+            cancelled: false,
+            value: Result.fail(
+              new QueuedUpdateError(QueuedUpdateError.reasons.ChannelRestoring, received.update, channelState),
+            ),
+          });
+        }
+
         // NOTE: no need to validate that the update has already been executed
         // because that is asserted on sync, where as an initiator you dont have
         // that certainty
@@ -562,7 +602,7 @@ export class Vector implements IVectorProtocol {
           return;
         }
 
-        // TODO: why in the world is this causing it to fail
+        // // TODO: why in the world is this causing it to fail
         // // Previous update may be undefined, but if it exists, validate
         // console.log("******** validating schema");
         // const previousError = validateParamSchema(received.previousUpdate, TChannelUpdate);
@@ -608,6 +648,81 @@ export class Vector implements IVectorProtocol {
         });
         this.logger.debug({ ...result.toJson() }, "Applied inbound update");
         return;
+      },
+    );
+
+    // response to restore messages
+    await this.messagingService.onReceiveRestoreStateMessage(
+      this.publicIdentifier,
+      async (restoreData: Result<{ chainId: number }, ProtocolError>, from: string, inbox: string) => {
+        // If it is from yourself, do nothing
+        if (from === this.publicIdentifier) {
+          return;
+        }
+        const method = "onReceiveRestoreStateMessage";
+        this.logger.debug({ method, data: restoreData.toJson(), inbox }, "Handling restore message");
+
+        // Received error from counterparty
+        if (restoreData.isError) {
+          this.logger.error(
+            { message: restoreData.getError()!.message, method },
+            "Error received from counterparty restore",
+          );
+          return;
+        }
+
+        const data = restoreData.getValue();
+        const [key] = Object.keys(data ?? []);
+        if (key !== "chainId") {
+          this.logger.error({ data }, "Message malformed");
+          return;
+        }
+
+        // Counterparty looking to initiate a restore
+        let channel: FullChannelState | undefined;
+        const sendCannotRestoreFromError = (error: Values<typeof RestoreError.reasons>, context: any = {}) => {
+          return this.messagingService.respondToRestoreStateMessage(
+            inbox,
+            Result.fail(new RestoreError(error, channel!, this.publicIdentifier, { ...context, method })),
+          );
+        };
+
+        // Get info from store to send to counterparty
+        const { chainId } = data as any;
+        try {
+          channel = await this.storeService.getChannelStateByParticipants(this.publicIdentifier, from, chainId);
+        } catch (e) {
+          return sendCannotRestoreFromError(RestoreError.reasons.CouldNotGetChannel, {
+            storeMethod: "getChannelStateByParticipants",
+            chainId,
+            identifiers: [this.publicIdentifier, from],
+          });
+        }
+        if (!channel) {
+          return sendCannotRestoreFromError(RestoreError.reasons.ChannelNotFound, { chainId });
+        }
+        let activeTransfers: FullTransferState[];
+        try {
+          activeTransfers = await this.storeService.getActiveTransfers(channel.channelAddress);
+        } catch (e) {
+          return sendCannotRestoreFromError(RestoreError.reasons.CouldNotGetActiveTransfers, {
+            storeMethod: "getActiveTransfers",
+            chainId,
+            channelAddress: channel.channelAddress,
+          });
+        }
+
+        // Send info to counterparty
+        this.logger.info(
+          {
+            method,
+            channel: channel.channelAddress,
+            nonce: channel.nonce,
+            activeTransfers: activeTransfers.map((a) => a.transferId),
+          },
+          "Sending counterparty state to sync",
+        );
+        await this.messagingService.respondToRestoreStateMessage(inbox, Result.ok({ channel, activeTransfers }));
       },
     );
 
@@ -802,6 +917,128 @@ export class Vector implements IVectorProtocol {
       "Method complete",
     );
     return returnVal;
+  }
+
+  public async restoreState(
+    params: ProtocolParams.Restore,
+  ): Promise<Result<FullChannelState, RestoreError | QueuedUpdateError>> {
+    const method = "restoreState";
+    const methodId = getRandomBytes32();
+    this.logger.debug({ method, methodId }, "Method start");
+    // Validate all input
+    const error = validateParamSchema(params, ProtocolParams.RestoreSchema);
+    if (error) {
+      return Result.fail(error);
+    }
+
+    // Send message to counterparty, they will grab lock and
+    // return information under lock, initiator will update channel,
+    // then send confirmation message to counterparty, who will release the lock
+    const { chainId, counterpartyIdentifier } = params;
+    const restoreDataRes = await this.messagingService.sendRestoreStateMessage(
+      Result.ok({ chainId }),
+      counterpartyIdentifier,
+      this.signer.publicIdentifier,
+    );
+    if (restoreDataRes.isError) {
+      return Result.fail(restoreDataRes.getError() as RestoreError);
+    }
+
+    const { channel, activeTransfers } = restoreDataRes.getValue() ?? ({} as any);
+
+    // Create helper to generate error
+    const generateRestoreError = (
+      error: Values<typeof RestoreError.reasons>,
+      context: any = {},
+    ): Result<FullChannelState, RestoreError> => {
+      // handle error by returning it to counterparty && returning result
+      const err = new RestoreError(error, channel, this.publicIdentifier, {
+        ...context,
+        method,
+        params,
+      });
+      channel && this.restorations.set(channel.channelAddress, false);
+      return Result.fail(err);
+    };
+
+    // Verify data exists
+    if (!channel || !activeTransfers) {
+      return generateRestoreError(RestoreError.reasons.NoData);
+    }
+
+    // Set restoration for channel to true
+    this.restorations.set(channel.channelAddress, true);
+
+    // Verify channel address is same as calculated
+    const counterparty = getSignerAddressFromPublicIdentifier(counterpartyIdentifier);
+    const calculated = await this.chainReader.getChannelAddress(
+      channel.alice === this.signer.address ? this.signer.address : counterparty,
+      channel.bob === this.signer.address ? this.signer.address : counterparty,
+      channel.networkContext.channelFactoryAddress,
+      chainId,
+    );
+    if (calculated.isError) {
+      return generateRestoreError(RestoreError.reasons.GetChannelAddressFailed, {
+        getChannelAddressError: jsonifyError(calculated.getError()!),
+      });
+    }
+    if (calculated.getValue() !== channel.channelAddress) {
+      return generateRestoreError(RestoreError.reasons.InvalidChannelAddress, {
+        calculated: calculated.getValue(),
+      });
+    }
+
+    // Verify signatures on latest update
+    const sigRes = await validateChannelSignatures(
+      channel,
+      channel.latestUpdate.aliceSignature,
+      channel.latestUpdate.bobSignature,
+      "both",
+    );
+    if (sigRes.isError) {
+      return generateRestoreError(RestoreError.reasons.InvalidSignatures, {
+        recoveryError: sigRes.getError()!.message,
+      });
+    }
+
+    // Verify transfers match merkleRoot
+    const root = generateMerkleRoot(activeTransfers);
+    if (root !== channel.merkleRoot) {
+      return generateRestoreError(RestoreError.reasons.InvalidMerkleRoot, {
+        calculated: root,
+        merkleRoot: channel.merkleRoot,
+        activeTransfers: activeTransfers.map((t) => t.transferId),
+      });
+    }
+
+    // Verify nothing with a sync-able nonce exists in store
+    const existing = await this.getChannelState(channel.channelAddress);
+    const nonce = existing?.nonce ?? 0;
+    const next = getNextNonceForUpdate(nonce, channel.latestUpdate.fromIdentifier === channel.aliceIdentifier);
+    if (next === channel.nonce && channel.latestUpdate.type !== UpdateType.setup) {
+      return generateRestoreError(RestoreError.reasons.SyncableState, {
+        existing: nonce,
+        toRestore: channel.nonce,
+      });
+    }
+    if (nonce >= channel.nonce) {
+      return generateRestoreError(RestoreError.reasons.SyncableState, {
+        existing: nonce,
+        toRestore: channel.nonce,
+      });
+    }
+
+    // Save channel
+    try {
+      await this.storeService.saveChannelStateAndTransfers(channel, activeTransfers);
+    } catch (e) {
+      return generateRestoreError(RestoreError.reasons.SaveChannelFailed, {
+        saveChannelStateAndTransfersError: e.message,
+      });
+    }
+
+    this.restorations.set(channel.channelAddress, false);
+    return Result.ok(channel);
   }
 
   ///////////////////////////////////

@@ -19,7 +19,7 @@ import { Evt } from "evt";
 import { getRandomBytes32 } from "../../hexStrings";
 
 export class MemoryMessagingService implements IMessagingService {
-  private readonly evt: Evt<{
+  private readonly protocolEvt: Evt<{
     to?: string;
     from: string;
     inbox?: string;
@@ -37,6 +37,24 @@ export class MemoryMessagingService implements IMessagingService {
     replyTo?: string;
   }>();
 
+  private readonly restoreEvt: Evt<{
+    to?: string;
+    from?: string;
+    chainId?: number;
+    channel?: FullChannelState;
+    activeTransfers?: FullTransferState[];
+    error?: ProtocolError;
+    inbox?: string;
+  }> = Evt.create<{
+    to?: string;
+    from?: string;
+    chainId?: number;
+    channel?: FullChannelState;
+    activeTransfers?: FullTransferState[];
+    error?: ProtocolError;
+    inbox?: string;
+  }>();
+
   flush(): Promise<void> {
     throw new Error("Method not implemented.");
   }
@@ -46,7 +64,7 @@ export class MemoryMessagingService implements IMessagingService {
   }
 
   async disconnect(): Promise<void> {
-    this.evt.detach();
+    this.protocolEvt.detach();
   }
 
   async sendProtocolMessage(
@@ -56,8 +74,8 @@ export class MemoryMessagingService implements IMessagingService {
     numRetries = 0,
   ): Promise<Result<{ update: ChannelUpdate<any>; previousUpdate: ChannelUpdate<any> }, ProtocolError>> {
     const inbox = getRandomBytes32();
-    const responsePromise = this.evt.pipe((e) => e.inbox === inbox).waitFor(timeout);
-    this.evt.post({
+    const responsePromise = this.protocolEvt.pipe((e) => e.inbox === inbox).waitFor(timeout);
+    this.protocolEvt.post({
       to: channelUpdate.toIdentifier,
       from: channelUpdate.fromIdentifier,
       replyTo: inbox,
@@ -75,7 +93,7 @@ export class MemoryMessagingService implements IMessagingService {
     channelUpdate: ChannelUpdate<any>,
     previousUpdate?: ChannelUpdate<any>,
   ): Promise<void> {
-    this.evt.post({
+    this.protocolEvt.post({
       inbox,
       data: { update: channelUpdate, previousUpdate },
       from: channelUpdate.toIdentifier,
@@ -83,7 +101,7 @@ export class MemoryMessagingService implements IMessagingService {
   }
 
   async respondWithProtocolError(inbox: string, error: ProtocolError): Promise<void> {
-    this.evt.post({
+    this.protocolEvt.post({
       inbox,
       data: { error },
       from: error.context.update.toIdentifier,
@@ -98,7 +116,7 @@ export class MemoryMessagingService implements IMessagingService {
       inbox: string,
     ) => void,
   ): Promise<void> {
-    this.evt
+    this.protocolEvt
       .pipe(({ to }) => to === myPublicIdentifier)
       .attach(({ data, replyTo, from }) => {
         callback(
@@ -110,6 +128,59 @@ export class MemoryMessagingService implements IMessagingService {
           replyTo!,
         );
       });
+  }
+
+  async onReceiveRestoreStateMessage(
+    publicIdentifier: string,
+    callback: (restoreData: Result<{ chainId: number }, EngineError>, from: string, inbox: string) => void,
+  ): Promise<void> {
+    this.restoreEvt
+      .pipe(({ to }) => to === publicIdentifier)
+      .attach(({ inbox, from, chainId, error }) => {
+        callback(!!error ? Result.fail(error) : Result.ok({ chainId }), from, inbox);
+      });
+  }
+
+  async sendRestoreStateMessage(
+    restoreData: Result<{ chainId: number }, EngineError>,
+    to: string,
+    from: string,
+    timeout?: number,
+    numRetries?: number,
+  ): Promise<Result<{ channel: FullChannelState; activeTransfers: FullTransferState[] }, EngineError>> {
+    const inbox = getRandomBytes32();
+    this.restoreEvt.post({
+      to,
+      from,
+      error: restoreData.isError ? restoreData.getError() : undefined,
+      chainId: restoreData.isError ? undefined : restoreData.getValue().chainId,
+      inbox,
+    });
+    try {
+      const response = await this.restoreEvt.waitFor((data) => {
+        return data.inbox === inbox;
+      }, timeout);
+      return response.error
+        ? Result.fail(response.error)
+        : Result.ok({ channel: response.channel!, activeTransfers: response.activeTransfers! });
+    } catch (e) {
+      if (e.message.includes("Evt timeout")) {
+        return Result.fail(new MessagingError(MessagingError.reasons.Timeout));
+      }
+      return Result.fail(e);
+    }
+  }
+
+  async respondToRestoreStateMessage(
+    inbox: string,
+    restoreData: Result<{ channel: FullChannelState; activeTransfers: FullTransferState[] }, EngineError>,
+  ): Promise<void> {
+    this.restoreEvt.post({
+      inbox,
+      error: restoreData.getError(),
+      channel: restoreData.isError ? undefined : restoreData.getValue().channel,
+      activeTransfers: restoreData.isError ? undefined : restoreData.getValue().activeTransfers,
+    });
   }
 
   sendSetupMessage(
@@ -155,28 +226,6 @@ export class MemoryMessagingService implements IMessagingService {
   }
 
   respondToRequestCollateralMessage(inbox: string, params: Result<{ message?: string }, Error>): Promise<void> {
-    throw new Error("Method not implemented.");
-  }
-
-  sendRestoreStateMessage(
-    restoreData: Result<{ chainId: number }, EngineError>,
-    to: string,
-    from: string,
-    timeout?: number,
-    numRetries?: number,
-  ): Promise<Result<{ channel: FullChannelState; activeTransfers: FullTransferState[] } | void, EngineError>> {
-    throw new Error("Method not implemented.");
-  }
-  onReceiveRestoreStateMessage(
-    publicIdentifier: string,
-    callback: (restoreData: Result<{ chainId: number }, EngineError>, from: string, inbox: string) => void,
-  ): Promise<void> {
-    throw new Error("Method not implemented.");
-  }
-  respondToRestoreStateMessage(
-    inbox: string,
-    restoreData: Result<{ channel: FullChannelState; activeTransfers: FullTransferState[] } | void, EngineError>,
-  ): Promise<void> {
     throw new Error("Method not implemented.");
   }
 

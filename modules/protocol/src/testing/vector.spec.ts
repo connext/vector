@@ -10,6 +10,7 @@ import {
   MemoryStoreService,
   expect,
   MemoryMessagingService,
+  mkPublicIdentifier,
 } from "@connext/vector-utils";
 import pino from "pino";
 import {
@@ -20,14 +21,19 @@ import {
   Result,
   CreateTransferParams,
   ChainError,
+  MessagingError,
+  FullChannelState,
+  IChannelSigner,
 } from "@connext/vector-types";
 import Sinon from "sinon";
 
-import { QueuedUpdateError } from "../errors";
+import { QueuedUpdateError, RestoreError } from "../errors";
 import { Vector } from "../vector";
 import * as vectorSync from "../sync";
+import * as vectorUtils from "../utils";
 
 import { env } from "./env";
+import { chainId } from "./constants";
 
 describe("Vector", () => {
   let chainReader: Sinon.SinonStubbedInstance<IVectorChainReader>;
@@ -448,6 +454,252 @@ describe("Vector", () => {
           expect(err?.context?.paramsError).to.include(error);
         });
       }
+    });
+  });
+
+  describe("Vector.restore", () => {
+    let vector: Vector;
+    const channelAddress: string = mkAddress("0xccc");
+    let counterpartyIdentifier: string;
+    let channel: FullChannelState;
+    let sigValidationStub: Sinon.SinonStub;
+
+    beforeEach(async () => {
+      const signer = getRandomChannelSigner();
+      const counterparty = getRandomChannelSigner();
+      counterpartyIdentifier = counterparty.publicIdentifier;
+
+      vector = await Vector.connect(
+        messagingService,
+        storeService,
+        signer,
+        chainReader as IVectorChainReader,
+        pino(),
+        false,
+      );
+
+      sigValidationStub = Sinon.stub(vectorUtils, "validateChannelSignatures");
+
+      channel = createTestChannelState(UpdateType.deposit, {
+        channelAddress,
+        aliceIdentifier: counterpartyIdentifier,
+        networkContext: { chainId },
+        nonce: 5,
+      }).channel;
+      messagingService.sendRestoreStateMessage.resolves(
+        Result.ok({
+          channel,
+          activeTransfers: [],
+        }),
+      );
+      chainReader.getChannelAddress.resolves(Result.ok(channel.channelAddress));
+      sigValidationStub.resolves(Result.ok(undefined));
+    });
+
+    // UNIT TESTS
+    describe("should fail if the parameters are malformed", () => {
+      const paramTests: ParamValidationTest[] = [
+        {
+          name: "should fail if parameters.chainId is invalid",
+          params: {
+            chainId: "fail",
+            counterpartyIdentifier: mkPublicIdentifier(),
+          },
+          error: "should be number",
+        },
+        {
+          name: "should fail if parameters.chainId is undefined",
+          params: {
+            chainId: undefined,
+            counterpartyIdentifier: mkPublicIdentifier(),
+          },
+          error: "should have required property 'chainId'",
+        },
+        {
+          name: "should fail if parameters.counterpartyIdentifier is invalid",
+          params: {
+            chainId,
+            counterpartyIdentifier: 1,
+          },
+          error: "should be string",
+        },
+        {
+          name: "should fail if parameters.counterpartyIdentifier is undefined",
+          params: {
+            chainId,
+            counterpartyIdentifier: undefined,
+          },
+          error: "should have required property 'counterpartyIdentifier'",
+        },
+      ];
+      for (const { name, error, params } of paramTests) {
+        it(name, async () => {
+          const result = await vector.restoreState(params);
+          expect(result.isError).to.be.true;
+          expect(result.getError()?.message).to.be.eq(QueuedUpdateError.reasons.InvalidParams);
+          expect(result.getError()?.context.paramsError).to.be.eq(error);
+        });
+      }
+    });
+
+    describe("restore initiator side", () => {
+      const runWithFailure = async (message: string) => {
+        const result = await vector.restoreState({ chainId, counterpartyIdentifier });
+        expect(result.getError()).to.not.be.undefined;
+        expect(result.getError()?.message).to.be.eq(message);
+      };
+      it("should fail if it receives an error", async () => {
+        messagingService.sendRestoreStateMessage.resolves(
+          Result.fail(new MessagingError(MessagingError.reasons.Timeout)),
+        );
+
+        await runWithFailure(MessagingError.reasons.Timeout);
+      });
+
+      it("should fail if there is no channel or active transfers provided", async () => {
+        messagingService.sendRestoreStateMessage.resolves(
+          Result.ok({ channel: undefined, activeTransfers: undefined }) as any,
+        );
+
+        await runWithFailure(RestoreError.reasons.NoData);
+      });
+
+      it("should fail if chainReader.geChannelAddress fails", async () => {
+        chainReader.getChannelAddress.resolves(Result.fail(new ChainError("fail")));
+
+        await runWithFailure(RestoreError.reasons.GetChannelAddressFailed);
+      });
+
+      it("should fail if it gives the wrong channel by channel address", async () => {
+        chainReader.getChannelAddress.resolves(Result.ok(mkAddress("0x334455666666ccccc")));
+
+        await runWithFailure(RestoreError.reasons.InvalidChannelAddress);
+      });
+
+      it("should fail if channel.latestUpdate is malsigned", async () => {
+        sigValidationStub.resolves(Result.fail(new Error("fail")));
+
+        await runWithFailure(RestoreError.reasons.InvalidSignatures);
+      });
+
+      it("should fail if channel.merkleRoot is incorrect", async () => {
+        messagingService.sendRestoreStateMessage.resolves(
+          Result.ok({
+            channel: { ...channel, merkleRoot: mkHash("0xddddeeefffff") },
+            activeTransfers: [],
+          }),
+        );
+
+        await runWithFailure(RestoreError.reasons.InvalidMerkleRoot);
+      });
+
+      it("should fail if the state is syncable", async () => {
+        storeService.getChannelState.resolves(channel);
+
+        await runWithFailure(RestoreError.reasons.SyncableState);
+      });
+
+      it("should fail if store.saveChannelStateAndTransfers fails", async () => {
+        storeService.getChannelState.resolves(undefined);
+        storeService.saveChannelStateAndTransfers.rejects(new Error("fail"));
+
+        await runWithFailure(RestoreError.reasons.SaveChannelFailed);
+      });
+    });
+
+    describe("restore responder side", () => {
+      // Test with memory messaging service + stubs to properly trigger
+      // callback
+      let memoryMessaging: MemoryMessagingService;
+      let signer: IChannelSigner;
+      beforeEach(async () => {
+        memoryMessaging = new MemoryMessagingService();
+        signer = getRandomChannelSigner();
+        vector = await Vector.connect(
+          // Use real messaging service to test properly
+          memoryMessaging,
+          storeService,
+          signer,
+          chainReader as IVectorChainReader,
+          pino(),
+          false,
+        );
+      });
+
+      it("should do nothing if it receives message from itself", async () => {
+        const response = await memoryMessaging.sendRestoreStateMessage(
+          Result.ok({ chainId }),
+          signer.publicIdentifier,
+          signer.publicIdentifier,
+          500,
+        );
+        expect(response.getError()?.message).to.be.eq(MessagingError.reasons.Timeout);
+        expect(storeService.getChannelStateByParticipants.callCount).to.be.eq(0);
+      });
+
+      it("should do nothing if it receives an error", async () => {
+        const response = await memoryMessaging.sendRestoreStateMessage(
+          Result.fail(new Error("fail") as any),
+          signer.publicIdentifier,
+          mkPublicIdentifier(),
+          500,
+        );
+        expect(response.getError()?.message).to.be.eq(MessagingError.reasons.Timeout);
+        expect(storeService.getChannelStateByParticipants.callCount).to.be.eq(0);
+      });
+
+      // Hard to test because of messaging service implementation
+      it.skip("should do nothing if message is malformed", async () => {
+        const response = await memoryMessaging.sendRestoreStateMessage(
+          Result.ok({ test: "test" } as any),
+          signer.publicIdentifier,
+          mkPublicIdentifier(),
+          500,
+        );
+        expect(response.getError()?.message).to.be.eq(MessagingError.reasons.Timeout);
+        expect(storeService.getChannelStateByParticipants.callCount).to.be.eq(0);
+      });
+
+      it("should send error if it cannot get channel", async () => {
+        storeService.getChannelStateByParticipants.rejects(new Error("fail"));
+        const response = await memoryMessaging.sendRestoreStateMessage(
+          Result.ok({ chainId }),
+          signer.publicIdentifier,
+          mkPublicIdentifier(),
+        );
+        expect(response.getError()?.message).to.be.eq(RestoreError.reasons.CouldNotGetChannel);
+        expect(storeService.getChannelStateByParticipants.callCount).to.be.eq(1);
+      });
+
+      it("should send error if it cannot get active transfers", async () => {
+        storeService.getChannelStateByParticipants.resolves(createTestChannelState(UpdateType.deposit).channel);
+        storeService.getActiveTransfers.rejects(new Error("fail"));
+        const response = await memoryMessaging.sendRestoreStateMessage(
+          Result.ok({ chainId }),
+          signer.publicIdentifier,
+          mkPublicIdentifier(),
+        );
+        expect(response.getError()?.message).to.be.eq(RestoreError.reasons.CouldNotGetActiveTransfers);
+        expect(storeService.getChannelStateByParticipants.callCount).to.be.eq(1);
+      });
+
+      it("should send correct information", async () => {
+        const channel = createTestChannelState(UpdateType.deposit).channel;
+        storeService.getChannelStateByParticipants.resolves(channel);
+        storeService.getActiveTransfers.resolves([]);
+        const response = await memoryMessaging.sendRestoreStateMessage(
+          Result.ok({ chainId }),
+          signer.publicIdentifier,
+          mkPublicIdentifier(),
+        );
+        expect(response.getValue()).to.be.deep.eq({ channel, activeTransfers: [] });
+      });
+    });
+
+    it("should work", async () => {
+      const result = await vector.restoreState({ chainId, counterpartyIdentifier });
+      expect(result.getError()).to.be.undefined;
+      expect(result.getValue()).to.be.deep.eq(channel);
     });
   });
 });

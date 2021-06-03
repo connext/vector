@@ -11,6 +11,36 @@ import {
   Result,
 } from "@connext/vector-types";
 
+export class RestoreError extends ProtocolError {
+  static readonly type = "RestoreError";
+
+  static readonly reasons = {
+    AckFailed: "Could not send restore ack",
+    AcquireLockError: "Failed to acquire restore lock",
+    ChannelNotFound: "Channel not found",
+    CouldNotGetActiveTransfers: "Failed to retrieve active transfers from store",
+    CouldNotGetChannel: "Failed to retrieve channel from store",
+    GetChannelAddressFailed: "Failed to calculate channel address for verification",
+    InvalidChannelAddress: "Failed to verify channel address",
+    InvalidMerkleRoot: "Failed to validate merkleRoot for restoration",
+    InvalidSignatures: "Failed to validate sigs on latestUpdate",
+    NoData: "No data sent from counterparty to restore",
+    ReceivedError: "Got restore error from counterparty",
+    ReleaseLockError: "Failed to release restore lock",
+    SaveChannelFailed: "Failed to save channel state",
+    SyncableState: "Cannot restore, state is syncable. Try reconcileDeposit",
+  } as const;
+
+  constructor(
+    public readonly message: Values<typeof RestoreError.reasons>,
+    channel: FullChannelState,
+    publicIdentifier: string,
+    context: any = {},
+  ) {
+    super(message, channel, undefined, undefined, { publicIdentifier, ...context }, RestoreError.type);
+  }
+}
+
 export class ValidationError extends ProtocolError {
   static readonly type = "ValidationError";
 
@@ -114,6 +144,7 @@ export class QueuedUpdateError extends ProtocolError {
     Cancelled: "Queued update was cancelled",
     CannotSyncSetup: "Cannot sync a setup update, must restore", // TODO: remove
     ChannelNotFound: "Channel not found",
+    ChannelRestoring: "Channel is restoring, cannot update",
     CouldNotGetParams: "Could not generate params from update",
     CouldNotGetResolvedBalance: "Could not retrieve resolved balance from chain",
     CounterpartyFailure: "Counterparty failed to apply update",
