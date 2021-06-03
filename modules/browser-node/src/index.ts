@@ -162,19 +162,27 @@ export class BrowserNode implements INodeService {
   }
 
   // method for non-signer based apps to connect to iframe
-  async init(params: { signature?: string; signer?: string } = {}): Promise<void> {
+  async init(
+    params: { signature?: string; signer?: string; channelProvider?: IRpcChannelProvider } = {},
+  ): Promise<void> {
     // TODO: validate config GH issue #429
     const method = "init";
     this.logger.debug({ method }, "Method started");
-    const iframeSrc = this.iframeSrc ?? "https://wallet.connext.network";
-    this.logger.info(
-      { method, iframeSrc, signer: params.signer, signature: params.signature },
-      "Connecting with iframe provider",
-    );
-    this.channelProvider = await IframeChannelProvider.connect({
-      src: iframeSrc,
-      id: "connext-iframe",
-    });
+
+    if (params.channelProvider) {
+      this.channelProvider = params.channelProvider;
+    } else {
+      const iframeSrc = this.iframeSrc ?? "https://wallet.connext.network";
+      this.logger.info(
+        { method, iframeSrc, signer: params.signer, signature: params.signature },
+        "Connecting with iframe provider",
+      );
+      this.channelProvider = await IframeChannelProvider.connect({
+        src: iframeSrc,
+        id: "connext-iframe",
+      });
+    }
+
     this.logger.info({ method }, "Authenticating Connext");
     const rpc = constructRpcRequest("connext_authenticate", {
       chainProviders: this.chainProviders,
