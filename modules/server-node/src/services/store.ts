@@ -559,6 +559,7 @@ export class PrismaStore implements IServerNodeStore {
         where: { transferId },
         data: {
           onchainTransaction: { connect: { id: record.id } },
+          transactionHash: withdrawCommitment.transactionHash,
         },
       });
     }
