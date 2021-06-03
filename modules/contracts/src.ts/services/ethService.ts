@@ -207,8 +207,11 @@ export class EthereumChainService extends EthereumChainReader implements IVector
           const actualNonce: number =
             nonce ?? this.nonces.get(chainId) ?? (await signer.getTransactionCount("pending"));
           const response: TransactionResponse | undefined = await txFn(gasPrice, actualNonce);
-          // After calling tx fn, set nonce to usedNonce + 1
-          this.nonces.set(chainId, actualNonce + 1);
+          // After calling tx fn, set nonce to usedNonce + 1 IFF the
+          // nonce wasnt pre-specified (i.e. not re-sending tx)
+          if (typeof nonce === undefined) {
+            this.nonces.set(chainId, actualNonce + 1);
+          }
           return Result.ok(response);
         } catch (e) {
           return Result.fail(e);
