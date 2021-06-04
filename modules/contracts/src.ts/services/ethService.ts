@@ -108,17 +108,6 @@ export class EthereumChainService extends EthereumChainReader implements IVector
     return signer;
   }
 
-  private async updateNonce(chainId: number, usedNonce: number, signer: Signer): Promise<void> {
-    const pending = await signer.getTransactionCount("pending");
-    const stored = this.nonces.get(chainId) ?? 0;
-    const incremented = usedNonce + 1;
-    // Ensure the nonce you store is *always* the greatest of the values
-    if (stored >= incremented && stored >= pending) {
-      return;
-    }
-    this.nonces.set(chainId, incremented > pending ? incremented : pending);
-  }
-
   /// Upsert tx submission to store, fire tx submit event.
   private async handleTxSubmit(
     onchainTransactionId: string,
@@ -219,11 +208,20 @@ export class EthereumChainService extends EthereumChainReader implements IVector
     const task = async (): Promise<Result<TransactionResponse | undefined, Error>> => {
       try {
         // Send transaction using the passed in callback.
-        const nonceToUse: number = nonce ?? this.nonces.get(chainId) ?? (await signer.getTransactionCount("pending"));
+        const stored = this.nonces.get(chainId);
+        const nonceToUse: number = nonce ?? stored ?? (await signer.getTransactionCount("pending"));
         const response: TransactionResponse | undefined = await txFn(gasPrice, nonceToUse);
-        // After calling tx fn, set nonce to usedNonce + 1 IFF the
-        // nonce wasnt pre-specified (i.e. not re-sending tx)
-        await this.updateNonce(chainId, nonceToUse, signer);
+        // After calling tx fn, set nonce to the greatest of
+        // stored, pending, or incremented
+        const pending = await signer.getTransactionCount("pending");
+        const incremented = nonceToUse + 1;
+        // Ensure the nonce you store is *always* the greatest of the values
+        const toCompare = stored ?? 0;
+        if (toCompare >= incremented && toCompare >= pending) {
+          // return without updating
+          return Result.ok(response);
+        }
+        this.nonces.set(chainId, incremented > pending ? incremented : pending);
         return Result.ok(response);
       } catch (e) {
         return Result.fail(e);
