@@ -214,14 +214,12 @@ export class EthereumChainService extends EthereumChainReader implements IVector
         // After calling tx fn, set nonce to the greatest of
         // stored, pending, or incremented
         const pending = await signer.getTransactionCount("pending");
-        const incremented = nonceToUse + 1;
+        const incremented = (response?.nonce ?? nonceToUse) + 1;
         // Ensure the nonce you store is *always* the greatest of the values
         const toCompare = stored ?? 0;
-        if (toCompare >= incremented && toCompare >= pending) {
-          // return without updating
-          return Result.ok(response);
+        if (toCompare < pending || toCompare < incremented) {
+          this.nonces.set(chainId, incremented > pending ? incremented : pending);
         }
-        this.nonces.set(chainId, incremented > pending ? incremented : pending);
         return Result.ok(response);
       } catch (e) {
         return Result.fail(e);
