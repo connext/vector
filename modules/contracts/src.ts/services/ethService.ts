@@ -76,7 +76,7 @@ export const waitForTransaction = async (
 export class EthereumChainService extends EthereumChainReader implements IVectorChainService {
   private nonces: Map<number, number> = new Map();
   private signers: Map<number, Signer> = new Map();
-  private queue: PriorityQueue = new PriorityQueue({ concurrency: 1 });
+  private queues: Map<number, PriorityQueue> = new Map();
   private evts: { [eventName in ChainServiceEvent]: Evt<ChainServiceEventMap[eventName]> } = {
     ...this.disputeEvts,
     [ChainServiceEvents.TRANSACTION_SUBMITTED]: new Evt(),
@@ -96,6 +96,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
         parseInt(chainId),
         typeof signer === "string" ? new Wallet(signer, provider) : (signer.connect(provider) as Signer),
       );
+      this.queues.set(parseInt(chainId), new PriorityQueue({ concurrency: 1 }));
     });
 
     // TODO: Check to see which tx's are still active / unresolved, and resolve them.
@@ -105,6 +106,17 @@ export class EthereumChainService extends EthereumChainReader implements IVector
   private getSigner(chainId: number): Signer | undefined {
     const signer = this.signers.get(chainId);
     return signer;
+  }
+
+  private async updateNonce(chainId: number, usedNonce: number, signer: Signer): Promise<void> {
+    const pending = await signer.getTransactionCount("pending");
+    const stored = this.nonces.get(chainId) ?? 0;
+    const incremented = usedNonce + 1;
+    // Ensure the nonce you store is *always* the greatest of the values
+    if (stored >= incremented && stored >= pending) {
+      return;
+    }
+    this.nonces.set(chainId, incremented > pending ? incremented : pending);
   }
 
   /// Upsert tx submission to store, fire tx submit event.
@@ -200,24 +212,25 @@ export class EthereumChainService extends EthereumChainReader implements IVector
     nonce?: number,
   ): Promise<Result<TransactionResponse | undefined, Error>> {
     // Queue up the execution of the transaction.
-    return await this.queue.add(
-      async (): Promise<Result<TransactionResponse | undefined, Error>> => {
-        try {
-          // Send transaction using the passed in callback.
-          const actualNonce: number =
-            nonce ?? this.nonces.get(chainId) ?? (await signer.getTransactionCount("pending"));
-          const response: TransactionResponse | undefined = await txFn(gasPrice, actualNonce);
-          // After calling tx fn, set nonce to usedNonce + 1 IFF the
-          // nonce wasnt pre-specified (i.e. not re-sending tx)
-          if (typeof nonce === undefined) {
-            this.nonces.set(chainId, actualNonce + 1);
-          }
-          return Result.ok(response);
-        } catch (e) {
-          return Result.fail(e);
-        }
-      },
-    );
+    if (!this.queues.has(chainId)) {
+      return Result.fail(new ChainError(ChainError.reasons.SignerNotFound));
+    }
+    // Define task to send tx with proper nonce
+    const task = async (): Promise<Result<TransactionResponse | undefined, Error>> => {
+      try {
+        // Send transaction using the passed in callback.
+        const nonceToUse: number = nonce ?? this.nonces.get(chainId) ?? (await signer.getTransactionCount("pending"));
+        const response: TransactionResponse | undefined = await txFn(gasPrice, nonceToUse);
+        // After calling tx fn, set nonce to usedNonce + 1 IFF the
+        // nonce wasnt pre-specified (i.e. not re-sending tx)
+        await this.updateNonce(chainId, nonceToUse, signer);
+        return Result.ok(response);
+      } catch (e) {
+        return Result.fail(e);
+      }
+    };
+    const result = await this.queues.get(chainId)!.add(task);
+    return result;
   }
 
   /// Check to see if any txs were left in an unfinished state. This should only execute on
