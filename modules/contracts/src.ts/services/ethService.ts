@@ -75,8 +75,9 @@ export const waitForTransaction = async (
 };
 
 export class EthereumChainService extends EthereumChainReader implements IVectorChainService {
+  private nonces: Map<number, number> = new Map();
   private signers: Map<number, Signer> = new Map();
-  private queue: PriorityQueue = new PriorityQueue({ concurrency: 1 });
+  private queues: Map<number, PriorityQueue> = new Map();
   private evts: { [eventName in ChainServiceEvent]: Evt<ChainServiceEventMap[eventName]> } = {
     ...this.disputeEvts,
     [ChainServiceEvents.TRANSACTION_SUBMITTED]: new Evt(),
@@ -96,6 +97,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
         parseInt(chainId),
         typeof signer === "string" ? new Wallet(signer, provider) : (signer.connect(provider) as Signer),
       );
+      this.queues.set(parseInt(chainId), new PriorityQueue({ concurrency: 1 }));
     });
 
     // TODO: Check to see which tx's are still active / unresolved, and resolve them.
@@ -116,7 +118,18 @@ export class EthereumChainService extends EthereumChainReader implements IVector
     reason: TransactionReason,
     response: TransactionResponse,
   ): Promise<void> {
-    this.log.info({ method, methodId, channelAddress, reason, response }, "Tx submitted.");
+    this.log.info(
+      {
+        method,
+        methodId,
+        channelAddress,
+        reason,
+        hash: response.hash,
+        gasPrice: response.gasPrice.toString(),
+        nonce: response.nonce,
+      },
+      "Tx submitted.",
+    );
     await this.store.saveTransactionAttempt(onchainTransactionId, channelAddress, reason, response);
     this.evts[ChainServiceEvents.TRANSACTION_SUBMITTED].post({
       response: Object.fromEntries(
@@ -185,21 +198,36 @@ export class EthereumChainService extends EthereumChainReader implements IVector
     txFn: (gasPrice: BigNumber, nonce: number) => Promise<TransactionResponse | undefined>,
     gasPrice: BigNumber,
     signer: Signer,
+    chainId: number,
     nonce?: number,
   ): Promise<Result<TransactionResponse | undefined, Error>> {
     // Queue up the execution of the transaction.
-    return await this.queue.add(
-      async (): Promise<Result<TransactionResponse | undefined, Error>> => {
-        try {
-          // Send transaction using the passed in callback.
-          const actualNonce: number = nonce ?? (await signer.getTransactionCount("pending"));
-          const response: TransactionResponse | undefined = await txFn(gasPrice, actualNonce);
-          return Result.ok(response);
-        } catch (e) {
-          return Result.fail(e);
+    if (!this.queues.has(chainId)) {
+      return Result.fail(new ChainError(ChainError.reasons.SignerNotFound));
+    }
+    // Define task to send tx with proper nonce
+    const task = async (): Promise<Result<TransactionResponse | undefined, Error>> => {
+      try {
+        // Send transaction using the passed in callback.
+        const stored = this.nonces.get(chainId);
+        const nonceToUse: number = nonce ?? stored ?? (await signer.getTransactionCount("pending"));
+        const response: TransactionResponse | undefined = await txFn(gasPrice, nonceToUse);
+        // After calling tx fn, set nonce to the greatest of
+        // stored, pending, or incremented
+        const pending = await signer.getTransactionCount("pending");
+        const incremented = (response?.nonce ?? nonceToUse) + 1;
+        // Ensure the nonce you store is *always* the greatest of the values
+        const toCompare = stored ?? 0;
+        if (toCompare < pending || toCompare < incremented) {
+          this.nonces.set(chainId, incremented > pending ? incremented : pending);
         }
-      },
-    );
+        return Result.ok(response);
+      } catch (e) {
+        return Result.fail(e);
+      }
+    };
+    const result = await this.queues.get(chainId)!.add(task);
+    return result;
   }
 
   /// Check to see if any txs were left in an unfinished state. This should only execute on
@@ -375,7 +403,11 @@ export class EthereumChainService extends EthereumChainReader implements IVector
       try {
         /// SUBMIT
         // NOTE: Nonce will persist across iterations, as soon as it is defined in the first one.
-        const result = await this.sendTx(txFn, gasPrice, signer, nonce);
+        this.log.debug(
+          { method, methodId, nonce, tryNumber, channelAddress, gasPrice: gasPrice.toString() },
+          "Attempting to send transaction",
+        );
+        const result = await this.sendTx(txFn, gasPrice, signer, chainId, nonce);
         if (!result.isError) {
           const response = result.getValue();
           if (response) {
@@ -388,6 +420,17 @@ export class EthereumChainService extends EthereumChainReader implements IVector
               // throw new ChainError(ChainError.reasons.)
             }
 
+            this.log.info(
+              {
+                hash: response.hash,
+                gas: response.gasPrice.toString(),
+                channelAddress,
+                method,
+                methodId,
+                nonce: response.nonce,
+              },
+              "Tx submitted",
+            );
             // Add this response to our local response history.
             responses.push(response);
             // NOTE: Response MUST be defined here because if it was NEVER defined (i.e. undefined on first iteration),
@@ -398,14 +441,21 @@ export class EthereumChainService extends EthereumChainReader implements IVector
           } else {
             // If response returns undefined, we assume the tx was not sent. This will happen if some logic was
             // passed into txFn to bail out at the time of sending.
-            this.log.warn({ method, methodId, channelAddress, reason }, "Did not attempt tx.");
+            this.log.info(
+              { method, methodId, channelAddress, reason, tryNumber, nonce, gasPrice: gasPrice.toString() },
+              "Did not attempt tx.",
+            );
             if (responses.length === 0) {
               // Iff this is the only iteration, then we want to go ahead return w/o saving anything.
+              this.log.info(
+                { method, methodId, channelAddress, tryNumber, nonce, gasPrice: gasPrice.toString() },
+                "Tx not needed",
+              );
               return Result.ok(undefined);
             } else {
               this.log.info(
-                { method, methodId, channelAddress, reason },
-                `txFn returned undefined on try ${tryNumber}. Proceeding to confirmation step.`,
+                { method, methodId, channelAddress, reason, tryNumber, nonce, gasPrice: gasPrice.toString() },
+                `txFn returned undefined, proceeding to confirmation step.`,
               );
             }
           }
@@ -425,12 +475,12 @@ export class EthereumChainService extends EthereumChainReader implements IVector
               error.message.includes("There is another transaction with same nonce in the queue."))
           ) {
             this.log.info(
-              { method, methodId, channelAddress, reason, nonce, error },
+              { method, methodId, channelAddress, reason, nonce, error: error.message },
               "Nonce already used: proceeding to check for confirmation in previous transactions.",
             );
           } else {
             this.log.error(
-              { method, methodId, channelAddress, reason, nonce, error },
+              { method, methodId, channelAddress, reason, nonce, tryNumber, gasPrice, error },
               "Error occurred while executing tx submit.",
             );
             throw error;

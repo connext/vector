@@ -2,6 +2,13 @@
 
 ## Next Release
 
+- \[contracts\] Add internal nonce tracking `ethService`
+- \[contracts\] Add per-chain queues
+
+## 0.2.5-beta.18
+
+- \[node\] Save transaction hash to commitment properly
+
 ## 0.2.5-beta.17
 
 - \[contracts\] Use pending transaction count for nonce
