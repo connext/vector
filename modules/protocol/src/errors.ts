@@ -58,6 +58,7 @@ export class ValidationError extends ProtocolError {
     InvalidChannelAddress: "Provided channel address is invalid",
     InvalidCounterparty: "Channel counterparty is invalid",
     InvalidInitialState: "Initial transfer state is invalid",
+    InvalidProtocolVersion: "Protocol version is invalid",
     InvalidResolver: "Transfer resolver must be an object",
     LongChannelTimeout: `Channel timeout above maximum of ${MAXIMUM_CHANNEL_TIMEOUT.toString()}s`,
     OnlyResponderCanInitiateResolve: "Only transfer responder may initiate resolve update",

@@ -334,13 +334,14 @@ export class NatsMessagingService extends NatsBasicMessagingService implements I
 
   // PROTOCOL METHODS
   async sendProtocolMessage(
+    protocolVersion: string,
     channelUpdate: ChannelUpdate<any>,
     previousUpdate?: ChannelUpdate<any>,
     timeout = 60_000,
     numRetries = 0,
   ): Promise<Result<{ update: ChannelUpdate<any>; previousUpdate: ChannelUpdate<any> }, ProtocolError>> {
     return this.sendMessageWithRetries(
-      Result.ok({ update: channelUpdate, previousUpdate }),
+      Result.ok({ update: channelUpdate, previousUpdate, protocolVersion }),
       "protocol",
       channelUpdate.toIdentifier,
       channelUpdate.fromIdentifier,
@@ -353,7 +354,10 @@ export class NatsMessagingService extends NatsBasicMessagingService implements I
   async onReceiveProtocolMessage(
     myPublicIdentifier: string,
     callback: (
-      result: Result<{ update: ChannelUpdate<any>; previousUpdate: ChannelUpdate<any> }, ProtocolError>,
+      result: Result<
+        { update: ChannelUpdate<any>; previousUpdate: ChannelUpdate<any>; protocolVersion: string },
+        ProtocolError
+      >,
       from: string,
       inbox: string,
     ) => void,
@@ -363,12 +367,13 @@ export class NatsMessagingService extends NatsBasicMessagingService implements I
 
   async respondToProtocolMessage(
     inbox: string,
+    protocolVersion: string,
     channelUpdate: ChannelUpdate<any>,
     previousUpdate?: ChannelUpdate<any>,
   ): Promise<void> {
     return this.respondToMessage(
       inbox,
-      Result.ok({ update: channelUpdate, previousUpdate }),
+      Result.ok({ update: channelUpdate, previousUpdate, protocolVersion }),
       "respondToProtocolMessage",
     );
   }
@@ -376,6 +381,21 @@ export class NatsMessagingService extends NatsBasicMessagingService implements I
   async respondWithProtocolError(inbox: string, error: ProtocolError): Promise<void> {
     return this.respondToMessage(inbox, Result.fail(error), "respondWithProtocolError");
   }
+  ////////////
+
+  // LOCK MESSAGE
+  // TODO: remove these!
+  async onReceiveLockMessage(
+    publicIdentifier: string,
+    callback: (lockInfo: Result<any, NodeError>, from: string, inbox: string) => void,
+  ): Promise<void> {
+    return this.registerCallback(`${publicIdentifier}.*.lock`, callback, "onReceiveLockMessage");
+  }
+
+  async respondToLockMessage(inbox: string, lockInformation: Result<any, NodeError>): Promise<void> {
+    return this.respondToMessage(inbox, lockInformation, "respondToLockMessage");
+  }
+
   ////////////
 
   // RESTORE METHODS

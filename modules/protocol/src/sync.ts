@@ -12,6 +12,7 @@ import {
   IExternalValidation,
   MessagingError,
   jsonifyError,
+  PROTOCOL_VERSION,
 } from "@connext/vector-types";
 import { getRandomBytes32 } from "@connext/vector-utils";
 import pino from "pino";
@@ -96,6 +97,7 @@ export async function outbound(
   // Send and wait for response
   logger.debug({ method, methodId, to: update.toIdentifier, type: update.type }, "Sending protocol message");
   let counterpartyResult = await messagingService.sendProtocolMessage(
+    PROTOCOL_VERSION,
     update,
     previousState?.latestUpdate,
     // LOCK_TTL / 10,

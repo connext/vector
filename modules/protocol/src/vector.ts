@@ -20,6 +20,7 @@ import {
   jsonifyError,
   Values,
   UpdateIdentifier,
+  PROTOCOL_VERSION,
 } from "@connext/vector-types";
 import { v4 as uuidV4 } from "uuid";
 import {
@@ -32,7 +33,7 @@ import {
 import { Evt } from "evt";
 import pino from "pino";
 
-import { QueuedUpdateError, RestoreError } from "./errors";
+import { QueuedUpdateError, RestoreError, ValidationError } from "./errors";
 import { Cancellable, OtherUpdate, SelfUpdate, SerializedQueue } from "./queue";
 import { outbound, inbound, OtherUpdateResult, SelfUpdateResult } from "./sync";
 import {
@@ -448,6 +449,7 @@ export class Vector implements IVectorProtocol {
       }
       await this.messagingService.respondToProtocolMessage(
         received.inbox,
+        PROTOCOL_VERSION,
         updatedChannel.latestUpdate,
         (channelState as FullChannelState | undefined)?.latestUpdate,
       );
@@ -558,6 +560,28 @@ export class Vector implements IVectorProtocol {
   }
 
   private async setupServices(): Promise<Vector> {
+    // TODO: REMOVE THIS!
+    await this.messagingService.onReceiveLockMessage(
+      this.publicIdentifier,
+      async (lockInfo: Result<any>, from: string, inbox: string) => {
+        if (from === this.publicIdentifier) {
+          return;
+        }
+        const method = "onReceiveProtocolMessage";
+        const methodId = getRandomBytes32();
+
+        this.logger.error({ method, methodId }, "Counterparty using incompatible version");
+        await this.messagingService.respondToLockMessage(
+          inbox,
+          Result.fail(
+            new ValidationError(ValidationError.reasons.InvalidProtocolVersion, {} as any, undefined, {
+              compatible: PROTOCOL_VERSION,
+            }),
+          ),
+        );
+      },
+    );
+
     // response to incoming message where we are not the leader
     // steps:
     //  - validate and save state
@@ -566,7 +590,7 @@ export class Vector implements IVectorProtocol {
     await this.messagingService.onReceiveProtocolMessage(
       this.publicIdentifier,
       async (
-        msg: Result<{ update: ChannelUpdate; previousUpdate: ChannelUpdate }, ProtocolError>,
+        msg: Result<{ update: ChannelUpdate; previousUpdate: ChannelUpdate; protocolVersion: string }, ProtocolError>,
         from: string,
         inbox: string,
       ) => {
@@ -587,9 +611,24 @@ export class Vector implements IVectorProtocol {
 
         const received = msg.getValue();
 
+        // Check the protocol version is compatible
+        const theirVersion = (received.protocolVersion ?? "0.0.0").split(".");
+        const ourVersion = PROTOCOL_VERSION.split(".");
+        if (theirVersion[0] !== ourVersion[0] || theirVersion[1] !== ourVersion[1]) {
+          this.logger.error({ method, methodId, theirVersion, ourVersion }, "Counterparty using incompatible version");
+          await this.messagingService.respondWithProtocolError(
+            inbox,
+            new ValidationError(ValidationError.reasons.InvalidProtocolVersion, received.update, undefined, {
+              responderVersion: ourVersion,
+              initiatorVersion: theirVersion,
+            }),
+          );
+          return;
+        }
+
         // Verify that the message has the correct structure
         const keys = Object.keys(received);
-        if (!keys.includes("update") || !keys.includes("previousUpdate")) {
+        if (!keys.includes("update") || !keys.includes("previousUpdate") || !keys.includes("protocolVersion")) {
           this.logger.warn({ method, methodId, received: Object.keys(received) }, "Message malformed");
           return;
         }

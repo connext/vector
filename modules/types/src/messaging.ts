@@ -1,5 +1,5 @@
 import { ChannelUpdate, FullChannelState, FullTransferState } from "./channel";
-import { ConditionalTransferCreatedPayload, ConditionalTransferRoutingCompletePayload } from "./engine";
+import { ConditionalTransferRoutingCompletePayload } from "./engine";
 import { EngineError, NodeError, MessagingError, ProtocolError, Result, RouterError, VectorError } from "./error";
 import { EngineParams, NodeResponses } from "./schemas";
 
@@ -27,12 +27,16 @@ export interface IMessagingService extends IBasicMessaging {
   onReceiveProtocolMessage(
     myPublicIdentifier: string,
     callback: (
-      result: Result<{ update: ChannelUpdate<any>; previousUpdate: ChannelUpdate<any> }, ProtocolError>,
+      result: Result<
+        { update: ChannelUpdate<any>; previousUpdate: ChannelUpdate<any>; protocolVersion: string },
+        ProtocolError
+      >,
       from: string,
       inbox: string,
     ) => void,
   ): Promise<void>;
   sendProtocolMessage(
+    protocolVersion: string,
     channelUpdate: ChannelUpdate<any>,
     previousUpdate?: ChannelUpdate<any>,
     timeout?: number,
@@ -42,10 +46,19 @@ export interface IMessagingService extends IBasicMessaging {
   >;
   respondToProtocolMessage(
     inbox: string,
+    protocolVersion: string,
     channelUpdate: ChannelUpdate<any>,
     previousUpdate?: ChannelUpdate<any>,
   ): Promise<void>;
   respondWithProtocolError(inbox: string, error: ProtocolError): Promise<void>;
+
+  // TODO: remove these!
+  onReceiveLockMessage(
+    publicIdentifier: string,
+    callback: (lockInfo: Result<any, NodeError>, from: string, inbox: string) => void,
+  ): Promise<void>;
+
+  respondToLockMessage(inbox: string, lockInformation: Result<any, NodeError>): Promise<void>;
 
   sendSetupMessage(
     setupInfo: Result<Omit<EngineParams.Setup, "counterpartyIdentifier">, EngineError>,

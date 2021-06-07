@@ -19,3 +19,4 @@ export * from "./store";
 export * from "./transferDefinitions";
 export * from "./utils";
 export * from "./vectorProvider";
+export * from "./version";
