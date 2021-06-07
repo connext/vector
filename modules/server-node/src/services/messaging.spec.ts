@@ -1,4 +1,12 @@
-import { IChannelSigner, Result, jsonifyError, MessagingError, UpdateType, VectorError } from "@connext/vector-types";
+import {
+  IChannelSigner,
+  Result,
+  jsonifyError,
+  MessagingError,
+  UpdateType,
+  VectorError,
+  PROTOCOL_VERSION,
+} from "@connext/vector-types";
 import {
   createTestChannelUpdate,
   delay,
@@ -12,7 +20,6 @@ import {
 import pino from "pino";
 
 import { config } from "../config";
-import { ServerNodeLockError } from "../helpers/errors";
 
 describe("messaging", () => {
   const { log: logger } = getTestLoggers("messaging", (config.logLevel ?? "fatal") as pino.Level);
@@ -57,13 +64,13 @@ describe("messaging", () => {
         expect(result.isError).to.not.be.ok;
         expect(result.getValue()).to.containSubset({ update });
         expect(inbox).to.be.a("string");
-        await messagingB.respondToProtocolMessage(inbox, update);
+        await messagingB.respondToProtocolMessage(inbox, PROTOCOL_VERSION, update);
       },
     );
 
     await delay(1_000);
 
-    const res = await messagingA.sendProtocolMessage(update);
+    const res = await messagingA.sendProtocolMessage(PROTOCOL_VERSION, update);
     expect(res.isError).to.not.be.ok;
     expect(res.getValue()).to.containSubset({ update });
   });
@@ -88,7 +95,7 @@ describe("messaging", () => {
 
     await delay(1_000);
 
-    const res = await messagingA.sendProtocolMessage(update);
+    const res = await messagingA.sendProtocolMessage(PROTOCOL_VERSION, update);
     expect(res.isError).to.be.true;
     const errReceived = res.getError()!;
     const expected = VectorError.fromJson(jsonifyError(err));
