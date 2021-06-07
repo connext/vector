@@ -52,6 +52,14 @@ export interface IMessagingService extends IBasicMessaging {
   ): Promise<void>;
   respondWithProtocolError(inbox: string, error: ProtocolError): Promise<void>;
 
+  // TODO: remove these!
+  onReceiveLockMessage(
+    publicIdentifier: string,
+    callback: (lockInfo: Result<any, NodeError>, from: string, inbox: string) => void,
+  ): Promise<void>;
+
+  respondToLockMessage(inbox: string, lockInformation: Result<any, NodeError>): Promise<void>;
+
   sendSetupMessage(
     setupInfo: Result<Omit<EngineParams.Setup, "counterpartyIdentifier">, EngineError>,
     to: string,

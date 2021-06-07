@@ -383,6 +383,21 @@ export class NatsMessagingService extends NatsBasicMessagingService implements I
   }
   ////////////
 
+  // LOCK MESSAGE
+  // TODO: remove these!
+  async onReceiveLockMessage(
+    publicIdentifier: string,
+    callback: (lockInfo: Result<any, NodeError>, from: string, inbox: string) => void,
+  ): Promise<void> {
+    return this.registerCallback(`${publicIdentifier}.*.lock`, callback, "onReceiveLockMessage");
+  }
+
+  async respondToLockMessage(inbox: string, lockInformation: Result<any, NodeError>): Promise<void> {
+    return this.respondToMessage(inbox, lockInformation, "respondToLockMessage");
+  }
+
+  ////////////
+
   // RESTORE METHODS
   async sendRestoreStateMessage(
     restoreData: Result<{ chainId: number }, EngineError>,

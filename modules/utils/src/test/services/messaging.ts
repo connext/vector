@@ -73,6 +73,18 @@ export class MemoryMessagingService implements IMessagingService {
     this.protocolEvt.detach();
   }
 
+  // TODO: remove these!
+  async onReceiveLockMessage(
+    publicIdentifier: string,
+    callback: (lockInfo: Result<any, NodeError>, from: string, inbox: string) => void,
+  ): Promise<void> {
+    console.warn("Method to be deprecated");
+  }
+
+  async respondToLockMessage(inbox: string, lockInformation: Result<any, NodeError>): Promise<void> {
+    console.warn("Method to be deprecated");
+  }
+
   async sendProtocolMessage(
     protocolVersion: string,
     channelUpdate: ChannelUpdate<any>,

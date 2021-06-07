@@ -560,6 +560,28 @@ export class Vector implements IVectorProtocol {
   }
 
   private async setupServices(): Promise<Vector> {
+    // TODO: REMOVE THIS!
+    await this.messagingService.onReceiveLockMessage(
+      this.publicIdentifier,
+      async (lockInfo: Result<any>, from: string, inbox: string) => {
+        if (from === this.publicIdentifier) {
+          return;
+        }
+        const method = "onReceiveProtocolMessage";
+        const methodId = getRandomBytes32();
+
+        this.logger.error({ method, methodId }, "Counterparty using incompatible version");
+        await this.messagingService.respondToLockMessage(
+          inbox,
+          Result.fail(
+            new ValidationError(ValidationError.reasons.InvalidProtocolVersion, {} as any, undefined, {
+              compatible: PROTOCOL_VERSION,
+            }),
+          ),
+        );
+      },
+    );
+
     // response to incoming message where we are not the leader
     // steps:
     //  - validate and save state
