@@ -375,6 +375,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
     // in this data with the already-existing store record of the tx.
     let responses: TransactionResponse[] = [];
     let nonce: number | undefined;
+    let nonceExpired: boolean = false;
     let receipt: TransactionReceipt | undefined;
     let gasPrice: BigNumber;
 
@@ -473,6 +474,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
               // Another ethers message that we could potentially be getting back.
               error.message.includes("There is another transaction with same nonce in the queue."))
           ) {
+            nonceExpired = true;
             this.log.info(
               { method, methodId, channelAddress, reason, nonce, error: error.message },
               "Nonce already used: proceeding to check for confirmation in previous transactions.",
@@ -496,6 +498,23 @@ export class EthereumChainService extends EthereumChainReader implements IVector
       } catch (e) {
         // Check if the error was a confirmation timeout.
         if (e.message === ChainError.reasons.ConfirmationTimeout) {
+          if (nonceExpired) {
+            const error = new ChainError(ChainError.reasons.NonceExpired, {
+              methodId,
+              method,
+            });
+            await this.handleTxFail(
+              onchainTransactionId,
+              method,
+              methodId,
+              channelAddress,
+              reason,
+              receipt,
+              error,
+              "Nonce expired and could not confirm tx",
+            );
+            return Result.fail(error);
+          }
           // Scale up gas by percentage as specified by GAS_BUMP_PERCENT.
           // From ethers docs:
           // Generally, the new gas price should be about 50% + 1 wei more, so if a gas price
