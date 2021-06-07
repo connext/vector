@@ -83,7 +83,15 @@ describe("config.ts", () => {
   });
 
   describe("onSwapGivenIn", () => {
-    it("error if getOnchainBalance errors", async () => {
+    let testName = "error if getOnchainBalance errors";
+    it(testName, async () => {
+      const { stableAmmChainId, stableAmmAddress } = config.getConfig();
+      if (!stableAmmChainId || !stableAmmAddress) {
+        log.warn(
+          `AMM configuration (stableAmmChainId, stableAmmAddress) not provided. Skipping unit test: ${testName}`
+        );
+        return;
+      }
       ethReader.getOnchainBalance.onFirstCall().resolves(Result.fail(new ChainError("getOnchainBalance error")));
       const res = await onSwapGivenIn(
         transferAmount,
@@ -100,7 +108,15 @@ describe("config.ts", () => {
       expect(res.getError()!.message).to.be.eq(ConfigServiceError.reasons.CouldNotGetAssetBalance);
     });
 
-    it("error if provider isn't provided", async () => {
+    testName = "error if provider isn't provided";
+    it(testName, async () => {
+      const { stableAmmChainId, stableAmmAddress } = config.getConfig();
+      if (!stableAmmChainId || !stableAmmAddress) {
+        log.warn(
+          `AMM configuration (stableAmmChainId, stableAmmAddress) not provided. Skipping unit test: ${testName}`
+        );
+        return;
+      }
       ethReader.getOnchainBalance.onFirstCall().resolves(Result.ok(parseEther("100")));
       ethReader.getOnchainBalance.onSecondCall().resolves(Result.ok(parseEther("100")));
       const res = await onSwapGivenIn(
