@@ -25,6 +25,7 @@ export class MemoryMessagingService implements IMessagingService {
     inbox?: string;
     replyTo?: string;
     data: {
+      protocolVersion?: string;
       update?: ChannelUpdate<any>;
       previousUpdate?: ChannelUpdate<any>;
       error?: ProtocolError;
@@ -33,7 +34,12 @@ export class MemoryMessagingService implements IMessagingService {
     to?: string;
     from: string;
     inbox?: string;
-    data: { update?: ChannelUpdate<any>; previousUpdate?: ChannelUpdate<any>; error?: ProtocolError };
+    data: {
+      update?: ChannelUpdate<any>;
+      previousUpdate?: ChannelUpdate<any>;
+      error?: ProtocolError;
+      protocolVersion?: string;
+    };
     replyTo?: string;
   }>();
 
@@ -68,6 +74,7 @@ export class MemoryMessagingService implements IMessagingService {
   }
 
   async sendProtocolMessage(
+    protocolVersion: string,
     channelUpdate: ChannelUpdate<any>,
     previousUpdate?: ChannelUpdate<any>,
     timeout = 20_000,
@@ -79,7 +86,7 @@ export class MemoryMessagingService implements IMessagingService {
       to: channelUpdate.toIdentifier,
       from: channelUpdate.fromIdentifier,
       replyTo: inbox,
-      data: { update: channelUpdate, previousUpdate },
+      data: { update: channelUpdate, previousUpdate, protocolVersion },
     });
     const res = await responsePromise;
     if (res.data.error) {
@@ -90,12 +97,13 @@ export class MemoryMessagingService implements IMessagingService {
 
   async respondToProtocolMessage(
     inbox: string,
+    protocolVersion: string,
     channelUpdate: ChannelUpdate<any>,
     previousUpdate?: ChannelUpdate<any>,
   ): Promise<void> {
     this.protocolEvt.post({
       inbox,
-      data: { update: channelUpdate, previousUpdate },
+      data: { update: channelUpdate, previousUpdate, protocolVersion },
       from: channelUpdate.toIdentifier,
     });
   }
@@ -111,7 +119,10 @@ export class MemoryMessagingService implements IMessagingService {
   async onReceiveProtocolMessage(
     myPublicIdentifier: string,
     callback: (
-      result: Result<{ update: ChannelUpdate<any>; previousUpdate: ChannelUpdate<any> }, ProtocolError>,
+      result: Result<
+        { update: ChannelUpdate<any>; previousUpdate: ChannelUpdate<any>; protocolVersion: string },
+        ProtocolError
+      >,
       from: string,
       inbox: string,
     ) => void,
@@ -123,6 +134,7 @@ export class MemoryMessagingService implements IMessagingService {
           Result.ok({
             previousUpdate: data.previousUpdate!,
             update: data.update!,
+            protocolVersion: data.protocolVersion!,
           }),
           from,
           replyTo!,
