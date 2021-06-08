@@ -1,6 +1,6 @@
 {
   "name": "@connext/vector-utils",
-  "version": "0.3.0-dev.0",
+  "version": "0.3.0-beta.0",
   "description": "Crypto & other utils for vector state channels",
   "main": "dist/index.js",
   "files": [
@@ -14,7 +14,7 @@
   },
   "dependencies": {
     "@connext/vector-merkle-tree": "0.1.4",
-    "@connext/vector-types": "0.3.0-dev.0",
+    "@connext/vector-types": "0.3.0-beta.0",
     "@ethersproject/abi": "5.2.0",
     "@ethersproject/abstract-provider": "5.2.0",
     "@ethersproject/abstract-signer": "5.2.0",
