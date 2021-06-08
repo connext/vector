@@ -19,6 +19,7 @@ import * as feesService from "../../services/fees";
 import * as metrics from "../../metrics";
 import * as utils from "../../services/utils";
 import { parseEther } from "ethers/lib/utils";
+import { Zero } from "@ethersproject/constants";
 
 const config = getConfig();
 
@@ -389,6 +390,78 @@ describe(testName, () => {
       expect(amount).to.be.eq(transferAmount.add(expectedFees));
     });
 
+    it("should work if there is no fromChannel", async () => {
+      const result = await feesService.calculateFeeAmount(
+        transferAmount,
+        false,
+        fromAssetId,
+        fromChannel.networkContext.chainId,
+        toAssetId,
+        toChannel.networkContext.chainId,
+        ethReader as IVectorChainReader,
+        routerIdentifier,
+        log,
+        undefined,
+        toChannel,
+      );
+      expect(result.isError).to.be.false;
+      const staticFees =
+        BigNumber.from(fees.flatFee).toNumber() + (transferAmount.toNumber() * fees.percentageFee) / 100;
+      const percentage = 100 - fees.gasSubsidyPercentage;
+      const dynamicFees = gasFees[1].add(gasFees[0]).toNumber() * (percentage / 100);
+      const { fee, amount } = result.getValue();
+      expect(fee).to.be.eq(BigNumber.from(staticFees + dynamicFees));
+      expect(amount).to.be.eq(transferAmount);
+    });
+
+    it("should work if there is no toChannel", async () => {
+      const result = await feesService.calculateFeeAmount(
+        transferAmount,
+        false,
+        fromAssetId,
+        fromChannel.networkContext.chainId,
+        toAssetId,
+        toChannel.networkContext.chainId,
+        ethReader as IVectorChainReader,
+        routerIdentifier,
+        log,
+        fromChannel,
+        undefined,
+      );
+      expect(result.isError).to.be.false;
+      const staticFees =
+        BigNumber.from(fees.flatFee).toNumber() + (transferAmount.toNumber() * fees.percentageFee) / 100;
+      const percentage = 100 - fees.gasSubsidyPercentage;
+      const dynamicFees = gasFees[1].add(gasFees[0]).toNumber() * (percentage / 100);
+      const { fee, amount } = result.getValue();
+      expect(fee).to.be.eq(BigNumber.from(staticFees + dynamicFees));
+      expect(amount).to.be.eq(transferAmount);
+    });
+
+    it("should work if there is no toChannel or fromChannel", async () => {
+      const result = await feesService.calculateFeeAmount(
+        transferAmount,
+        false,
+        fromAssetId,
+        fromChannel.networkContext.chainId,
+        toAssetId,
+        toChannel.networkContext.chainId,
+        ethReader as IVectorChainReader,
+        routerIdentifier,
+        log,
+        undefined,
+        undefined,
+      );
+      expect(result.isError).to.be.false;
+      const staticFees =
+        BigNumber.from(fees.flatFee).toNumber() + (transferAmount.toNumber() * fees.percentageFee) / 100;
+      const percentage = 100 - fees.gasSubsidyPercentage;
+      const dynamicFees = gasFees[1].add(gasFees[0]).toNumber() * (percentage / 100);
+      const { fee, amount } = result.getValue();
+      expect(fee).to.be.eq(BigNumber.from(staticFees + dynamicFees));
+      expect(amount).to.be.eq(transferAmount);
+    });
+
     it("should fail if it cannot get swap fees from config", async () => {
       getFeesStub.returns(Result.fail(new Error("fail")));
       const result = await feesService.calculateFeeAmount(
@@ -728,6 +801,61 @@ describe(testName, () => {
         expect(result.isError).to.be.false;
         expect(result.getValue()[0]).to.be.eq(GAS_ESTIMATES.depositAlice);
       });
+
+      it("should work if no fromChannel and will collateralize", async () => {
+        fromChannel.balances[0] = {
+          to: [fromChannel.alice, fromChannel.bob],
+          amount: ["0", "0"],
+        };
+        const result = await feesService.calculateEstimatedGasFee(
+          BigNumber.from(3),
+          fromAssetId,
+          fromChannel.networkContext.chainId,
+          toAssetId,
+          toChannel.networkContext.chainId,
+          ethReader as IVectorChainReader,
+          routerIdentifier,
+          log,
+          undefined,
+          toChannel,
+        );
+        expect(result.isError).to.be.false;
+        expect(result.getValue()[0]).to.be.eq(GAS_ESTIMATES.createChannelAndDepositAlice);
+      });
+
+      it("should work if no fromChannel and will reclaim", async () => {
+        const result = await feesService.calculateEstimatedGasFee(
+          BigNumber.from(101),
+          fromAssetId,
+          fromChannel.networkContext.chainId,
+          toAssetId,
+          toChannel.networkContext.chainId,
+          ethReader as IVectorChainReader,
+          routerIdentifier,
+          log,
+          undefined,
+          toChannel,
+        );
+        expect(result.isError).to.be.false;
+        expect(result.getValue()[0]).to.be.eq(GAS_ESTIMATES.createChannel.add(SIMPLE_WITHDRAWAL_GAS_ESTIMATE));
+      });
+
+      it("should work if no fromChannel and will collateralize", async () => {
+        const result = await feesService.calculateEstimatedGasFee(
+          BigNumber.from(3),
+          fromAssetId,
+          fromChannel.networkContext.chainId,
+          toAssetId,
+          toChannel.networkContext.chainId,
+          ethReader as IVectorChainReader,
+          routerIdentifier,
+          log,
+          undefined,
+          toChannel,
+        );
+        expect(result.isError).to.be.false;
+        expect(result.getValue()[0]).to.be.eq(GAS_ESTIMATES.createChannelAndDepositAlice);
+      });
     });
 
     describe("should work for toChannel actions", () => {
@@ -810,6 +938,58 @@ describe(testName, () => {
         expect(result.isError).to.be.false;
         expect(result.getValue()[1]).to.be.eq(GAS_ESTIMATES.depositAlice);
       });
+
+      it("should work if no toChannel and will collateralize", async () => {
+        const result = await feesService.calculateEstimatedGasFee(
+          toSend,
+          fromAssetId,
+          fromChannel.networkContext.chainId,
+          toAssetId,
+          toChannel.networkContext.chainId,
+          ethReader as IVectorChainReader,
+          routerIdentifier,
+          log,
+          fromChannel,
+          undefined,
+        );
+        expect(result.isError).to.be.false;
+        expect(result.getValue()[1]).to.be.eq(GAS_ESTIMATES.createChannelAndDepositAlice);
+      });
+
+      it("should work if no toChannel and will reclaim", async () => {
+        const result = await feesService.calculateEstimatedGasFee(
+          toSend,
+          fromAssetId,
+          fromChannel.networkContext.chainId,
+          toAssetId,
+          toChannel.networkContext.chainId,
+          ethReader as IVectorChainReader,
+          routerIdentifier,
+          log,
+          fromChannel,
+          undefined,
+        );
+        expect(result.isError).to.be.false;
+        expect(result.getValue()[1]).to.be.eq(GAS_ESTIMATES.createChannelAndDepositAlice);
+      });
+    });
+
+    it("should work if no toChannel or fromChannel and sendAmount lte ", async () => {
+      const result = await feesService.calculateEstimatedGasFee(
+        toSend,
+        fromAssetId,
+        fromChannel.networkContext.chainId,
+        toAssetId,
+        toChannel.networkContext.chainId,
+        ethReader as IVectorChainReader,
+        routerIdentifier,
+        log,
+        undefined,
+        undefined,
+      );
+      expect(result.isError).to.be.false;
+      expect(result.getValue()[0]).to.be.eq(Zero);
+      expect(result.getValue()[1]).to.be.eq(GAS_ESTIMATES.createChannelAndDepositAlice);
     });
   });
 });

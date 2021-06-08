@@ -85,7 +85,7 @@ export const calculateFeeAmount = async (
   const amountOut = onSwapGivenInRes.getValue().amountOut;
   // If recipient is router, i.e. fromChannel ===  toChannel, then the
   // fee amount is 0 because no fees are taken without forwarding
-  if (toChannel?.channelAddress === fromChannel?.channelAddress) {
+  if ((toChannel || fromChannel) && toChannel?.channelAddress === fromChannel?.channelAddress) {
     return Result.ok({ fee: Zero, amount: amountOut });
   }
 
@@ -378,6 +378,8 @@ export const calculateEstimatedGasFee = async (
   // (2) IFF current balance + transfer amount < collateralThreshold, collateralize
   // (3) IFF channel has not been deployed, deploy
   const fromProfile = rebalanceFromProfile.getValue();
+  console.log("fromProfile: ", fromProfile);
+  console.log("amountToSend: ", amountToSend);
   if (!fromChannel) {
     // if no fromChannel, assume all actions take place
     if (amountToSend.gt(fromProfile.reclaimThreshold)) {
