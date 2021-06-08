@@ -1,4 +1,4 @@
-import { delay, expect, getRandomBytes32, RestServerNodeService } from "@connext/vector-utils";
+import { createlockHash, delay, expect, getRandomBytes32, RestServerNodeService } from "@connext/vector-utils";
 import { Wallet, utils, constants } from "ethers";
 import pino from "pino";
 import { EngineEvents, INodeService, TransferNames } from "@connext/vector-types";
@@ -252,5 +252,78 @@ describe(testName, () => {
       withdrawAmt.sub(transferQuote.fee),
       Wallet.createRandom().address,
     );
+  });
+
+  // NOTE: will need to bump timeout for
+  // this test to run
+  it.skip("should work for 1000s of transfers", async () => {
+    const assetId = constants.AddressZero;
+    const depositAmt = utils.parseEther("0.2");
+    const transferAmt = utils.parseEther("0.00000001");
+    const numberOfTransfers = 5_000;
+
+    const carolRogerPostSetup = await setup(carolService, rogerService, chainId1);
+    const daveRogerPostSetup = await setup(daveService, rogerService, chainId1);
+
+    // carol deposits
+    await deposit(carolService, rogerService, carolRogerPostSetup.channelAddress, assetId, depositAmt);
+
+    let recievedTransfers = 0;
+    daveService.on(EngineEvents.CONDITIONAL_TRANSFER_CREATED, (data) => {
+      recievedTransfers++;
+    });
+
+    let forwardedTransfers = 0;
+    carolService.on(EngineEvents.CONDITIONAL_TRANSFER_ROUTING_COMPLETE, (data) => {
+      forwardedTransfers++;
+    });
+
+    let requests = 0;
+    const completed = new Promise(async (resolve) => {
+      while (recievedTransfers < numberOfTransfers) {
+        if (requests !== numberOfTransfers) {
+          await delay(35_000);
+          continue;
+        } else {
+          console.log(`recipient has ${recievedTransfers + 1} / ${numberOfTransfers}`);
+          await delay(1_000);
+        }
+      }
+      resolve(undefined);
+    });
+
+    let t1;
+    let t10: number[] = [];
+    for (const _ of Array(numberOfTransfers).fill(0)) {
+      t1 = Date.now();
+      const res = await carolService.conditionalTransfer({
+        publicIdentifier: carolService.publicIdentifier,
+        channelAddress: carolRogerPostSetup.channelAddress,
+        amount: transferAmt.toString(),
+        assetId,
+        type: TransferNames.HashlockTransfer,
+        details: {
+          lockHash: createlockHash(getRandomBytes32()),
+          expiry: "0",
+        },
+        recipient: daveService.publicIdentifier,
+      });
+
+      if (res.isError) {
+        throw res.getError();
+      }
+
+      requests++;
+      const diff = Date.now() - t1;
+      t10.push(diff);
+      if (requests % 10 === 0) {
+        console.log(
+          `${requests}/${numberOfTransfers} created ${diff} ${t10.reduce((prev: number, curr: number) => prev + curr)}`,
+        );
+        t10 = [];
+      }
+    }
+    console.log("created all transfers");
+    await completed;
   });
 });

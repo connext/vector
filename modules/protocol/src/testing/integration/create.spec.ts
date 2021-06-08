@@ -6,6 +6,7 @@ import { BigNumber } from "@ethersproject/bignumber";
 
 import { env } from "../env";
 import { createTransfer, getFundedChannel, depositInChannel } from "../utils";
+import { getNextNonceForUpdate } from "../../utils";
 
 const testName = "Create Integrations";
 const { log } = getTestLoggers(testName, env.logLevel);
@@ -193,17 +194,19 @@ describe(testName, () => {
     );
 
     await runTest(channel, transfer);
-    expect(channel.nonce).to.be.eq(initial!.nonce + 2);
+    const expected = getNextNonceForUpdate(getNextNonceForUpdate(initial!.nonce, true), true);
+    expect(channel.nonce).to.be.eq(expected);
   });
 
   it("should work if responder channel is out of sync", async () => {
     const initial = await aliceStore.getChannelState(abChannelAddress);
-    await depositInChannel(abChannelAddress, bob, bobSigner, alice, assetId, depositAmount);
+    const depositChannel = await depositInChannel(abChannelAddress, bob, bobSigner, alice, assetId, depositAmount);
 
     await bobStore.saveChannelState(initial!);
     const { channel, transfer } = await createTransfer(abChannelAddress, alice, bob, assetId, transferAmount);
 
     await runTest(channel, transfer);
-    expect(channel.nonce).to.be.eq(initial!.nonce + 2);
+    const expected = getNextNonceForUpdate(depositChannel.nonce, true);
+    expect(channel.nonce).to.be.eq(expected);
   });
 });

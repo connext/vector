@@ -5,7 +5,6 @@ import {
   createTestChannelUpdateWithSigners,
   createTestChannelStateWithSigners,
   createTestFullHashlockTransferState,
-  getRandomBytes32,
   createTestUpdateParams,
   mkAddress,
   mkSig,
@@ -22,7 +21,6 @@ import {
   UpdateParams,
   FullChannelState,
   FullTransferState,
-  ChainError,
   IVectorChainReader,
 } from "@connext/vector-types";
 import { AddressZero } from "@ethersproject/constants";
@@ -31,7 +29,7 @@ import Sinon from "sinon";
 import { VectorChainReader } from "@connext/vector-contracts";
 
 // Import as full module for easy sinon function mocking
-import { OutboundChannelUpdateError, InboundChannelUpdateError } from "../errors";
+import { QueuedUpdateError } from "../errors";
 import * as vectorUtils from "../utils";
 import * as vectorValidation from "../validate";
 import { inbound, outbound } from "../sync";
@@ -40,9 +38,7 @@ import { env } from "./env";
 
 describe("inbound", () => {
   const chainProviders = env.chainProviders;
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [chainIdStr, providerUrl] = Object.entries(chainProviders)[0] as string[];
-  const inbox = getRandomBytes32();
+  const [_, providerUrl] = Object.entries(chainProviders)[0] as string[];
   const logger = pino().child({
     testName: "inbound",
   });
@@ -54,8 +50,6 @@ describe("inbound", () => {
   };
 
   let signers: ChannelSigner[];
-  let store: Sinon.SinonStubbedInstance<MemoryStoreService>;
-  let messaging: Sinon.SinonStubbedInstance<MemoryMessagingService>;
   let chainService: Sinon.SinonStubbedInstance<VectorChainReader>;
 
   let validationStub: Sinon.SinonStub;
@@ -64,8 +58,6 @@ describe("inbound", () => {
     signers = Array(2)
       .fill(0)
       .map(() => getRandomChannelSigner(providerUrl));
-    store = Sinon.createStubInstance(MemoryStoreService);
-    messaging = Sinon.createStubInstance(MemoryMessagingService);
     chainService = Sinon.createStubInstance(VectorChainReader);
 
     // Set the validation stub
@@ -77,8 +69,9 @@ describe("inbound", () => {
   });
 
   it("should return an error if the update does not advance state", async () => {
-    // Set the store mock
-    store.getChannelState.resolves({ nonce: 1, latestUpdate: {} as any } as any);
+    // Set the stored values
+    const activeTransfers = [];
+    const channel = createTestChannelStateWithSigners(signers, UpdateType.setup, { nonce: 1 });
 
     // Generate an update at nonce = 1
     const update = createTestChannelUpdateWithSigners(signers, UpdateType.setup, { nonce: 1 });
@@ -86,85 +79,42 @@ describe("inbound", () => {
     const result = await inbound(
       update,
       {} as any,
-      inbox,
+      activeTransfers,
+      channel,
       chainService as IVectorChainReader,
-      store,
-      messaging,
       externalValidation,
       signers[1],
       logger,
     );
     expect(result.isError).to.be.true;
     const error = result.getError()!;
-    expect(error.message).to.be.eq(InboundChannelUpdateError.reasons.StaleUpdate);
-
-    // Verify calls
-    expect(messaging.respondWithProtocolError.callCount).to.be.eq(1);
-    expect(store.saveChannelState.callCount).to.be.eq(0);
-  });
-
-  it("should fail if you are 3+ states behind the update", async () => {
-    // Generate the update
-    const prevUpdate: ChannelUpdate<typeof UpdateType.setup> = createTestChannelUpdateWithSigners(
-      signers,
-      UpdateType.setup,
-      {
-        nonce: 1,
-      },
-    );
-
-    const update: ChannelUpdate<typeof UpdateType.setup> = createTestChannelUpdateWithSigners(
-      signers,
-      UpdateType.setup,
-      {
-        nonce: 5,
-      },
-    );
-
-    const result = await inbound(
-      update,
-      prevUpdate,
-      inbox,
-      chainService as IVectorChainReader,
-      store,
-      messaging,
-      externalValidation,
-      signers[1],
-      logger,
-    );
-
-    expect(result.isError).to.be.true;
-    const error = result.getError()!;
-    expect(error.message).to.be.eq(InboundChannelUpdateError.reasons.RestoreNeeded);
-    // Make sure the calls were correctly performed
-    expect(validationStub.callCount).to.be.eq(0);
-    expect(store.saveChannelState.callCount).to.be.eq(0);
-    expect(messaging.respondToProtocolMessage.callCount).to.be.eq(0);
+    expect(error.message).to.be.eq(QueuedUpdateError.reasons.StaleUpdate);
   });
 
   it("should fail if validating the update fails", async () => {
+    // Set the stored values
+    const activeTransfers = [];
+    const channel = createTestChannelStateWithSigners(signers, UpdateType.setup, { nonce: 1 });
+
     // Generate the update
     const update: ChannelUpdate<typeof UpdateType.deposit> = createTestChannelUpdateWithSigners(
       signers,
       UpdateType.deposit,
       {
-        nonce: 1,
+        nonce: 2,
       },
     );
     // Set the validation stub
     validationStub.resolves(
-      Result.fail(
-        new InboundChannelUpdateError(InboundChannelUpdateError.reasons.ExternalValidationFailed, update, {} as any),
-      ),
+      Result.fail(new QueuedUpdateError(QueuedUpdateError.reasons.ExternalValidationFailed, update, {} as any)),
     );
 
     const result = await inbound(
       update,
-      update,
-      inbox,
+      channel.latestUpdate,
+      activeTransfers,
+      channel,
       chainService as IVectorChainReader,
-      store,
-      messaging,
       externalValidation,
       signers[1],
       logger,
@@ -172,50 +122,18 @@ describe("inbound", () => {
 
     expect(result.isError).to.be.true;
     const error = result.getError()!;
-    expect(error.message).to.be.eq(InboundChannelUpdateError.reasons.ExternalValidationFailed);
+    expect(error.message).to.be.eq(QueuedUpdateError.reasons.ExternalValidationFailed);
     // Make sure the calls were correctly performed
     expect(validationStub.callCount).to.be.eq(1);
-    expect(store.saveChannelState.callCount).to.be.eq(0);
-    expect(messaging.respondToProtocolMessage.callCount).to.be.eq(0);
   });
 
-  it("should fail if saving the data fails", async () => {
-    // Generate the update
-    store.saveChannelState.rejects();
-
-    const update: ChannelUpdate<typeof UpdateType.setup> = createTestChannelUpdateWithSigners(
-      signers,
-      UpdateType.setup,
-      {
-        nonce: 1,
-      },
-    );
-    // Set the validation stub
-    validationStub.resolves(Result.ok({ updatedChannel: {} as any }));
-    const result = await inbound(
-      update,
-      update,
-      inbox,
-      chainService as IVectorChainReader,
-      store,
-      messaging,
-      externalValidation,
-      signers[1],
-      logger,
-    );
-
-    expect(result.isError).to.be.true;
-    const error = result.getError()!;
-    expect(error.message).to.be.eq(InboundChannelUpdateError.reasons.SaveChannelFailed);
-    // Make sure the calls were correctly performed
-    expect(validationStub.callCount).to.be.eq(1);
-    expect(store.saveChannelState.callCount).to.be.eq(1);
-    expect(messaging.respondToProtocolMessage.callCount).to.be.eq(0);
-  });
-
-  it("should update if stored state is in sync", async () => {
-    // Set the store mock
-    store.getChannelState.resolves({ nonce: 1, latestUpdate: {} as any } as any);
+  it("should update if state is in sync", async () => {
+    // Set the stored values
+    const activeTransfers = [];
+    const channel = createTestChannelStateWithSigners(signers, UpdateType.setup, {
+      nonce: 1,
+      latestUpdate: { nonce: 1 },
+    });
 
     // Set the validation stub
     validationStub.resolves(Result.ok({ updatedChannel: { nonce: 3 } as any }));
@@ -228,11 +146,10 @@ describe("inbound", () => {
     // Call `inbound`
     const result = await inbound(
       update,
-      update,
-      inbox,
+      channel.latestUpdate,
+      activeTransfers,
+      channel,
       chainService as IVectorChainReader,
-      store,
-      messaging,
       externalValidation,
       signers[1],
       logger,
@@ -240,46 +157,61 @@ describe("inbound", () => {
     expect(result.getError()).to.be.undefined;
 
     // Verify callstack
-    expect(messaging.respondToProtocolMessage.callCount).to.be.eq(1);
-    expect(messaging.respondWithProtocolError.callCount).to.be.eq(0);
-    expect(store.saveChannelState.callCount).to.be.eq(1);
     expect(validationStub.callCount).to.be.eq(1);
   });
 
-  describe("IFF the update.nonce is ahead by 2, then the update recipient should try to sync", () => {
+  describe("If our previous update is behind, it should try to sync", () => {
     it("should fail if there is no missed update", async () => {
-      // Set the store mock
-      store.getChannelState.resolves({ nonce: 1 } as any);
+      // Set the stored values
+      const activeTransfers = [];
+      const channel = createTestChannelStateWithSigners(signers, UpdateType.setup, { nonce: 1 });
 
       // Create the received update
-      const update = createTestChannelUpdateWithSigners(signers, UpdateType.deposit, { nonce: 3 });
+      const update = createTestChannelUpdateWithSigners(signers, UpdateType.deposit, { nonce: 4 });
 
       // Create the update to sync
       const result = await inbound(
         update,
         undefined as any,
-        inbox,
+        activeTransfers,
+        channel,
         chainService as IVectorChainReader,
-        store,
-        messaging,
         externalValidation,
         signers[1],
         logger,
       );
-      expect(result.getError()?.message).to.be.eq(InboundChannelUpdateError.reasons.StaleChannel);
+      expect(result.getError()?.message).to.be.eq(QueuedUpdateError.reasons.StaleUpdate);
+    });
 
-      // Verify nothing was saved and error properly sent
-      expect(store.saveChannelState.callCount).to.be.eq(0);
-      expect(messaging.respondToProtocolMessage.callCount).to.be.eq(0);
-      expect(messaging.respondWithProtocolError.callCount).to.be.eq(1);
+    it("should fail if the update to sync is a setup update", async () => {
+      // Set the stored values
+      const activeTransfers = [];
+      const channel = createTestChannelStateWithSigners(signers, UpdateType.setup, { nonce: 1 });
+
+      // Create the received update
+      const update = createTestChannelUpdateWithSigners(signers, UpdateType.deposit, { nonce: 4 });
+
+      // Create the update to sync
+      const result = await inbound(
+        update,
+        channel.latestUpdate,
+        activeTransfers,
+        undefined,
+        chainService as IVectorChainReader,
+        externalValidation,
+        signers[1],
+        logger,
+      );
+      expect(result.getError()?.message).to.be.eq(QueuedUpdateError.reasons.CannotSyncSetup);
     });
 
     it("should fail if the missed update is not double signed", async () => {
-      // Set the store mock
-      store.getChannelState.resolves({ nonce: 1 } as any);
+      // Set the stored values
+      const activeTransfers = [];
+      const channel = createTestChannelStateWithSigners(signers, UpdateType.setup, { nonce: 1 });
 
       // Create the received update
-      const update = createTestChannelUpdateWithSigners(signers, UpdateType.deposit, { nonce: 3 });
+      const update = createTestChannelUpdateWithSigners(signers, UpdateType.deposit, { nonce: 4 });
 
       // Create previous update
       const toSync = createTestChannelUpdateWithSigners(signers, UpdateType.deposit, {
@@ -291,33 +223,54 @@ describe("inbound", () => {
       const result = await inbound(
         update,
         toSync,
-        inbox,
+        activeTransfers,
+        channel,
         chainService as IVectorChainReader,
-        store,
-        messaging,
         externalValidation,
         signers[1],
         logger,
       );
-      expect(result.getError()?.message).to.be.eq(InboundChannelUpdateError.reasons.SyncFailure);
-      expect(result.getError()?.context.syncError).to.be.eq("Cannot sync single signed state");
+      expect(result.getError()?.message).to.be.eq(QueuedUpdateError.reasons.SyncSingleSigned);
+    });
 
-      // Verify nothing was saved and error properly sent
-      expect(store.saveChannelState.callCount).to.be.eq(0);
-      expect(messaging.respondToProtocolMessage.callCount).to.be.eq(0);
-      expect(messaging.respondWithProtocolError.callCount).to.be.eq(1);
+    it("should fail if the update to sync is not the next update (i.e. off by more than 1 transition)", async () => {
+      // Set the stored values
+      const activeTransfers = [];
+      const channel = createTestChannelStateWithSigners(signers, UpdateType.setup, { nonce: 1 });
+
+      // Create the received update
+      const update = createTestChannelUpdateWithSigners(signers, UpdateType.deposit, { nonce: 4 });
+
+      // Create previous update
+      const toSync = createTestChannelUpdateWithSigners(signers, UpdateType.deposit, {
+        nonce: 8,
+      });
+
+      // Create the update to sync
+      const result = await inbound(
+        update,
+        toSync,
+        activeTransfers,
+        channel,
+        chainService as IVectorChainReader,
+        externalValidation,
+        signers[1],
+        logger,
+      );
+      expect(result.getError()?.message).to.be.eq(QueuedUpdateError.reasons.RestoreNeeded);
     });
 
     it("should fail if the missed update fails validation", async () => {
-      // Set the store mock
-      store.getChannelState.resolves({ nonce: 1 } as any);
+      // Set the stored values
+      const activeTransfers = [];
+      const channel = createTestChannelStateWithSigners(signers, UpdateType.setup, { nonce: 1 });
 
       // Create the received update
       const update = createTestChannelUpdateWithSigners(signers, UpdateType.deposit, { nonce: 3 });
 
       // Create previous update
       const toSync = createTestChannelUpdateWithSigners(signers, UpdateType.deposit, {
-        nonce: 2,
+        nonce: vectorUtils.getNextNonceForUpdate(1, update.fromIdentifier === channel.aliceIdentifier),
       });
 
       // Set validation mock
@@ -327,79 +280,50 @@ describe("inbound", () => {
       const result = await inbound(
         update,
         toSync,
-        inbox,
+        activeTransfers,
+        channel,
         chainService as IVectorChainReader,
-        store,
-        messaging,
         externalValidation,
         signers[1],
         logger,
       );
-      expect(result.getError()!.message).to.be.eq(InboundChannelUpdateError.reasons.SyncFailure);
-      expect(result.getError()!.context.syncError).to.be.eq("fail");
-
-      // Verify nothing was saved and error properly sent
-      expect(store.saveChannelState.callCount).to.be.eq(0);
-      expect(messaging.respondToProtocolMessage.callCount).to.be.eq(0);
-      expect(messaging.respondWithProtocolError.callCount).to.be.eq(1);
-    });
-
-    it("should fail if fails to save the synced channel", async () => {
-      // Set the store mocks
-      store.getChannelState.resolves({ nonce: 1 } as any);
-      store.saveChannelState.rejects(new Error("fail"));
-
-      // Create the received update
-      const update = createTestChannelUpdateWithSigners(signers, UpdateType.deposit, { nonce: 3 });
-
-      // Create previous update
-      const toSync = createTestChannelUpdateWithSigners(signers, UpdateType.deposit, {
-        nonce: 2,
-      });
-
-      // Set validation mock
-      validationStub.resolves(Result.ok({ nonce: 2 } as any));
-
-      // Create the update to sync
-      const result = await inbound(
-        update,
-        toSync,
-        inbox,
-        chainService as IVectorChainReader,
-        store,
-        messaging,
-        externalValidation,
-        signers[1],
-        logger,
-      );
-      expect(result.getError()!.message).to.be.eq(InboundChannelUpdateError.reasons.SyncFailure);
-      expect(result.getError()?.context.syncError).to.be.eq("fail");
-
-      // Verify nothing was saved and error properly sent
-      expect(store.saveChannelState.callCount).to.be.eq(1);
-      expect(messaging.respondToProtocolMessage.callCount).to.be.eq(0);
-      expect(messaging.respondWithProtocolError.callCount).to.be.eq(1);
+      expect(result.getError()!.message).to.be.eq("fail");
     });
 
     describe("should properly sync channel and apply update", async () => {
       // Declare params
       const runTest = async (proposedType: UpdateType, typeToSync: UpdateType) => {
-        // Set store mocks
-        store.getChannelState.resolves({ nonce: 1, latestUpdate: {} as any } as any);
+        // Set the stored values
+        const activeTransfers = [];
+        const channel = createTestChannelStateWithSigners(signers, UpdateType.setup, {
+          nonce: 1,
+          latestUpdate: {} as any,
+        });
 
         // Set validation mocks
-        const proposed = createTestChannelUpdateWithSigners(signers, proposedType, { nonce: 3 });
-        const toSync = createTestChannelUpdateWithSigners(signers, typeToSync, { nonce: 2 });
-        validationStub.onFirstCall().resolves(Result.ok({ updatedChannel: { nonce: 2, latestUpdate: toSync } }));
-        validationStub.onSecondCall().resolves(Result.ok({ updatedChannel: { nonce: 3, latestUpdate: proposed } }));
+        const toSyncNonce = vectorUtils.getNextNonceForUpdate(channel.nonce, true);
+        const proposedNonce = vectorUtils.getNextNonceForUpdate(toSyncNonce, true);
+        const proposed = createTestChannelUpdateWithSigners(signers, proposedType, {
+          nonce: proposedNonce,
+          fromIdentifier: channel.aliceIdentifier,
+        });
+        const toSync = createTestChannelUpdateWithSigners(signers, typeToSync, {
+          nonce: toSyncNonce,
+          fromIdentifier: channel.aliceIdentifier,
+        });
+        validationStub
+          .onFirstCall()
+          .resolves(Result.ok({ updatedChannel: { nonce: toSyncNonce, latestUpdate: toSync } }));
+        validationStub
+          .onSecondCall()
+          .resolves(Result.ok({ updatedChannel: { nonce: proposedNonce, latestUpdate: proposed } }));
 
         const result = await inbound(
           proposed,
           toSync,
-          inbox,
+          activeTransfers,
+          channel,
           chainService as IVectorChainReader,
-          store,
-          messaging,
           externalValidation,
           signers[1],
           logger,
@@ -407,12 +331,9 @@ describe("inbound", () => {
         expect(result.getError()).to.be.undefined;
 
         // Verify callstack
-        expect(messaging.respondToProtocolMessage.callCount).to.be.eq(1);
-        expect(messaging.respondWithProtocolError.callCount).to.be.eq(0);
-        expect(store.saveChannelState.callCount).to.be.eq(2);
         expect(validationStub.callCount).to.be.eq(2);
-        expect(validationStub.firstCall.args[3].nonce).to.be.eq(2);
-        expect(validationStub.secondCall.args[3].nonce).to.be.eq(3);
+        expect(validationStub.firstCall.args[3].nonce).to.be.eq(toSyncNonce);
+        expect(validationStub.secondCall.args[3].nonce).to.be.eq(proposedNonce);
       };
 
       for (const proposalType of Object.keys(UpdateType)) {
@@ -434,36 +355,44 @@ describe("inbound", () => {
   });
 
   it("IFF update is invalid and channel is out of sync, should fail on retry, but sync properly", async () => {
-    // Set previous state
-    store.getChannelState.resolves(createTestChannelStateWithSigners(signers, UpdateType.setup, { nonce: 1 }));
+    // Set the stored values
+    const activeTransfers = [];
+    const channel = createTestChannelStateWithSigners(signers, UpdateType.setup, {
+      nonce: 1,
+      latestUpdate: {} as any,
+    });
+
+    const toSyncNonce = vectorUtils.getNextNonceForUpdate(channel.nonce, true);
+    const proposedNonce = vectorUtils.getNextNonceForUpdate(toSyncNonce, true);
 
     // Set update to sync
     const prevUpdate = createTestChannelUpdateWithSigners(signers, UpdateType.deposit, {
-      nonce: 2,
+      nonce: toSyncNonce,
+      fromIdentifier: channel.aliceIdentifier,
     });
-    validationStub.onFirstCall().resolves(Result.ok({ updatedChannel: { nonce: 3, latestUpdate: {} as any } }));
+    validationStub
+      .onFirstCall()
+      .resolves(Result.ok({ updatedChannel: { nonce: toSyncNonce, latestUpdate: {} as any } }));
 
     const update: ChannelUpdate<typeof UpdateType.deposit> = createTestChannelUpdateWithSigners(
       signers,
       UpdateType.deposit,
       {
-        nonce: 3,
+        nonce: proposedNonce,
+        fromIdentifier: channel.aliceIdentifier,
       },
     );
     validationStub
       .onSecondCall()
       .resolves(
-        Result.fail(
-          new InboundChannelUpdateError(InboundChannelUpdateError.reasons.ExternalValidationFailed, update, {} as any),
-        ),
+        Result.fail(new QueuedUpdateError(QueuedUpdateError.reasons.ExternalValidationFailed, update, {} as any)),
       );
     const result = await inbound(
       update,
       prevUpdate,
-      inbox,
+      activeTransfers,
+      channel,
       chainService as IVectorChainReader,
-      store,
-      messaging,
       externalValidation,
       signers[1],
       logger,
@@ -471,16 +400,17 @@ describe("inbound", () => {
 
     expect(result.isError).to.be.true;
     const error = result.getError()!;
-    expect(error.message).to.be.eq(InboundChannelUpdateError.reasons.ExternalValidationFailed);
+    expect(error.message).to.be.eq(QueuedUpdateError.reasons.ExternalValidationFailed);
     expect(validationStub.callCount).to.be.eq(2);
-    expect(validationStub.firstCall.args[3].nonce).to.be.eq(2);
-    expect(validationStub.secondCall.args[3].nonce).to.be.eq(3);
-    // Make sure the calls were correctly performed
-    expect(store.saveChannelState.callCount).to.be.eq(1);
-    expect(messaging.respondToProtocolMessage.callCount).to.be.eq(0);
+    expect(validationStub.firstCall.args[3].nonce).to.be.eq(toSyncNonce);
+    expect(validationStub.secondCall.args[3].nonce).to.be.eq(proposedNonce);
   });
 
   it("should work if there is no channel state stored and you are receiving a setup update", async () => {
+    // Set the stored values
+    const activeTransfers = [];
+    const channel = undefined;
+
     // Generate the update
     const update: ChannelUpdate<typeof UpdateType.setup> = createTestChannelUpdateWithSigners(
       signers,
@@ -494,20 +424,14 @@ describe("inbound", () => {
     const result = await inbound(
       update,
       update,
-      inbox,
+      activeTransfers,
+      channel,
       chainService as IVectorChainReader,
-      store,
-      messaging,
       externalValidation,
       signers[1],
       logger,
     );
-    expect(result.getError()).to.be.undefined;
-
-    // Make sure the calls were correctly performed
-    expect(validationStub.callCount).to.be.eq(1);
-    expect(messaging.respondToProtocolMessage.callCount).to.be.eq(1);
-    expect(store.saveChannelState.callCount).to.be.eq(1);
+    expect(result.getError()?.message).to.be.eq(QueuedUpdateError.reasons.CannotSyncSetup);
   });
 });
 
@@ -533,6 +457,7 @@ describe("outbound", () => {
   let validateParamsAndApplyStub: Sinon.SinonStub;
   // called during sync
   let validateAndApplyInboundStub: Sinon.SinonStub;
+  let validateUpdateIdSignatureStub: Sinon.SinonStub;
 
   beforeEach(async () => {
     signers = Array(2)
@@ -550,6 +475,9 @@ describe("outbound", () => {
 
     // Stub out all signature validation
     validateUpdateSignatureStub = Sinon.stub(vectorUtils, "validateChannelSignatures").resolves(Result.ok(undefined));
+    validateUpdateIdSignatureStub = Sinon.stub(vectorUtils, "validateChannelUpdateIdSignature").resolves(
+      Result.ok(undefined),
+    );
   });
 
   afterEach(() => {
@@ -557,44 +485,22 @@ describe("outbound", () => {
     Sinon.restore();
   });
 
-  describe("should fail if .getChannelState / .getActiveTransfers / .getTransferState fails", () => {
-    const methods = ["getChannelState", "getActiveTransfers"];
-
-    for (const method of methods) {
-      it(method, async () => {
-        // Set store stub
-        store[method].rejects(new Error("fail"));
-
-        // Make outbound call
-        const result = await outbound(
-          createTestUpdateParams(UpdateType.resolve),
-          store,
-          chainService as IVectorChainReader,
-          messaging,
-          externalValidation,
-          signers[0],
-          log,
-        );
-
-        // Assert error
-        expect(result.isError).to.be.eq(true);
-        const error = result.getError()!;
-        expect(error.message).to.be.eq(OutboundChannelUpdateError.reasons.StoreFailure);
-        expect(error.context.storeError).to.be.eq(`${method} failed: fail`);
-      });
-    }
-  });
-
   it("should fail if it fails to validate and apply the update", async () => {
+    // Generate stored info
+    const activeTransfers = [];
+    const previousState = createTestChannelStateWithSigners(signers, UpdateType.deposit);
+
+    // Generate params
     const params = createTestUpdateParams(UpdateType.deposit, { channelAddress: "0xfail" });
 
     // Stub the validation function
-    const error = new OutboundChannelUpdateError(OutboundChannelUpdateError.reasons.InvalidParams, params);
+    const error = new QueuedUpdateError(QueuedUpdateError.reasons.InvalidParams, params);
     validateParamsAndApplyStub.resolves(Result.fail(error));
 
     const res = await outbound(
       params,
-      store,
+      activeTransfers,
+      previousState,
       chainService as IVectorChainReader,
       messaging,
       externalValidation,
@@ -605,13 +511,17 @@ describe("outbound", () => {
   });
 
   it("should fail if it counterparty update fails for some reason other than update being out of date", async () => {
+    // Generate stored info
+    const activeTransfers = [];
+    const previousState = createTestChannelStateWithSigners(signers, UpdateType.deposit, { channelAddress });
+
     // Create a setup update
     const params = createTestUpdateParams(UpdateType.setup, {
       channelAddress,
       details: { counterpartyIdentifier: signers[1].publicIdentifier },
     });
     // Create a messaging service stub
-    const counterpartyError = new InboundChannelUpdateError(InboundChannelUpdateError.reasons.StoreFailure, {} as any);
+    const counterpartyError = new QueuedUpdateError(QueuedUpdateError.reasons.StoreFailure, {} as any);
     messaging.sendProtocolMessage.resolves(Result.fail(counterpartyError));
 
     // Stub the generation function
@@ -627,7 +537,8 @@ describe("outbound", () => {
     // Call the outbound function
     const res = await outbound(
       params,
-      store,
+      activeTransfers,
+      previousState,
       chainService as IVectorChainReader,
       messaging,
       externalValidation,
@@ -637,7 +548,7 @@ describe("outbound", () => {
 
     // Verify the error is returned as an outbound error
     const error = res.getError();
-    expect(error?.message).to.be.eq(OutboundChannelUpdateError.reasons.CounterpartyFailure);
+    expect(error?.message).to.be.eq(QueuedUpdateError.reasons.CounterpartyFailure);
     expect(error?.context.counterpartyError.message).to.be.eq(counterpartyError.message);
     expect(error?.context.counterpartyError.context).to.be.ok;
 
@@ -646,6 +557,10 @@ describe("outbound", () => {
   });
 
   it("should fail if it the signature validation fails", async () => {
+    // Generate stored info
+    const activeTransfers = [];
+    const previousState = createTestChannelStateWithSigners(signers, UpdateType.deposit, { channelAddress });
+
     // Stub generation function
     validateParamsAndApplyStub.resolves(
       Result.ok({
@@ -665,53 +580,22 @@ describe("outbound", () => {
     // Make outbound call
     const res = await outbound(
       createTestUpdateParams(UpdateType.deposit),
-      store,
+      activeTransfers,
+      previousState,
       chainService as IVectorChainReader,
       messaging,
       externalValidation,
       signers[0],
       log,
     );
-    expect(res.getError()!.message).to.be.eq(OutboundChannelUpdateError.reasons.BadSignatures);
-  });
-
-  it("should fail if the channel is not saved to store", async () => {
-    // Stub save method to fail
-    store.saveChannelState.rejects("Failed to save channel");
-
-    const params = createTestUpdateParams(UpdateType.deposit, {
-      channelAddress,
-    });
-
-    // Stub the generation results
-    validateParamsAndApplyStub.resolves(
-      Result.ok({
-        update: createTestChannelUpdateWithSigners(signers, UpdateType.deposit),
-        updatedTransfer: undefined,
-        updatedActiveTransfers: undefined,
-        updatedChannel: createTestChannelStateWithSigners(signers, UpdateType.deposit),
-      }),
-    );
-
-    // Set the messaging mocks to return the proper update from the counterparty
-    messaging.sendProtocolMessage.onFirstCall().resolves(Result.ok({ update: {}, previousUpdate: {} } as any));
-
-    const result = await outbound(
-      params,
-      store,
-      chainService as IVectorChainReader,
-      messaging,
-      externalValidation,
-      signers[0],
-      log,
-    );
-
-    expect(result.isError).to.be.true;
-    const error = result.getError()!;
-    expect(error.message).to.be.eq(OutboundChannelUpdateError.reasons.SaveChannelFailed);
+    expect(res.getError()!.message).to.be.eq(QueuedUpdateError.reasons.BadSignatures);
   });
 
   it("should successfully initiate an update if channels are in sync", async () => {
+    // Generate stored info
+    const activeTransfers = [];
+    const previousState = createTestChannelStateWithSigners(signers, UpdateType.deposit, { channelAddress, nonce: 1 });
+
     // Create the update (a user deposit on a setup channel)
     const assetId = AddressZero;
     const params: UpdateParams<typeof UpdateType.deposit> = createTestUpdateParams(UpdateType.deposit, {
@@ -719,18 +603,13 @@ describe("outbound", () => {
       details: { assetId },
     });
 
-    // Create the channel and store mocks for the user
-    // channel at nonce 1, proposes nonce 2, syncs nonce 2 from counterparty
-    // then proposes nonce 3
-    store.getChannelState.resolves(createTestChannelStateWithSigners(signers, UpdateType.setup, { nonce: 2 }));
-
     // Stub the generation results
     validateParamsAndApplyStub.onFirstCall().resolves(
       Result.ok({
         update: createTestChannelUpdateWithSigners(signers, UpdateType.deposit),
         updatedTransfer: undefined,
         updatedActiveTransfers: undefined,
-        updatedChannel: createTestChannelStateWithSigners(signers, UpdateType.deposit, { nonce: 3 }),
+        updatedChannel: { ...previousState, nonce: 4 },
       }),
     );
 
@@ -742,7 +621,8 @@ describe("outbound", () => {
     // Call the outbound function
     const res = await outbound(
       params,
-      store,
+      activeTransfers,
+      previousState,
       chainService as IVectorChainReader,
       messaging,
       externalValidation,
@@ -752,17 +632,23 @@ describe("outbound", () => {
 
     // Verify return values
     expect(res.getError()).to.be.undefined;
-    expect(res.getValue().updatedChannel).to.containSubset({ nonce: 3 });
+    expect(res.getValue().updatedChannel).to.containSubset({ nonce: 4 });
 
     // Verify message only sent once by initiator w/update to sync
     expect(messaging.sendProtocolMessage.callCount).to.be.eq(1);
     // Verify sync happened
     expect(validateParamsAndApplyStub.callCount).to.be.eq(1);
-    expect(store.saveChannelState.callCount).to.be.eq(1);
   });
 
   describe("counterparty returned a StaleUpdate error, indicating the channel should try to sync (hitting `syncStateAndRecreateUpdate`)", () => {
     it("should fail to sync setup update", async () => {
+      // Generate stored info
+      const activeTransfers = [];
+      const previousState = createTestChannelStateWithSigners(signers, UpdateType.deposit, {
+        channelAddress,
+        nonce: 1,
+      });
+
       const proposedParams = createTestUpdateParams(UpdateType.deposit);
 
       // Set generation stub
@@ -774,19 +660,16 @@ describe("outbound", () => {
       );
 
       // Stub counterparty return
+      const toSync = createTestChannelStateWithSigners(signers, UpdateType.setup);
       messaging.sendProtocolMessage.resolves(
-        Result.fail(
-          new InboundChannelUpdateError(
-            InboundChannelUpdateError.reasons.StaleUpdate,
-            createTestChannelUpdateWithSigners(signers, UpdateType.setup),
-          ),
-        ),
+        Result.fail(new QueuedUpdateError(QueuedUpdateError.reasons.StaleUpdate, toSync.latestUpdate, toSync)),
       );
 
       // Send request
       const result = await outbound(
         proposedParams,
-        store,
+        activeTransfers,
+        previousState,
         chainService as IVectorChainReader,
         messaging,
         externalValidation,
@@ -795,14 +678,19 @@ describe("outbound", () => {
       );
 
       // Verify error
-      expect(result.getError()?.message).to.be.eq(OutboundChannelUpdateError.reasons.CannotSyncSetup);
+      expect(result.getError()?.message).to.be.eq(QueuedUpdateError.reasons.CannotSyncSetup);
       // Verify update was not retried
       expect(messaging.sendProtocolMessage.callCount).to.be.eq(1);
-      // Verify channel was not updated
-      expect(store.saveChannelState.callCount).to.be.eq(0);
     });
 
     it("should fail if update to sync is single signed", async () => {
+      // Generate stored info
+      const activeTransfers = [];
+      const previousState = createTestChannelStateWithSigners(signers, UpdateType.deposit, {
+        channelAddress,
+        nonce: 1,
+      });
+
       const proposedParams = createTestUpdateParams(UpdateType.deposit);
 
       // Set generation stub
@@ -814,22 +702,21 @@ describe("outbound", () => {
       );
 
       // Stub counterparty return
+      const toSync = createTestChannelUpdateWithSigners(signers, UpdateType.deposit, {
+        aliceSignature: undefined,
+        bobSignature: mkSig(),
+      });
       messaging.sendProtocolMessage.resolves(
         Result.fail(
-          new InboundChannelUpdateError(
-            InboundChannelUpdateError.reasons.StaleUpdate,
-            createTestChannelUpdateWithSigners(signers, UpdateType.deposit, {
-              aliceSignature: undefined,
-              bobSignature: mkSig(),
-            }),
-          ),
+          new QueuedUpdateError(QueuedUpdateError.reasons.StaleUpdate, toSync, { latestUpdate: toSync } as any),
         ),
       );
 
       // Send request
       const result = await outbound(
         proposedParams,
-        store,
+        activeTransfers,
+        previousState,
         chainService as IVectorChainReader,
         messaging,
         externalValidation,
@@ -838,17 +725,19 @@ describe("outbound", () => {
       );
 
       // Verify error
-      expect(result.getError()?.message).to.be.eq(OutboundChannelUpdateError.reasons.SyncFailure);
-      expect(result.getError()?.context.syncError).to.be.eq("Cannot sync single signed state");
+      expect(result.getError()?.message).to.be.eq(QueuedUpdateError.reasons.SyncSingleSigned);
       // Verify update was not retried
       expect(messaging.sendProtocolMessage.callCount).to.be.eq(1);
-      // Verify channel was not updated
-      expect(store.saveChannelState.callCount).to.be.eq(0);
     });
 
     it("should fail if it fails to apply the inbound update", async () => {
       // Set store mocks
-      store.getChannelState.resolves(createTestChannelStateWithSigners(signers, UpdateType.deposit, { nonce: 2 }));
+      // Generate stored info
+      const activeTransfers = [];
+      const previousState = createTestChannelStateWithSigners(signers, UpdateType.deposit, {
+        channelAddress,
+        nonce: 1,
+      });
 
       // Set generation mock
       validateParamsAndApplyStub.resolves(
@@ -859,14 +748,12 @@ describe("outbound", () => {
       );
 
       // Stub counterparty return
+      const toSync = createTestChannelUpdateWithSigners(signers, UpdateType.deposit, {
+        nonce: 4,
+      });
       messaging.sendProtocolMessage.resolves(
         Result.fail(
-          new InboundChannelUpdateError(
-            InboundChannelUpdateError.reasons.StaleUpdate,
-            createTestChannelUpdateWithSigners(signers, UpdateType.deposit, {
-              nonce: 3,
-            }),
-          ),
+          new QueuedUpdateError(QueuedUpdateError.reasons.StaleUpdate, toSync, { latestUpdate: toSync } as any),
         ),
       );
 
@@ -876,7 +763,8 @@ describe("outbound", () => {
       // Send request
       const result = await outbound(
         createTestUpdateParams(UpdateType.deposit),
-        store,
+        activeTransfers,
+        previousState,
         chainService as IVectorChainReader,
         messaging,
         externalValidation,
@@ -885,109 +773,9 @@ describe("outbound", () => {
       );
 
       // Verify error
-      expect(result.getError()?.message).to.be.eq(OutboundChannelUpdateError.reasons.SyncFailure);
-      expect(result.getError()?.context.syncError).to.be.eq("fail");
+      expect(result.getError()?.message).to.be.eq("fail");
       // Verify update was not retried
       expect(messaging.sendProtocolMessage.callCount).to.be.eq(1);
-      // Verify channel was not updated
-      expect(store.saveChannelState.callCount).to.be.eq(0);
-    });
-
-    it("should fail if it cannot save synced channel to store", async () => {
-      // Set the apply/update return value
-      const applyRet = {
-        update: createTestChannelUpdate(UpdateType.deposit),
-        updatedChannel: createTestChannelUpdateWithSigners(signers, UpdateType.deposit, { nonce: 3 }),
-      };
-
-      // Set store mocks
-      store.getChannelState.resolves(createTestChannelStateWithSigners(signers, UpdateType.deposit, { nonce: 2 }));
-      store.saveChannelState.rejects("fail");
-
-      // Set generation mock
-      validateParamsAndApplyStub.resolves(Result.ok(applyRet));
-
-      // Stub counterparty return
-      messaging.sendProtocolMessage.resolves(
-        Result.fail(
-          new InboundChannelUpdateError(
-            InboundChannelUpdateError.reasons.StaleUpdate,
-            createTestChannelUpdateWithSigners(signers, UpdateType.deposit, {
-              nonce: 3,
-            }),
-          ),
-        ),
-      );
-
-      // Stub the apply function
-      validateAndApplyInboundStub.resolves(Result.ok(applyRet));
-
-      // Send request
-      const result = await outbound(
-        createTestUpdateParams(UpdateType.deposit),
-        store,
-        chainService as IVectorChainReader,
-        messaging,
-        externalValidation,
-        signers[0],
-        log,
-      );
-
-      // Verify error
-      expect(result.getError()?.message).to.be.eq(OutboundChannelUpdateError.reasons.SyncFailure);
-      // Verify update was not retried
-      expect(messaging.sendProtocolMessage.callCount).to.be.eq(1);
-      // Verify channel save was attempted
-      expect(store.saveChannelState.callCount).to.be.eq(1);
-    });
-
-    it("should fail if it cannot re-validate proposed parameters", async () => {
-      // Set the apply/update return value
-      const applyRet = {
-        update: createTestChannelUpdate(UpdateType.deposit),
-        updatedChannel: createTestChannelUpdateWithSigners(signers, UpdateType.deposit, { nonce: 3 }),
-      };
-
-      // Set store mocks
-      store.getChannelState.resolves(createTestChannelStateWithSigners(signers, UpdateType.deposit, { nonce: 2 }));
-
-      // Set generation mock
-      validateParamsAndApplyStub.onFirstCall().resolves(Result.ok(applyRet));
-      validateParamsAndApplyStub.onSecondCall().resolves(Result.fail(new ChainError("fail")));
-
-      // Stub counterparty return
-      messaging.sendProtocolMessage.resolves(
-        Result.fail(
-          new InboundChannelUpdateError(
-            InboundChannelUpdateError.reasons.StaleUpdate,
-            createTestChannelUpdateWithSigners(signers, UpdateType.deposit, {
-              nonce: 3,
-            }),
-          ),
-        ),
-      );
-
-      // Stub the sync function
-      validateAndApplyInboundStub.resolves(Result.ok(applyRet));
-
-      // Send request
-      const result = await outbound(
-        createTestUpdateParams(UpdateType.deposit),
-        store,
-        chainService as IVectorChainReader,
-        messaging,
-        externalValidation,
-        signers[0],
-        log,
-      );
-
-      // Verify error
-      expect(result.getError()?.message).to.be.eq(OutboundChannelUpdateError.reasons.RegenerateUpdateFailed);
-      expect(result.getError()?.context.regenerateUpdateError).to.be.eq("fail");
-      // Verify update was not retried
-      expect(messaging.sendProtocolMessage.callCount).to.be.eq(1);
-      // Verify channel save was called
-      expect(store.saveChannelState.callCount).to.be.eq(1);
     });
 
     // responder nonce n, proposed update nonce by initiator is at n too.
@@ -998,11 +786,14 @@ describe("outbound", () => {
       let preSyncUpdatedState;
       let params;
       let preSyncUpdate;
-      let postSyncUpdate;
 
       // create a helper to create the proper counterparty error
       const createInboundError = (updateToSync: ChannelUpdate): any => {
-        return Result.fail(new InboundChannelUpdateError(InboundChannelUpdateError.reasons.StaleUpdate, updateToSync));
+        return Result.fail(
+          new QueuedUpdateError(QueuedUpdateError.reasons.StaleUpdate, updateToSync, {
+            latestUpdate: updateToSync,
+          } as any),
+        );
       };
 
       // create a helper to create a post-sync state
@@ -1021,29 +812,33 @@ describe("outbound", () => {
       };
 
       // create a helper to establish mocks
-      const createTestEnv = (typeToSync: UpdateType): void => {
+      const createTestEnv = (
+        typeToSync: UpdateType,
+      ): { activeTransfers: FullTransferState[]; previousState: FullChannelState; toSync: ChannelUpdate } => {
         // Create the missed update
         const toSync = createUpdateToSync(typeToSync);
 
+        // Generate stored info
+        const previousState = createTestChannelStateWithSigners(signers, UpdateType.deposit, {
+          channelAddress,
+          nonce: 1,
+        });
+
         // If it is resolve, make sure the store returns this in the
         // active transfers + the proper transfer state
+        let activeTransfers;
         if (typeToSync === UpdateType.resolve) {
           const transfer = createTestFullHashlockTransferState({ transferId: toSync.details.transferId });
-          store.getActiveTransfers.resolves([transfer]);
-          store.getTransferState.resolves({ ...transfer, transferResolver: undefined });
+          activeTransfers = [transfer];
           chainService.resolve.resolves(Result.ok(transfer.balance));
         } else {
           // otherwise, assume no other active transfers
-          store.getActiveTransfers.resolves([]);
+          activeTransfers = [];
         }
 
         // Set messaging mocks:
         // - first call should return an error
-        // - second call should return a final channel state
         messaging.sendProtocolMessage.onFirstCall().resolves(createInboundError(toSync));
-        messaging.sendProtocolMessage
-          .onSecondCall()
-          .resolves(Result.ok({ update: postSyncUpdate, previousUpdate: toSync }));
 
         // Stub apply-sync results
         validateAndApplyInboundStub.resolves(
@@ -1053,23 +848,18 @@ describe("outbound", () => {
           }),
         );
 
-        // Stub the generation results post-sync
-        validateParamsAndApplyStub.onSecondCall().resolves(
-          Result.ok({
-            update: postSyncUpdate,
-            updatedChannel: createUpdatedState(postSyncUpdate),
-          }),
-        );
+        return { previousState, activeTransfers, toSync };
       };
 
       // create a helper to verify calling + code path
       const runTest = async (typeToSync: UpdateType): Promise<void> => {
-        createTestEnv(typeToSync);
+        const { previousState, activeTransfers, toSync } = createTestEnv(typeToSync);
 
         // Call the outbound function
         const res = await outbound(
           params,
-          store,
+          activeTransfers,
+          previousState,
           chainService as IVectorChainReader,
           messaging,
           externalValidation,
@@ -1077,28 +867,26 @@ describe("outbound", () => {
           log,
         );
 
-        // Verify the update was successfully sent + retried
+        // Verify the update was successfully sent + synced
         expect(res.getError()).to.be.undefined;
+        expect(res.getValue().successfullyApplied).to.be.eq("synced");
         expect(res.getValue().updatedChannel).to.be.containSubset({
-          nonce: postSyncUpdate.nonce,
-          latestUpdate: postSyncUpdate,
+          nonce: toSync.nonce,
+          latestUpdate: toSync,
         });
-        expect(messaging.sendProtocolMessage.callCount).to.be.eq(2);
-        expect(store.saveChannelState.callCount).to.be.eq(2);
-        expect(validateParamsAndApplyStub.callCount).to.be.eq(2);
+        expect(messaging.sendProtocolMessage.callCount).to.be.eq(1);
+        expect(validateParamsAndApplyStub.callCount).to.be.eq(1);
         expect(validateAndApplyInboundStub.callCount).to.be.eq(1);
-        expect(validateUpdateSignatureStub.callCount).to.be.eq(1);
       };
 
       describe("initiator trying deposit", () => {
         beforeEach(() => {
           // Create the test params
-          preSyncState = createTestChannelStateWithSigners(signers, UpdateType.deposit, { nonce: 3 });
+          preSyncState = createTestChannelStateWithSigners(signers, UpdateType.deposit, { nonce: 1 });
           preSyncUpdatedState = createTestChannelStateWithSigners(signers, UpdateType.deposit, { nonce: 4 });
 
           params = createTestUpdateParams(UpdateType.deposit);
           preSyncUpdate = createTestChannelUpdateWithSigners(signers, UpdateType.deposit, { nonce: 4 });
-          postSyncUpdate = createTestChannelUpdateWithSigners(signers, UpdateType.deposit, { nonce: 5 });
 
           // Set the stored state
           store.getChannelState.resolves(preSyncState);
@@ -1136,7 +924,6 @@ describe("outbound", () => {
 
           params = createTestUpdateParams(UpdateType.create);
           preSyncUpdate = createTestChannelUpdateWithSigners(signers, UpdateType.create, { nonce: 4 });
-          postSyncUpdate = createTestChannelUpdateWithSigners(signers, UpdateType.create, { nonce: 5 });
 
           // Set the stored state
           store.getChannelState.resolves(preSyncState);
@@ -1174,7 +961,6 @@ describe("outbound", () => {
 
           params = createTestUpdateParams(UpdateType.resolve);
           preSyncUpdate = createTestChannelUpdateWithSigners(signers, UpdateType.resolve, { nonce: 4 });
-          postSyncUpdate = createTestChannelUpdateWithSigners(signers, UpdateType.resolve, { nonce: 5 });
 
           // Set the stored state
           store.getChannelState.resolves(preSyncState);
