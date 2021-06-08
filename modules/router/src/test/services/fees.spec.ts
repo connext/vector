@@ -6,6 +6,7 @@ import {
   FullChannelState,
   SIMPLE_WITHDRAWAL_GAS_ESTIMATE,
   IVectorChainReader,
+  GAS_ESTIMATES,
 } from "@connext/vector-types";
 import { BigNumber } from "@ethersproject/bignumber";
 import { expect } from "chai";
@@ -19,20 +20,12 @@ import * as feesService from "../../services/fees";
 import * as metrics from "../../metrics";
 import * as utils from "../../services/utils";
 import { parseEther } from "ethers/lib/utils";
-import { Zero } from "@ethersproject/constants";
+import { One, Zero } from "@ethersproject/constants";
 
 const config = getConfig();
 
 const testName = "Router fees";
 const { log } = vectorUtils.getTestLoggers(testName, config.logLevel ?? ("info" as any));
-
-const GAS_ESTIMATES = {
-  createChannelAndDepositAlice: BigNumber.from(200_000), // 0x5a78baf521e5739b2b63626566f6b360a242b52734662db439a2c3256d3e1f97
-  createChannel: BigNumber.from(150_000), // 0x45690e81cfc5576d11ecda7938ce91af513a873f8c7e4f26bf2a898ee45ae8ab
-  depositAlice: BigNumber.from(85_000), // 0x0ed5459c7366d862177408328591c6df5c534fe4e1fbf4a5dd0abbe3d9c761b3
-  depositBob: BigNumber.from(50_000),
-  withdraw: SIMPLE_WITHDRAWAL_GAS_ESTIMATE, // 0x4d4466ed10b5d39c0a80be859dc30bca0120b5e8de10ed7155cc0b26da574439
-};
 
 describe(testName, () => {
   let ethReader: Sinon.SinonStubbedInstance<VectorChainReader>;
@@ -712,7 +705,7 @@ describe(testName, () => {
           toChannel,
         );
         expect(result.isError).to.be.false;
-        expect(result.getValue()[0]).to.be.eq(GAS_ESTIMATES.withdraw.add(GAS_ESTIMATES.createChannel));
+        expect(result.getValue()[0]).to.be.eq(GAS_ESTIMATES.createChannel.add(SIMPLE_WITHDRAWAL_GAS_ESTIMATE));
       });
 
       it("should work if from channel will reclaim && channel is deployed", async () => {
@@ -730,7 +723,7 @@ describe(testName, () => {
           toChannel,
         );
         expect(result.isError).to.be.false;
-        expect(result.getValue()[0]).to.be.eq(GAS_ESTIMATES.withdraw);
+        expect(result.getValue()[0]).to.be.eq(SIMPLE_WITHDRAWAL_GAS_ESTIMATE);
       });
 
       it("should work if from channel will collateralize && router is bob", async () => {
@@ -860,9 +853,9 @@ describe(testName, () => {
 
     describe("should work for toChannel actions", () => {
       it("should work if to channel will do nothing", async () => {
-        toChannel.balances[0] = { to: [toChannel.alice, toChannel.bob], amount: ["780", "0"] };
+        toChannel.balances[0] = { to: [toChannel.alice, toChannel.bob], amount: ["301", "0"] };
         const result = await feesService.calculateEstimatedGasFee(
-          toSend,
+          One,
           fromAssetId,
           fromChannel.networkContext.chainId,
           toAssetId,
@@ -875,6 +868,24 @@ describe(testName, () => {
         );
         expect(result.isError).to.be.false;
         expect(result.getValue()[1]).to.be.eq(0);
+      });
+
+      it("should work if to channel will reclaim", async () => {
+        toChannel.balances[0] = { to: [toChannel.alice, toChannel.bob], amount: ["780", "0"] };
+        const result = await feesService.calculateEstimatedGasFee(
+          One,
+          fromAssetId,
+          fromChannel.networkContext.chainId,
+          toAssetId,
+          toChannel.networkContext.chainId,
+          ethReader as IVectorChainReader,
+          routerIdentifier,
+          log,
+          fromChannel,
+          toChannel,
+        );
+        expect(result.isError).to.be.false;
+        expect(result.getValue()[1]).to.be.eq(GAS_ESTIMATES.withdraw);
       });
 
       it("should work if to channel will collatearlize && router is bob", async () => {

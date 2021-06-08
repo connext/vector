@@ -510,7 +510,11 @@ export const calculateEstimatedGasFee = async (
         "Method complete",
       );
       // check for reclaim, reclaim if end balance after in-channel transger
-      let toChannelFee = GAS_ESTIMATES.depositBob;
+      let toChannelFee = Zero;
+      console.log(
+        "BigNumber.from(routerBalance).sub(converted.getValue()).gt(toProfile.reclaimThreshold): ",
+        BigNumber.from(routerBalance).sub(converted.getValue()).gt(toProfile.reclaimThreshold),
+      );
       if (BigNumber.from(routerBalance).sub(converted.getValue()).gt(toProfile.reclaimThreshold)) {
         toChannelFee = toChannelFee.add(GAS_ESTIMATES.withdraw);
       }
