@@ -329,6 +329,10 @@
       "0xe9e7cea3dedca5984780bafc599bd69add087d56": {
         "symbol": "BUSD",
         "mainnetEquivalent": "0x4fabb145d64652a948d72533023f6e7a623c7c53"
+      },
+      "0x532197ec38756b9956190b845d99b4b0a88e4ca9": {
+        "symbol": "PAID",
+        "mainnetEquivalent": "0x1614f18fc94f47967a3fbe5ffcd46d4e7da3d787"
       }
     },
     "rpc": [
@@ -404,7 +408,7 @@
         "symbol": "BNB",
         "mainnetEquivalent": "0xB8c77482e45F1F44dE1745F52C74426C631bDD52"
       },
-      "0xc825e75837a3f10e6cc7bda1b85eaac572ac3b8d": {
+      "0x532197ec38756b9956190b845d99b4b0a88e4ca9": {
         "symbol": "PAID",
         "mainnetEquivalent": "0x1614f18fc94f47967a3fbe5ffcd46d4e7da3d787"
       },
