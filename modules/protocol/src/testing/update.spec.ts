@@ -555,7 +555,10 @@ describe("generateAndApplyUpdate", () => {
         signer.publicIdentifier === aliceSigner.publicIdentifier
           ? bobSigner.publicIdentifier
           : aliceSigner.publicIdentifier,
-      nonce: (previousState?.nonce ?? 0) + 1,
+      nonce: vectorUtils.getNextNonceForUpdate(
+        previousState?.nonce ?? 0,
+        !!previousState ? previousState.aliceIdentifier === signer.publicIdentifier : true,
+      ),
     };
   };
 

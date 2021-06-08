@@ -1,26 +1,34 @@
+import * as merkle from "@connext/vector-merkle-tree";
 import { CoreTransferState } from "@connext/vector-types";
-import { HashZero } from "@ethersproject/constants";
 import { keccak256 } from "ethereumjs-util";
 import { MerkleTree } from "merkletreejs";
 
-import { hashCoreTransferState } from "./transfers";
+import { encodeCoreTransferState, hashCoreTransferState } from "./transfers";
 
-export const generateMerkleTreeData = (transfers: CoreTransferState[]): { root: string; tree: MerkleTree } => {
-  // Sort transfers alphabetically by id
-  const sorted = transfers.sort((a, b) => a.transferId.localeCompare(b.transferId));
-
+export const generateMerkleRoot = (transfers: CoreTransferState[]): string => {
   // Create leaves
-  const leaves = sorted.map((transfer) => {
-    return hashCoreTransferState(transfer);
-  });
+  const tree = new merkle.Tree();
 
-  // Generate tree
+  let root: string;
+  try {
+    transfers.forEach((transfer) => {
+      tree.insertHex(encodeCoreTransferState(transfer));
+    });
+    root = tree.root();
+  } finally {
+    tree.free();
+  }
+
+  return root;
+};
+
+// Get merkle proof of transfer
+// TODO: use merkle.Tree not MerkleTree
+export const getMerkleProof = (active: CoreTransferState[], toProve: string): string[] => {
+  // Sort transfers alphabetically by id
+  const sorted = active.slice(0).sort((a, b) => a.transferId.localeCompare(b.transferId));
+
+  const leaves = sorted.map((transfer) => hashCoreTransferState(transfer));
   const tree = new MerkleTree(leaves, keccak256, { sortPairs: true });
-
-  // Return
-  const calculated = tree.getHexRoot();
-  return {
-    root: calculated === "0x" ? HashZero : calculated,
-    tree,
-  };
+  return tree.getHexProof(hashCoreTransferState(active.find((t) => t.transferId === toProve)!));
 };

@@ -134,7 +134,9 @@ export const concurrencyTest = async (): Promise<void> => {
     const resolved = completed.filter((x) => !!x) as TransferCompletedPayload[];
     const cancelled = resolved.filter((c) => c.cancelled);
     loopStats = {
-      cancellationReasons: cancelled.map((c) => c.cancellationReason),
+      cancellationReasons: cancelled.map((c) => {
+        return { id: c.transferId, reason: c.cancellationReason };
+      }),
       cancelled: cancelled.length,
       resolved: resolved.length,
       concurrency,

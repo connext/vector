@@ -23,7 +23,7 @@ const provider = new providers.JsonRpcProvider(env.chainProviders[chainId]);
 const wallet = Wallet.fromMnemonic(env.sugarDaddy).connect(provider);
 const transferAmount = "1"; //utils.parseEther("0.00001").toString();
 const agentBalance = utils.parseEther("0.0005").toString();
-const routerBalance = utils.parseEther("0.15");
+const routerBalance = utils.parseEther("0.3");
 
 const walletQueue = new PriorityQueue({ concurrency: 1 });
 
@@ -467,7 +467,7 @@ export class AgentManager {
             logger.info({ transferId, channelAddress, agent: agent.publicIdentifier, routingId }, "Resolved transfer");
           } catch (e) {
             logger.error(
-              { transferId, channelAddress, agent: agent.publicIdentifier, error: e.message },
+              { transferId, channelAddress, agent: agent.publicIdentifier, error: e },
               "Failed to resolve transfer",
             );
             process.exit(1);
@@ -508,7 +508,8 @@ export class AgentManager {
           this.transferInfo[routingId].end = Date.now();
 
           // If it was cancelled, mark as failure
-          if (Object.values(data.transfer.transferResolver)[0] === constants.HashZero) {
+          const cancelled = Object.values(data.transfer.transferResolver)[0] === constants.HashZero;
+          if (cancelled) {
             logger.warn(
               {
                 transferId: transfer.transferId,
@@ -530,7 +531,7 @@ export class AgentManager {
           }
 
           // Only create a new transfer IFF you resolved it
-          if (agent.signerAddress === transfer.initiator) {
+          if (agent.signerAddress === transfer.initiator && !cancelled) {
             logger.debug(
               {
                 transfer: transfer.transferId,
@@ -675,7 +676,7 @@ export class AgentManager {
     const errored = Object.entries(this.transferInfo)
       .map(([routingId, transfer]) => {
         if (transfer.error) {
-          return transfer.error;
+          return { ...transfer, routingId };
         }
         return undefined;
       })
@@ -690,6 +691,9 @@ export class AgentManager {
         created: Object.entries(this.transferInfo).length,
         completed: times.length,
         cancelled: errored.length,
+        cancellationReasons: errored.map((c) => {
+          return { routingId: c!.routingId, reason: c!.error };
+        }),
       },
       "Transfer summary",
     );

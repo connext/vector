@@ -15,6 +15,7 @@ import {
   WithdrawalQuoteSchema,
   TransferQuoteSchema,
 } from "./basic";
+import { ProtocolParams } from "./protocol";
 
 ////////////////////////////////////////
 // Engine API Parameter schemas
@@ -239,11 +240,11 @@ const SignUtilityMessageParamsSchema = Type.Object({
 // Ping-pong
 const SendIsAliveParamsSchema = Type.Object({ channelAddress: TAddress, skipCheckIn: Type.Boolean() });
 
-// Restore channel from counterparty
-const RestoreStateParamsSchema = Type.Object({
-  counterpartyIdentifier: TPublicIdentifier,
-  chainId: TChainId,
-});
+// // Restore channel from counterparty
+// const RestoreStateParamsSchema = Type.Object({
+//   counterpartyIdentifier: TPublicIdentifier,
+//   chainId: TChainId,
+// });
 
 // Rpc request schema
 const RpcRequestEngineParamsSchema = Type.Object({
@@ -310,8 +311,8 @@ export namespace EngineParams {
   export const SetupSchema = SetupEngineParamsSchema;
   export type Setup = Static<typeof SetupEngineParamsSchema>;
 
-  export const RestoreStateSchema = RestoreStateParamsSchema;
-  export type RestoreState = Static<typeof RestoreStateParamsSchema>;
+  export const RestoreStateSchema = ProtocolParams.RestoreSchema;
+  export type RestoreState = ProtocolParams.Restore;
 
   export const DepositSchema = DepositEngineParamsSchema;
   export type Deposit = Static<typeof DepositEngineParamsSchema>;

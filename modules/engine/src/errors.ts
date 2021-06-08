@@ -46,36 +46,6 @@ export class CheckInError extends EngineError {
   }
 }
 
-export class RestoreError extends EngineError {
-  static readonly type = "RestoreError";
-
-  static readonly reasons = {
-    AckFailed: "Could not send restore ack",
-    AcquireLockError: "Failed to acquire restore lock",
-    ChannelNotFound: "Channel not found",
-    CouldNotGetActiveTransfers: "Failed to retrieve active transfers from store",
-    CouldNotGetChannel: "Failed to retrieve channel from store",
-    GetChannelAddressFailed: "Failed to calculate channel address for verification",
-    InvalidChannelAddress: "Failed to verify channel address",
-    InvalidMerkleRoot: "Failed to validate merkleRoot for restoration",
-    InvalidSignatures: "Failed to validate sigs on latestUpdate",
-    NoData: "No data sent from counterparty to restore",
-    ReceivedError: "Got restore error from counterparty",
-    ReleaseLockError: "Failed to release restore lock",
-    SaveChannelFailed: "Failed to save channel state",
-    SyncableState: "Cannot restore, state is syncable. Try reconcileDeposit",
-  } as const;
-
-  constructor(
-    public readonly message: Values<typeof RestoreError.reasons>,
-    channelAddress: string,
-    publicIdentifier: string,
-    context: any = {},
-  ) {
-    super(message, channelAddress, publicIdentifier, context, RestoreError.type);
-  }
-}
-
 export class IsAliveError extends EngineError {
   static readonly type = "IsAliveError";
 
