@@ -608,8 +608,8 @@ export class BrowserNode implements INodeService {
   ): Promise<Result<NodeResponses.RunAuction, BrowserNodeError>> {
     const rpc = constructRpcRequest(ChannelRpcMethods.chan_runAuction, params);
     try {
-      const { routerPublicIdentifier, swapRate, totalFee } = await this.send(rpc);
-      return Result.ok({ routerPublicIdentifier, swapRate, totalFee });
+      const { routerPublicIdentifier, swapRate, totalFee, quote } = await this.send(rpc);
+      return Result.ok({ routerPublicIdentifier, swapRate, totalFee, quote });
     } catch (e) {
       return Result.fail(e);
     }
