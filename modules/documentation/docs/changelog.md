@@ -4,6 +4,7 @@
 
 - \[contracts\] Add internal nonce tracking `ethService`
 - \[contracts\] Add per-chain queues
+- \[contracts\] Add a flag for nonce expired in chain service
 
 ## 0.2.5-beta.18
 
