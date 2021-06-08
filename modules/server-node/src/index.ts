@@ -874,11 +874,11 @@ server.post<{ Body: NodeParams.RunAuction }>(
     }
     const rpc = constructRpcRequest(ChannelRpcMethods.chan_runAuction, request.body);
     try {
-      const { routerPublicIdentifier, swapRate, totalFee } = await engine.request<
+      const { routerPublicIdentifier, swapRate, totalFee, quote } = await engine.request<
         typeof ChannelRpcMethods.chan_runAuction
       >(rpc);
 
-      return reply.status(200).send({ routerPublicIdentifier, swapRate, totalFee } as NodeResponses.RunAuction);
+      return reply.status(200).send({ routerPublicIdentifier, swapRate, totalFee, quote } as NodeResponses.RunAuction);
     } catch (e) {
       logger.error({ error: jsonifyError(e) });
       return reply.status(500).send(jsonifyError(e));
