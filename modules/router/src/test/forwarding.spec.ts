@@ -388,6 +388,30 @@ describe(testName, () => {
       await verifySuccessfulResult(result, mocked, 1);
     });
 
+    it("successfully forwards a transfer and creates a receiver channel", async () => {
+      const ctx = generateDefaultTestContext();
+      ctx.receiverChannel.networkContext.chainId = 1338;
+      ctx.senderTransfer.meta.path[0].recipientChainId = realConfig.allowedSwaps[0].toChainId;
+      ctx.senderTransfer.meta.path[0].recipientAssetId = realConfig.allowedSwaps[0].toAssetId;
+      const mocked = prepEnv({ ...ctx });
+
+      node.getStateChannelByParticipants.onFirstCall().resolves(Result.ok(undefined));
+      node.setup.resolves(Result.ok({ channelAddress: mkAddress() }));
+
+      const result = await forwarding.forwardTransferCreation(
+        mocked.event,
+        routerPublicIdentifier,
+        signerAddress,
+        node as INodeService,
+        store,
+        testLog,
+        chainReader as IVectorChainReader,
+      );
+
+      expect(node.setup.callCount).to.eq(1);
+      await verifySuccessfulResult(result, mocked, 1);
+    });
+
     it.skip("fails but queues transfers if receiver offline and allowable offline", async () => {});
 
     // Uncancellable failures
@@ -573,9 +597,14 @@ describe(testName, () => {
       });
     });
 
-    it("fails with cancellation if no state channel available for receiver", async () => {
+    it("fails with cancellation if no state channel available for receiver and creation fails", async () => {
       const ctx = prepEnv();
       node.getStateChannelByParticipants.onFirstCall().resolves(Result.ok(undefined));
+      node.setup.resolves(
+        Result.fail(
+          new ServerNodeServiceError(ServerNodeServiceError.reasons.InvalidParams, mkPublicIdentifier(), "", {}),
+        ),
+      );
 
       const result = await forwarding.forwardTransferCreation(
         ctx.event,
@@ -588,8 +617,8 @@ describe(testName, () => {
       );
 
       await verifyErrorResult(result, ctx, ForwardTransferCreationError.reasons.RecipientChannelNotFound, {
-        participants: [routerPublicIdentifier, ctx.receiverChannel.bobIdentifier],
-        chainId: ctx.receiverChannel.networkContext.chainId,
+        recipientChainId: ctx.receiverChannel.networkContext.chainId,
+        recipientIdentifier: ctx.receiverChannel.bobIdentifier,
       });
     });
 
