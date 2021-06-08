@@ -584,6 +584,7 @@ const PostRunAuctionResponseSchema = {
     routerPublicIdentifier: TPublicIdentifier,
     swapRate: TIntegerString,
     totalFee: TIntegerString,
+    quote: TransferQuoteSchema,
   }),
 };
 
