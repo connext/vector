@@ -81,7 +81,7 @@ describe("messaging.ts", () => {
         chainId: 123,
         expiry: "1234",
         fee: "1",
-        recipientAssetId: mkAddress,
+        recipientAssetId: mkAddress(),
         recipientChainId: 321,
         routerIdentifier: mkPublicIdentifier(),
         signature: mkSig(),
