@@ -48,6 +48,7 @@ describe("ethReader", () => {
 
     const _provider = createStubInstance(JsonRpcProvider);
     _provider.getTransaction.resolves(_txResponse);
+    _provider.getBlockNumber.resolves(10);
     provider1337 = _provider;
     provider1338 = _provider;
 

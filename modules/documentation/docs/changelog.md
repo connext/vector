@@ -2,6 +2,8 @@
 
 ## Next Release
 
+- \[contracts\] Use confirmed block for ethReader
+
 ## 0.3.0-beta.1
 
 - \[contracts\] Add internal nonce tracking `ethService`
@@ -11,6 +13,7 @@
 - \[protocol\] Add protocol versioning
 - \[messaging\] Remove lock messages
 - \[server-node\] Remove `LockService`
+
 
 ## 0.2.5-beta.18
 
