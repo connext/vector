@@ -31,8 +31,9 @@ export const DEFAULT_FEE_EXPIRY = 300_000;
 
 // number of confirmations for non-mainnet chains
 export const NUM_CONFIRMATIONS = 10;
+export const TEST_CHAIN_IDS = [1337, 1338, 1340, 1341, 1342];
+export const CHAINS_WITH_ONE_CONFIRMATION = [1, ...TEST_CHAIN_IDS];
 // TODO: need to stop using random chainIds in our testing, these could eventually be real chains...
-export const CHAINS_WITH_ONE_CONFIRMATION = [1, 1337, 1338, 1340, 1341, 1342];
 export const getConfirmationsForChain = (chainId: number): number => {
   return CHAINS_WITH_ONE_CONFIRMATION.includes(chainId) ? 1 : NUM_CONFIRMATIONS;
 };
