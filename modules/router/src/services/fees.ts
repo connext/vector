@@ -378,8 +378,6 @@ export const calculateEstimatedGasFee = async (
   // (2) IFF current balance + transfer amount < collateralThreshold, collateralize
   // (3) IFF channel has not been deployed, deploy
   const fromProfile = rebalanceFromProfile.getValue();
-  console.log("fromProfile: ", fromProfile);
-  console.log("amountToSend: ", amountToSend);
   if (!fromChannel) {
     // if no fromChannel, assume all actions take place
     if (amountToSend.gt(fromProfile.reclaimThreshold)) {
