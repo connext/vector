@@ -360,6 +360,12 @@ export const calculateEstimatedGasFee = async (
   );
 
   let fromChannelFee = Zero; // start with no actions
+
+  // the sender channel will have the following possible actions:
+  // (1) IFF current balance + transfer amount > reclaimThreshold, reclaim
+  // (2) IFF current balance + transfer amount < collateralThreshold, collateralize
+  // (3) IFF channel has not been deployed, deploy
+
   // Get the rebalance profile
   const rebalanceFromProfile = getRebalanceProfile(fromChainId, fromAssetId);
   if (rebalanceFromProfile.isError) {
@@ -372,11 +378,6 @@ export const calculateEstimatedGasFee = async (
       }),
     );
   }
-
-  // the sender channel will have the following possible actions:
-  // (1) IFF current balance + transfer amount > reclaimThreshold, reclaim
-  // (2) IFF current balance + transfer amount < collateralThreshold, collateralize
-  // (3) IFF channel has not been deployed, deploy
   const fromProfile = rebalanceFromProfile.getValue();
   if (!fromChannel) {
     // if no fromChannel, assume all actions take place
@@ -447,6 +448,23 @@ export const calculateEstimatedGasFee = async (
   //     not need to be created for a deposit to be recognized offchain)
   // (5) participant == bob && contract deployed: depositBob
 
+  // reclaimation cases:
+  // (1) channel balance > reclaimThreshold after transfer: withdraw
+
+  // Get the rebalance profile
+  const rebalanceToProfile = getRebalanceProfile(toChainId, toAssetId);
+  if (rebalanceToProfile.isError) {
+    return Result.fail(
+      new FeeError(FeeError.reasons.ConfigError, {
+        message: "Failed to get rebalance profile",
+        assetId: toAssetId,
+        chainId: toChainId,
+        error: jsonifyError(rebalanceToProfile.getError()!),
+      }),
+    );
+  }
+  const toProfile = rebalanceToProfile.getValue();
+
   if (!toChannel) {
     // if no channel exists, we need to account for the full channel deployment always
     // NOTE: same assumption as above for alice
@@ -477,6 +495,7 @@ export const calculateEstimatedGasFee = async (
         }),
       );
     }
+
     if (BigNumber.from(routerBalance).gte(converted.getValue())) {
       // channel has balance, no extra gas required to facilitate transfer
       logger.info(
@@ -490,7 +509,12 @@ export const calculateEstimatedGasFee = async (
         },
         "Method complete",
       );
-      return Result.ok([fromChannelFee, Zero]);
+      // check for reclaim, reclaim if end balance after in-channel transger
+      let toChannelFee = GAS_ESTIMATES.depositBob;
+      if (BigNumber.from(routerBalance).sub(converted.getValue()).gt(toProfile.reclaimThreshold)) {
+        toChannelFee = toChannelFee.add(GAS_ESTIMATES.withdraw);
+      }
+      return Result.ok([fromChannelFee, toChannelFee]);
     }
     logger.info(
       {
@@ -513,6 +537,7 @@ export const calculateEstimatedGasFee = async (
         },
         "Method complete",
       );
+
       return Result.ok([fromChannelFee, GAS_ESTIMATES.depositBob]);
     }
 
