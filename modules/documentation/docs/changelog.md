@@ -2,7 +2,7 @@
 
 ## Next Release
 
-## 0.3.0-beta.0
+## 0.3.0-beta.1
 
 - \[contracts\] Add internal nonce tracking `ethService`
 - \[contracts\] Add per-chain queues
