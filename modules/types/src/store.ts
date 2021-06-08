@@ -1,7 +1,7 @@
 import { TransactionReceipt, TransactionResponse } from "@ethersproject/abstract-provider";
 
 import { WithdrawCommitmentJson } from "./transferDefinitions/withdraw";
-import { FullTransferState, FullChannelState } from "./channel";
+import { FullTransferState, FullChannelState, ChannelUpdate } from "./channel";
 import { Address } from "./basic";
 import { ChannelDispute, TransferDispute } from "./dispute";
 import { GetTransfersFilterOpts } from "./schemas/engine";
@@ -28,9 +28,12 @@ export interface IVectorStore {
   getActiveTransfers(channelAddress: string): Promise<FullTransferState[]>;
   getTransferState(transferId: string): Promise<FullTransferState | undefined>;
   getTransfers(filterOpts?: GetTransfersFilterOpts): Promise<FullTransferState[]>;
+  getUpdateById(id: string): Promise<ChannelUpdate | undefined>;
 
   // Setters
   saveChannelState(channelState: FullChannelState, transfer?: FullTransferState): Promise<void>;
+  // Used for restore
+  saveChannelStateAndTransfers(channelState: FullChannelState, activeTransfers: FullTransferState[]): Promise<void>;
 
   /**
    * Saves information about a channel dispute from the onchain record
@@ -174,8 +177,6 @@ export interface IEngineStore extends IVectorStore, IChainServiceStore {
 
   // Setters
   saveWithdrawalCommitment(transferId: string, withdrawCommitment: WithdrawCommitmentJson): Promise<void>;
-  // Used for restore
-  saveChannelStateAndTransfers(channelState: FullChannelState, activeTransfers: FullTransferState[]): Promise<void>;
 }
 
 export interface IServerNodeStore extends IEngineStore {

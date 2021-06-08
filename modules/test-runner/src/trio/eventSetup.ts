@@ -20,7 +20,7 @@ import { env } from "../utils";
 const serverBase = `http://${env.testerName}:${env.port}`;
 const conditionalTransferCreatedPath = "/conditional-transfer-created";
 const conditionalTransferResolvedPath = "/conditional-transfer-resolved";
-const conditionalTransferForwardedPath = "/conditional-transfer-forwarded";
+const conditionalTransferForwardedPath = "/conditional-transfer-routing-complete";
 const depositReconciledPath = "/deposit-reconciled";
 const withdrawalCreatedPath = "/withdrawal-created";
 const withdrawalResolvedPath = "/withdrawal-resolved";

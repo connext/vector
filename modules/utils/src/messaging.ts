@@ -3,7 +3,6 @@ import {
   ChannelUpdate,
   IMessagingService,
   NodeError,
-  LockInformation,
   Result,
   EngineParams,
   FullChannelState,
@@ -343,13 +342,14 @@ export class NatsMessagingService extends NatsBasicMessagingService implements I
 
   // PROTOCOL METHODS
   async sendProtocolMessage(
+    protocolVersion: string,
     channelUpdate: ChannelUpdate<any>,
     previousUpdate?: ChannelUpdate<any>,
-    timeout = 30_000,
+    timeout = 60_000,
     numRetries = 0,
   ): Promise<Result<{ update: ChannelUpdate<any>; previousUpdate: ChannelUpdate<any> }, ProtocolError>> {
     return this.sendMessageWithRetries(
-      Result.ok({ update: channelUpdate, previousUpdate }),
+      Result.ok({ update: channelUpdate, previousUpdate, protocolVersion }),
       "protocol",
       channelUpdate.toIdentifier,
       channelUpdate.fromIdentifier,
@@ -362,7 +362,10 @@ export class NatsMessagingService extends NatsBasicMessagingService implements I
   async onReceiveProtocolMessage(
     myPublicIdentifier: string,
     callback: (
-      result: Result<{ update: ChannelUpdate<any>; previousUpdate: ChannelUpdate<any> }, ProtocolError>,
+      result: Result<
+        { update: ChannelUpdate<any>; previousUpdate: ChannelUpdate<any>; protocolVersion: string },
+        ProtocolError
+      >,
       from: string,
       inbox: string,
     ) => void,
@@ -372,12 +375,13 @@ export class NatsMessagingService extends NatsBasicMessagingService implements I
 
   async respondToProtocolMessage(
     inbox: string,
+    protocolVersion: string,
     channelUpdate: ChannelUpdate<any>,
     previousUpdate?: ChannelUpdate<any>,
   ): Promise<void> {
     return this.respondToMessage(
       inbox,
-      Result.ok({ update: channelUpdate, previousUpdate }),
+      Result.ok({ update: channelUpdate, previousUpdate, protocolVersion }),
       "respondToProtocolMessage",
     );
   }
@@ -387,14 +391,30 @@ export class NatsMessagingService extends NatsBasicMessagingService implements I
   }
   ////////////
 
+  // LOCK MESSAGE
+  // TODO: remove these!
+  async onReceiveLockMessage(
+    publicIdentifier: string,
+    callback: (lockInfo: Result<any, NodeError>, from: string, inbox: string) => void,
+  ): Promise<void> {
+    return this.registerCallback(`${publicIdentifier}.*.lock`, callback, "onReceiveLockMessage");
+  }
+
+  async respondToLockMessage(inbox: string, lockInformation: Result<any, NodeError>): Promise<void> {
+    return this.respondToMessage(inbox, lockInformation, "respondToLockMessage");
+  }
+
+  ////////////
+
   // RESTORE METHODS
   async sendRestoreStateMessage(
-    restoreData: Result<{ chainId: number } | { channelAddress: string }, EngineError>,
+    restoreData: Result<{ chainId: number }, EngineError>,
     to: string,
     from: string,
     timeout = 30_000,
     numRetries?: number,
   ): Promise<Result<{ channel: FullChannelState; activeTransfers: FullTransferState[] } | void, EngineError>> {
+    this.logger.warn({ to, from, data: restoreData.toJson() }, "Sending restore message");
     return this.sendMessageWithRetries(
       restoreData,
       "restore",
@@ -408,19 +428,18 @@ export class NatsMessagingService extends NatsBasicMessagingService implements I
 
   async onReceiveRestoreStateMessage(
     publicIdentifier: string,
-    callback: (
-      restoreData: Result<{ chainId: number } | { channelAddress: string }, EngineError>,
-      from: string,
-      inbox: string,
-    ) => void,
+    callback: (restoreData: Result<{ chainId: number }, EngineError>, from: string, inbox: string) => void,
   ): Promise<void> {
-    await this.registerCallback(`${publicIdentifier}.*.restore`, callback, "onReceiveRestoreStateMessage");
+    const subject = `${publicIdentifier}.*.restore`;
+    this.logger.warn({ subject }, "Registered restore state callback");
+    await this.registerCallback(subject, callback, "onReceiveRestoreStateMessage");
   }
 
   async respondToRestoreStateMessage(
     inbox: string,
     restoreData: Result<{ channel: FullChannelState; activeTransfers: FullTransferState[] } | void, EngineError>,
   ): Promise<void> {
+    this.logger.warn({ inbox, data: restoreData.toJson() }, "Sending restore state response");
     return this.respondToMessage(inbox, restoreData, "respondToRestoreStateMessage");
   }
   ////////////
@@ -488,29 +507,6 @@ export class NatsMessagingService extends NatsBasicMessagingService implements I
     params: Result<{ message?: string }, VectorError>,
   ): Promise<void> {
     return this.respondToMessage(inbox, params, "respondToRequestCollateralMessage");
-  }
-  ////////////
-
-  // LOCK METHODS
-  async sendLockMessage(
-    lockInfo: Result<LockInformation, NodeError>,
-    to: string,
-    from: string,
-    timeout = 30_000, // TODO this timeout is copied from memolock
-    numRetries = 0,
-  ): Promise<Result<LockInformation, NodeError>> {
-    return this.sendMessageWithRetries(lockInfo, "lock", to, from, timeout, numRetries, "sendLockMessage");
-  }
-
-  async onReceiveLockMessage(
-    publicIdentifier: string,
-    callback: (lockInfo: Result<LockInformation, NodeError>, from: string, inbox: string) => void,
-  ): Promise<void> {
-    return this.registerCallback(`${publicIdentifier}.*.lock`, callback, "onReceiveLockMessage");
-  }
-
-  async respondToLockMessage(inbox: string, lockInformation: Result<LockInformation, NodeError>): Promise<void> {
-    return this.respondToMessage(inbox, lockInformation, "respondToLockMessage");
   }
   ////////////
 

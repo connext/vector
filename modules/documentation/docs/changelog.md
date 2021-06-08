@@ -2,6 +2,21 @@
 
 ## Next Release
 
+## 0.3.0-beta.2
+
+- \[contracts\] Use confirmed block for ethReader
+
+## 0.3.0-beta.1
+
+- \[contracts\] Add internal nonce tracking `ethService`
+- \[contracts\] Add per-chain queues
+- \[contracts\] Add a flag for nonce expired in chain service
+- \[protocol\] Remove channel lock
+- \[protocol\] Add protocol versioning
+- \[messaging\] Remove lock messages
+- \[server-node\] Remove `LockService`
+
+
 ## 0.2.5-beta.18
 
 - \[node\] Save transaction hash to commitment properly

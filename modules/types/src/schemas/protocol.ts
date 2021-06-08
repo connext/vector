@@ -5,6 +5,7 @@ import {
   TBalance,
   TBasicMeta,
   TBytes32,
+  TChainId,
   TIntegerString,
   TNetworkContext,
   TPublicIdentifier,
@@ -52,6 +53,12 @@ const ResolveProtocolParamsSchema = Type.Object({
   meta: Type.Optional(TBasicMeta),
 });
 
+// Restore
+const RestoreProtocolParamsSchema = Type.Object({
+  counterpartyIdentifier: TPublicIdentifier,
+  chainId: TChainId,
+});
+
 // Namespace export
 // eslint-disable-next-line @typescript-eslint/no-namespace
 export namespace ProtocolParams {
@@ -63,4 +70,6 @@ export namespace ProtocolParams {
   export type Create = Static<typeof CreateProtocolParamsSchema>;
   export const ResolveSchema = ResolveProtocolParamsSchema;
   export type Resolve = Static<typeof ResolveProtocolParamsSchema>;
+  export const RestoreSchema = RestoreProtocolParamsSchema;
+  export type Restore = Static<typeof RestoreProtocolParamsSchema>;
 }

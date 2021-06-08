@@ -1,4 +1,3 @@
-import { BrowserNode, NonEIP712Message } from "@connext/vector-browser-node";
 import {
   ChainAddresses,
   ChannelRpcMethod,
@@ -6,7 +5,6 @@ import {
   EngineParams,
   jsonifyError,
 } from "@connext/vector-types";
-import { ChannelSigner, constructRpcRequest, safeJsonParse } from "@connext/vector-utils";
 import { entropyToMnemonic } from "@ethersproject/hdnode";
 import { keccak256 } from "@ethersproject/keccak256";
 import { toUtf8Bytes } from "@ethersproject/strings";
@@ -20,9 +18,12 @@ import { config } from "./config";
 
 export default class ConnextManager {
   private parentOrigin: string;
-  private browserNode: BrowserNode | undefined;
+  private browserNode: any | undefined;
 
-  constructor() {
+  private utilsPkg: any;
+  private browserPkg: any;
+
+  constructor(browserPkg: any, utilsPkg: any) {
     this.parentOrigin = new URL(document.referrer).origin;
     window.addEventListener("message", (e) => this.handleIncomingMessage(e), true);
     if (document.readyState === "loading") {
@@ -32,6 +33,9 @@ export default class ConnextManager {
     } else {
       window.parent.postMessage("event:iframe-initialized", this.parentOrigin);
     }
+
+    this.utilsPkg = utilsPkg;
+    this.browserPkg = browserPkg;
   }
 
   private async initNode(
@@ -42,7 +46,7 @@ export default class ConnextManager {
     messagingUrl?: string,
     natsUrl?: string,
     authUrl?: string,
-  ): Promise<BrowserNode> {
+  ): Promise<any> {
     console.log(`initNode params: `, {
       chainProviders,
       chainAddresses,
@@ -57,7 +61,7 @@ export default class ConnextManager {
       throw new Error("localStorage not available in this window, please enable cross-site cookies and try again.");
     }
 
-    const recovered = verifyMessage(NonEIP712Message, signature);
+    const recovered = verifyMessage(this.browserPkg.NonEIP712Message, signature);
     if (getAddress(recovered) !== getAddress(signerAddress)) {
       throw new Error(
         `Signature not properly recovered. expected ${signerAddress}, got ${recovered}, signature: ${signature}`,
@@ -84,9 +88,9 @@ export default class ConnextManager {
     // since the signature depends on the private key stored by Magic/Metamask, this is not forgeable by an adversary
     const mnemonic = entropyToMnemonic(keccak256(signature));
     const privateKey = Wallet.fromMnemonic(mnemonic).privateKey;
-    const signer = new ChannelSigner(privateKey);
+    const signer = new this.utilsPkg.ChannelSigner(privateKey);
 
-    this.browserNode = await BrowserNode.connect({
+    this.browserNode = await this.browserPkg.BrowserNode.connect({
       signer,
       chainAddresses: chainAddresses ?? config.chainAddresses,
       chainProviders,
@@ -96,12 +100,13 @@ export default class ConnextManager {
       natsUrl: _natsUrl,
     });
     localStorage.setItem("publicIdentifier", signer.publicIdentifier);
+
     return this.browserNode;
   }
 
   private async handleIncomingMessage(e: MessageEvent) {
     if (e.origin !== this.parentOrigin) return;
-    const request = safeJsonParse(e.data);
+    const request = this.utilsPkg.safeJsonParse(e.data);
     let response: any;
     try {
       const result = await this.handleRequest(request);
@@ -137,7 +142,7 @@ export default class ConnextManager {
         if (!signerAddress) {
           throw new Error("No account available");
         }
-        signature = await signer.signMessage(NonEIP712Message);
+        signature = await signer.signMessage(this.browserPkg.NonEIP712Message);
       }
 
       if (!signature) {
@@ -166,7 +171,7 @@ export default class ConnextManager {
     if (request.method === "chan_subscribe") {
       const subscription = keccak256(toUtf8Bytes(`${request.id}`));
       const listener = (data: any) => {
-        const payload = constructRpcRequest<"chan_subscription">("chan_subscription", {
+        const payload = this.utilsPkg.constructRpcRequest("chan_subscription", {
           subscription,
           data,
         });
