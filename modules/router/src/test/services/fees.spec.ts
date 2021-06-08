@@ -69,7 +69,7 @@ describe(testName, () => {
     let normalizedGasFeesStub: Sinon.SinonStub;
 
     let fees: { flatFee: string; percentageFee: number; gasSubsidyPercentage: number };
-    let gasFees: { [channelAddress: string]: BigNumber };
+    let gasFees: [fromFee: BigNumber, toFee: BigNumber];
 
     beforeEach(() => {
       // default values
@@ -94,10 +94,7 @@ describe(testName, () => {
         flatFee: "300",
         gasSubsidyPercentage: 0,
       };
-      gasFees = {
-        [fromChannel.channelAddress]: BigNumber.from(50),
-        [toChannel.channelAddress]: BigNumber.from(25),
-      };
+      gasFees = [BigNumber.from(50), BigNumber.from(25)];
 
       // default stubs
       onSwapGivenInStub.resolves(Result.ok({ priceImpact: "0", amountOut: transferAmount }));
@@ -108,9 +105,9 @@ describe(testName, () => {
       // by default, these functions should only return gas fee values
       // i.e. they do nothing
       normalizedGasFeesStub = Sinon.stub(utils, "normalizeGasFees");
-      normalizedGasFeesStub.onFirstCall().resolves(Result.ok(gasFees[fromChannel.channelAddress]));
-      normalizedGasFeesStub.onSecondCall().resolves(Result.ok(gasFees[toChannel.channelAddress]));
-      getSwappedAmountStub.resolves(Result.ok(gasFees[toChannel.channelAddress]));
+      normalizedGasFeesStub.onFirstCall().resolves(Result.ok(gasFees[0]));
+      normalizedGasFeesStub.onSecondCall().resolves(Result.ok(gasFees[1]));
+      getSwappedAmountStub.resolves(Result.ok(gasFees[1]));
     });
 
     it("should work with only static fees", async () => {
@@ -120,12 +117,14 @@ describe(testName, () => {
         transferAmount,
         false,
         fromAssetId,
-        fromChannel,
+        fromChannel.networkContext.chainId,
         toAssetId,
-        toChannel,
+        toChannel.networkContext.chainId,
         ethReader as IVectorChainReader,
         routerIdentifier,
         log,
+        fromChannel,
+        toChannel,
       );
       expect(result.isError).to.be.false;
       const { fee, amount } = result.getValue();
@@ -141,12 +140,14 @@ describe(testName, () => {
         transferAmount,
         true,
         fromAssetId,
-        fromChannel,
+        fromChannel.networkContext.chainId,
         toAssetId,
-        toChannel,
+        toChannel.networkContext.chainId,
         ethReader as IVectorChainReader,
         routerIdentifier,
         log,
+        fromChannel,
+        toChannel,
       );
       expect(result.isError).to.be.false;
       const { fee, amount } = result.getValue();
@@ -162,12 +163,14 @@ describe(testName, () => {
         transferAmount,
         true,
         fromAssetId,
-        fromChannel,
+        fromChannel.networkContext.chainId,
         toAssetId,
-        toChannel,
+        toChannel.networkContext.chainId,
         ethReader as IVectorChainReader,
         routerIdentifier,
         log,
+        fromChannel,
+        toChannel,
       );
       expect(result.isError).to.be.false;
       const { fee, amount } = result.getValue();
@@ -186,12 +189,14 @@ describe(testName, () => {
         _transferAmount,
         false,
         fromAssetId,
-        fromChannel,
+        fromChannel.networkContext.chainId,
         toAssetId,
-        toChannel,
+        toChannel.networkContext.chainId,
         ethReader as IVectorChainReader,
         routerIdentifier,
         log,
+        fromChannel,
+        toChannel,
       );
       expect(result.isError).to.be.false;
       const { fee, amount } = result.getValue();
@@ -211,12 +216,14 @@ describe(testName, () => {
         transferAmount,
         true,
         fromAssetId,
-        fromChannel,
+        fromChannel.networkContext.chainId,
         toAssetId,
-        toChannel,
+        toChannel.networkContext.chainId,
         ethReader as IVectorChainReader,
         routerIdentifier,
         log,
+        fromChannel,
+        toChannel,
       );
       expect(result.isError).to.be.false;
       const { fee, amount } = result.getValue();
@@ -236,12 +243,14 @@ describe(testName, () => {
         transferAmount,
         false,
         fromAssetId,
-        fromChannel,
+        fromChannel.networkContext.chainId,
         toAssetId,
-        toChannel,
+        toChannel.networkContext.chainId,
         ethReader as IVectorChainReader,
         routerIdentifier,
         log,
+        fromChannel,
+        toChannel,
       );
       expect(result.isError).to.be.false;
       const { fee, amount } = result.getValue();
@@ -260,16 +269,18 @@ describe(testName, () => {
         transferAmount,
         false,
         fromAssetId,
-        fromChannel,
+        fromChannel.networkContext.chainId,
         toAssetId,
-        toChannel,
+        toChannel.networkContext.chainId,
         ethReader as IVectorChainReader,
         routerIdentifier,
         log,
+        fromChannel,
+        toChannel,
       );
       expect(result.isError).to.be.false;
       const percentage = 100 - fees.gasSubsidyPercentage;
-      const dynamicFees = gasFees[fromChannel.channelAddress].toNumber() * (percentage / 100);
+      const dynamicFees = gasFees[0].toNumber() * (percentage / 100);
       const { fee, amount } = result.getValue();
       expect(fee).to.be.eq(BigNumber.from(dynamicFees));
       expect(amount).to.be.eq(transferAmount);
@@ -285,16 +296,18 @@ describe(testName, () => {
         transferAmount,
         false,
         fromAssetId,
-        fromChannel,
+        fromChannel.networkContext.chainId,
         toAssetId,
-        toChannel,
+        toChannel.networkContext.chainId,
         ethReader as IVectorChainReader,
         routerIdentifier,
         log,
+        fromChannel,
+        toChannel,
       );
       expect(result.isError).to.be.false;
       const percentage = 100 - fees.gasSubsidyPercentage;
-      const dynamicFees = gasFees[toChannel.channelAddress].toNumber() * (percentage / 100);
+      const dynamicFees = gasFees[1].toNumber() * (percentage / 100);
       const { fee, amount } = result.getValue();
       expect(fee).to.be.eq(BigNumber.from(dynamicFees));
       expect(amount).to.be.eq(transferAmount);
@@ -309,17 +322,18 @@ describe(testName, () => {
         transferAmount,
         false,
         fromAssetId,
-        fromChannel,
+        fromChannel.networkContext.chainId,
         toAssetId,
-        toChannel,
+        toChannel.networkContext.chainId,
         ethReader as IVectorChainReader,
         routerIdentifier,
         log,
+        fromChannel,
+        toChannel,
       );
       expect(result.isError).to.be.false;
       const percentage = 100 - fees.gasSubsidyPercentage;
-      const dynamicFees =
-        gasFees[toChannel.channelAddress].add(gasFees[fromChannel.channelAddress]).toNumber() * (percentage / 100);
+      const dynamicFees = gasFees[1].add(gasFees[0]).toNumber() * (percentage / 100);
       const { fee, amount } = result.getValue();
       expect(fee).to.be.eq(BigNumber.from(dynamicFees));
       expect(amount).to.be.eq(transferAmount);
@@ -330,19 +344,20 @@ describe(testName, () => {
         transferAmount,
         false,
         fromAssetId,
-        fromChannel,
+        fromChannel.networkContext.chainId,
         toAssetId,
-        toChannel,
+        toChannel.networkContext.chainId,
         ethReader as IVectorChainReader,
         routerIdentifier,
         log,
+        fromChannel,
+        toChannel,
       );
       expect(result.isError).to.be.false;
       const staticFees =
         BigNumber.from(fees.flatFee).toNumber() + (transferAmount.toNumber() * fees.percentageFee) / 100;
       const percentage = 100 - fees.gasSubsidyPercentage;
-      const dynamicFees =
-        gasFees[toChannel.channelAddress].add(gasFees[fromChannel.channelAddress]).toNumber() * (percentage / 100);
+      const dynamicFees = gasFees[1].add(gasFees[0]).toNumber() * (percentage / 100);
       const { fee, amount } = result.getValue();
       expect(fee).to.be.eq(BigNumber.from(staticFees + dynamicFees));
       expect(amount).to.be.eq(transferAmount);
@@ -354,17 +369,18 @@ describe(testName, () => {
         transferAmount,
         true,
         fromAssetId,
-        fromChannel,
+        fromChannel.networkContext.chainId,
         toAssetId,
-        toChannel,
+        toChannel.networkContext.chainId,
         ethReader as IVectorChainReader,
         routerIdentifier,
         log,
+        fromChannel,
+        toChannel,
       );
       expect(result.isError).to.be.false;
       const percentage = 100 - fees.gasSubsidyPercentage;
-      const dynamicFees =
-        gasFees[toChannel.channelAddress].add(gasFees[fromChannel.channelAddress]).toNumber() * (percentage / 100);
+      const dynamicFees = gasFees[1].add(gasFees[0]).toNumber() * (percentage / 100);
 
       const expectedFees = BigNumber.from(fees.flatFee).add(transferAmount.mul(11).div(100)).add(dynamicFees);
       const { fee, amount } = result.getValue();
@@ -379,12 +395,14 @@ describe(testName, () => {
         transferAmount,
         false,
         fromAssetId,
-        fromChannel,
+        fromChannel.networkContext.chainId,
         toAssetId,
-        toChannel,
+        toChannel.networkContext.chainId,
         ethReader as IVectorChainReader,
         routerIdentifier,
         log,
+        fromChannel,
+        toChannel,
       );
       expect(result.isError).to.be.true;
       expect(result.getError()?.message).to.be.eq(FeeError.reasons.ConfigError);
@@ -397,12 +415,14 @@ describe(testName, () => {
         transferAmount,
         false,
         fromAssetId,
-        fromChannel,
+        fromChannel.networkContext.chainId,
         toAssetId,
-        toChannel,
+        toChannel.networkContext.chainId,
         ethReader as IVectorChainReader,
         routerIdentifier,
         log,
+        fromChannel,
+        toChannel,
       );
       expect(result.isError).to.be.true;
       expect(result.getError()?.message).to.be.eq("fail");
@@ -414,12 +434,14 @@ describe(testName, () => {
         transferAmount,
         false,
         fromAssetId,
-        fromChannel,
+        fromChannel.networkContext.chainId,
         toAssetId,
-        toChannel,
+        toChannel.networkContext.chainId,
         ethReader as IVectorChainReader,
         routerIdentifier,
         log,
+        fromChannel,
+        toChannel,
       );
       expect(result.isError).to.be.true;
       expect(result.getError()?.message).to.be.eq(FeeError.reasons.ExchangeRateError);
@@ -432,12 +454,14 @@ describe(testName, () => {
         transferAmount,
         false,
         fromAssetId,
-        fromChannel,
+        fromChannel.networkContext.chainId,
         toAssetId,
-        toChannel,
+        toChannel.networkContext.chainId,
         ethReader as IVectorChainReader,
         routerIdentifier,
         log,
+        fromChannel,
+        toChannel,
       );
       expect(result.isError).to.be.true;
       expect(result.getError()?.message).to.be.eq(FeeError.reasons.ExchangeRateError);
@@ -488,13 +512,15 @@ describe(testName, () => {
       fromChannel.aliceIdentifier = vectorUtils.getRandomChannelSigner().publicIdentifier;
       const result = await feesService.calculateEstimatedGasFee(
         toSend,
-        toAssetId,
         fromAssetId,
-        fromChannel,
-        toChannel,
+        fromChannel.networkContext.chainId,
+        toAssetId,
+        toChannel.networkContext.chainId,
         ethReader as IVectorChainReader,
         routerIdentifier,
         log,
+        fromChannel,
+        toChannel,
       );
       expect(result.isError).to.be.true;
       expect(result.getError()?.message).to.be.eq(FeeError.reasons.ChannelError);
@@ -505,13 +531,15 @@ describe(testName, () => {
       ethReader.getCode.onFirstCall().resolves(Result.fail(new Error("fail")) as any);
       const result = await feesService.calculateEstimatedGasFee(
         toSend,
-        toAssetId,
         fromAssetId,
-        fromChannel,
-        toChannel,
+        fromChannel.networkContext.chainId,
+        toAssetId,
+        toChannel.networkContext.chainId,
         ethReader as IVectorChainReader,
         routerIdentifier,
         log,
+        fromChannel,
+        toChannel,
       );
       expect(result.isError).to.be.true;
       expect(result.getError()?.message).to.be.eq(FeeError.reasons.ChainError);
@@ -522,13 +550,15 @@ describe(testName, () => {
       getRebalanceProfileStub.returns(Result.fail(new Error("fail")));
       const result = await feesService.calculateEstimatedGasFee(
         toSend,
-        toAssetId,
         fromAssetId,
-        fromChannel,
-        toChannel,
+        fromChannel.networkContext.chainId,
+        toAssetId,
+        toChannel.networkContext.chainId,
         ethReader as IVectorChainReader,
         routerIdentifier,
         log,
+        fromChannel,
+        toChannel,
       );
       expect(result.isError).to.be.true;
       expect(result.getError()?.message).to.be.eq(FeeError.reasons.ConfigError);
@@ -539,13 +569,15 @@ describe(testName, () => {
       toChannel.aliceIdentifier = vectorUtils.getRandomChannelSigner().publicIdentifier;
       const result = await feesService.calculateEstimatedGasFee(
         toSend,
-        toAssetId,
         fromAssetId,
-        fromChannel,
-        toChannel,
+        fromChannel.networkContext.chainId,
+        toAssetId,
+        toChannel.networkContext.chainId,
         ethReader as IVectorChainReader,
         routerIdentifier,
         log,
+        fromChannel,
+        toChannel,
       );
       expect(result.isError).to.be.true;
       expect(result.getError()?.message).to.be.eq(FeeError.reasons.ChannelError);
@@ -556,13 +588,15 @@ describe(testName, () => {
       getSwappedAmountStub.resolves(Result.fail(new Error("fail")) as any);
       const result = await feesService.calculateEstimatedGasFee(
         toSend,
-        toAssetId,
         fromAssetId,
-        fromChannel,
-        toChannel,
+        fromChannel.networkContext.chainId,
+        toAssetId,
+        toChannel.networkContext.chainId,
         ethReader as IVectorChainReader,
         routerIdentifier,
         log,
+        fromChannel,
+        toChannel,
       );
       expect(result.isError).to.be.true;
       expect(result.getError()?.message).to.be.eq(FeeError.reasons.ConversionError);
@@ -573,13 +607,15 @@ describe(testName, () => {
       ethReader.getCode.onSecondCall().resolves(Result.fail(new Error("fail")) as any);
       const result = await feesService.calculateEstimatedGasFee(
         toSend,
-        toAssetId,
         fromAssetId,
-        fromChannel,
-        toChannel,
+        fromChannel.networkContext.chainId,
+        toAssetId,
+        toChannel.networkContext.chainId,
         ethReader as IVectorChainReader,
         routerIdentifier,
         log,
+        fromChannel,
+        toChannel,
       );
       expect(result.isError).to.be.true;
       expect(result.getError()?.message).to.be.eq(FeeError.reasons.ChainError);
@@ -592,34 +628,36 @@ describe(testName, () => {
         fromChannel.balances[0] = { to: [fromChannel.alice, fromChannel.bob], amount: ["780", "0"] };
         const result = await feesService.calculateEstimatedGasFee(
           toSend,
-          toAssetId,
           fromAssetId,
-          fromChannel,
-          toChannel,
+          fromChannel.networkContext.chainId,
+          toAssetId,
+          toChannel.networkContext.chainId,
           ethReader as IVectorChainReader,
           routerIdentifier,
           log,
+          fromChannel,
+          toChannel,
         );
         expect(result.isError).to.be.false;
-        expect(result.getValue()[fromChannel.channelAddress]).to.be.eq(
-          GAS_ESTIMATES.withdraw.add(GAS_ESTIMATES.createChannel),
-        );
+        expect(result.getValue()[0]).to.be.eq(GAS_ESTIMATES.withdraw.add(GAS_ESTIMATES.createChannel));
       });
 
       it("should work if from channel will reclaim && channel is deployed", async () => {
         fromChannel.balances[0] = { to: [fromChannel.alice, fromChannel.bob], amount: ["780", "0"] };
         const result = await feesService.calculateEstimatedGasFee(
           toSend,
-          toAssetId,
           fromAssetId,
-          fromChannel,
-          toChannel,
+          fromChannel.networkContext.chainId,
+          toAssetId,
+          toChannel.networkContext.chainId,
           ethReader as IVectorChainReader,
           routerIdentifier,
           log,
+          fromChannel,
+          toChannel,
         );
         expect(result.isError).to.be.false;
-        expect(result.getValue()[fromChannel.channelAddress]).to.be.eq(GAS_ESTIMATES.withdraw);
+        expect(result.getValue()[0]).to.be.eq(GAS_ESTIMATES.withdraw);
       });
 
       it("should work if from channel will collateralize && router is bob", async () => {
@@ -634,16 +672,18 @@ describe(testName, () => {
         // from channel calls
         const result = await feesService.calculateEstimatedGasFee(
           BigNumber.from(3),
-          toAssetId,
           fromAssetId,
-          fromChannel,
-          toChannel,
+          fromChannel.networkContext.chainId,
+          toAssetId,
+          toChannel.networkContext.chainId,
           ethReader as IVectorChainReader,
           routerIdentifier,
           log,
+          fromChannel,
+          toChannel,
         );
         expect(result.isError).to.be.false;
-        expect(result.getValue()[fromChannel.channelAddress]).to.be.eq(GAS_ESTIMATES.depositBob);
+        expect(result.getValue()[0]).to.be.eq(GAS_ESTIMATES.depositBob);
       });
 
       it("should work if from channel will collateralize && router is alice && channel is not deployed", async () => {
@@ -654,16 +694,18 @@ describe(testName, () => {
         };
         const result = await feesService.calculateEstimatedGasFee(
           BigNumber.from(3),
-          toAssetId,
           fromAssetId,
-          fromChannel,
-          toChannel,
+          fromChannel.networkContext.chainId,
+          toAssetId,
+          toChannel.networkContext.chainId,
           ethReader as IVectorChainReader,
           routerIdentifier,
           log,
+          fromChannel,
+          toChannel,
         );
         expect(result.isError).to.be.false;
-        expect(result.getValue()[fromChannel.channelAddress]).to.be.eq(GAS_ESTIMATES.createChannelAndDepositAlice);
+        expect(result.getValue()[0]).to.be.eq(GAS_ESTIMATES.createChannelAndDepositAlice);
       });
 
       it("should work if from channel will collateralize && router is alice && channel is deployed", async () => {
@@ -673,16 +715,18 @@ describe(testName, () => {
         };
         const result = await feesService.calculateEstimatedGasFee(
           BigNumber.from(3),
-          toAssetId,
           fromAssetId,
-          fromChannel,
-          toChannel,
+          fromChannel.networkContext.chainId,
+          toAssetId,
+          toChannel.networkContext.chainId,
           ethReader as IVectorChainReader,
           routerIdentifier,
           log,
+          fromChannel,
+          toChannel,
         );
         expect(result.isError).to.be.false;
-        expect(result.getValue()[fromChannel.channelAddress]).to.be.eq(GAS_ESTIMATES.depositAlice);
+        expect(result.getValue()[0]).to.be.eq(GAS_ESTIMATES.depositAlice);
       });
     });
 
@@ -691,16 +735,18 @@ describe(testName, () => {
         toChannel.balances[0] = { to: [toChannel.alice, toChannel.bob], amount: ["780", "0"] };
         const result = await feesService.calculateEstimatedGasFee(
           toSend,
-          toAssetId,
           fromAssetId,
-          fromChannel,
-          toChannel,
+          fromChannel.networkContext.chainId,
+          toAssetId,
+          toChannel.networkContext.chainId,
           ethReader as IVectorChainReader,
           routerIdentifier,
           log,
+          fromChannel,
+          toChannel,
         );
         expect(result.isError).to.be.false;
-        expect(result.getValue()[toChannel.channelAddress]).to.be.eq(0);
+        expect(result.getValue()[1]).to.be.eq(0);
       });
 
       it("should work if to channel will collatearlize && router is bob", async () => {
@@ -712,16 +758,18 @@ describe(testName, () => {
 
         const result = await feesService.calculateEstimatedGasFee(
           toSend,
-          toAssetId,
           fromAssetId,
-          fromChannel,
-          toChannel,
+          fromChannel.networkContext.chainId,
+          toAssetId,
+          toChannel.networkContext.chainId,
           ethReader as IVectorChainReader,
           routerIdentifier,
           log,
+          fromChannel,
+          toChannel,
         );
         expect(result.isError).to.be.false;
-        expect(result.getValue()[toChannel.channelAddress]).to.be.eq(GAS_ESTIMATES.depositBob);
+        expect(result.getValue()[1]).to.be.eq(GAS_ESTIMATES.depositBob);
       });
 
       it("should work if to channel will collateralize && router is alice && channel is not deployed", async () => {
@@ -730,16 +778,18 @@ describe(testName, () => {
 
         const result = await feesService.calculateEstimatedGasFee(
           toSend,
-          toAssetId,
           fromAssetId,
-          fromChannel,
-          toChannel,
+          fromChannel.networkContext.chainId,
+          toAssetId,
+          toChannel.networkContext.chainId,
           ethReader as IVectorChainReader,
           routerIdentifier,
           log,
+          fromChannel,
+          toChannel,
         );
         expect(result.isError).to.be.false;
-        expect(result.getValue()[toChannel.channelAddress]).to.be.eq(GAS_ESTIMATES.createChannelAndDepositAlice);
+        expect(result.getValue()[1]).to.be.eq(GAS_ESTIMATES.createChannelAndDepositAlice);
       });
 
       it("should work if to channel will collateralize && router is alice && channel is deployed", async () => {
@@ -747,16 +797,18 @@ describe(testName, () => {
 
         const result = await feesService.calculateEstimatedGasFee(
           toSend,
-          toAssetId,
           fromAssetId,
-          fromChannel,
-          toChannel,
+          fromChannel.networkContext.chainId,
+          toAssetId,
+          toChannel.networkContext.chainId,
           ethReader as IVectorChainReader,
           routerIdentifier,
           log,
+          fromChannel,
+          toChannel,
         );
         expect(result.isError).to.be.false;
-        expect(result.getValue()[toChannel.channelAddress]).to.be.eq(GAS_ESTIMATES.depositAlice);
+        expect(result.getValue()[1]).to.be.eq(GAS_ESTIMATES.depositAlice);
       });
     });
   });

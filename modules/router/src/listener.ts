@@ -762,12 +762,14 @@ export async function setupListeners(
       BigNumber.from(amount),
       receiveExactAmount,
       assetId,
-      senderChannel,
+      senderChannel.networkContext.chainId,
       recipientAssetId,
-      recipientChannel,
+      recipientChannel.networkContext.chainId,
       chainReader,
       routerSigner.publicIdentifier,
       logger,
+      senderChannel,
+      recipientChannel,
     );
     if (feeRes.isError) {
       logger.error({ error: feeRes.getError() }, "Error in calculateFeeAmount");
@@ -975,12 +977,14 @@ export async function setupListeners(
       BigNumber.from(amount),
       false, // receive exact amount, to be reviewed
       assetId,
-      senderChannel,
+      senderChannel.networkContext.chainId,
       recipientAssetId,
-      recipientChannel,
+      recipientChannel.networkContext.chainId,
       chainReader,
       routerSigner.publicIdentifier,
       logger,
+      senderChannel,
+      recipientChannel,
     );
     if (feeRes.isError) {
       logger.error({ error: feeRes.getError() }, "Error in calculateFeeAmount");
