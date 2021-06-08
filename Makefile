@@ -38,7 +38,7 @@ dev: messaging node router duet trio test-runner-js
 prod: messaging-prod node-prod router-prod test-runner
 all: dev prod iframe-app
 
-messaging: auth-js ethprovider messaging-proxy nats
+messaging: auth-bundle ethprovider messaging-proxy nats
 messaging-prod: auth-img messaging-proxy nats
 
 node: messaging server-node-img

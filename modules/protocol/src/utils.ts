@@ -19,12 +19,20 @@ import {
   UpdateParamsMap,
   UpdateType,
   ChainError,
+  UpdateIdentifier,
 } from "@connext/vector-types";
 import { getAddress } from "@ethersproject/address";
 import { BigNumber } from "@ethersproject/bignumber";
-import { hashChannelCommitment, validateChannelUpdateSignatures } from "@connext/vector-utils";
+import {
+  getSignerAddressFromPublicIdentifier,
+  hashChannelCommitment,
+  hashTransferState,
+  validateChannelUpdateSignatures,
+  recoverAddressFromChannelMessage,
+} from "@connext/vector-utils";
 import Ajv from "ajv";
 import { BaseLogger, Level } from "pino";
+import { QueuedUpdateError } from "./errors";
 
 const ajv = new Ajv();
 
@@ -37,6 +45,16 @@ export const validateSchema = (obj: any, schema: any): undefined | string => {
   }
   return undefined;
 };
+
+export function validateParamSchema(params: any, schema: any): undefined | QueuedUpdateError {
+  const error = validateSchema(params, schema);
+  if (error) {
+    return new QueuedUpdateError(QueuedUpdateError.reasons.InvalidParams, params, undefined, {
+      paramsError: error,
+    });
+  }
+  return undefined;
+}
 
 // NOTE: If you do *NOT* use this function within the protocol, it becomes
 // very difficult to write proper unit tests. When the same utility is imported
@@ -57,14 +75,31 @@ export async function validateChannelSignatures(
   return validateChannelUpdateSignatures(state, aliceSignature, bobSignature, requiredSigners, logger);
 }
 
+export async function validateChannelUpdateIdSignature(
+  identifier: UpdateIdentifier,
+  initiatorIdentifier: string,
+): Promise<Result<void, Error>> {
+  try {
+    const recovered = await recoverAddressFromChannelMessage(identifier.id, identifier.signature);
+    if (recovered !== getSignerAddressFromPublicIdentifier(initiatorIdentifier)) {
+      return Result.fail(new Error(``));
+    }
+    return Result.ok(undefined);
+  } catch (e) {
+    return Result.fail(new Error(`Failed to recover signer from update id: ${e.message}`));
+  }
+}
+
 export const extractContextFromStore = async (
   storeService: IVectorStore,
   channelAddress: string,
+  updateId: string,
 ): Promise<
   Result<
     {
       activeTransfers: FullTransferState[];
       channelState: FullChannelState | undefined;
+      update: ChannelUpdate | undefined;
     },
     Error
   >
@@ -72,6 +107,7 @@ export const extractContextFromStore = async (
   // First, pull all information out from the store
   let activeTransfers: FullTransferState[];
   let channelState: FullChannelState | undefined;
+  let update: ChannelUpdate | undefined;
   let storeMethod = "getChannelState";
   try {
     // will always need the previous state
@@ -79,6 +115,8 @@ export const extractContextFromStore = async (
     // will only need active transfers for create/resolve
     storeMethod = "getActiveTransfers";
     activeTransfers = await storeService.getActiveTransfers(channelAddress);
+    storeMethod = "getUpdateById";
+    update = await storeService.getUpdateById(updateId);
   } catch (e) {
     return Result.fail(new Error(`${storeMethod} failed: ${e.message}`));
   }
@@ -86,7 +124,24 @@ export const extractContextFromStore = async (
   return Result.ok({
     activeTransfers,
     channelState,
+    update,
   });
+};
+
+export const persistChannel = async (
+  storeService: IVectorStore,
+  updatedChannel: FullChannelState,
+  updatedTransfer?: FullTransferState,
+) => {
+  try {
+    await storeService.saveChannelState(updatedChannel, updatedTransfer);
+    return Result.ok({
+      updatedChannel,
+      updatedTransfer,
+    });
+  } catch (e) {
+    return Result.fail(new Error(`Failed to persist data: ${e.message}`));
+  }
 };
 
 // Channels store `ChannelUpdate<T>` types as the `latestUpdate` field, which
@@ -159,7 +214,35 @@ export function getParamsFromUpdate<T extends UpdateType = any>(
     channelAddress,
     type,
     details: paramDetails as UpdateParamsMap[T],
+    id: update.id,
   });
+}
+
+export function getTransferFromUpdate(
+  update: ChannelUpdate<typeof UpdateType.create>,
+  channel: FullChannelState,
+): FullTransferState {
+  return {
+    balance: update.details.balance,
+    assetId: update.assetId,
+    transferId: update.details.transferId,
+    channelAddress: update.channelAddress,
+    transferDefinition: update.details.transferDefinition,
+    transferEncodings: update.details.transferEncodings,
+    transferTimeout: update.details.transferTimeout,
+    initialStateHash: hashTransferState(update.details.transferInitialState, update.details.transferEncodings[0]),
+    transferState: update.details.transferInitialState,
+    channelFactoryAddress: channel.networkContext.channelFactoryAddress,
+    chainId: channel.networkContext.chainId,
+    transferResolver: undefined,
+    initiator: getSignerAddressFromPublicIdentifier(update.fromIdentifier),
+    responder: getSignerAddressFromPublicIdentifier(update.toIdentifier),
+    meta: { ...(update.details.meta ?? {}), createdAt: Date.now() },
+    inDispute: false,
+    channelNonce: update.nonce,
+    initiatorIdentifier: update.fromIdentifier,
+    responderIdentifier: update.toIdentifier,
+  };
 }
 
 // This function signs the state after the update is applied,
@@ -381,3 +464,26 @@ export const mergeAssetIds = (channel: FullChannelState): FullChannelState => {
     defundNonces,
   };
 };
+
+// Returns the first unused nonce for the given participant.
+// Nonces alternate back and forth like so:
+//   0: Alice
+//   1: Alice
+//   2: Bob
+//   3: Bob
+//   4: Alice
+//   5: Alice
+//   6: Bob
+//   7: Bob
+//
+// Examples:
+//   (0, true) => 1
+//   (0, false) => 2
+//   (1, true) => 4
+export function getNextNonceForUpdate(currentNonce: number, isAlice: boolean): number {
+  let rotation = currentNonce % 4;
+  let currentlyMe = rotation < 2 === isAlice;
+  let top = currentNonce % 2 === 1;
+  let offset = currentlyMe ? (top ? 3 : 1) : top ? 1 : 2;
+  return currentNonce + offset;
+}

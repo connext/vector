@@ -24,8 +24,6 @@ if [[ ! "$(pwd | sed 's|.*/\(.*\)|\1|')" =~ $project ]]
 then echo "Aborting: Make sure you're in the $project project root" && exit 1
 fi
 
-make all
-
 echo "Did you update the changelog.md before publishing (y/n)?"
 read -p "> " -r
 echo
@@ -91,6 +89,8 @@ fi
 
 ( # () designates a subshell so we don't have to cd back to where we started afterwards
   echo "Let's go"
+  echo "export const PROTOCOL_VERSION='${target_version}'" > "${root}/modules/types/src/version.ts"
+  make all
   cd modules
 
   for package in $package_names

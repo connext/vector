@@ -28,12 +28,14 @@ import { isAddress, getAddress } from "@ethersproject/address";
 import { BigNumber } from "@ethersproject/bignumber";
 import { BaseLogger } from "pino";
 
-import { InboundChannelUpdateError, OutboundChannelUpdateError, ValidationError } from "./errors";
+import { QueuedUpdateError, ValidationError } from "./errors";
 import { applyUpdate, generateAndApplyUpdate } from "./update";
 import {
   generateSignedChannelCommitment,
+  getNextNonceForUpdate,
   getParamsFromUpdate,
   validateChannelSignatures,
+  validateChannelUpdateIdSignature,
   validateSchema,
 } from "./utils";
 
@@ -69,7 +71,21 @@ export async function validateUpdateParams<T extends UpdateType = any>(
     return handleError(ValidationError.reasons.InDispute);
   }
 
-  const { type, channelAddress, details } = params;
+  const { type, channelAddress, details, id } = params;
+
+  // if this is *not* the initiator, verify the update id sig.
+  // if it is, they are only hurting themselves by not providing
+  // it correctly
+  if (signer.publicIdentifier !== initiatorIdentifier) {
+    const recovered = await validateChannelUpdateIdSignature(id, initiatorIdentifier);
+    if (recovered.isError) {
+      return Result.fail(
+        new ValidationError(ValidationError.reasons.UpdateIdSigInvalid, params, previousState, {
+          recoveryError: jsonifyError(recovered.getError()!),
+        }),
+      );
+    }
+  }
 
   if (previousState && channelAddress !== previousState.channelAddress) {
     return handleError(ValidationError.reasons.InvalidChannelAddress);
@@ -286,7 +302,7 @@ export const validateParamsAndApplyUpdate = async (
       updatedActiveTransfers: FullTransferState[];
       updatedTransfer: FullTransferState | undefined;
     },
-    OutboundChannelUpdateError
+    QueuedUpdateError
   >
 > => {
   // Verify params are valid
@@ -303,15 +319,10 @@ export const validateParamsAndApplyUpdate = async (
     // strip useful context from validation error
     const { state, params, ...usefulContext } = error.context;
     return Result.fail(
-      new OutboundChannelUpdateError(
-        OutboundChannelUpdateError.reasons.OutboundValidationFailed,
-        params,
-        previousState,
-        {
-          validationError: error.message,
-          validationContext: usefulContext,
-        },
-      ),
+      new QueuedUpdateError(QueuedUpdateError.reasons.OutboundValidationFailed, params, previousState, {
+        validationError: error.message,
+        validationContext: usefulContext,
+      }),
     );
   }
 
@@ -320,14 +331,9 @@ export const validateParamsAndApplyUpdate = async (
     const externalRes = await externalValidation.validateOutbound(params, previousState, activeTransfers);
     if (externalRes.isError) {
       return Result.fail(
-        new OutboundChannelUpdateError(
-          OutboundChannelUpdateError.reasons.ExternalValidationFailed,
-          params,
-          previousState,
-          {
-            externalValidationError: externalRes.getError()!.message,
-          },
-        ),
+        new QueuedUpdateError(QueuedUpdateError.reasons.ExternalValidationFailed, params, previousState, {
+          externalValidationError: externalRes.getError()!.message,
+        }),
       );
     }
   }
@@ -348,7 +354,7 @@ export const validateParamsAndApplyUpdate = async (
     // strip useful context from validation error
     const { state, params: updateParams, ...usefulContext } = error.context;
     return Result.fail(
-      new OutboundChannelUpdateError(OutboundChannelUpdateError.reasons.GenerateUpdateFailed, params, previousState, {
+      new QueuedUpdateError(QueuedUpdateError.reasons.GenerateUpdateFailed, params, previousState, {
         generateError: error.message,
         generateContext: usefulContext,
       }),
@@ -376,14 +382,14 @@ export async function validateAndApplyInboundUpdate<T extends UpdateType = any>(
       updatedActiveTransfers: FullTransferState[];
       updatedTransfer?: FullTransferState;
     },
-    InboundChannelUpdateError
+    QueuedUpdateError
   >
 > {
   // Make sure update + details have proper structure before proceeding
   const invalidUpdate = validateSchema(update, TChannelUpdate);
   if (invalidUpdate) {
     return Result.fail(
-      new InboundChannelUpdateError(InboundChannelUpdateError.reasons.MalformedUpdate, update, previousState, {
+      new QueuedUpdateError(QueuedUpdateError.reasons.MalformedUpdate, update, previousState, {
         updateError: invalidUpdate,
       }),
     );
@@ -397,24 +403,33 @@ export async function validateAndApplyInboundUpdate<T extends UpdateType = any>(
   const invalid = validateSchema(update.details, schemas[update.type]);
   if (invalid) {
     return Result.fail(
-      new InboundChannelUpdateError(InboundChannelUpdateError.reasons.MalformedDetails, update, previousState, {
+      new QueuedUpdateError(QueuedUpdateError.reasons.MalformedDetails, update, previousState, {
         detailsError: invalid,
       }),
     );
   }
 
   // Shortcut: check if the incoming update is double signed. If it is, and the
-  // nonce, only increments by 1, then it is safe to apply update and proceed
-  // without any additional validation.
-  const expected = (previousState?.nonce ?? 0) + 1;
+  // nonce, only increments by 1 transition, then it is safe to apply update
+  // and proceed without any additional validation.
+  const aliceSentUpdate =
+    update.type === UpdateType.setup ? true : previousState!.aliceIdentifier === update.fromIdentifier;
+  const expected = getNextNonceForUpdate(previousState?.nonce ?? 0, aliceSentUpdate);
   if (update.nonce !== expected) {
-    return Result.fail(
-      new InboundChannelUpdateError(InboundChannelUpdateError.reasons.InvalidUpdateNonce, update, previousState),
-    );
+    return Result.fail(new QueuedUpdateError(QueuedUpdateError.reasons.InvalidUpdateNonce, update, previousState));
   }
 
   // Handle double signed updates without validating params
   if (update.aliceSignature && update.bobSignature) {
+    // Verify the update.id.signature is correct (should be initiator)
+    const recovered = await validateChannelUpdateIdSignature(update.id, update.fromIdentifier);
+    if (recovered.isError) {
+      return Result.fail(
+        new QueuedUpdateError(QueuedUpdateError.reasons.UpdateIdSigInvalid, update, previousState, {
+          recoveryError: jsonifyError(recovered.getError()!),
+        }),
+      );
+    }
     // Get final transfer balance (required when applying resolve updates);
     let finalTransferBalance: Balance | undefined = undefined;
     if (update.type === UpdateType.resolve) {
@@ -424,7 +439,7 @@ export async function validateAndApplyInboundUpdate<T extends UpdateType = any>(
       );
       if (!transfer) {
         return Result.fail(
-          new InboundChannelUpdateError(InboundChannelUpdateError.reasons.TransferNotActive, update, previousState, {
+          new QueuedUpdateError(QueuedUpdateError.reasons.TransferNotActive, update, previousState, {
             existing: activeTransfers.map((t) => t.transferId),
           }),
         );
@@ -436,14 +451,9 @@ export async function validateAndApplyInboundUpdate<T extends UpdateType = any>(
 
       if (transferBalanceResult.isError) {
         return Result.fail(
-          new InboundChannelUpdateError(
-            InboundChannelUpdateError.reasons.CouldNotGetFinalBalance,
-            update,
-            previousState,
-            {
-              chainServiceError: jsonifyError(transferBalanceResult.getError()!),
-            },
-          ),
+          new QueuedUpdateError(QueuedUpdateError.reasons.CouldNotGetResolvedBalance, update, previousState, {
+            chainServiceError: jsonifyError(transferBalanceResult.getError()!),
+          }),
         );
       }
       finalTransferBalance = transferBalanceResult.getValue();
@@ -452,7 +462,7 @@ export async function validateAndApplyInboundUpdate<T extends UpdateType = any>(
     if (applyRes.isError) {
       const { state, params, update: errUpdate, ...usefulContext } = applyRes.getError()?.context;
       return Result.fail(
-        new InboundChannelUpdateError(InboundChannelUpdateError.reasons.ApplyUpdateFailed, update, previousState, {
+        new QueuedUpdateError(QueuedUpdateError.reasons.ApplyUpdateFailed, update, previousState, {
           applyUpdateError: applyRes.getError()?.message,
           applyUpdateContext: usefulContext,
         }),
@@ -468,7 +478,7 @@ export async function validateAndApplyInboundUpdate<T extends UpdateType = any>(
     );
     if (sigRes.isError) {
       return Result.fail(
-        new InboundChannelUpdateError(InboundChannelUpdateError.reasons.BadSignatures, update, previousState, {
+        new QueuedUpdateError(QueuedUpdateError.reasons.BadSignatures, update, previousState, {
           validateSignatureError: sigRes.getError()?.message,
         }),
       );
@@ -492,7 +502,7 @@ export async function validateAndApplyInboundUpdate<T extends UpdateType = any>(
   const inboundRes = await externalValidation.validateInbound(update, previousState, activeTransfers);
   if (inboundRes.isError) {
     return Result.fail(
-      new InboundChannelUpdateError(InboundChannelUpdateError.reasons.ExternalValidationFailed, update, previousState, {
+      new QueuedUpdateError(QueuedUpdateError.reasons.ExternalValidationFailed, update, previousState, {
         externalValidationError: inboundRes.getError()?.message,
       }),
     );
@@ -503,7 +513,7 @@ export async function validateAndApplyInboundUpdate<T extends UpdateType = any>(
   const params = getParamsFromUpdate(update);
   if (params.isError) {
     return Result.fail(
-      new InboundChannelUpdateError(InboundChannelUpdateError.reasons.CouldNotGetParams, update, previousState, {
+      new QueuedUpdateError(QueuedUpdateError.reasons.CouldNotGetParams, update, previousState, {
         getParamsError: params.getError()?.message,
       }),
     );
@@ -522,15 +532,10 @@ export async function validateAndApplyInboundUpdate<T extends UpdateType = any>(
     // strip useful context from validation error
     const { state, params, ...usefulContext } = validRes.getError()!.context;
     return Result.fail(
-      new InboundChannelUpdateError(
-        InboundChannelUpdateError.reasons.ApplyAndValidateInboundFailed,
-        update,
-        previousState,
-        {
-          validationError: validRes.getError()!.message,
-          validationContext: usefulContext,
-        },
-      ),
+      new QueuedUpdateError(QueuedUpdateError.reasons.ApplyAndValidateInboundFailed, update, previousState, {
+        validationError: validRes.getError()!.message,
+        validationContext: usefulContext,
+      }),
     );
   }
 
@@ -545,8 +550,12 @@ export async function validateAndApplyInboundUpdate<T extends UpdateType = any>(
     logger,
   );
   if (sigRes.isError) {
+    logger?.error(
+      { generatedParams: params.getValue(), generatedUpdate: updatedChannel.latestUpdate, update, previousState },
+      "Failed to validate initiator sig",
+    );
     return Result.fail(
-      new InboundChannelUpdateError(InboundChannelUpdateError.reasons.BadSignatures, update, previousState, {
+      new QueuedUpdateError(QueuedUpdateError.reasons.BadSignatures, update, previousState, {
         signatureError: sigRes.getError()?.message,
       }),
     );
@@ -562,7 +571,7 @@ export async function validateAndApplyInboundUpdate<T extends UpdateType = any>(
   );
   if (signedRes.isError) {
     return Result.fail(
-      new InboundChannelUpdateError(InboundChannelUpdateError.reasons.GenerateSignatureFailed, update, previousState, {
+      new QueuedUpdateError(QueuedUpdateError.reasons.GenerateSignatureFailed, update, previousState, {
         signatureError: signedRes.getError()?.message,
       }),
     );

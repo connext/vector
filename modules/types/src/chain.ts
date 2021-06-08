@@ -67,6 +67,7 @@ export class ChainError extends VectorError {
     TxReverted: "Transaction reverted on chain",
     MaxGasPriceReached: "Max gas price reached",
     ConfirmationTimeout: "Timed out waiting for confirmation.",
+    NonceExpired: "Failed to confirm a tx whose nonce had expired.",
   };
 
   // Errors you would see from trying to send a transaction, and

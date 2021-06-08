@@ -11,6 +11,7 @@ import {
   GetTransfersFilterOpts,
   CoreChannelState,
   CoreTransferState,
+  ChannelUpdate,
 } from "@connext/vector-types";
 import { TransactionReceipt, TransactionResponse } from "@ethersproject/abstract-provider";
 
@@ -97,6 +98,7 @@ export class MemoryStoreService implements IEngineStore {
 
   // Map<channelAddress, channelState>
   private channelStates: Map<string, FullChannelState> = new Map();
+  private updates: Map<string, ChannelUpdate> = new Map();
 
   private schemaVersion: number | undefined = undefined;
 
@@ -118,23 +120,29 @@ export class MemoryStoreService implements IEngineStore {
     return Promise.resolve();
   }
 
+  getUpdateById(id: string): Promise<ChannelUpdate> {
+    return Promise.resolve(this.updates.get(id));
+  }
+
   getChannelState(channelAddress: string): Promise<FullChannelState | undefined> {
     const state = this.channelStates.get(channelAddress);
     return Promise.resolve(state);
   }
 
   getChannelStateByParticipants(
-    participantA: string,
-    participantB: string,
+    publicIdentifierA: string,
+    publicIdentifierB: string,
     chainId: number,
   ): Promise<FullChannelState | undefined> {
-    return Promise.resolve(
-      [...this.channelStates.values()].find((channelState) => {
-        channelState.alice === participantA &&
-          channelState.bob === participantB &&
-          channelState.networkContext.chainId === chainId;
-      }),
-    );
+    const channel = [...this.channelStates.values()].find((channelState) => {
+      const identifiers = [channelState.aliceIdentifier, channelState.bobIdentifier];
+      return (
+        identifiers.includes(publicIdentifierA) &&
+        identifiers.includes(publicIdentifierB) &&
+        channelState.networkContext.chainId === chainId
+      );
+    });
+    return Promise.resolve(channel);
   }
 
   getChannelStates(): Promise<FullChannelState[]> {
@@ -142,6 +150,9 @@ export class MemoryStoreService implements IEngineStore {
   }
 
   saveChannelState(channelState: FullChannelState, transfer?: FullTransferState): Promise<void> {
+    if (channelState.latestUpdate) {
+      this.updates.set(channelState.latestUpdate.id.id, channelState.latestUpdate);
+    }
     this.channelStates.set(channelState.channelAddress, {
       ...channelState,
     });
@@ -169,7 +180,24 @@ export class MemoryStoreService implements IEngineStore {
   }
 
   saveChannelStateAndTransfers(channelState: FullChannelState, activeTransfers: FullTransferState[]): Promise<void> {
-    return Promise.reject("Method not implemented");
+    // remove all previous
+    this.channelStates.delete(channelState.channelAddress);
+    activeTransfers.map((transfer) => {
+      this.transfers.delete(transfer.transferId);
+    });
+    this.transfersInChannel.delete(channelState.channelAddress);
+
+    // add in new records
+    this.channelStates.set(channelState.channelAddress, channelState);
+    activeTransfers.map((transfer) => {
+      this.transfers.set(transfer.transferId, transfer);
+    });
+    this.transfersInChannel.set(
+      channelState.channelAddress,
+      activeTransfers.map((t) => t.transferId),
+    );
+
+    return Promise.resolve();
   }
 
   getActiveTransfers(channelAddress: string): Promise<FullTransferState[]> {

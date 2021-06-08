@@ -13,7 +13,7 @@ import {
 import Sinon from "sinon";
 import { VectorChainReader } from "@connext/vector-contracts";
 
-import { generateSignedChannelCommitment, mergeAssetIds, reconcileDeposit } from "../utils";
+import { generateSignedChannelCommitment, mergeAssetIds, reconcileDeposit, getNextNonceForUpdate } from "../utils";
 
 import { env } from "./env";
 
@@ -295,6 +295,114 @@ describe("utils", () => {
             totalDepositsBob: expected.totalDepositsBob,
           });
         }
+      });
+    }
+  });
+
+  describe('get next nonce for update', () => {
+    const tests = [
+      {
+        name: "0 alice => 1",
+        nonce: 0,
+        isAlice: true,
+        expect: 1,
+      },
+      {
+        name: "0 bob => 2",
+        nonce: 0,
+        isAlice: false,
+        expect: 2,
+      },
+      {
+        name: "1 alice => 4",
+        nonce: 1,
+        isAlice: true,
+        expect: 4,
+      },
+      {
+        name: "1 bob => 2",
+        nonce: 1,
+        isAlice: false,
+        expect: 2,
+      },
+      {
+        name: "2 alice => 4",
+        nonce: 2,
+        isAlice: true,
+        expect: 4,
+      },
+      {
+        name: "2 bob => 3",
+        nonce: 2,
+        isAlice: false,
+        expect: 3,
+      },
+      {
+        name: "3 alice => 4",
+        nonce: 3,
+        isAlice: true,
+        expect: 4,
+      },
+      {
+        name: "3 bob => 6",
+        nonce: 3,
+        isAlice: false,
+        expect: 6,
+      },
+      {
+        name: "4 alice => 5",
+        nonce: 4,
+        isAlice: true,
+        expect: 5,
+      },
+      {
+        name: "4 bob => 6",
+        nonce: 4,
+        isAlice: false,
+        expect: 6,
+      },
+      {
+        name: "5 alice => 8",
+        nonce: 5,
+        isAlice: true,
+        expect: 8,
+      },
+      {
+        name: "5 bob => 6",
+        nonce: 5,
+        isAlice: false,
+        expect: 6
+      },
+      {
+        name: "6 alice => 8",
+        nonce: 6,
+        isAlice: true,
+        expect: 8,
+      },
+      {
+        name: "6 bob => 7",
+        nonce: 6,
+        isAlice: false,
+        expect: 7,
+      },
+      {
+        name: "7 alice => 8",
+        nonce: 7,
+        isAlice: true,
+        expect: 8,
+      },
+      {
+        name: "7 bob => 10",
+        nonce: 7,
+        isAlice: false,
+        expect: 10,
+      },
+    ];
+
+    for (const test of tests) {
+      it(test.name, () => {
+        const returned = getNextNonceForUpdate(test.nonce, test.isAlice);
+        expect(returned).to.be.eq(test.expect);
       });
     }
   });
