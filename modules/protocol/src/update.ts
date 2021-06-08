@@ -2,8 +2,7 @@ import {
   getSignerAddressFromPublicIdentifier,
   hashTransferState,
   getTransferId,
-  generateMerkleTreeData,
-  hashCoreTransferState,
+  generateMerkleRoot,
 } from "@connext/vector-utils";
 import {
   UpdateType,
@@ -26,7 +25,13 @@ import { HashZero, AddressZero } from "@ethersproject/constants";
 import { BaseLogger } from "pino";
 
 import { ApplyUpdateError, CreateUpdateError } from "./errors";
-import { generateSignedChannelCommitment, getUpdatedChannelBalance, mergeAssetIds, reconcileDeposit } from "./utils";
+import {
+  generateSignedChannelCommitment,
+  getNextNonceForUpdate,
+  getUpdatedChannelBalance,
+  mergeAssetIds,
+  reconcileDeposit,
+} from "./utils";
 
 // Should return a state with the given update applied
 // It is assumed here that the update is validated before
@@ -74,7 +79,7 @@ export function applyUpdate<T extends UpdateType>(
       return Result.ok({
         updatedActiveTransfers: [...previousActiveTransfers],
         updatedChannel: {
-          nonce: 1,
+          nonce: update.nonce,
           channelAddress,
           timeout,
           alice: getSignerAddressFromPublicIdentifier(fromIdentifier),
@@ -361,6 +366,7 @@ function generateSetupUpdate(
       meta: params.details.meta ?? {},
     },
     assetId: AddressZero,
+    id: params.id,
   };
 
   return unsigned;
@@ -493,7 +499,7 @@ async function generateCreateUpdate(
     initiatorIdentifier,
     responderIdentifier: signer.publicIdentifier === initiatorIdentifier ? counterpartyId : signer.address,
   };
-  const { tree, root } = generateMerkleTreeData([...transfers, transferState]);
+  const merkleRoot = generateMerkleRoot([...transfers, transferState]);
 
   // Create the update from the user provided params
   const channelBalance = getUpdatedChannelBalance(UpdateType.create, assetId, balance, state, transferState.initiator);
@@ -508,8 +514,7 @@ async function generateCreateUpdate(
       balance,
       transferInitialState,
       transferEncodings: [stateEncoding, resolverEncoding],
-      merkleProofData: tree.getHexProof(hashCoreTransferState(transferState)),
-      merkleRoot: root,
+      merkleRoot,
       meta: { ...(meta ?? {}), createdAt: Date.now() },
     },
   };
@@ -542,7 +547,7 @@ async function generateResolveUpdate(
       }),
     );
   }
-  const { root } = generateMerkleTreeData(transfers.filter((x) => x.transferId !== transferId));
+  const merkleRoot = generateMerkleRoot(transfers.filter((t) => t.transferId !== transferId));
 
   // Get the final transfer balance from contract
   const transferBalanceResult = await chainService.resolve(
@@ -576,7 +581,7 @@ async function generateResolveUpdate(
       transferId,
       transferDefinition: transferToResolve.transferDefinition,
       transferResolver,
-      merkleRoot: root,
+      merkleRoot,
       meta: { ...(transferToResolve.meta ?? {}), ...(meta ?? {}) },
     },
   };
@@ -593,15 +598,16 @@ function generateBaseUpdate<T extends UpdateType>(
   params: UpdateParams<T>,
   signer: IChannelSigner,
   initiatorIdentifier: string,
-): Pick<ChannelUpdate<T>, "channelAddress" | "nonce" | "fromIdentifier" | "toIdentifier" | "type"> {
+): Pick<ChannelUpdate<T>, "channelAddress" | "nonce" | "fromIdentifier" | "toIdentifier" | "type" | "id"> {
   const isInitiator = signer.publicIdentifier === initiatorIdentifier;
   const counterparty = signer.publicIdentifier === state.bobIdentifier ? state.aliceIdentifier : state.bobIdentifier;
   return {
-    nonce: state.nonce + 1,
+    nonce: getNextNonceForUpdate(state.nonce, initiatorIdentifier === state.aliceIdentifier),
     channelAddress: state.channelAddress,
     type: params.type,
     fromIdentifier: initiatorIdentifier,
     toIdentifier: isInitiator ? counterparty : signer.publicIdentifier,
+    id: params.id,
   };
 }
 
