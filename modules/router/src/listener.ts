@@ -957,7 +957,7 @@ export async function setupListeners(
       await messagingService.respondToAuctionMessage(
         inbox,
         Result.ok({
-          quote,
+          quote: { ...quote, signature },
           routerPublicIdentifier: quote.routerIdentifier,
           swapRate: "1",
           totalFee: quote.fee,
