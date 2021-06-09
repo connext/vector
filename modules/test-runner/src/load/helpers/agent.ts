@@ -143,7 +143,13 @@ export class Agent {
     // Make sure there are sufficient funds in channel
     await agent.fundChannelToTarget(minimumChannelBalance.assetId, minimumChannelBalance.amount);
 
+    agent.startMerklePoller();
+
     return agent;
+  }
+
+  async startMerklePoller() {
+    setInterval(async () => await this.checkMerkleRoot(), 5_000);
   }
 
   async getChannelBalance(assetId: string): Promise<string> {
