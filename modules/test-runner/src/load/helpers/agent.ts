@@ -7,7 +7,14 @@ import {
   NodeError,
   TransferNames,
 } from "@connext/vector-types";
-import { createlockHash, delay, getRandomBytes32, RestServerNodeService } from "@connext/vector-utils";
+import {
+  createlockHash,
+  delay,
+  generateMerkleRoot,
+  getBalanceForAssetId,
+  getRandomBytes32,
+  RestServerNodeService,
+} from "@connext/vector-utils";
 import { BigNumber, constants, Contract, providers, Wallet, utils } from "ethers";
 import { formatEther, parseUnits } from "ethers/lib/utils";
 import { Evt } from "evt";
@@ -139,6 +146,72 @@ export class Agent {
     return agent;
   }
 
+  async getChannelBalance(assetId: string): Promise<string> {
+    const channel = await this.nodeService.getStateChannel({
+      publicIdentifier: this.publicIdentifier,
+      channelAddress: this.channelAddress!,
+    });
+    if (channel.isError) {
+      const error = channel.getError()!;
+      logger.error({ ...error }, "Failed to get channel");
+      process.exit(1);
+    }
+    if (!channel.getValue()) {
+      return "0";
+    }
+    return getBalanceForAssetId(
+      channel.getValue() as FullChannelState,
+      assetId,
+      channel.getValue()?.bob === this.signerAddress ? "bob" : "alice",
+    );
+  }
+
+  async checkMerkleRoot(transferId?: string): Promise<void> {
+    const channel = await this.nodeService.getStateChannel({
+      publicIdentifier: this.publicIdentifier,
+      channelAddress: this.channelAddress!,
+    });
+    const active = await this.nodeService.getActiveTransfers({
+      publicIdentifier: this.publicIdentifier,
+      channelAddress: this.channelAddress!,
+    });
+    if (channel.isError || active.isError) {
+      const error = channel.getError() ?? active.getError();
+      logger.error({ ...error }, "Failed to get channel or active transfers");
+      process.exit(1);
+    }
+    if (!channel.getValue()) {
+      logger.info({ channelAddress: this.channelAddress }, "No channel");
+      return;
+    }
+
+    // if necessary, check active transfer includes transferId
+    if (
+      transferId &&
+      !active
+        .getValue()
+        .map((t) => t.transferId)
+        .includes(transferId)
+    ) {
+      logger.error(
+        { channelAddress: this.channelAddress, active: active.getValue(), transferId },
+        "Transfer not in active transfers",
+      );
+      process.exit(1);
+    }
+
+    // recalculate merkleRoot
+    const stored = channel.getValue()?.merkleRoot;
+    const calculated = generateMerkleRoot(active.getValue());
+    if (stored !== calculated) {
+      logger.error(
+        { active: active.getValue(), channel: channel.getValue(), calculated },
+        "Incorrectly stored merkleRoot",
+      );
+      process.exit(1);
+    }
+  }
+
   async createHashlockTransfer(
     recipient: string,
     assetId: string,
@@ -148,6 +221,8 @@ export class Agent {
     this.assertChannel();
     // Create the transfer information
     const lockHash = createlockHash(preImage);
+
+    const preTransfer = await this.getChannelBalance(assetId);
 
     // Create transfer
     logger.debug({ recipient, sender: this.publicIdentifier, preImage, routingId }, "Creating transfer");
@@ -164,8 +239,18 @@ export class Agent {
     if (createRes.isError) {
       logger.error({ creationError: createRes.getError() }, "Failed to create transfer");
       process.exit(1);
-      // throw createRes.getError()!;
     }
+
+    // Check balance post-create
+    const postTransfer = await this.getChannelBalance(assetId);
+    if (!BigNumber.from(preTransfer).sub(transferAmount).eq(postTransfer)) {
+      logger.error({ postTransfer, preTransfer, transferAmount, ...createRes }, "Incorrect balance post-create");
+      process.exit(1);
+    }
+
+    // Check merkle-root post-create
+    await this.checkMerkleRoot(createRes.getValue().transferId);
+
     logger.info({ ...createRes.getValue() }, "Created transfer");
     return { ...createRes.getValue(), preImage, routingId, start: Date.now() };
   }
@@ -173,8 +258,10 @@ export class Agent {
   async resolveHashlockTransfer(
     transferId: string,
     preImage: string,
+    assetId: string,
   ): Promise<{ channelAddress: string; transferId: string; routingId?: string; preImage: string }> {
     this.assertChannel();
+    const preResolve = await this.getChannelBalance(assetId);
     // Try to resolve the transfer
     const resolveRes = await this.nodeService.resolveTransfer({
       publicIdentifier: this.publicIdentifier,
@@ -183,8 +270,20 @@ export class Agent {
       transferId,
     });
     if (resolveRes.isError) {
-      throw resolveRes.getError()!;
+      logger.error({ ...resolveRes.getError() }, "Failed to resolve transfer");
+      process.exit(1);
     }
+
+    // Check balance post-resolve
+    const postResolve = await this.getChannelBalance(assetId);
+    if (!BigNumber.from(preResolve).add(transferAmount).eq(postResolve)) {
+      logger.error({ postResolve, preResolve, transferAmount, ...resolveRes }, "Incorrect balance post-resolve");
+      process.exit(1);
+    }
+
+    // Check merkle-root post-resolve
+    await this.checkMerkleRoot();
+
     logger.debug({ ...resolveRes.getValue() }, "Resolved transfer");
     return { ...resolveRes.getValue()!, preImage };
   }
@@ -421,7 +520,7 @@ export class AgentManager {
 
           const {
             channelAddress,
-            transfer: { meta, initiator, transferId },
+            transfer: { meta, initiator, transferId, assetId },
           } = data;
           const { routingId } = meta ?? {};
           // Make sure there is a routingID
@@ -443,6 +542,9 @@ export class AgentManager {
             return;
           }
 
+          // Check the merkle root post-create
+          await agent.checkMerkleRoot(transferId);
+
           // Creation comes from router forwarding, agent is responder
           // Find the preImage
           const { preImage } = this.transferInfo[routingId] ?? {};
@@ -463,7 +565,7 @@ export class AgentManager {
           // Resolve the transfer
           try {
             logger.debug({ agent: agent.signerAddress, preImage, transfer: transferId }, "Resolving transfer");
-            await agent.resolveHashlockTransfer(transferId, preImage);
+            await agent.resolveHashlockTransfer(transferId, preImage, assetId);
             logger.info({ transferId, channelAddress, agent: agent.publicIdentifier, routingId }, "Resolved transfer");
           } catch (e) {
             logger.error(
@@ -503,6 +605,9 @@ export class AgentManager {
             logger.debug({}, "No routingId");
             return;
           }
+
+          // Check the merkle root when you get a resolved transfer
+          await _agent.checkMerkleRoot();
 
           // Add timestamp on resolution
           this.transferInfo[routingId].end = Date.now();
