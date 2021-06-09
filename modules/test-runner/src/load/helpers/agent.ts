@@ -228,8 +228,6 @@ export class Agent {
     // Create the transfer information
     const lockHash = createlockHash(preImage);
 
-    const preTransfer = await this.getChannelBalance(assetId);
-
     // Create transfer
     logger.debug({ recipient, sender: this.publicIdentifier, preImage, routingId }, "Creating transfer");
     const createRes = await this.nodeService.conditionalTransfer({
@@ -247,13 +245,6 @@ export class Agent {
       process.exit(1);
     }
 
-    // Check balance post-create
-    const postTransfer = await this.getChannelBalance(assetId);
-    if (!BigNumber.from(preTransfer).sub(transferAmount).eq(postTransfer)) {
-      logger.error({ postTransfer, preTransfer, transferAmount, ...createRes }, "Incorrect balance post-create");
-      process.exit(1);
-    }
-
     // Check merkle-root post-create
     await this.checkMerkleRoot(createRes.getValue().transferId);
 
@@ -267,7 +258,6 @@ export class Agent {
     assetId: string,
   ): Promise<{ channelAddress: string; transferId: string; routingId?: string; preImage: string }> {
     this.assertChannel();
-    const preResolve = await this.getChannelBalance(assetId);
     // Try to resolve the transfer
     const resolveRes = await this.nodeService.resolveTransfer({
       publicIdentifier: this.publicIdentifier,
@@ -277,13 +267,6 @@ export class Agent {
     });
     if (resolveRes.isError) {
       logger.error({ ...resolveRes.getError() }, "Failed to resolve transfer");
-      process.exit(1);
-    }
-
-    // Check balance post-resolve
-    const postResolve = await this.getChannelBalance(assetId);
-    if (!BigNumber.from(preResolve).add(transferAmount).eq(postResolve)) {
-      logger.error({ postResolve, preResolve, transferAmount, ...resolveRes }, "Incorrect balance post-resolve");
       process.exit(1);
     }
 
