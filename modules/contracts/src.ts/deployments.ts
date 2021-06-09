@@ -346,3 +346,22 @@ const harmonyDeployment = {
 };
 deployments.harmony = harmonyDeployment;
 deployments["1666600000"] = harmonyDeployment;
+
+////////////////////////////////////////
+// 42161 - arbitrum
+import * as arbitrumChannelFactory from "../deployments/arbitrum/ChannelFactory.json";
+import * as arbitrumChannelMastercopy from "../deployments/arbitrum/ChannelMastercopy.json";
+import * as arbitrumHashlockTransfer from "../deployments/arbitrum/HashlockTransfer.json";
+import * as arbitrumTestToken from "../deployments/arbitrum/TestToken.json";
+import * as arbitrumTransferRegistry from "../deployments/arbitrum/TransferRegistry.json";
+import * as arbitrumWithdraw from "../deployments/arbitrum/Withdraw.json";
+const arbitrumDeployment = {
+  ChannelFactory: arbitrumChannelFactory,
+  ChannelMastercopy: arbitrumChannelMastercopy,
+  HashlockTransfer: arbitrumHashlockTransfer,
+  TestToken: arbitrumTestToken,
+  TransferRegistry: arbitrumTransferRegistry,
+  Withdraw: arbitrumWithdraw,
+};
+deployments.arbitrum = arbitrumDeployment;
+deployments["42161"] = arbitrumDeployment;
