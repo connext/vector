@@ -1078,7 +1078,9 @@ export class VectorEngine implements IVectorEngine {
 
   private async addTransactionToCommitment(
     params: EngineParams.AddTransactionToCommitment,
-  ): Promise<Result<ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_addTransactionToCommitment], EngineError>> {
+  ): Promise<
+    Result<ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_addTransactionToCommitment], EngineError>
+  > {
     const method = "addTransactionToCommitment";
     const methodId = getRandomBytes32();
     this.logger.info({ params, method, methodId }, "Method started");
@@ -1339,14 +1341,15 @@ export class VectorEngine implements IVectorEngine {
     }
 
     // Verify transfers match merkleRoot
-    const { root } = generateMerkleTreeData(activeTransfers);
-    if (root !== channel.merkleRoot) {
-      return sendResponseToCounterparty(RestoreError.reasons.InvalidMerkleRoot, {
-        calculated: root,
-        merkleRoot: channel.merkleRoot,
-        activeTransfers: activeTransfers.map((t) => t.transferId),
-      });
-    }
+    // TODO: SKIPPING MERKLE ROOT CHECK
+    // const { root } = generateMerkleTreeData(activeTransfers);
+    // if (root !== channel.merkleRoot) {
+    //   return sendResponseToCounterparty(RestoreError.reasons.InvalidMerkleRoot, {
+    //     calculated: root,
+    //     merkleRoot: channel.merkleRoot,
+    //     activeTransfers: activeTransfers.map((t) => t.transferId),
+    //   });
+    // }
 
     // Verify nothing with a sync-able nonce exists in store
     const existing = await this.getChannelState({ channelAddress: channel.channelAddress });
