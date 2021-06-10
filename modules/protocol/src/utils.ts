@@ -108,13 +108,11 @@ export const extractContextFromStore = async (
   let activeTransfers: FullTransferState[];
   let channelState: FullChannelState | undefined;
   let update: ChannelUpdate | undefined;
-  let storeMethod = "getChannelState";
+  let storeMethod = "getChannelAndActiveTransfers";
   try {
-    // will always need the previous state
-    channelState = await storeService.getChannelState(channelAddress);
-    // will only need active transfers for create/resolve
-    storeMethod = "getActiveTransfers";
-    activeTransfers = await storeService.getActiveTransfers(channelAddress);
+    const res = await storeService.getChannelAndActiveTransfers(channelAddress);
+    channelState = res.channel;
+    activeTransfers = res.transfers;
     storeMethod = "getUpdateById";
     update = await storeService.getUpdateById(updateId);
   } catch (e) {

@@ -6,6 +6,9 @@ import {
   INodeService,
   NodeError,
   TransferNames,
+  FullTransferState,
+  UpdateType,
+  Result,
 } from "@connext/vector-types";
 import {
   createlockHash,
@@ -33,6 +36,14 @@ const agentBalance = utils.parseEther("0.0005").toString();
 const routerBalance = utils.parseEther("0.3");
 
 const walletQueue = new PriorityQueue({ concurrency: 1 });
+
+export function getNextNonceForUpdate(currentNonce: number, isAlice: boolean): number {
+  let rotation = currentNonce % 4;
+  let currentlyMe = rotation < 2 === isAlice;
+  let top = currentNonce % 2 === 1;
+  let offset = currentlyMe ? (top ? 3 : 1) : top ? 1 : 2;
+  return currentNonce + offset;
+}
 
 let walletNonce;
 const getWalletNonce = async () => {
@@ -173,47 +184,36 @@ export class Agent {
   }
 
   async checkMerkleRoot(transferId?: string): Promise<void> {
-    const channel = await this.nodeService.getStateChannel({
+    const data = await this.nodeService.getChannelAndActiveTransfers({
       publicIdentifier: this.publicIdentifier,
       channelAddress: this.channelAddress!,
     });
-    const active = await this.nodeService.getActiveTransfers({
-      publicIdentifier: this.publicIdentifier,
-      channelAddress: this.channelAddress!,
-    });
-    if (channel.isError || active.isError) {
-      const error = channel.getError() ?? active.getError();
-      logger.error({ ...error }, "Failed to get channel or active transfers");
+    if (data.isError) {
+      const error = data.getError();
+      logger.error({ ...error }, "Failed to get channel");
       process.exit(1);
     }
-    if (!channel.getValue()) {
-      logger.info({ channelAddress: this.channelAddress }, "No channel");
+    // console.log("***** data", data.toJson());
+    const { channel, transfers } = data.getValue();
+    if (!channel) {
+      logger.warn({ channelAddress: this.channelAddress }, "No channel");
       return;
     }
 
-    // if necessary, check active transfer includes transferId
-    if (
-      transferId &&
-      !active
-        .getValue()
-        .map((t) => t.transferId)
-        .includes(transferId)
-    ) {
+    if (transferId && !transfers.map((t) => t.transferId).includes(transferId)) {
+      // if necessary, check active transfer includes transferId
       logger.error(
-        { channelAddress: this.channelAddress, active: active.getValue(), transferId },
+        { channelAddress: this.channelAddress, transfers: transfers.map((t) => t.transferId), transferId },
         "Transfer not in active transfers",
       );
       process.exit(1);
     }
 
     // recalculate merkleRoot
-    const stored = channel.getValue()?.merkleRoot;
-    const calculated = generateMerkleRoot(active.getValue());
+    const stored = channel.merkleRoot;
+    const calculated = generateMerkleRoot(transfers);
     if (stored !== calculated) {
-      logger.error(
-        { active: active.getValue(), channel: channel.getValue(), calculated },
-        "Incorrectly stored merkleRoot",
-      );
+      logger.error({ transfers, channel, calculated }, "Incorrectly stored merkleRoot");
       process.exit(1);
     }
   }
@@ -245,8 +245,8 @@ export class Agent {
       process.exit(1);
     }
 
-    // Check merkle-root post-create
-    await this.checkMerkleRoot(createRes.getValue().transferId);
+    // // Check merkle-root post-create
+    // await this.checkMerkleRoot(createRes.getValue().transferId);
 
     logger.info({ ...createRes.getValue() }, "Created transfer");
     return { ...createRes.getValue(), preImage, routingId, start: Date.now() };
@@ -270,8 +270,8 @@ export class Agent {
       process.exit(1);
     }
 
-    // Check merkle-root post-resolve
-    await this.checkMerkleRoot();
+    // // Check merkle-root post-resolve
+    // await this.checkMerkleRoot();
 
     logger.debug({ ...resolveRes.getValue() }, "Resolved transfer");
     return { ...resolveRes.getValue()!, preImage };
@@ -531,8 +531,8 @@ export class AgentManager {
             return;
           }
 
-          // Check the merkle root post-create
-          await agent.checkMerkleRoot(transferId);
+          // // Check the merkle root post-create
+          // await agent.checkMerkleRoot(transferId);
 
           // Creation comes from router forwarding, agent is responder
           // Find the preImage
@@ -595,8 +595,8 @@ export class AgentManager {
             return;
           }
 
-          // Check the merkle root when you get a resolved transfer
-          await _agent.checkMerkleRoot();
+          // // Check the merkle root when you get a resolved transfer
+          // await _agent.checkMerkleRoot();
 
           // Add timestamp on resolution
           this.transferInfo[routingId].end = Date.now();
