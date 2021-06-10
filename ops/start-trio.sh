@@ -206,6 +206,11 @@ services:
     $node_image
     $node_env
       VECTOR_MNEMONIC: '$carol_mnemonic'
+      VECTOR_PG_HOST: carol_db
+      VECTOR_PG_PORT: 5432
+      VECTOR_PG_DATABASE: '$project'
+      VECTOR_PG_USERNAME: '$project'
+      VECTOR_PG_PASSWORD: '$project'
     ports:
       - '$carol_node_port:$internal_node_port'
       - '$carol_prisma:$internal_prisma_port'
@@ -222,6 +227,11 @@ services:
     $node_image
     $node_env
       VECTOR_MNEMONIC: '$dave_mnemonic'
+      VECTOR_PG_HOST: dave_db
+      VECTOR_PG_PORT: 5432
+      VECTOR_PG_DATABASE: '$project'
+      VECTOR_PG_USERNAME: '$project'
+      VECTOR_PG_PASSWORD: '$project'
     ports:
       - '$dave_node_port:$internal_node_port'
       - '$dave_prisma:$internal_prisma_port'
