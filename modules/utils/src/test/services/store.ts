@@ -129,6 +129,16 @@ export class MemoryStoreService implements IEngineStore {
     return Promise.resolve(state);
   }
 
+  getChannelAndActiveTransfers(
+    channelAddress: string,
+  ): Promise<{ channel: FullChannelState<any>; transfers: FullTransferState<any>[] }> {
+    const active = this.transfersInChannel.get(channelAddress) ?? [];
+    return Promise.resolve({
+      channel: this.channelStates.get(channelAddress),
+      transfers: active.map((a) => this.transfers.get(a)).filter((x) => !!x),
+    });
+  }
+
   getChannelStateByParticipants(
     publicIdentifierA: string,
     publicIdentifierB: string,

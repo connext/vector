@@ -29,6 +29,9 @@ export interface IVectorStore {
   getTransferState(transferId: string): Promise<FullTransferState | undefined>;
   getTransfers(filterOpts?: GetTransfersFilterOpts): Promise<FullTransferState[]>;
   getUpdateById(id: string): Promise<ChannelUpdate | undefined>;
+  getChannelAndActiveTransfers(
+    channelAddress: string,
+  ): Promise<{ channel: FullChannelState | undefined; transfers: FullTransferState[] }>;
 
   // Setters
   saveChannelState(channelState: FullChannelState, transfer?: FullTransferState): Promise<void>;

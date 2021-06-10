@@ -701,6 +701,29 @@ export class PrismaStore implements IServerNodeStore {
     return convertChannelEntityToFullChannelState(channelEntity);
   }
 
+  async getChannelAndActiveTransfers(
+    channelAddress: string,
+  ): Promise<{ channel: FullChannelState | undefined; transfers: FullTransferState[] }> {
+    const channelEntity = await this.prisma.channel.findUnique({
+      where: { channelAddress },
+      include: {
+        activeTransfers: { include: { createUpdate: true, resolveUpdate: true, channel: true, dispute: true } },
+        balances: true,
+        latestUpdate: true,
+        dispute: true,
+      },
+    });
+
+    if (!channelEntity) {
+      return { channel: undefined, transfers: [] };
+    }
+
+    return {
+      channel: convertChannelEntityToFullChannelState(channelEntity),
+      transfers: channelEntity.activeTransfers.map((t) => convertTransferEntityToFullTransferState(t!)),
+    };
+  }
+
   async getChannelStates(): Promise<FullChannelState[]> {
     const channelEntities = await this.prisma.channel.findMany({
       include: { balances: true, latestUpdate: true, dispute: true },

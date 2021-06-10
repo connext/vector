@@ -10,7 +10,7 @@ import {
 import { PrismaStore } from "./store";
 import { config } from "../config";
 import { expect } from "chai";
-import { CreateUpdateDetails, ResolveUpdateDetails } from "@connext/vector-types";
+import { CreateUpdateDetails } from "@connext/vector-types";
 
 const name = "PrismaStore";
 

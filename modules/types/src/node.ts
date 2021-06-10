@@ -33,6 +33,10 @@ export interface INodeService {
     params: OptionalPublicIdentifier<NodeParams.GetChannelState>,
   ): Promise<Result<NodeResponses.GetChannelState, NodeError>>;
 
+  getChannelAndActiveTransfers(
+    params: OptionalPublicIdentifier<NodeParams.GetChannelAndActiveTransfers>,
+  ): Promise<Result<NodeResponses.GetChannelAndActiveTransfers, NodeError>>;
+
   getTransferQuote(
     params: OptionalPublicIdentifier<NodeParams.TransferQuote>,
   ): Promise<Result<NodeResponses.TransferQuote, NodeError>>;
@@ -56,7 +60,7 @@ export interface INodeService {
   getTransfers(
     params: OptionalPublicIdentifier<
       NodeParams.GetTransfers &
-        Omit<GetTransfersFilterOpts, "startDate" | "endDate"> & { startDate: Date; endDate: Date } // in the client, use Date type
+        Omit<GetTransfersFilterOpts, "startDate" | "endDate"> & { startDate?: Date; endDate?: Date } // in the client, use Date type
     >,
   ): Promise<Result<NodeResponses.GetTransfers, NodeError>>;
 

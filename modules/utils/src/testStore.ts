@@ -104,6 +104,23 @@ export const testStore = <T extends IEngineStore>(
       await store.disconnect();
     });
 
+    describe("getChannelAndActiveTransfers", async () => {
+      it("should work", async () => {
+        const { channel: _channel, transfer } = createTestChannelState(
+          "create",
+          { nonce: 10 },
+          {
+            transferId: mkHash("0x111"),
+            meta: { routingId: mkBytes32("0xddd") },
+          },
+        );
+        await store.saveChannelState(_channel, transfer);
+        const { channel, transfers } = await store.getChannelAndActiveTransfers(_channel.channelAddress);
+        expect(channel).to.deep.eq(_channel);
+        expect(transfers).to.be.deep.eq([transfer]);
+      });
+    });
+
     describe("saveChannelStateAndTransfers", () => {
       it("saveChannelStateAndTransfers removes previous state", async () => {
         const { channel, transfer } = createTestChannelState(

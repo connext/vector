@@ -322,10 +322,23 @@ export class RestServerNodeService implements INodeService {
     );
   }
 
+  async getChannelAndActiveTransfers(
+    params: OptionalPublicIdentifier<NodeParams.GetChannelAndActiveTransfers>,
+  ): Promise<Result<NodeResponses.GetChannelAndActiveTransfers, ServerNodeServiceError>> {
+    return this.executeHttpRequest(
+      `${params.publicIdentifier ?? this.publicIdentifier}/channels/${
+        params.channelAddress
+      }/channel-and-active-transfers`,
+      "get",
+      params,
+      NodeParams.GetChannelAndActiveTransfersSchema,
+    );
+  }
+
   async getTransfers(
     params: OptionalPublicIdentifier<
       NodeParams.GetTransfers &
-        Omit<GetTransfersFilterOpts, "startDate" | "endDate"> & { startDate: Date; endDate: Date } // in the client, use Date type
+        Omit<GetTransfersFilterOpts, "startDate" | "endDate"> & { startDate?: Date; endDate?: Date } // in the client, use Date type
     >,
   ): Promise<Result<NodeResponses.GetTransfers, ServerNodeServiceError>> {
     const queryString = [

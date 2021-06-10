@@ -274,6 +274,35 @@ export class VectorEngine implements IVectorEngine {
     }
   }
 
+  private async getChannelAndActiveTransfers(
+    params: EngineParams.GetChannelAndActiveTransfers,
+  ): Promise<
+    Result<ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_getChannelAndActiveTransfers], EngineError>
+  > {
+    const validate = ajv.compile(EngineParams.GetChannelAndActiveTransfersSchema);
+    const valid = validate(params);
+    if (!valid) {
+      return Result.fail(
+        new RpcError(RpcError.reasons.InvalidParams, params.channelAddress ?? "", this.publicIdentifier, {
+          invalidParamsError: validate.errors?.map((e) => e.message).join(","),
+          invalidParams: params,
+        }),
+      );
+    }
+    try {
+      const ret = await this.store.getChannelAndActiveTransfers(params.channelAddress);
+      return Result.ok(ret);
+    } catch (e) {
+      return Result.fail(
+        new RpcError(RpcError.reasons.StoreMethodFailed, params.channelAddress, this.publicIdentifier, {
+          storeMethod: "getChannelAndActiveTransfers",
+          storeError: e.message,
+          params,
+        }),
+      );
+    }
+  }
+
   private async getTransferState(
     params: EngineParams.GetTransferState,
   ): Promise<Result<ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_getTransferState], EngineError>> {

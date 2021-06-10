@@ -440,6 +440,32 @@ server.get<{ Params: NodeParams.GetActiveTransfersByChannelAddress }>(
   },
 );
 
+server.get<{ Params: NodeParams.GetChannelAndActiveTransfers }>(
+  "/:publicIdentifier/channels/:channelAddress/channel-and-active-transfers",
+  { schema: { params: NodeParams.GetChannelAndActiveTransfersSchema } },
+  async (request, reply) => {
+    const engine = getNode(request.params.publicIdentifier);
+    if (!engine) {
+      return reply
+        .status(400)
+        .send(
+          jsonifyError(
+            new ServerNodeError(ServerNodeError.reasons.NodeNotFound, request.params.publicIdentifier, request.params),
+          ),
+        );
+    }
+    const params = constructRpcRequest(ChannelRpcMethods.chan_getChannelAndActiveTransfers, request.params);
+    try {
+      const res = await engine.request<"chan_getChannelAndActiveTransfers">(params);
+      console.log("****** res", res);
+      return reply.status(200).send(res);
+    } catch (e) {
+      logger.error({ error: jsonifyError(e) });
+      return reply.status(500).send(jsonifyError(e));
+    }
+  },
+);
+
 server.get<{ Params: NodeParams.GetChannelStates }>(
   "/:publicIdentifier/channels",
   { schema: { params: NodeParams.GetChannelStatesSchema, response: NodeResponses.GetChannelStatesSchema } },
