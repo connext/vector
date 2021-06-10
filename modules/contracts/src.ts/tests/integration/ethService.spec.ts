@@ -10,7 +10,7 @@ import {
   getRandomBytes32,
   hashTransferState,
   MemoryStoreService,
-  generateMerkleTreeData,
+  generateMerkleRoot,
 } from "@connext/vector-utils";
 import { AddressZero } from "@ethersproject/constants";
 import { Contract } from "@ethersproject/contracts";
@@ -71,7 +71,7 @@ describe("ethService integration", function () {
       initialStateHash: hashTransferState(state, HashlockTransferStateEncoding),
     });
 
-    const { root } = generateMerkleTreeData([transferState]);
+    const root = generateMerkleRoot([transferState]);
     channelState = createTestChannelStateWithSigners([aliceSigner, bobSigner], "create", {
       channelAddress: channel.address,
       assetIds: [AddressZero],

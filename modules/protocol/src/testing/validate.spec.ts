@@ -11,7 +11,7 @@ import {
   mkAddress,
   createTestChannelStateWithSigners,
   getTransferId,
-  generateMerkleTreeData,
+  generateMerkleRoot,
   getRandomBytes32,
 } from "@connext/vector-utils";
 import {
@@ -35,7 +35,7 @@ import {
 import Sinon from "sinon";
 import { AddressZero } from "@ethersproject/constants";
 
-import { OutboundChannelUpdateError, InboundChannelUpdateError, ValidationError } from "../errors";
+import { QueuedUpdateError, ValidationError } from "../errors";
 import * as vectorUtils from "../utils";
 import * as validation from "../validate";
 import * as vectorUpdate from "../update";
@@ -49,6 +49,7 @@ describe("validateUpdateParams", () => {
 
   // Declare all mocks
   let chainReader: Sinon.SinonStubbedInstance<VectorChainReader>;
+  let validateUpdateIdSignatureStub: Sinon.SinonStub;
 
   // Create helpers to create valid contexts
   const createValidSetupContext = () => {
@@ -140,7 +141,7 @@ describe("validateUpdateParams", () => {
       balance: { to: [initiator.address, responder.address], amount: ["3", "0"] },
       transferResolver: undefined,
     });
-    const { root } = generateMerkleTreeData([transfer]);
+    const root = generateMerkleRoot([transfer]);
     const previousState = createTestChannelStateWithSigners([initiator, responder], UpdateType.deposit, {
       channelAddress,
       nonce,
@@ -198,6 +199,10 @@ describe("validateUpdateParams", () => {
     chainReader = Sinon.createStubInstance(VectorChainReader);
     chainReader.getChannelAddress.resolves(Result.ok(channelAddress));
     chainReader.create.resolves(Result.ok(true));
+
+    validateUpdateIdSignatureStub = Sinon.stub(vectorUtils, "validateChannelUpdateIdSignature").resolves(
+      Result.ok(undefined),
+    );
   });
 
   afterEach(() => {
@@ -757,7 +762,7 @@ describe.skip("validateParamsAndApplyUpdate", () => {
       activeTransfers,
       signer.publicIdentifier,
     );
-    expect(result.getError()?.message).to.be.eq(OutboundChannelUpdateError.reasons.OutboundValidationFailed);
+    expect(result.getError()?.message).to.be.eq(QueuedUpdateError.reasons.OutboundValidationFailed);
     expect(result.getError()?.context.params).to.be.deep.eq(params);
     expect(result.getError()?.context.state).to.be.deep.eq(previousState);
     expect(result.getError()?.context.error).to.be.eq("fail");
@@ -795,6 +800,7 @@ describe("validateAndApplyInboundUpdate", () => {
   let chainReader: Sinon.SinonStubbedInstance<VectorChainReader>;
   let validateParamsAndApplyUpdateStub: Sinon.SinonStub;
   let validateChannelUpdateSignaturesStub: Sinon.SinonStub;
+  let validateUpdateIdSignatureStub: Sinon.SinonStub;
   let generateSignedChannelCommitmentStub: Sinon.SinonStub;
   let applyUpdateStub: Sinon.SinonStub;
   let externalValidationStub: {
@@ -804,7 +810,7 @@ describe("validateAndApplyInboundUpdate", () => {
 
   // Create helper to run test
   const runErrorTest = async (
-    errorMessage: Values<typeof InboundChannelUpdateError.reasons>,
+    errorMessage: Values<typeof QueuedUpdateError.reasons>,
     signer: ChannelSigner = signers[0],
     context: any = {},
   ) => {
@@ -834,6 +840,7 @@ describe("validateAndApplyInboundUpdate", () => {
 
     // Need for double signed and single signed
     validateChannelUpdateSignaturesStub.resolves(Result.ok(undefined));
+    validateUpdateIdSignatureStub.resolves(Result.ok(undefined));
 
     // Needed for double signed
     chainReader.resolve.resolves(Result.ok({ to: [updatedChannel.alice, updatedChannel.bob], amount: ["10", "2"] }));
@@ -864,6 +871,9 @@ describe("validateAndApplyInboundUpdate", () => {
     chainReader = Sinon.createStubInstance(VectorChainReader);
     validateParamsAndApplyUpdateStub = Sinon.stub(validation, "validateParamsAndApplyUpdate");
     validateChannelUpdateSignaturesStub = Sinon.stub(vectorUtils, "validateChannelSignatures").resolves(
+      Result.ok(undefined),
+    );
+    validateUpdateIdSignatureStub = Sinon.stub(vectorUtils, "validateChannelUpdateIdSignature").resolves(
       Result.ok(undefined),
     );
     generateSignedChannelCommitmentStub = Sinon.stub(vectorUtils, "generateSignedChannelCommitment");
@@ -972,7 +982,7 @@ describe("validateAndApplyInboundUpdate", () => {
       for (const test of tests) {
         it(test.name, async () => {
           update = { ...valid, ...(test.overrides ?? {}) } as any;
-          await runErrorTest(InboundChannelUpdateError.reasons.MalformedUpdate, signers[0], {
+          await runErrorTest(QueuedUpdateError.reasons.MalformedUpdate, signers[0], {
             updateError: test.error,
           });
         });
@@ -1037,7 +1047,7 @@ describe("validateAndApplyInboundUpdate", () => {
               ...test.overrides,
             },
           };
-          await runErrorTest(InboundChannelUpdateError.reasons.MalformedDetails, signers[0], {
+          await runErrorTest(QueuedUpdateError.reasons.MalformedDetails, signers[0], {
             detailsError: test.error,
           });
         });
@@ -1077,7 +1087,7 @@ describe("validateAndApplyInboundUpdate", () => {
               ...test.overrides,
             },
           };
-          await runErrorTest(InboundChannelUpdateError.reasons.MalformedDetails, signers[0], {
+          await runErrorTest(QueuedUpdateError.reasons.MalformedDetails, signers[0], {
             detailsError: test.error,
           });
         });
@@ -1148,16 +1158,6 @@ describe("validateAndApplyInboundUpdate", () => {
           error: "should be array",
         },
         {
-          name: "no merkleProofData",
-          overrides: { merkleProofData: undefined },
-          error: "should have required property 'merkleProofData'",
-        },
-        {
-          name: "malformed merkleProofData",
-          overrides: { merkleProofData: "fail" },
-          error: "should be array",
-        },
-        {
           name: "no merkleRoot",
           overrides: { merkleRoot: undefined },
           error: "should have required property 'merkleRoot'",
@@ -1182,7 +1182,7 @@ describe("validateAndApplyInboundUpdate", () => {
               ...test.overrides,
             },
           };
-          await runErrorTest(InboundChannelUpdateError.reasons.MalformedDetails, signers[0], {
+          await runErrorTest(QueuedUpdateError.reasons.MalformedDetails, signers[0], {
             detailsError: test.error,
           });
         });
@@ -1247,7 +1247,7 @@ describe("validateAndApplyInboundUpdate", () => {
               ...test.overrides,
             },
           };
-          await runErrorTest(InboundChannelUpdateError.reasons.MalformedDetails, signers[0], {
+          await runErrorTest(QueuedUpdateError.reasons.MalformedDetails, signers[0], {
             detailsError: test.error,
           });
         });
@@ -1256,18 +1256,21 @@ describe("validateAndApplyInboundUpdate", () => {
   });
 
   describe("should handle double signed update", () => {
-    const updateNonce = 3;
+    const initialNonce = 4;
+    let updateNonce;
 
     beforeEach(() => {
-      previousState = createTestChannelState(UpdateType.deposit, { nonce: 2 }).channel;
+      previousState = createTestChannelState(UpdateType.deposit, { nonce: initialNonce }).channel;
     });
 
     it("should work without hitting validation for UpdateType.resolve", async () => {
       const { updatedActiveTransfers, updatedChannel, updatedTransfer } = prepEnv();
+      updateNonce = vectorUtils.getNextNonceForUpdate(initialNonce, true);
       update = createTestChannelUpdate(UpdateType.resolve, {
         aliceSignature: mkSig("0xaaa"),
         bobSignature: mkSig("0xbbb"),
         nonce: updateNonce,
+        fromIdentifier: previousState.aliceIdentifier,
       });
 
       // Run test
@@ -1310,6 +1313,10 @@ describe("validateAndApplyInboundUpdate", () => {
         bobSignature: mkSig("0xbbb"),
         nonce: updateNonce,
       });
+      updateNonce = vectorUtils.getNextNonceForUpdate(
+        initialNonce,
+        update.fromIdentifier === previousState.aliceIdentifier,
+      );
 
       // Run test
       const result = await validation.validateAndApplyInboundUpdate(
@@ -1352,9 +1359,15 @@ describe("validateAndApplyInboundUpdate", () => {
       chainReader.resolve.resolves(Result.fail(chainErr));
 
       // Create update
-      update = createTestChannelUpdate(UpdateType.resolve, { aliceSignature, bobSignature, nonce: updateNonce });
+      updateNonce = vectorUtils.getNextNonceForUpdate(initialNonce, true);
+      update = createTestChannelUpdate(UpdateType.resolve, {
+        aliceSignature,
+        bobSignature,
+        nonce: updateNonce,
+        fromIdentifier: previousState.aliceIdentifier,
+      });
       activeTransfers = [createTestFullHashlockTransferState({ transferId: update.details.transferId })];
-      await runErrorTest(InboundChannelUpdateError.reasons.CouldNotGetFinalBalance, undefined, {
+      await runErrorTest(QueuedUpdateError.reasons.CouldNotGetResolvedBalance, undefined, {
         chainServiceError: jsonifyError(chainErr),
       });
     });
@@ -1363,9 +1376,15 @@ describe("validateAndApplyInboundUpdate", () => {
       prepEnv();
 
       // Create update
-      update = createTestChannelUpdate(UpdateType.resolve, { aliceSignature, bobSignature, nonce: updateNonce });
+      updateNonce = vectorUtils.getNextNonceForUpdate(initialNonce, true);
+      update = createTestChannelUpdate(UpdateType.resolve, {
+        aliceSignature,
+        bobSignature,
+        nonce: updateNonce,
+        fromIdentifier: previousState.aliceIdentifier,
+      });
       activeTransfers = [];
-      await runErrorTest(InboundChannelUpdateError.reasons.TransferNotActive, signers[0], { existing: [] });
+      await runErrorTest(QueuedUpdateError.reasons.TransferNotActive, signers[0], { existing: [] });
     });
 
     it("should fail if applyUpdate fails", async () => {
@@ -1376,9 +1395,15 @@ describe("validateAndApplyInboundUpdate", () => {
       applyUpdateStub.returns(Result.fail(err));
 
       // Create update
-      update = createTestChannelUpdate(UpdateType.setup, { aliceSignature, bobSignature, nonce: updateNonce });
+      updateNonce = vectorUtils.getNextNonceForUpdate(initialNonce, true);
+      update = createTestChannelUpdate(UpdateType.setup, {
+        aliceSignature,
+        bobSignature,
+        nonce: updateNonce,
+        fromIdentifier: previousState.aliceIdentifier,
+      });
       activeTransfers = [];
-      await runErrorTest(InboundChannelUpdateError.reasons.ApplyUpdateFailed, signers[0], {
+      await runErrorTest(QueuedUpdateError.reasons.ApplyUpdateFailed, signers[0], {
         applyUpdateError: err.message,
         applyUpdateContext: err.context,
       });
@@ -1391,9 +1416,15 @@ describe("validateAndApplyInboundUpdate", () => {
       validateChannelUpdateSignaturesStub.resolves(Result.fail(new Error("fail")));
 
       // Create update
-      update = createTestChannelUpdate(UpdateType.setup, { aliceSignature, bobSignature, nonce: updateNonce });
+      updateNonce = vectorUtils.getNextNonceForUpdate(initialNonce, true);
+      update = createTestChannelUpdate(UpdateType.setup, {
+        aliceSignature,
+        bobSignature,
+        nonce: updateNonce,
+        fromIdentifier: previousState.aliceIdentifier,
+      });
       activeTransfers = [];
-      await runErrorTest(InboundChannelUpdateError.reasons.BadSignatures, signers[0], {
+      await runErrorTest(QueuedUpdateError.reasons.BadSignatures, signers[0], {
         validateSignatureError: "fail",
       });
     });
@@ -1403,7 +1434,7 @@ describe("validateAndApplyInboundUpdate", () => {
     // Set a passing mocked env
     prepEnv();
     update = createTestChannelUpdate(UpdateType.setup, { nonce: 2 });
-    await runErrorTest(InboundChannelUpdateError.reasons.InvalidUpdateNonce, signers[0]);
+    await runErrorTest(QueuedUpdateError.reasons.InvalidUpdateNonce, signers[0]);
   });
 
   it("should fail if externalValidation.validateInbound fails", async () => {
@@ -1413,7 +1444,7 @@ describe("validateAndApplyInboundUpdate", () => {
     externalValidationStub.validateInbound.resolves(Result.fail(new Error("fail")));
 
     update = createTestChannelUpdate(UpdateType.setup, { nonce: 1, aliceSignature: undefined });
-    await runErrorTest(InboundChannelUpdateError.reasons.ExternalValidationFailed, signers[0], {
+    await runErrorTest(QueuedUpdateError.reasons.ExternalValidationFailed, signers[0], {
       externalValidationError: "fail",
     });
   });
@@ -1425,7 +1456,7 @@ describe("validateAndApplyInboundUpdate", () => {
     validateParamsAndApplyUpdateStub.resolves(Result.fail(new ChainError("fail")));
 
     update = createTestChannelUpdate(UpdateType.setup, { nonce: 1, aliceSignature: undefined });
-    await runErrorTest(InboundChannelUpdateError.reasons.ApplyAndValidateInboundFailed, signers[0], {
+    await runErrorTest(QueuedUpdateError.reasons.ApplyAndValidateInboundFailed, signers[0], {
       validationError: "fail",
       validationContext: {},
     });
@@ -1438,7 +1469,7 @@ describe("validateAndApplyInboundUpdate", () => {
     validateChannelUpdateSignaturesStub.resolves(Result.fail(new Error("fail")));
 
     update = createTestChannelUpdate(UpdateType.setup, { nonce: 1, aliceSignature: undefined });
-    await runErrorTest(InboundChannelUpdateError.reasons.BadSignatures, signers[0], { signatureError: "fail" });
+    await runErrorTest(QueuedUpdateError.reasons.BadSignatures, signers[0], { signatureError: "fail" });
   });
 
   it("should fail if generateSignedChannelCommitment fails", async () => {
@@ -1448,7 +1479,7 @@ describe("validateAndApplyInboundUpdate", () => {
     generateSignedChannelCommitmentStub.resolves(Result.fail(new Error("fail")));
 
     update = createTestChannelUpdate(UpdateType.setup, { nonce: 1, aliceSignature: undefined });
-    await runErrorTest(InboundChannelUpdateError.reasons.GenerateSignatureFailed, signers[0], {
+    await runErrorTest(QueuedUpdateError.reasons.GenerateSignatureFailed, signers[0], {
       signatureError: "fail",
     });
   });

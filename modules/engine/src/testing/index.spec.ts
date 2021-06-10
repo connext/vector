@@ -6,7 +6,6 @@ import {
   getTestLoggers,
   MemoryStoreService,
   MemoryMessagingService,
-  MemoryLockService,
   getRandomBytes32,
   mkPublicIdentifier,
   mkAddress,
@@ -51,7 +50,6 @@ describe("VectorEngine", () => {
   it("should connect without validation", async () => {
     const engine = await VectorEngine.connect(
       Sinon.createStubInstance(MemoryMessagingService),
-      Sinon.createStubInstance(MemoryLockService),
       storeService,
       getRandomChannelSigner(),
       chainService as IVectorChainService,
@@ -66,7 +64,6 @@ describe("VectorEngine", () => {
   it("should connect with validation", async () => {
     const engine = await VectorEngine.connect(
       Sinon.createStubInstance(MemoryMessagingService),
-      Sinon.createStubInstance(MemoryLockService),
       storeService,
       getRandomChannelSigner(),
       chainService as IVectorChainService,
@@ -156,7 +153,6 @@ describe("VectorEngine", () => {
       it(test.name, async () => {
         const engine = await VectorEngine.connect(
           Sinon.createStubInstance(MemoryMessagingService),
-          Sinon.createStubInstance(MemoryLockService),
           storeService,
           getRandomChannelSigner(),
           chainService as IVectorChainService,
@@ -195,7 +191,6 @@ describe("VectorEngine", () => {
         it(test.name, async () => {
           const engine = await VectorEngine.connect(
             Sinon.createStubInstance(MemoryMessagingService),
-            Sinon.createStubInstance(MemoryLockService),
             storeService,
             getRandomChannelSigner(),
             chainService as IVectorChainService,
@@ -809,7 +804,6 @@ describe("VectorEngine", () => {
         it(test.name, async () => {
           const engine = await VectorEngine.connect(
             Sinon.createStubInstance(MemoryMessagingService),
-            Sinon.createStubInstance(MemoryLockService),
             storeService,
             getRandomChannelSigner(),
             chainService as IVectorChainService,

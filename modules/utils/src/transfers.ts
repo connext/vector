@@ -1,11 +1,9 @@
 import {
   TransferState,
   CoreTransferState,
-  CoreTransferStateEncoding,
   Address,
   TransferResolver,
   Balance,
-  BalanceEncoding,
   TransferQuote,
   TransferQuoteEncoding,
   WithdrawalQuote,
@@ -13,6 +11,7 @@ import {
   FullTransferState,
 } from "@connext/vector-types";
 import { defaultAbiCoder } from "@ethersproject/abi";
+import { BigNumber } from "@ethersproject/bignumber";
 import { keccak256 as solidityKeccak256, sha256 as soliditySha256 } from "@ethersproject/solidity";
 import { keccak256 } from "ethereumjs-util";
 import { bufferify } from "./crypto";
@@ -34,7 +33,16 @@ export const encodeTransferState = (state: TransferState, encoding: string): str
 export const decodeTransferState = <T extends TransferState = any>(encoded: string, encoding: string): T =>
   defaultAbiCoder.decode([encoding], encoded)[0];
 
-export const encodeBalance = (balance: Balance): string => defaultAbiCoder.encode([BalanceEncoding], [balance]);
+export const encodeBalance = (balance: Balance): string => {
+  return "0x".concat(
+    BigNumber.from(balance.amount[0]).toHexString().slice(2).padStart(64, "0"),
+    BigNumber.from(balance.amount[1]).toHexString().slice(2).padStart(64, "0"),
+    "000000000000000000000000",
+    balance.to[0].slice(2),
+    "000000000000000000000000",
+    balance.to[1].slice(2),
+  );
+};
 
 export const decodeTransferResolver = <T extends TransferResolver = any>(encoded: string, encoding: string): T =>
   defaultAbiCoder.decode([encoding], encoded)[0];
@@ -42,11 +50,30 @@ export const decodeTransferResolver = <T extends TransferResolver = any>(encoded
 export const encodeTransferResolver = (resolver: TransferResolver, encoding: string): string =>
   defaultAbiCoder.encode([encoding], [resolver]);
 
-export const encodeCoreTransferState = (state: CoreTransferState): string =>
-  defaultAbiCoder.encode([CoreTransferStateEncoding], [state]);
+export const encodeCoreTransferState = (state: CoreTransferState): string => {
+  return "0x".concat(
+    "000000000000000000000000",
+    state.channelAddress.slice(2),
+    state.transferId.slice(2),
+    "000000000000000000000000",
+    state.transferDefinition.slice(2),
+    "000000000000000000000000",
+    state.initiator.slice(2),
+    "000000000000000000000000",
+    state.responder.slice(2),
+    "000000000000000000000000",
+    state.assetId.slice(2),
+    encodeBalance(state.balance).slice(2),
+    BigNumber.from(state.transferTimeout).toHexString().slice(2).padStart(64, "0"),
+    state.initialStateHash.slice(2),
+  );
+};
 
 export const hashTransferState = (state: TransferState, encoding: string): string =>
   solidityKeccak256(["bytes"], [encodeTransferState(state, encoding)]);
+
+// export const hashCoreTransferState = (state: CoreTransferState): string =>
+//   solidityKeccak256(["bytes"], [encodeCoreTransferState(state)]);
 
 export const hashCoreTransferState = (state: CoreTransferState): Buffer =>
   keccak256(bufferify(encodeCoreTransferState(state)));
