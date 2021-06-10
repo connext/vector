@@ -31,6 +31,10 @@ import { logger } from "./setupServer";
 const chainId = parseInt(Object.keys(env.chainProviders)[0]);
 const provider = new providers.JsonRpcProvider(env.chainProviders[chainId]);
 const wallet = Wallet.fromMnemonic(env.sugarDaddy).connect(provider);
+// const transferAmount = "10"; //utils.parseEther("0.00001").toString();
+// const agentBalance = utils.parseEther("0.5").toString();
+// const routerBalance = utils.parseEther("1");
+
 const transferAmount = "1"; //utils.parseEther("0.00001").toString();
 const agentBalance = utils.parseEther("0.0005").toString();
 const routerBalance = utils.parseEther("0.3");
@@ -486,6 +490,16 @@ export class AgentManager {
           }
           // Transfer was completed, post to evt
           const cancelled = Object.values(data.transfer.transferResolver)[0] === constants.HashZero;
+          logger.info(
+            {
+              routingId,
+              sendingAgent: agent.publicIdentifier,
+              senderChannel: channelAddress,
+              senderTransfer: transferId,
+              cancelled: cancelled ? meta.cancellationReason : "Not cancelled",
+            },
+            "Forwarding complete",
+          );
           this.transfersCompleted.post({
             routingId,
             sendingAgent: agent.publicIdentifier,
