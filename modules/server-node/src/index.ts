@@ -457,7 +457,6 @@ server.get<{ Params: NodeParams.GetChannelAndActiveTransfers }>(
     const params = constructRpcRequest(ChannelRpcMethods.chan_getChannelAndActiveTransfers, request.params);
     try {
       const res = await engine.request<"chan_getChannelAndActiveTransfers">(params);
-      console.log("****** res", res);
       return reply.status(200).send(res);
     } catch (e) {
       logger.error({ error: jsonifyError(e) });
