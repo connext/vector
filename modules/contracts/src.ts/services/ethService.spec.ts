@@ -37,7 +37,7 @@ let sendTxWithRetriesMock: SinonStub;
 let approveMock: SinonStub;
 let getCodeMock: SinonStub;
 let getOnchainBalanceMock: SinonStub;
-let waitForConfirmation: SinonStub<[chainId: number, responses: TransactionResponse[]], Promise<TransactionReceipt>>;
+let waitForConfirmation: SinonStub<[chainId: number, responses: TransactionResponse[], timeoutMultiplier?: number | undefined], Promise<TransactionReceipt>>;
 let getGasPrice: SinonStub<[chainId: number], Promise<Result<BigNumber, ChainError>>>;
 
 let channelState: FullChannelState;
