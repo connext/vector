@@ -15,7 +15,7 @@ import {
 import { Static, Type } from "@sinclair/typebox";
 
 import { config } from "./config";
-import { createNode, deleteNodes, getChainService, getNode, getNodes } from "./helpers/nodes";
+import { Aggregator } from "./aggregator";
 
 export const logger = pino({ name: "", level: config.logLevel ?? "info" });
 logger.info("Loaded config from environment", { ...config, mnemonic: "", adminToken: "" });
@@ -37,96 +37,22 @@ server.addHook("onReady", async () => {
   // asset the router serves.
 });
 
+const aggregator = Aggregator();
+
 server.get("/ping", async () => {
   return "pong\n";
 });
-
-// server.get("/config", { schema: { response: NodeResponses.GetConfigSchema } }, async (request, reply) => {
-//   const nodes = getNodes();
-//   return reply.status(200).send(
-//     nodes.map((node) => {
-//       return {
-//         index: node.index,
-//         publicIdentifier: node.node.publicIdentifier,
-//         signerAddress: node.node.signerAddress,
-//         chainAddresses: config.chainAddresses,
-//       };
-//     }),
-//   );
-// });
 
 server.get<{ Params: { assetId: string, chainId: number } }>(
   "/liquidity/:assetId/:chainId",
   { schema: { params: Type.Object({ publicIdentifier: TPublicIdentifier }) } },
   async (request, reply) => {
-    const engine = getNode(request.params.publicIdentifier);
-    if (!engine) {
-      return reply
-        .status(400)
-        .send(
-          jsonifyError(
-            new ServerNodeError(ServerNodeError.reasons.NodeNotFound, request.params.publicIdentifier, request.params),
-          ),
-        );
-    }
     try {
-      const params = constructRpcRequest(ChannelRpcMethods.chan_getStatus, {});
-      const res = await engine.request<"chan_getStatus">(params);
-      return reply.status(200).send(res);
+      const res = await aggregator.getLiquidity(assetId, chainId)
+      return reply.status(200).send();
     } catch (e) {
       logger.error({ error: jsonifyError(e) });
       return reply.status(500).send(jsonifyError(e));
-    }
-  },
-);
-
-server.get<{ Params: NodeParams.GetRouterConfig }>(
-  "/:publicIdentifier/router/config/:routerIdentifier",
-  { schema: { params: NodeParams.GetRouterConfigSchema } },
-  async (request, reply) => {
-    const engine = getNode(request.params.publicIdentifier);
-    if (!engine) {
-      return reply
-        .status(400)
-        .send(
-          jsonifyError(
-            new ServerNodeError(ServerNodeError.reasons.NodeNotFound, request.params.publicIdentifier, request.params),
-          ),
-        );
-    }
-    const params = constructRpcRequest(ChannelRpcMethods.chan_getRouterConfig, request.params);
-    try {
-      const res = await engine.request<"chan_getRouterConfig">(params);
-      return reply.status(200).send(res);
-    } catch (e) {
-      logger.error({ error: jsonifyError(e) });
-      return reply.status(500).send(jsonifyError(e));
-    }
-  },
-);
-
-const JsonRpcRequestSchema = Type.Object({
-  method: Type.String(),
-  params: Type.Any(),
-});
-type JsonRpcRequest = Static<typeof JsonRpcRequestSchema>;
-  
-server.post<{ Params: { chainId: string }; Body: JsonRpcRequest }>(
-  "/ethprovider/:chainId",
-  { schema: { body: JsonRpcRequestSchema } },
-  async (request, reply) => {
-    const provider = _providers[parseInt(request.params.chainId)];
-    if (!provider) {
-      return reply
-        .status(400)
-        .send(new ServerNodeError(ServerNodeError.reasons.ProviderNotConfigured, "", request.body.params).toJson());
-    }
-    try {
-      const result = await provider.send(request.body.method, request.body.params);
-      return reply.status(200).send({ result });
-    } catch (e) {
-      // Do not touch provider errors
-      return reply.status(500).send({ message: e.message, stack: e.stack });
     }
   },
 );
