@@ -4,18 +4,13 @@ import fastify from "fastify";
 import fastifyCors from "fastify-cors";
 import pino from "pino";
 import {
-  ChannelRpcMethods,
-  EngineEvent,
-  ChainError,
-  NodeParams,
-  NodeResponses,
   TPublicIdentifier,
   jsonifyError,
 } from "@connext/vector-types";
 import { Static, Type } from "@sinclair/typebox";
 
 import { config } from "./config";
-import { Aggregator } from "./aggregator";
+import { Aggregator } from "../services/aggregator";
 
 export const logger = pino({ name: "", level: config.logLevel ?? "info" });
 logger.info("Loaded config from environment", { ...config, mnemonic: "", adminToken: "" });
@@ -48,8 +43,8 @@ server.get<{ Params: { assetId: string, chainId: number } }>(
   { schema: { params: Type.Object({ publicIdentifier: TPublicIdentifier }) } },
   async (request, reply) => {
     try {
-      const res = await aggregator.getLiquidity(assetId, chainId)
-      return reply.status(200).send();
+      const res = await aggregator.getLiquidity(request.params.assetId, request.params.chainId)
+      return reply.status(200).send(res);
     } catch (e) {
       logger.error({ error: jsonifyError(e) });
       return reply.status(500).send(jsonifyError(e));
@@ -57,7 +52,7 @@ server.get<{ Params: { assetId: string, chainId: number } }>(
   },
 );
   
-server.listen(8000, "0.0.0.0", (err, address) => {
+server.listen(8012, "0.0.0.0", (err, address) => {
   if (err) {
     logger.error(err);
     process.exit(1);
