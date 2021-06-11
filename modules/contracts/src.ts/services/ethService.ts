@@ -115,18 +115,6 @@ export class EthereumChainService extends EthereumChainReader implements IVector
     reason: TransactionReason,
     response: TransactionResponse,
   ): Promise<void> {
-    this.log.info(
-      {
-        method,
-        methodId,
-        channelAddress,
-        reason,
-        hash: response.hash,
-        gasPrice: response.gasPrice.toString(),
-        nonce: response.nonce,
-      },
-      "Tx submitted.",
-    );
     await this.store.saveTransactionAttempt(onchainTransactionId, channelAddress, reason, response);
     this.evts[ChainServiceEvents.TRANSACTION_SUBMITTED].post({
       response: Object.fromEntries(
@@ -137,6 +125,18 @@ export class EthereumChainService extends EthereumChainReader implements IVector
       channelAddress,
       reason,
     });
+    this.log.info(
+      {
+        method,
+        methodId,
+        channelAddress,
+        reason,
+        hash: response.hash,
+        gasPrice: response.gasPrice.toString(),
+        nonce: response.nonce,
+      },
+      "Tx submitted. Attempt saved.",
+    );
   }
 
   /// Save the tx receipt in the store and fire tx mined event.
@@ -148,7 +148,6 @@ export class EthereumChainService extends EthereumChainReader implements IVector
     reason: TransactionReason,
     receipt: TransactionReceipt,
   ) {
-    this.log.info({ method, methodId, onchainTransactionId, reason, receipt }, "Tx mined.");
     await this.store.saveTransactionReceipt(onchainTransactionId, receipt);
     this.evts[ChainServiceEvents.TRANSACTION_MINED].post({
       receipt: Object.fromEntries(
@@ -159,6 +158,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
       channelAddress,
       reason,
     });
+    this.log.info({ method, methodId, onchainTransactionId, reason, receipt }, "Tx mined. Saved receipt.");
   }
 
   /// Save tx failure in store and fire tx failed event.
@@ -172,7 +172,6 @@ export class EthereumChainService extends EthereumChainReader implements IVector
     error?: Error,
     message: string = "Tx reverted",
   ) {
-    this.log.error({ method, methodId, error: error ? jsonifyError(error) : message }, message);
     await this.store.saveTransactionFailure(onchainTransactionId, error?.message ?? message, receipt);
     this.evts[ChainServiceEvents.TRANSACTION_FAILED].post({
       error,
@@ -188,6 +187,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
           }
         : {}),
     });
+    this.log.error({ method, methodId, error: error ? jsonifyError(error) : message }, message);
   }
 
   /// Helper method to wrap queuing up a transaction and waiting for response.
@@ -402,25 +402,10 @@ export class EthereumChainService extends EthereumChainReader implements IVector
               // Only if the callback txFn() *disobeys* us in not passing in the nonce.
               // throw new ChainError(ChainError.reasons.)
             }
-
-            this.log.info(
-              {
-                hash: response.hash,
-                gas: response.gasPrice.toString(),
-                channelAddress,
-                method,
-                methodId,
-                nonce: response.nonce,
-              },
-              "Tx submitted",
-            );
-            // Add this response to our local response history.
-            responses.push(response);
-            // NOTE: Response MUST be defined here because if it was NEVER defined (i.e. undefined on first iteration),
-            // we would have returned in prev block, and if it was undefined on this iteration we would not overwrite
-            // that value.
             // Tx was submitted: handle saving to store.
             await this.handleTxSubmit(onchainTransactionId, method, methodId, channelAddress, reason, response);
+            // Add this response to our local response history.
+            responses.push(response);
           } else {
             // If response returns undefined, we assume the tx was not sent. This will happen if some logic was
             // passed into txFn to bail out at the time of sending.
@@ -473,7 +458,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
 
         /// CONFIRM
         // Now we wait for confirmation and get tx receipt.
-        receipt = await this.waitForConfirmation(chainId, responses);
+        receipt = await this.waitForConfirmation(chainId, responses, nonceExpired ? 3 : 1);
         // Check status in event of tx reversion.
         if (receipt && receipt.status === 0) {
           throw new ChainError(ChainError.reasons.TxReverted, { receipt });
@@ -579,7 +564,22 @@ export class EthereumChainService extends EthereumChainReader implements IVector
    * a timeout. If within the timeout there are *not* 10 confirmations,
    * the tx will be resubmitted at the same nonce.
    */
-  public async waitForConfirmation(chainId: number, responses: TransactionResponse[]): Promise<TransactionReceipt> {
+  public async waitForConfirmation(
+    chainId: number,
+    responses: TransactionResponse[],
+    timeoutMultiplier: number = 1
+  ): Promise<TransactionReceipt> {
+    const method = "waitForConfirmation";
+    const methodId = getRandomBytes32();
+    this.log.info(
+      {
+        method,
+        methodId,
+        attemptHashes: responses.map(tx => tx.hash),
+      },
+      "Checking for confirmations on tx attempt(s).",
+    );
+
     const provider: JsonRpcProvider = this.chainProviders[chainId];
     if (!provider) {
       throw new ChainError(ChainError.reasons.ProviderNotFound);
@@ -628,7 +628,8 @@ export class EthereumChainService extends EthereumChainReader implements IVector
     // NOTE: This loop won't execute if receipt is valid (not undefined).
     let timeElapsed: number = 0;
     const startMark = new Date().getTime();
-    while (!receipt && timeElapsed < CONFIRMATION_TIMEOUT) {
+    const confirmationTimeout = CONFIRMATION_TIMEOUT * timeoutMultiplier;
+    while (!receipt && timeElapsed < confirmationTimeout) {
       receipt = await pollForReceipt();
       // Update elapsed time.
       timeElapsed = new Date().getTime() - startMark;
