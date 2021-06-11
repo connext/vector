@@ -241,7 +241,7 @@ services:
     image: '${project}_database'
     $db_env
     volumes:
-      - carol_db:/var/lib/postgresql/data
+      - dave_db:/var/lib/postgresql/data
 
   roger:
     $common
