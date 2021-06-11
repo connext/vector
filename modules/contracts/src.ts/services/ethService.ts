@@ -458,7 +458,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
 
         /// CONFIRM
         // Now we wait for confirmation and get tx receipt.
-        receipt = await this.waitForConfirmation(chainId, responses);
+        receipt = await this.waitForConfirmation(chainId, responses, nonceExpired ? 3 : 1);
         // Check status in event of tx reversion.
         if (receipt && receipt.status === 0) {
           throw new ChainError(ChainError.reasons.TxReverted, { receipt });
@@ -569,6 +569,17 @@ export class EthereumChainService extends EthereumChainReader implements IVector
     responses: TransactionResponse[],
     timeoutMultiplier: number = 1
   ): Promise<TransactionReceipt> {
+    const method = "waitForConfirmation";
+    const methodId = getRandomBytes32();
+    this.log.info(
+      {
+        method,
+        methodId,
+        attemptHashes: responses.map(tx => tx.hash),
+      },
+      "Checking for confirmations on tx attempt(s).",
+    );
+
     const provider: JsonRpcProvider = this.chainProviders[chainId];
     if (!provider) {
       throw new ChainError(ChainError.reasons.ProviderNotFound);
