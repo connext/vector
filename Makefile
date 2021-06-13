@@ -114,6 +114,7 @@ stop-all:
 	@bash ops/stop.sh messaging
 	@bash ops/stop.sh chains
 	@bash ops/stop.sh evm
+	@bash ops/stop.sh postgres
 
 clean: stop-all
 	rm -rf .flags
@@ -201,6 +202,7 @@ watch-engine: contracts-js protocol
 
 test-server-node: server-node-js
 	bash ops/start-messaging.sh
+	bash ops/start-postgres.sh
 	bash ops/test-unit.sh server-node test 1342
 watch-server-node: engine
 	bash ops/start-messaging.sh

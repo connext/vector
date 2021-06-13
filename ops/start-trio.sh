@@ -161,6 +161,11 @@ grafana_service="grafana:
 observability_services="$prometheus_services
   $grafana_service"
 
+db_env="environment:
+      POSTGRES_DB: '$project'
+      POSTGRES_USER: '$project'
+      POSTGRES_PASSWORD: '$project'"
+
 ####################
 # Launch stack
 
@@ -173,6 +178,27 @@ networks:
   $project:
     external: true
 
+volumes:
+  roger_db:
+    driver_opts:
+      type: tmpfs
+      device: tmpfs
+
+  router_db:
+    driver_opts:
+      type: tmpfs
+      device: tmpfs
+
+  carol_db:
+    driver_opts:
+      type: tmpfs
+      device: tmpfs
+
+  dave_db:
+    driver_opts:
+      type: tmpfs
+      device: tmpfs
+
 services:
 
   carol:
@@ -180,27 +206,63 @@ services:
     $node_image
     $node_env
       VECTOR_MNEMONIC: '$carol_mnemonic'
+      VECTOR_PG_HOST: carol_db
+      VECTOR_PG_PORT: 5432
+      VECTOR_PG_DATABASE: '$project'
+      VECTOR_PG_USERNAME: '$project'
+      VECTOR_PG_PASSWORD: '$project'
     ports:
       - '$carol_node_port:$internal_node_port'
       - '$carol_prisma:$internal_prisma_port'
+
+  carol_db:
+    $common
+    image: '${project}_database'
+    $db_env
+    volumes:
+      - carol_db:/var/lib/postgresql/data
 
   dave:
     $common
     $node_image
     $node_env
       VECTOR_MNEMONIC: '$dave_mnemonic'
+      VECTOR_PG_HOST: dave_db
+      VECTOR_PG_PORT: 5432
+      VECTOR_PG_DATABASE: '$project'
+      VECTOR_PG_USERNAME: '$project'
+      VECTOR_PG_PASSWORD: '$project'
     ports:
       - '$dave_node_port:$internal_node_port'
       - '$dave_prisma:$internal_prisma_port'
+
+  dave_db:
+    $common
+    image: '${project}_database'
+    $db_env
+    volumes:
+      - dave_db:/var/lib/postgresql/data
 
   roger:
     $common
     $node_image
     $node_env
       VECTOR_MNEMONIC: '$roger_mnemonic'
+      VECTOR_PG_HOST: roger_db
+      VECTOR_PG_PORT: 5432
+      VECTOR_PG_DATABASE: '$project'
+      VECTOR_PG_USERNAME: '$project'
+      VECTOR_PG_PASSWORD: '$project'
     ports:
       - '$roger_node_port:$internal_node_port'
       - '$roger_prisma:$internal_prisma_port'
+
+  roger_db:
+    $common
+    image: '${project}_database'
+    $db_env
+    volumes:
+      - roger_db:/var/lib/postgresql/data
 
   router:
     $common
@@ -209,7 +271,19 @@ services:
       VECTOR_CONFIG: '$config'
       VECTOR_NODE_URL: 'http://roger:$internal_node_port'
       VECTOR_PORT: '$router_port'
+      VECTOR_PG_HOST: router_db
+      VECTOR_PG_PORT: 5432
+      VECTOR_PG_DATABASE: '$project'
+      VECTOR_PG_USERNAME: '$project'
+      VECTOR_PG_PASSWORD: '$project'
       VECTOR_MNEMONIC: '$roger_mnemonic'
+
+  router_db:
+    $common
+    image: '${project}_database'
+    $db_env
+    volumes:
+      - router_db:/var/lib/postgresql/data
 
   $observability_services
 
