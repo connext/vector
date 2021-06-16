@@ -1024,6 +1024,7 @@ export const isWithdrawTransfer = async (
   chainAddresses: ChainAddresses,
   chainService: IVectorChainReader,
 ): Promise<Result<boolean, ChainError>> => {
+  // TODO: cache this!
   const withdrawInfo = await chainService.getRegisteredTransferByName(
     TransferNames.Withdraw,
     chainAddresses[transfer.chainId].transferRegistryAddress,
@@ -1033,6 +1034,24 @@ export const isWithdrawTransfer = async (
     return Result.fail(withdrawInfo.getError()!);
   }
   const { definition } = withdrawInfo.getValue();
+  return Result.ok(transfer.transferDefinition === definition);
+};
+
+export const isCrosschainTransfer = async (
+  transfer: FullTransferState,
+  chainAddresses: ChainAddresses,
+  chainService: IVectorChainReader,
+): Promise<Result<boolean, ChainError>> => {
+  // TODO: cache this!
+  const crosschainInfo = await chainService.getRegisteredTransferByName(
+    TransferNames.CrosschainTransfer,
+    chainAddresses[transfer.chainId].transferRegistryAddress,
+    transfer.chainId,
+  );
+  if (crosschainInfo.isError) {
+    return Result.fail(crosschainInfo.getError()!);
+  }
+  const { definition } = crosschainInfo.getValue();
   return Result.ok(transfer.transferDefinition === definition);
 };
 

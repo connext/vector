@@ -30,7 +30,7 @@ import {
   VectorErrorJson,
 } from "@connext/vector-types";
 import {
-  generateMerkleTreeData,
+  recoverAddressFromChannelMessage,
   validateChannelUpdateSignatures,
   getSignerAddressFromPublicIdentifier,
   getRandomBytes32,
@@ -41,6 +41,7 @@ import {
 import pino from "pino";
 import Ajv from "ajv";
 import { Evt } from "evt";
+import { BigNumber } from "@ethersproject/bignumber";
 
 import { version } from "../package.json";
 
@@ -51,7 +52,7 @@ import {
   convertSetupParams,
   convertWithdrawParams,
 } from "./paramConverter";
-import { setupEngineListeners } from "./listeners";
+import { isCrosschainTransfer, setupEngineListeners } from "./listeners";
 import { getEngineEvtContainer, withdrawRetryForTransferId, addTransactionToCommitment } from "./utils";
 import { sendIsAlive } from "./isAlive";
 import { WithdrawCommitment } from "@connext/vector-contracts";
@@ -898,6 +899,63 @@ export class VectorEngine implements IVectorEngine {
       );
     }
     this.logger.info({ transfer, method, methodId }, "Transfer pre-resolve");
+
+    // special case for crosschain transfer
+    // we need to generate a separate sig for withdrawal commitment since the transfer resolver may have gotten forwarded
+    // and needs to be regenerated for this leg of the transfer
+    const isCrossChain = await isCrosschainTransfer(transfer, this.chainAddresses, this.chainService);
+    if (isCrossChain) {
+      // first check if the provided sig is valid. in the case of the receiver directly resolving the withdrawal, it will
+      // be valid already
+      const channelRes = await this.getChannelState({ channelAddress: transfer.channelAddress });
+      if (channelRes.isError) {
+        return Result.fail(
+          new RpcError(RpcError.reasons.ChannelNotFound, transfer.channelAddress, this.publicIdentifier, {
+            getChannelStateError: jsonifyError(channelRes.getError()!),
+          }),
+        );
+      }
+      const channel = channelRes.getValue();
+      if (!channel) {
+        return Result.fail(
+          new RpcError(RpcError.reasons.ChannelNotFound, transfer.channelAddress, this.publicIdentifier),
+        );
+      }
+      const {
+        transferState: { nonce, initiatorSignature, fee, callTo, callData, balance },
+      } = transfer;
+      const withdrawalAmount = balance.amount.reduce((prev, curr) => prev.add(curr), BigNumber.from(0)).sub(fee);
+      const commitment = new WithdrawCommitment(
+        channel.channelAddress,
+        channel.alice,
+        channel.bob,
+        transfer.balance.amount[0],
+        transfer.assetId,
+        withdrawalAmount.toString(),
+        nonce,
+        callTo,
+        callData,
+      );
+      let recovered: string;
+      try {
+        recovered = await recoverAddressFromChannelMessage(
+          commitment.hashToSign(),
+          params.transferResolver.responderSignature,
+        );
+      } catch (e) {
+        recovered = e.message;
+      }
+
+      // if it is not valid, regenerate the sig, otherwise use the provided one
+      if (recovered !== channel.alice && recovered !== channel.bob) {
+        this.logger.info({ method, methodId }, "Crosschain transfer signature invalid, regenerating sig");
+        // Generate your signature on the withdrawal commitment
+        params.transferResolver.responderSignature = await this.signer.signMessage(commitment.hashToSign());
+      }
+      await commitment.addSignatures(initiatorSignature, params.transferResolver.responderSignature);
+      // Store the double signed commitment
+      await this.store.saveWithdrawalCommitment(transfer.transferId, commitment.toJson());
+    }
 
     // First, get translated `create` params using the passed in conditional transfer ones
     const resolveResult = convertResolveConditionParams(params, transfer);
