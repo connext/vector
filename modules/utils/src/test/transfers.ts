@@ -7,13 +7,11 @@ import {
   HashlockTransferStateEncoding,
   HashlockTransferResolverEncoding,
   FullChannelState,
-} from "@connext/vector-types";
-import { sha256 as soliditySha256 } from "@ethersproject/solidity";
-import {
   CrosschainTransferResolverEncoding,
   CrosschainTransferState,
   CrosschainTransferStateEncoding,
-} from "../../../types/dist/src/transferDefinitions/crosschain";
+} from "@connext/vector-types";
+import { sha256 as soliditySha256 } from "@ethersproject/solidity";
 
 import { getRandomBytes32 } from "../hexStrings";
 import { hashTransferState } from "../transfers";
