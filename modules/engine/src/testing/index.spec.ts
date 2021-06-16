@@ -1,12 +1,5 @@
-import { VectorChainService, WithdrawCommitment } from "@connext/vector-contracts";
-import {
-  Result,
-  EngineParams,
-  IEngineStore,
-  IVectorChainService,
-  IVectorEngine,
-  IVectorProtocol,
-} from "@connext/vector-types";
+import { VectorChainService } from "@connext/vector-contracts";
+import { Result, EngineParams, IEngineStore, IVectorChainService } from "@connext/vector-types";
 import {
   expect,
   getRandomChannelSigner,
@@ -22,12 +15,10 @@ import {
   createTestChannelState,
   ChannelSigner,
 } from "@connext/vector-utils";
-import { Vector } from "@connext/vector-protocol";
-import Sinon, { createStubInstance, SinonStubbedInstance, stub } from "sinon";
+import Sinon from "sinon";
 
 import { RpcError } from "../errors";
 import { VectorEngine } from "../index";
-import * as listeners from "../listeners";
 
 import { env } from "./env";
 
@@ -844,147 +835,6 @@ describe("VectorEngine", () => {
           }
         });
       }
-    });
-  });
-
-  describe.only("resolveTransfer", () => {
-    let engine: IVectorEngine;
-    let vector: SinonStubbedInstance<IVectorProtocol>;
-    let alice: ChannelSigner;
-    beforeEach(async () => {
-      alice = getRandomChannelSigner();
-      engine = await VectorEngine.connect(
-        Sinon.createStubInstance(MemoryMessagingService),
-        Sinon.createStubInstance(MemoryLockService),
-        storeService,
-        alice,
-        chainService as IVectorChainService,
-        chainAddresses,
-        log,
-        false,
-        100,
-      );
-      vector = Sinon.createStubInstance(Vector);
-      (engine as any).vector = vector;
-    });
-
-    it("should fail if get transfer errors", async () => {
-      storeService.getTransferState.rejects("Blah");
-      await expect(
-        engine.request({
-          id: Date.now(),
-          jsonrpc: "2.0",
-          method: "chan_resolveTransfer",
-          params: {
-            transferId: getRandomBytes32(),
-            channelAddress: mkAddress(),
-            transferResolver: { preImage: getRandomBytes32() },
-          },
-        }),
-      ).to.eventually.be.rejectedWith("Transfer not found");
-    });
-
-    it("should fail if transfer not found", async () => {
-      storeService.getTransferState.resolves(undefined);
-      await expect(
-        engine.request({
-          id: Date.now(),
-          jsonrpc: "2.0",
-          method: "chan_resolveTransfer",
-          params: {
-            transferId: getRandomBytes32(),
-            channelAddress: mkAddress(),
-            transferResolver: { preImage: getRandomBytes32() },
-          },
-        }),
-      ).to.eventually.be.rejectedWith("Transfer not found");
-    });
-
-    describe("is crosschain transfer", () => {
-      beforeEach(async () => {
-        stub(listeners, "isCrosschainTransfer").resolves(Result.ok(true));
-      });
-
-      it("should fail if get channel errors", async () => {
-        storeService.getChannelState.rejects("Blah");
-        await expect(
-          engine.request({
-            id: Date.now(),
-            jsonrpc: "2.0",
-            method: "chan_resolveTransfer",
-            params: {
-              transferId: getRandomBytes32(),
-              channelAddress: mkAddress(),
-              transferResolver: { preImage: getRandomBytes32() },
-            },
-          }),
-        ).to.eventually.be.rejectedWith("Channel not found");
-      });
-
-      it("should fail if channel not found", async () => {
-        storeService.getChannelState.resolves(undefined);
-        await expect(
-          engine.request({
-            id: Date.now(),
-            jsonrpc: "2.0",
-            method: "chan_resolveTransfer",
-            params: {
-              transferId: getRandomBytes32(),
-              channelAddress: mkAddress(),
-              transferResolver: { preImage: getRandomBytes32() },
-            },
-          }),
-        ).to.eventually.be.rejectedWith("Channel not found");
-      });
-
-      it.only("should use provided resolver sig if it's valid", async () => {
-        const bob = getRandomChannelSigner();
-        const channel = createTestChannelState("create").channel;
-        channel.alice = alice.address;
-        channel.bob = bob.address;
-        const transfer = createTestFullCrosschainTransferState();
-
-        const commitment = new WithdrawCommitment(
-          channel.channelAddress,
-          channel.alice,
-          channel.bob,
-          channel.alice,
-          transfer.assetId,
-          transfer.balance.amount[0],
-          "1",
-        );
-        console.log("commitment:", commitment.toJson());
-        const initiatorSignature = await alice.signMessage(commitment.hashToSign());
-        const responderSignature = await bob.signMessage(commitment.hashToSign());
-
-        transfer.transferState.initiatorSignature = initiatorSignature;
-        transfer.transferState.callData = undefined;
-        transfer.transferState.callTo = undefined;
-        transfer.transferState.data = commitment.hashToSign();
-        transfer.transferState.initiator = channel.alice;
-        transfer.transferState.responder = channel.bob;
-
-        storeService.getTransferState.resolves(transfer);
-        storeService.getChannelState.resolves(channel);
-
-        const res = await engine.request({
-          id: Date.now(),
-          jsonrpc: "2.0",
-          method: "chan_resolveTransfer",
-          params: {
-            transferId: getRandomBytes32(),
-            channelAddress: mkAddress(),
-            transferResolver: { preImage: getRandomBytes32(), responderSignature },
-          },
-        });
-
-        console.log("vector.resolve: ", vector.resolve.call[0]);
-        expect(vector.resolve.callCount).to.eq(1);
-
-        console.log("res: ", res);
-      });
-
-      it("should use regenerate resolver sig if it's not valid", async () => {});
     });
   });
 });
