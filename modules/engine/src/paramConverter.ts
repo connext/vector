@@ -262,7 +262,6 @@ export async function convertResolveConditionParams(
       callTo,
       callData,
     );
-    console.log("commitment: ", commitment.toJson());
     let recovered: string;
     try {
       recovered = await recoverAddressFromChannelMessage(commitment.hashToSign(), transferResolver.responderSignature);

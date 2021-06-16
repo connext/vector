@@ -1024,7 +1024,6 @@ export const isWithdrawTransfer = async (
   chainAddresses: ChainAddresses,
   chainService: IVectorChainReader,
 ): Promise<Result<boolean, ChainError>> => {
-  // TODO: cache this!
   const withdrawInfo = await chainService.getRegisteredTransferByName(
     TransferNames.Withdraw,
     chainAddresses[transfer.chainId].transferRegistryAddress,
@@ -1042,7 +1041,6 @@ export const isCrosschainTransfer = async (
   chainAddresses: ChainAddresses,
   chainService: IVectorChainReader,
 ): Promise<Result<boolean, ChainError>> => {
-  // TODO: cache this!
   const crosschainInfo = await chainService.getRegisteredTransferByName(
     TransferNames.CrosschainTransfer,
     chainAddresses[transfer.chainId].transferRegistryAddress,
