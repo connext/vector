@@ -14,11 +14,6 @@ contract Crosschain is TransferDefinition {
     using LibChannelCrypto for bytes32;
 
     struct TransferState {
-        bytes32 lockHash;
-        uint256 expiry; // If 0, then no timelock is enforced.
-    }
-
-    struct TransferState {
         bytes initiatorSignature;
         address initiator;
         address responder;
@@ -27,6 +22,8 @@ contract Crosschain is TransferDefinition {
         uint256 fee;
         address callTo;
         bytes callData;
+        bytes32 lockHash;
+        uint256 expiry; // If 0, then no timelock is enforced.
     }
 
     struct TransferResolver {
@@ -49,7 +46,7 @@ contract Crosschain is TransferDefinition {
 
     function create(bytes calldata encodedBalance, bytes calldata encodedState)
         external
-        pure
+        view
         override
         returns (bool)
     {
@@ -101,7 +98,7 @@ contract Crosschain is TransferDefinition {
         bytes calldata encodedBalance,
         bytes calldata encodedState,
         bytes calldata encodedResolver
-    ) external pure override returns (Balance memory) {
+    ) external view override returns (Balance memory) {
         TransferState memory state = abi.decode(encodedState, (TransferState));
         TransferResolver memory resolver =
             abi.decode(encodedResolver, (TransferResolver));
