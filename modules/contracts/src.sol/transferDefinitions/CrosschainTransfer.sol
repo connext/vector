@@ -14,6 +14,7 @@ contract CrosschainTransfer is TransferDefinition {
     using LibChannelCrypto for bytes32;
 
     struct TransferState {
+        bytes initiatorSignature;
         address initiator;
         address responder;
         bytes32 data;
@@ -25,7 +26,6 @@ contract CrosschainTransfer is TransferDefinition {
     }
 
     struct TransferResolver {
-        bytes initiatorSignature;
         bytes responderSignature;
         bytes32 preImage;
     }
@@ -79,9 +79,13 @@ contract CrosschainTransfer is TransferDefinition {
             "CrosschainTransfer: EMPTY_LOCKHASH"
         );
 
-        // Update state.
-        balance.amount[1] = balance.amount[0];
-        balance.amount[0] = 0;
+        require(
+            state.data.checkSignature(
+                state.initiatorSignature,
+                state.initiator
+            ),
+            "CrosschainTransfer: INVALID_INITIATOR_SIG"
+        );
 
         // Valid initial transfer state
         return true;
@@ -113,14 +117,6 @@ contract CrosschainTransfer is TransferDefinition {
             "CrosschainTransfer: EMPTY_SIGNERS"
         );
 
-        // Both signatures must be valid.
-        require(
-            state.data.checkSignature(
-                resolver.initiatorSignature,
-                state.initiator
-            ),
-            "CrosschainTransfer: INVALID_INITIATOR_SIG"
-        );
         require(
             state.data.checkSignature(
                 resolver.responderSignature,
@@ -136,7 +132,7 @@ contract CrosschainTransfer is TransferDefinition {
             "CrosschainTransfer: INVALID_PREIMAGE"
         );
 
-        // Reduce CrosschainTransfer amount by optional fee.
+        // Reduce CrosschainTransfer amount to optional fee.
         // It's up to the offchain validators to ensure that the
         // CrosschainTransfer commitment takes this fee into account.
         balance.amount[1] = state.fee;
