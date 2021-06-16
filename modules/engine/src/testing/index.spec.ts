@@ -1,5 +1,12 @@
-import { VectorChainService } from "@connext/vector-contracts";
-import { Result, EngineParams, IEngineStore, IVectorChainService, IVectorEngine } from "@connext/vector-types";
+import { VectorChainService, WithdrawCommitment } from "@connext/vector-contracts";
+import {
+  Result,
+  EngineParams,
+  IEngineStore,
+  IVectorChainService,
+  IVectorEngine,
+  IVectorProtocol,
+} from "@connext/vector-types";
 import {
   expect,
   getRandomChannelSigner,
@@ -13,8 +20,10 @@ import {
   createTestFullHashlockTransferState,
   createTestFullCrosschainTransferState,
   createTestChannelState,
+  ChannelSigner,
 } from "@connext/vector-utils";
-import Sinon, { stub } from "sinon";
+import { Vector } from "@connext/vector-protocol";
+import Sinon, { createStubInstance, SinonStubbedInstance, stub } from "sinon";
 
 import { RpcError } from "../errors";
 import { VectorEngine } from "../index";
@@ -840,18 +849,23 @@ describe("VectorEngine", () => {
 
   describe.only("resolveTransfer", () => {
     let engine: IVectorEngine;
+    let vector: SinonStubbedInstance<IVectorProtocol>;
+    let alice: ChannelSigner;
     beforeEach(async () => {
+      alice = getRandomChannelSigner();
       engine = await VectorEngine.connect(
         Sinon.createStubInstance(MemoryMessagingService),
         Sinon.createStubInstance(MemoryLockService),
         storeService,
-        getRandomChannelSigner(),
+        alice,
         chainService as IVectorChainService,
         chainAddresses,
         log,
         false,
         100,
       );
+      vector = Sinon.createStubInstance(Vector);
+      (engine as any).vector = vector;
     });
 
     it("should fail if get transfer errors", async () => {
@@ -924,10 +938,31 @@ describe("VectorEngine", () => {
       });
 
       it.only("should use provided resolver sig if it's valid", async () => {
-        const alice = getRandomChannelSigner();
         const bob = getRandomChannelSigner();
         const channel = createTestChannelState("create").channel;
+        channel.alice = alice.address;
+        channel.bob = bob.address;
         const transfer = createTestFullCrosschainTransferState();
+
+        const commitment = new WithdrawCommitment(
+          channel.channelAddress,
+          channel.alice,
+          channel.bob,
+          channel.alice,
+          transfer.assetId,
+          transfer.balance.amount[0],
+          "1",
+        );
+        console.log("commitment:", commitment.toJson());
+        const initiatorSignature = await alice.signMessage(commitment.hashToSign());
+        const responderSignature = await bob.signMessage(commitment.hashToSign());
+
+        transfer.transferState.initiatorSignature = initiatorSignature;
+        transfer.transferState.callData = undefined;
+        transfer.transferState.callTo = undefined;
+        transfer.transferState.data = commitment.hashToSign();
+        transfer.transferState.initiator = channel.alice;
+        transfer.transferState.responder = channel.bob;
 
         storeService.getTransferState.resolves(transfer);
         storeService.getChannelState.resolves(channel);
@@ -939,9 +974,12 @@ describe("VectorEngine", () => {
           params: {
             transferId: getRandomBytes32(),
             channelAddress: mkAddress(),
-            transferResolver: { preImage: getRandomBytes32() },
+            transferResolver: { preImage: getRandomBytes32(), responderSignature },
           },
         });
+
+        console.log("vector.resolve: ", vector.resolve.call[0]);
+        expect(vector.resolve.callCount).to.eq(1);
 
         console.log("res: ", res);
       });

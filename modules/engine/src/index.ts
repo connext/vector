@@ -879,7 +879,6 @@ export class VectorEngine implements IVectorEngine {
     const validate = ajv.compile(EngineParams.ResolveTransferSchema);
     const valid = validate(params);
     if (!valid) {
-      console.log("validate.errors: ", validate.errors);
       return Result.fail(
         new RpcError(RpcError.reasons.InvalidParams, params.channelAddress ?? "", this.publicIdentifier, {
           invalidParamsError: validate.errors?.map((e) => e.message).join(","),
@@ -931,20 +930,23 @@ export class VectorEngine implements IVectorEngine {
         );
       }
       const {
-        transferState: { nonce, initiatorSignature, fee, callTo, callData, balance },
+        transferState: { nonce, initiatorSignature, fee, callTo, callData },
+        balance,
       } = transfer;
+      console.log("transfer: ", transfer);
       const withdrawalAmount = balance.amount.reduce((prev, curr) => prev.add(curr), BigNumber.from(0)).sub(fee);
       const commitment = new WithdrawCommitment(
         channel.channelAddress,
         channel.alice,
         channel.bob,
-        transfer.balance.amount[0],
+        this.signer.address,
         transfer.assetId,
         withdrawalAmount.toString(),
         nonce,
         callTo,
         callData,
       );
+      console.log("commitment: ", commitment.toJson());
       let recovered: string;
       try {
         recovered = await recoverAddressFromChannelMessage(
