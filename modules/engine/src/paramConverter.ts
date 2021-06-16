@@ -272,11 +272,8 @@ export async function convertResolveConditionParams(
 
     // if it is not valid, regenerate the sig, otherwise use the provided one
     if (recovered !== channel.alice && recovered !== channel.bob) {
-      console.log("SIG BAD");
       // Generate your signature on the withdrawal commitment
-      console.log("commitment.hashToSign(): ", commitment.hashToSign());
       transferResolver.responderSignature = await signer.signMessage(commitment.hashToSign());
-      console.log("transferResolver.responderSignature: ", transferResolver.responderSignature);
     }
     await commitment.addSignatures(initiatorSignature, transferResolver.responderSignature);
     // Store the double signed commitment

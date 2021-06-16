@@ -35,7 +35,7 @@ import {
   mkSig,
 } from "@connext/vector-utils";
 import { expect } from "chai";
-import Sinon, { stub } from "sinon";
+import Sinon, { SinonStub, stub } from "sinon";
 import { VectorChainReader, WithdrawCommitment } from "@connext/vector-contracts";
 import { getAddress } from "@ethersproject/address";
 import { AddressZero } from "@ethersproject/constants";
@@ -74,7 +74,6 @@ describe("ParamConverter", () => {
   let signerB: Sinon.SinonStubbedInstance<ChannelSigner>;
   let messaging: Sinon.SinonStubbedInstance<NatsMessagingService>;
   let store: Sinon.SinonStubbedInstance<IEngineStore>;
-  let isCrosschainTransfer: Sinon.SinonStub;
 
   const setDefaultStubs = (registryInfo: RegisteredTransfer = transferRegisteredInfo) => {
     chainReader = Sinon.createStubInstance(VectorChainReader);
@@ -84,7 +83,6 @@ describe("ParamConverter", () => {
     store = Sinon.createStubInstance(MemoryStoreService);
     store.getTransferState.resolves(createTestFullHashlockTransferState());
     store.getChannelState.resolves(createTestChannelState("create").channel);
-    isCrosschainTransfer = stub(listeners, "isCrosschainTransfer").resolves(Result.ok(false));
 
     signerA.signMessage.resolves("success");
     signerB.signMessage.resolves("success");
@@ -563,6 +561,7 @@ describe("ParamConverter", () => {
   });
 
   describe("convertResolveConditionParams", () => {
+    let isCrosschainTransfer: SinonStub;
     const generateParams = (): EngineParams.ResolveTransfer => {
       setDefaultStubs();
       return {
@@ -576,6 +575,11 @@ describe("ParamConverter", () => {
         },
       };
     };
+
+    beforeEach(() => {
+      isCrosschainTransfer = stub(listeners, "isCrosschainTransfer");
+      isCrosschainTransfer.resolves(Result.ok(false));
+    });
 
     it("should work", async () => {
       const params = generateParams();
@@ -620,7 +624,7 @@ describe("ParamConverter", () => {
           channel.channelAddress,
           channel.alice,
           channel.bob,
-          channel.alice,
+          channel.bob,
           transfer.assetId,
           transfer.balance.amount[0],
           "1",
@@ -687,7 +691,7 @@ describe("ParamConverter", () => {
             transferResolver: { preImage, responderSignature },
           },
           transfer,
-          alice,
+          bob,
           chainAddresses,
           chainReader as any,
           store,
