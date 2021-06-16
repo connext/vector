@@ -28,6 +28,7 @@ import {
   MinimalTransaction,
   WITHDRAWAL_RESOLVED_EVENT,
   VectorErrorJson,
+  FullTransferState,
 } from "@connext/vector-types";
 import {
   recoverAddressFromChannelMessage,
@@ -878,6 +879,7 @@ export class VectorEngine implements IVectorEngine {
     const validate = ajv.compile(EngineParams.ResolveTransferSchema);
     const valid = validate(params);
     if (!valid) {
+      console.log("validate.errors: ", validate.errors);
       return Result.fail(
         new RpcError(RpcError.reasons.InvalidParams, params.channelAddress ?? "", this.publicIdentifier, {
           invalidParamsError: validate.errors?.map((e) => e.message).join(","),
@@ -886,11 +888,17 @@ export class VectorEngine implements IVectorEngine {
       );
     }
 
-    const transferRes = await this.getTransferState({ transferId: params.transferId });
-    if (transferRes.isError) {
-      return Result.fail(transferRes.getError()!);
+    let transfer: FullTransferState | undefined;
+    try {
+      transfer = await this.store.getTransferState(params.transferId);
+    } catch (e) {
+      return Result.fail(
+        new RpcError(RpcError.reasons.TransferNotFound, params.channelAddress ?? "", this.publicIdentifier, {
+          transferId: params.transferId,
+          getTransferStateError: jsonifyError(e),
+        }),
+      );
     }
-    const transfer = transferRes.getValue();
     if (!transfer) {
       return Result.fail(
         new RpcError(RpcError.reasons.TransferNotFound, params.channelAddress ?? "", this.publicIdentifier, {
@@ -907,15 +915,16 @@ export class VectorEngine implements IVectorEngine {
     if (isCrossChain) {
       // first check if the provided sig is valid. in the case of the receiver directly resolving the withdrawal, it will
       // be valid already
-      const channelRes = await this.getChannelState({ channelAddress: transfer.channelAddress });
-      if (channelRes.isError) {
+      let channel: FullChannelState | undefined;
+      try {
+        channel = await this.store.getChannelState(transfer.channelAddress);
+      } catch (e) {
         return Result.fail(
           new RpcError(RpcError.reasons.ChannelNotFound, transfer.channelAddress, this.publicIdentifier, {
-            getChannelStateError: jsonifyError(channelRes.getError()!),
+            getChannelStateError: jsonifyError(e),
           }),
         );
       }
-      const channel = channelRes.getValue();
       if (!channel) {
         return Result.fail(
           new RpcError(RpcError.reasons.ChannelNotFound, transfer.channelAddress, this.publicIdentifier),
