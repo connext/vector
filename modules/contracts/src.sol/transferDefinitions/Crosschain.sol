@@ -5,12 +5,12 @@ pragma experimental ABIEncoderV2;
 import "./TransferDefinition.sol";
 import "../lib/LibChannelCrypto.sol";
 
-/// @title Crosschain
+/// @title CrosschainTransfer
 /// @author Connext <support@connext.network>
 /// @notice This contract burns the initiator's funds if a mutually signed
 ///         transfer can be generated
 
-contract Crosschain is TransferDefinition {
+contract CrosschainTransfer is TransferDefinition {
     using LibChannelCrypto for bytes32;
 
     struct TransferState {
