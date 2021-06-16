@@ -40,6 +40,7 @@ contract CrosschainTransfer is TransferDefinition {
     function EncodedCancel() external pure override returns (bytes memory) {
         TransferResolver memory resolver;
         resolver.responderSignature = new bytes(65);
+        resolver.preImage = bytes32(0);
         return abi.encode(resolver);
     }
 
@@ -57,11 +58,7 @@ contract CrosschainTransfer is TransferDefinition {
         require(state.data != bytes32(0), "CrosschainTransfer: EMPTY_DATA");
         require(state.nonce != uint256(0), "CrosschainTransfer: EMPTY_NONCE");
 
-        // Initiator balance must be greater than 0 and include amount for fee.
-        require(
-            balance.amount[0] > 0,
-            "CrosschainTransfer: ZER0_SENDER_BALANCE"
-        );
+        // Initiator balance can be 0 for crosschain contract calls
         require(
             state.fee <= balance.amount[0],
             "CrosschainTransfer: INSUFFICIENT_BALANCE"
@@ -87,6 +84,11 @@ contract CrosschainTransfer is TransferDefinition {
             "CrosschainTransfer: INVALID_INITIATOR_SIG"
         );
 
+        require(
+            state.initiator != address(0) && state.responder != address(0),
+            "CrosschainTransfer: EMPTY_SIGNERS"
+        );
+
         // Valid initial transfer state
         return true;
     }
@@ -100,22 +102,6 @@ contract CrosschainTransfer is TransferDefinition {
         TransferResolver memory resolver =
             abi.decode(encodedResolver, (TransferResolver));
         Balance memory balance = abi.decode(encodedBalance, (Balance));
-
-        // Ensure data and nonce provided.
-        require(state.data != bytes32(0), "CrosschainTransfer: EMPTY_DATA");
-        require(state.nonce != uint256(0), "CrosschainTransfer: EMPTY_NONCE");
-
-        // Amount recipient is able to withdraw > 0.
-        require(
-            balance.amount[1] == 0,
-            "CrosschainTransfer: NONZERO_RECIPIENT_BALANCE"
-        );
-
-        // Transfer must have two valid parties.
-        require(
-            state.initiator != address(0) && state.responder != address(0),
-            "CrosschainTransfer: EMPTY_SIGNERS"
-        );
 
         require(
             state.data.checkSignature(
