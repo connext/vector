@@ -10,7 +10,7 @@ import {
 import { PrismaStore } from "./store";
 import { config } from "../config";
 import { expect } from "chai";
-import { CreateUpdateDetails, ResolveUpdateDetails } from "@connext/vector-types";
+import { CreateUpdateDetails, ResolveUpdateDetails, UpdateType } from "@connext/vector-types";
 
 const name = "PrismaStore";
 
@@ -29,6 +29,24 @@ describe("Server node-specific methods", async () => {
 
   after(async () => {
     await store.disconnect();
+  });
+
+  it.only("should save channel", async () => {
+    // Save channel
+    const channel1 = mkAddress("0xaaa");
+    const aliceCS = getRandomChannelSigner();
+    const bobCS = getRandomChannelSigner();
+    const state = createTestChannelState(UpdateType.deposit, {
+      channelAddress: channel1,
+      aliceIdentifier: aliceCS.publicIdentifier,
+      bobIdentifier: bobCS.publicIdentifier,
+      nonce: 8,
+      latestUpdate: { nonce: 8 },
+    });
+    await store.saveChannelState(state.channel);
+    console.log("****** saved");
+    const stored = await store.getChannelState(channel1);
+    console.log("***** stored", stored);
   });
 
   describe("should handle disconnects", () => {

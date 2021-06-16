@@ -20,7 +20,12 @@ import {
   StoredTransactionReceipt,
   ChannelUpdate,
 } from "@connext/vector-types";
-import { getRandomBytes32, getSignerAddressFromPublicIdentifier, mkSig } from "@connext/vector-utils";
+import {
+  getRandomBytes32,
+  getSignerAddressFromPublicIdentifier,
+  mkSig,
+  safeJsonStringify,
+} from "@connext/vector-utils";
 import { BigNumber } from "@ethersproject/bignumber";
 import { TransactionResponse, TransactionReceipt } from "@ethersproject/providers";
 
@@ -321,7 +326,7 @@ export class PrismaStore implements IServerNodeStore {
       ? `${config.dbUrl}?connection_limit=1&socket_timeout=10`
       : config.dbUrl;
 
-    this.prisma = new PrismaClient(_dbUrl ? { datasources: { db: { url: _dbUrl } } } : undefined);
+    this.prisma = new PrismaClient(_dbUrl ? { log: ["query"], datasources: { db: { url: _dbUrl } } } : undefined);
   }
 
   /// Retrieve transaction by id.
@@ -709,7 +714,12 @@ export class PrismaStore implements IServerNodeStore {
   }
 
   async saveChannelState(channelState: FullChannelState, transfer?: FullTransferState): Promise<void> {
-    await this.prisma.$executeRaw(`CALL save_channel_and_transfer($1, $2)`, channelState, transfer);
+    console.log("***** trying to save channel", channelState);
+    await this.prisma.$executeRaw(
+      `SELECT save_channel_and_transfer('${safeJsonStringify(channelState)}'::JSONB, '{${
+        channelState.assetIds
+      }}'::TEXT[])`,
+    );
   }
 
   async saveChannelStateAndTransfers(
