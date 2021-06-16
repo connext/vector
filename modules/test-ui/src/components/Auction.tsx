@@ -1,13 +1,13 @@
-import { BrowserNode } from "@connext/vector-browser-node";
-import {
-  getPublicKeyFromPublicIdentifier,
-  encrypt,
-  createlockHash,
-  getBalanceForAssetId,
-  getRandomBytes32,
-  constructRpcRequest,
-} from "@connext/vector-utils";
-import React, { useState, FC } from "react";
+// import { BrowserNode } from "@connext/vector-browser-node";
+// import {
+//   getPublicKeyFromPublicIdentifier,
+//   encrypt,
+//   createlockHash,
+//   getBalanceForAssetId,
+//   getRandomBytes32,
+//   constructRpcRequest,
+// } from "@connext/vector-utils";
+import React, { useState, FC, useEffect } from "react";
 import { constants } from "ethers";
 import { Col, Divider, Row, Statistic, Input, Typography, Table, Form, Button, List, Select, Tabs, Radio } from "antd";
 import { CopyToClipboard } from "react-copy-to-clipboard";
@@ -15,7 +15,7 @@ import { EngineEvents, FullChannelState, jsonifyError, TransferNames } from "@co
 import { config } from "../config";
 
 const Auction: FC = () => {
-  const [node, setNode] = useState<BrowserNode>();
+  const [node, setNode] = useState<any>();
   const [channels, setChannels] = useState<FullChannelState[]>([]);
   const [selectedChannel, setSelectedChannel] = useState<FullChannelState>();
   const [showCustomIframe, setShowCustomIframe] = useState<boolean>(false);
@@ -34,11 +34,25 @@ const Auction: FC = () => {
   const [transferForm] = Form.useForm();
   const [signMessageForm] = Form.useForm();
 
+  const [utils, setUtils] = useState<any>();
+  const [browserNode, setBrowserNode] = useState<any>();
+
+  const loadWasmLibs = async () => {
+    const utils = await import("@connext/vector-utils");
+    const browserNode = await import("@connext/vector-browser-node");
+    setUtils(utils);
+    setBrowserNode(browserNode);
+  };
+
+  useEffect(() => {
+    loadWasmLibs();
+  }, []);
+
   const connectNode = async (
     iframeSrc: string,
     supportedChains: number[],
     loginProvider: "none" | "metamask" | "magic",
-  ): Promise<BrowserNode> => {
+  ): Promise<any> => {
     try {
       setConnectLoading(true);
 
@@ -46,7 +60,7 @@ const Auction: FC = () => {
       supportedChains.forEach((chain) => {
         chainProviders[chain] = config.chainProviders[chain];
       });
-      const client = new BrowserNode({
+      const client = new browserNode.BrowserNode({
         supportedChains,
         iframeSrc,
         chainProviders,
@@ -150,10 +164,10 @@ const Auction: FC = () => {
           return channelVal;
         }),
       )
-    ).filter((chan) => supportedChains.includes(chan.networkContext.chainId));
+    ).filter((chan) => supportedChains.includes((chan as any).networkContext.chainId));
     if (_channels.length > 0) {
-      setChannels(_channels);
-      setSelectedChannel(_channels[0]);
+      setChannels(_channels as any);
+      setSelectedChannel(_channels[0] as any);
     }
 
     node.on(EngineEvents.DEPOSIT_RECONCILED, async (data) => {
@@ -171,7 +185,7 @@ const Auction: FC = () => {
         console.log("No encrypted preImage attached", data.transfer);
         return;
       }
-      const rpc = constructRpcRequest<"chan_decrypt">("chan_decrypt", data.transfer.meta.encryptedPreImage);
+      const rpc = utils.constructRpcRequest("chan_decrypt", data.transfer.meta.encryptedPreImage);
       const decryptedPreImage = await node.send(rpc);
 
       const requestRes = await node.resolveTransfer({
@@ -188,7 +202,7 @@ const Auction: FC = () => {
     });
   };
 
-  const updateChannel = async (node: BrowserNode, channelAddress: string) => {
+  const updateChannel = async (node: any, channelAddress: string) => {
     const res = await node.getStateChannel({ channelAddress });
     if (res.isError) {
       console.error("Error getting state channel", res.getError());
@@ -229,8 +243,8 @@ const Auction: FC = () => {
 
     const submittedMeta: { encryptedPreImage?: string } = {};
     if (recipient) {
-      const recipientPublicKey = getPublicKeyFromPublicIdentifier(recipient);
-      const encryptedPreImage = await encrypt(preImage, recipientPublicKey);
+      const recipientPublicKey = utils.getPublicKeyFromPublicIdentifier(recipient);
+      const encryptedPreImage = await utils.encrypt(preImage, recipientPublicKey);
       submittedMeta.encryptedPreImage = encryptedPreImage;
     }
 
@@ -241,7 +255,7 @@ const Auction: FC = () => {
       amount,
       recipient,
       details: {
-        lockHash: createlockHash(preImage),
+        lockHash: utils.createlockHash(preImage),
         expiry: "0",
       },
       meta: submittedMeta,
@@ -530,7 +544,7 @@ const Auction: FC = () => {
                     name="transfer"
                     initialValues={{
                       assetId: selectedChannel?.assetIds && selectedChannel?.assetIds[0],
-                      preImage: getRandomBytes32(),
+                      preImage: utils.getRandomBytes32(),
                       numLoops: 1,
                     }}
                     onFinish={(values) => transfer(values.assetId, values.amount, values.recipient, values.preImage)}
@@ -569,7 +583,7 @@ const Auction: FC = () => {
                         enterButton="MAX"
                         onSearch={() => {
                           const assetId = transferForm.getFieldValue("assetId");
-                          const amount = getBalanceForAssetId(selectedChannel, assetId, "bob");
+                          const amount = utils.getBalanceForAssetId(selectedChannel, assetId, "bob");
                           transferForm.setFieldsValue({ amount });
                         }}
                       />
@@ -583,7 +597,7 @@ const Auction: FC = () => {
                       <Input.Search
                         enterButton="Random"
                         onSearch={() => {
-                          const preImage = getRandomBytes32();
+                          const preImage = utils.getRandomBytes32();
                           transferForm.setFieldsValue({ preImage });
                         }}
                       />
@@ -702,7 +716,7 @@ const Auction: FC = () => {
                     enterButton="MAX"
                     onSearch={() => {
                       const assetId = withdrawForm.getFieldValue("assetId");
-                      const amount = getBalanceForAssetId(selectedChannel, assetId, "bob");
+                      const amount = utils.getBalanceForAssetId(selectedChannel, assetId, "bob");
                       withdrawForm.setFieldsValue({ amount });
                     }}
                   />

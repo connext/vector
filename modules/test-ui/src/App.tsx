@@ -1,6 +1,6 @@
-import React from "react";
+import React, { useEffect } from "react";
 import Auction from "./components/Auction";
-import OldCode from "./components/OldCode";
+// import OldCode from "./components/OldCode";
 
 import "./App.css";
 function App() {
