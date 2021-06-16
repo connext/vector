@@ -23,7 +23,6 @@ contract Crosschain is TransferDefinition {
         address callTo;
         bytes callData;
         bytes32 lockHash;
-        uint256 expiry; // If 0, then no timelock is enforced.
     }
 
     struct TransferResolver {
@@ -34,9 +33,9 @@ contract Crosschain is TransferDefinition {
     // Provide registry information.
     string public constant override Name = "CrosschainTransfer";
     string public constant override StateEncoding =
-        "tuple(bytes initiatorSignature, address initiator, address responder, bytes32 data, uint256 nonce, uint256 fee, address callTo, bytes callData)";
+        "tuple(bytes initiatorSignature, address initiator, address responder, bytes32 data, uint256 nonce, uint256 fee, address callTo, bytes callData, bytes32 lockHash)";
     string public constant override ResolverEncoding =
-        "tuple(bytes responderSignature)";
+        "tuple(bytes responderSignature, preImage)";
 
     function EncodedCancel() external pure override returns(bytes memory) {
       TransferResolver memory resolver;
@@ -46,7 +45,7 @@ contract Crosschain is TransferDefinition {
 
     function create(bytes calldata encodedBalance, bytes calldata encodedState)
         external
-        view
+        pure
         override
         returns (bool)
     {
@@ -80,12 +79,6 @@ contract Crosschain is TransferDefinition {
             "CrosschainTransfer: EMPTY_LOCKHASH"
         );
 
-        // Ensure that the timelock, if applicable, has not expired.
-        require(
-            state.expiry == 0 || state.expiry > block.timestamp,
-            "CrosschainTransfer: EXPIRED_TIMELOCK"
-        );
-
         // Update state.
         balance.amount[1] = balance.amount[0];
         balance.amount[0] = 0;
@@ -98,7 +91,7 @@ contract Crosschain is TransferDefinition {
         bytes calldata encodedBalance,
         bytes calldata encodedState,
         bytes calldata encodedResolver
-    ) external view override returns (Balance memory) {
+    ) external pure override returns (Balance memory) {
         TransferState memory state = abi.decode(encodedState, (TransferState));
         TransferResolver memory resolver =
             abi.decode(encodedResolver, (TransferResolver));
@@ -114,25 +107,13 @@ contract Crosschain is TransferDefinition {
             "CrosschainTransfer: NONZERO_RECIPIENT_BALANCE"
         );
 
-        // Transfer expiry cannot be expired.
-        require(
-            state.expiry == 0 || state.expiry > block.timestamp,
-            "CrosschainTransfer: EXPIRED_TIMELOCK"
-        );
-
         // Transfer must be signed by both parties to resolve.
         require(
             state.initiator != address(0) && state.responder != address(0),
             "CrosschainTransfer: EMPTY_SIGNERS"
         );
 
-        // Payment must not be expired based on defined expiry, if applicable.
-        require(
-            state.expiry == 0 || state.expiry > block.timestamp,
-            "CrosschainTransfer: PAYMENT_EXPIRED"
-        );
-
-        // Initiator signature must be valid.
+        // Both signatures must be valid.
         require(
             state.data.checkSignature(
                 state.initiatorSignature,
@@ -140,7 +121,6 @@ contract Crosschain is TransferDefinition {
             ),
             "CrosschainTransfer: INVALID_INITIATOR_SIG"
         );
-
         require(
             state.data.checkSignature(
                 resolver.responderSignature,
@@ -163,20 +143,5 @@ contract Crosschain is TransferDefinition {
         balance.amount[0] = 0;
 
         return balance;
-
-        // TODO: Remove. No canceling
-        // To cancel, the preImage must be empty (not simply incorrect)
-        // There are no additional state mutations, and the preImage is
-        // asserted by the `if` statement
-
-        // Allow for a withdrawal to be canceled if an empty signature is 
-        // passed in. Should have *specific* cancellation action, not just
-        // any invalid sig
-        // bytes memory b = new bytes(65);
-        // if (keccak256(resolver.responderSignature) == keccak256(b)) {
-        //     // CrosschainTransfer should be cancelled, no state manipulation needed
-        // } else {
-            
-        // }
     }
 }
