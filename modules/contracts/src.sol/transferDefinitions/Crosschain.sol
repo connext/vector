@@ -14,7 +14,6 @@ contract CrosschainTransfer is TransferDefinition {
     using LibChannelCrypto for bytes32;
 
     struct TransferState {
-        bytes initiatorSignature;
         address initiator;
         address responder;
         bytes32 data;
@@ -26,6 +25,7 @@ contract CrosschainTransfer is TransferDefinition {
     }
 
     struct TransferResolver {
+        bytes initiatorSignature;
         bytes responderSignature;
         bytes32 preImage;
     }
@@ -37,10 +37,10 @@ contract CrosschainTransfer is TransferDefinition {
     string public constant override ResolverEncoding =
         "tuple(bytes responderSignature, bytes32 preImage)";
 
-    function EncodedCancel() external pure override returns(bytes memory) {
-      TransferResolver memory resolver;
-      resolver.responderSignature = new bytes(65);
-      return abi.encode(resolver);
+    function EncodedCancel() external pure override returns (bytes memory) {
+        TransferResolver memory resolver;
+        resolver.responderSignature = new bytes(65);
+        return abi.encode(resolver);
     }
 
     function create(bytes calldata encodedBalance, bytes calldata encodedState)
@@ -82,7 +82,7 @@ contract CrosschainTransfer is TransferDefinition {
         // Update state.
         balance.amount[1] = balance.amount[0];
         balance.amount[0] = 0;
-        
+
         // Valid initial transfer state
         return true;
     }
@@ -116,7 +116,7 @@ contract CrosschainTransfer is TransferDefinition {
         // Both signatures must be valid.
         require(
             state.data.checkSignature(
-                state.initiatorSignature,
+                resolver.initiatorSignature,
                 state.initiator
             ),
             "CrosschainTransfer: INVALID_INITIATOR_SIG"
