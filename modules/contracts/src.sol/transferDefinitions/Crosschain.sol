@@ -107,7 +107,7 @@ contract CrosschainTransfer is TransferDefinition {
             "CrosschainTransfer: NONZERO_RECIPIENT_BALANCE"
         );
 
-        // Transfer must be signed by both parties to resolve.
+        // Transfer must have two valid parties.
         require(
             state.initiator != address(0) && state.responder != address(0),
             "CrosschainTransfer: EMPTY_SIGNERS"
