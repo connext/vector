@@ -21,18 +21,18 @@ export type CrosschainTransferResolver = {
 };
 
 export const CrosschainTransferStateEncoding = tidy(`tuple(
-  bytes initiatorSignature;
-  address initiator;
-  address responder;
-  bytes32 data;
-  uint256 nonce;
-  uint256 fee;
-  address callTo;
-  bytes callData;
-  bytes32 lockHash;
+  bytes initiatorSignature,
+  address initiator,
+  address responder,
+  bytes32 data,
+  uint256 nonce,
+  uint256 fee,
+  address callTo,
+  bytes callData,
+  bytes32 lockHash
 )`);
 
 export const CrosschainTransferResolverEncoding = tidy(`tuple(
-  bytes responderSignature;
-  bytes32 preImage;
+  bytes responderSignature,
+  bytes32 preImage
 )`);
