@@ -608,7 +608,7 @@ describe("ParamConverter", () => {
       let initiatorSignature: string;
       beforeEach(async () => {
         defaultParams = generateParams();
-        stub(listeners, "isCrosschainTransfer").resolves(Result.ok(true));
+        isCrosschainTransfer.resolves(Result.ok(true));
         alice = getRandomChannelSigner();
         bob = getRandomChannelSigner();
         channel = createTestChannelState("create").channel;
