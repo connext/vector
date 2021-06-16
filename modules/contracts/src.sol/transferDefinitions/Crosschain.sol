@@ -35,7 +35,7 @@ contract CrosschainTransfer is TransferDefinition {
     string public constant override StateEncoding =
         "tuple(bytes initiatorSignature, address initiator, address responder, bytes32 data, uint256 nonce, uint256 fee, address callTo, bytes callData, bytes32 lockHash)";
     string public constant override ResolverEncoding =
-        "tuple(bytes responderSignature, preImage)";
+        "tuple(bytes responderSignature, bytes32 preImage)";
 
     function EncodedCancel() external pure override returns(bytes memory) {
       TransferResolver memory resolver;
