@@ -290,7 +290,7 @@ export async function forwardTransferCreation(
   }
 
   // Pull the receiver channel from db
-  const recipientChannelRes = await nodeService.getStateChannelByParticipants({
+  let recipientChannelRes = await nodeService.getStateChannelByParticipants({
     publicIdentifier: routerPublicIdentifier,
     counterparty: recipientIdentifier,
     chainId: recipientChainId,
@@ -308,18 +308,44 @@ export async function forwardTransferCreation(
       },
     );
   }
-  const recipientChannel = recipientChannelRes.getValue() as FullChannelState | undefined;
+  let recipientChannel = recipientChannelRes.getValue() as FullChannelState | undefined;
   if (!recipientChannel) {
-    return cancelSenderTransferAndReturnError(
-      routingId,
-      senderTransfer,
-      ForwardTransferCreationError.reasons.RecipientChannelNotFound,
-      "",
-      {
-        participants: [routerPublicIdentifier, recipientIdentifier],
-        chainId: recipientChainId,
-      },
-    );
+    // create receiver channel if does not exist
+    const setupRes = await nodeService.setup({
+      chainId: recipientChainId,
+      counterpartyIdentifier: recipientIdentifier,
+    });
+    if (setupRes.isError) {
+      return cancelSenderTransferAndReturnError(
+        routingId,
+        senderTransfer,
+        ForwardTransferCreationError.reasons.RecipientChannelNotFound,
+        "",
+        {
+          setupError: setupRes.getError()!.toJson(),
+          recipientChainId,
+          recipientIdentifier,
+        },
+      );
+    }
+    logger.info({ recipientChannel: setupRes.getValue(), methodId, method }, "Created channel for receiver");
+    recipientChannelRes = await nodeService.getStateChannel({
+      channelAddress: setupRes.getValue().channelAddress,
+    });
+    if (recipientChannelRes.isError) {
+      return cancelSenderTransferAndReturnError(
+        routingId,
+        senderTransfer,
+        ForwardTransferCreationError.reasons.RecipientChannelNotFound,
+        "",
+        {
+          storeError: recipientChannelRes.getError()!.toJson(),
+          recipientChainId,
+          recipientIdentifier,
+        },
+      );
+    }
+    recipientChannel = recipientChannelRes.getValue() as FullChannelState;
   }
 
   // Below, we figure out the correct params needed for the receiver's channel.

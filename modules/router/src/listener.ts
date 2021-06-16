@@ -762,12 +762,14 @@ export async function setupListeners(
       BigNumber.from(amount),
       receiveExactAmount,
       assetId,
-      senderChannel,
+      senderChannel.networkContext.chainId,
       recipientAssetId,
-      recipientChannel,
+      recipientChannel.networkContext.chainId,
       chainReader,
       routerSigner.publicIdentifier,
       logger,
+      senderChannel,
+      recipientChannel,
     );
     if (feeRes.isError) {
       logger.error({ error: feeRes.getError() }, "Error in calculateFeeAmount");
@@ -904,83 +906,20 @@ export async function setupListeners(
       return;
     }
 
-    const getEmptyChannel = async (
-      counterparty: string,
-      chainId: number,
-    ): Promise<Result<FullChannelState, QuoteError>> => {
-      const alice = getSignerAddressFromPublicIdentifier(routerSigner.publicIdentifier);
-      const bob = getSignerAddressFromPublicIdentifier(counterparty);
-      const channelAddress = await chainReader.getChannelAddress(
-        alice,
-        bob,
-        chainAddresses[chainId].channelFactoryAddress,
-        chainId,
-      );
-      if (channelAddress.isError) {
-        return Result.fail(
-          new QuoteError(QuoteError.reasons.CouldNotGetChannelAddress, {
-            chainServiceError: jsonifyError(channelAddress.getError()!),
-            recipient,
-            recipientChainId,
-            recipientAssetId,
-            assetId,
-            chainId,
-            sender: from,
-          }),
-        );
-      }
-      return Result.ok({
-        nonce: 1,
-        channelAddress: channelAddress.getValue(),
-        timeout: DEFAULT_CHANNEL_TIMEOUT.toString(),
-        alice,
-        bob,
-        balances: [],
-        processedDepositsA: [],
-        processedDepositsB: [],
-        assetIds: [],
-        defundNonces: [],
-        merkleRoot: HashZero,
-        latestUpdate: {} as any,
-        networkContext: {
-          chainId,
-          channelFactoryAddress: chainAddresses[chainId].channelFactoryAddress,
-          transferRegistryAddress: chainAddresses[chainId].transferRegistryAddress,
-        },
-        aliceIdentifier: routerSigner.publicIdentifier,
-        bobIdentifier: counterparty,
-        inDispute: false,
-      });
-    };
-
-    let senderChannel = senderChannelRes.getValue() as FullChannelState | undefined;
-    if (!senderChannel) {
-      const placeholder = await getEmptyChannel(from, chainId);
-      if (placeholder.isError) {
-        await messagingService.respondToAuctionMessage(inbox, Result.fail(placeholder.getError()!));
-        return;
-      }
-      senderChannel = placeholder.getValue();
-    }
-    let recipientChannel = recipientChannelRes.getValue() as FullChannelState | undefined;
-    if (!recipientChannel) {
-      const placeholder = await getEmptyChannel(recipient, chainId);
-      if (placeholder.isError) {
-        await messagingService.respondToAuctionMessage(inbox, Result.fail(placeholder.getError()!));
-        return;
-      }
-      recipientChannel = placeholder.getValue();
-    }
+    const senderChannel = senderChannelRes.getValue() as FullChannelState | undefined;
+    const recipientChannel = recipientChannelRes.getValue() as FullChannelState | undefined;
     const feeRes = await calculateFeeAmount(
       BigNumber.from(amount),
       false, // receive exact amount, to be reviewed
       assetId,
-      senderChannel,
+      chainId,
       recipientAssetId,
-      recipientChannel,
+      recipientChainId,
       chainReader,
       routerSigner.publicIdentifier,
       logger,
+      senderChannel,
+      recipientChannel,
     );
     if (feeRes.isError) {
       logger.error({ error: feeRes.getError() }, "Error in calculateFeeAmount");
@@ -1018,6 +957,7 @@ export async function setupListeners(
       await messagingService.respondToAuctionMessage(
         inbox,
         Result.ok({
+          quote: { ...quote, signature },
           routerPublicIdentifier: quote.routerIdentifier,
           swapRate: "1",
           totalFee: quote.fee,

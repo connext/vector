@@ -647,16 +647,14 @@ export class NatsMessagingService extends NatsBasicMessagingService implements I
     data: Result<EngineParams.RunAuction, NodeError>,
     inbox: string,
   ): Promise<void> {
-    console.log("publishStartAuctionMessage ======> ", `${to}.${from}.start-auction`);
     return this.publishUniqueInbox(`${from}.${to}.start-auction`, data, inbox);
   }
 
   async onReceiveAuctionMessage(
     myPublicIdentifier: string,
-    inbox,
+    inbox: string,
     callback: (runAuction: Result<NodeResponses.RunAuction, NodeError>, from: string, inbox: string) => void | any,
   ): Promise<void | any> {
-    console.log("onReceiveAuctionMessage ======> ", `waiting for auction responses on inbox ${inbox}`);
     return this.registerCallback(inbox, callback, "onReceiveAuctionMessage");
   }
 

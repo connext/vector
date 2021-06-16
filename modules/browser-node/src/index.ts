@@ -180,9 +180,18 @@ export class BrowserNode implements INodeService {
     });
     const auth = await this.channelProvider.send(rpc);
     this.logger.info({ method, response: auth }, "Received response from auth method");
+
     const [nodeConfig] = await this.getConfig();
     this.publicIdentifier = nodeConfig.publicIdentifier;
     this.signerAddress = nodeConfig.signerAddress;
+    this.logger.debug({ method }, "Method complete");
+  }
+
+  async channelSetup(params: { routerPublicIdentifier: string }): Promise<void> {
+    const method = "channelSetup";
+    this.logger.debug({ method }, "Channel Setup");
+
+    this.routerPublicIdentifier = params.routerPublicIdentifier;
     this.logger.info(
       { supportedChains: this.supportedChains, routerPublicIdentifier: this.routerPublicIdentifier, method },
       "Checking for existing channels",
@@ -601,8 +610,8 @@ export class BrowserNode implements INodeService {
   ): Promise<Result<NodeResponses.RunAuction, BrowserNodeError>> {
     const rpc = constructRpcRequest(ChannelRpcMethods.chan_runAuction, params);
     try {
-      const { routerPublicIdentifier, swapRate, totalFee } = await this.send(rpc);
-      return Result.ok({ routerPublicIdentifier, swapRate, totalFee });
+      const { routerPublicIdentifier, swapRate, totalFee, quote } = await this.send(rpc);
+      return Result.ok({ routerPublicIdentifier, swapRate, totalFee, quote });
     } catch (e) {
       return Result.fail(e);
     }

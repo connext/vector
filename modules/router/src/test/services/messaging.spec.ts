@@ -1,6 +1,15 @@
-import { getRandomChannelSigner, getTestLoggers, NatsMessagingService, expect, delay } from "@connext/vector-utils";
+import {
+  getRandomChannelSigner,
+  getTestLoggers,
+  NatsMessagingService,
+  expect,
+  delay,
+  mkPublicIdentifier,
+  mkAddress,
+  mkSig,
+} from "@connext/vector-utils";
 import pino from "pino";
-import { IChannelSigner, Result } from "@connext/vector-types";
+import { IChannelSigner, NodeResponses, Result } from "@connext/vector-types";
 
 import { NatsRouterMessagingService } from "../../services/messaging";
 import { getConfig } from "../../config";
@@ -61,10 +70,22 @@ describe("messaging.ts", () => {
 
   // TODO: replace hardcoded swapRate
   it("should properly respond with auction response when requested", async () => {
-    const auctionResponse = {
+    const auctionResponse: NodeResponses.RunAuction = {
       routerPublicIdentifier: router.publicIdentifier,
       swapRate: "1",
       totalFee: config.baseFlatFee as string,
+      quote: {
+        amount: "2",
+        recipient: mkPublicIdentifier(),
+        assetId: mkAddress(),
+        chainId: 123,
+        expiry: "1234",
+        fee: "1",
+        recipientAssetId: mkAddress(),
+        recipientChainId: 321,
+        routerIdentifier: mkPublicIdentifier(),
+        signature: mkSig(),
+      },
     };
 
     await routerMessaging.onReceiveStartAuction(
