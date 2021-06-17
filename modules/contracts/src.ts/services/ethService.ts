@@ -52,9 +52,6 @@ export const BIG_GAS_LIMIT = BigNumber.from(2_000_000);
 // nothing should ever be this expensive... _should_
 export const BIG_GAS_PRICE = parseUnits("1500", "gwei");
 
-// TODO: Temp hotfix solution.
-const MATIC_TEMP_GAS_PRICE = parseUnits("4", "gwei");
-
 // TODO: Deprecate. Note that this is used in autoRebalance.ts.
 export const waitForTransaction = async (
   provider: JsonRpcProvider,
@@ -387,9 +384,6 @@ export class EthereumChainService extends EthereumChainReader implements IVector
       gasPrice =
         presetGasPrice ??
         (await (async (): Promise<BigNumber> => {
-          if (chainId === 137) {
-            return MATIC_TEMP_GAS_PRICE;
-          }
           const price = await this.getGasPrice(chainId);
           if (price.isError) {
             throw price.getError()!;
