@@ -856,6 +856,24 @@ export async function setupListeners(
       ? getMatchingSwap(assetId, chainId, recipientAssetId, recipientChainId)
       : getRebalanceProfile(recipientChainId, recipientAssetId);
 
+    if (supported.isError) {
+      await messagingService.respondToAuctionMessage(
+        inbox,
+        Result.fail(
+          new QuoteError(QuoteError.reasons.TransferNotSupported, {
+            supportedError: jsonifyError(supported.getError()!),
+            recipient,
+            recipientChainId,
+            recipientAssetId,
+            assetId,
+            chainId,
+            sender: from,
+          }),
+        ),
+      );
+      return;
+    }
+
     const supportedChains = Object.keys(config.chainProviders);
     if (!supportedChains.includes(chainId.toString()) || !supportedChains.includes(recipientChainId.toString())) {
       // recipient or sender chain not supported
@@ -884,30 +902,41 @@ export async function setupListeners(
       }),
     ]);
 
+    let senderChannel: FullChannelState | undefined;
+    let recipientChannel: FullChannelState | undefined;
     if (senderChannelRes.isError || recipientChannelRes.isError) {
-      // return error to counterparty
-      await messagingService.respondToAuctionMessage(
-        inbox,
-        Result.fail(
-          new QuoteError(QuoteError.reasons.CouldNotGetChannel, {
-            senderChannelError: senderChannelRes.isError ? jsonifyError(senderChannelRes.getError()!) : undefined,
-            recipientChannelError: recipientChannelRes.isError
-              ? jsonifyError(recipientChannelRes.getError()!)
-              : undefined,
-            recipient,
-            recipientChainId,
-            recipientAssetId,
-            assetId,
-            chainId,
-            sender: from,
-          }),
-        ),
-      );
-      return;
+      // if channel doesn't exist, dont error
+      if (
+        (senderChannelRes.isError &&
+          !senderChannelRes.getError()?.message.toLowerCase().includes("channel not found")) ||
+        (recipientChannelRes.isError &&
+          !recipientChannelRes.getError()?.message.toLowerCase().includes("channel not found"))
+      ) {
+        // return error to counterparty
+        await messagingService.respondToAuctionMessage(
+          inbox,
+          Result.fail(
+            new QuoteError(QuoteError.reasons.CouldNotGetChannel, {
+              senderChannelError: senderChannelRes.isError ? jsonifyError(senderChannelRes.getError()!) : undefined,
+              recipientChannelError: recipientChannelRes.isError
+                ? jsonifyError(recipientChannelRes.getError()!)
+                : undefined,
+              recipient,
+              recipientChainId,
+              recipientAssetId,
+              assetId,
+              chainId,
+              sender: from,
+            }),
+          ),
+        );
+        return;
+      }
+    } else {
+      senderChannel = senderChannelRes.getValue() as FullChannelState;
+      recipientChannel = recipientChannelRes.getValue() as FullChannelState;
     }
 
-    const senderChannel = senderChannelRes.getValue() as FullChannelState | undefined;
-    const recipientChannel = recipientChannelRes.getValue() as FullChannelState | undefined;
     const feeRes = await calculateFeeAmount(
       BigNumber.from(amount),
       false, // receive exact amount, to be reviewed
