@@ -2,7 +2,9 @@
 
 ## Next Release
 
+## 0.2.5-beta.19
 
+- \[contracts\] Add internal nonce tracking `ethService`
 
 ## 0.2.5-beta.18
 
