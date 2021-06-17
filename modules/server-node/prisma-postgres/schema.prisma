@@ -186,10 +186,13 @@ model EventSubscription {
 model OnchainTransaction {
   id        String    @id @default(uuid())
   createdAt DateTime  @default(now())
-  transfer  Transfer?
+  
+  // keeping these optional for now so we can write a script to migrate the values later
+  assetId     String?
+  assetValue  String?
+  chainId     String?
 
   // Response fields : should be saved upon receiving first response
-  chainId String?
   nonce   Int?
   to      String?
   from    String?
@@ -206,6 +209,9 @@ model OnchainTransaction {
   // Tx fields
   attempts OnchainTransactionAttempt[] // 1-n
   receipt  OnchainTransactionReceipt?
+  
+  // if related to a transfer
+  transfer  Transfer?
 
   @@map(name: "onchain_transaction")
 }
