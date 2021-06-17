@@ -14,13 +14,14 @@ if [[ -n "$(git status -s)" ]]
 then echo "Aborting: Make sure your git repo is clean" && exit 1
 fi
 
-if [[ "$(git symbolic-ref HEAD | sed 's|.*/\(.*\)|\1|')" != "main" ]]
-then echo "Aborting: Make sure you've checked out the main branch" && exit 1
-fi
+# TODO: remove when main is fixed
+# if [[ "$(git symbolic-ref HEAD | sed 's|.*/\(.*\)|\1|')" != "main" ]]
+# then echo "Aborting: Make sure you've checked out the main branch" && exit 1
+# fi
 
-if [[ -n "$(git diff origin/main)" ]]
-then echo "Aborting: Make sure your branch is up to date with origin/main" && exit 1
-fi
+# if [[ -n "$(git diff origin/main)" ]]
+# then echo "Aborting: Make sure your branch is up to date with origin/main" && exit 1
+# fi
 
 if [[ ! -f "Makefile" ]]
 then echo "Aborting: Make sure you're in the $project project root" && exit 1
