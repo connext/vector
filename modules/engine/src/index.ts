@@ -22,9 +22,12 @@ import {
   EngineError,
   VectorError,
   jsonifyError,
+  RunAuctionPayload,
   MinimalTransaction,
   WITHDRAWAL_RESOLVED_EVENT,
   VectorErrorJson,
+  getConfirmationsForChain,
+  NodeResponses,
 } from "@connext/vector-types";
 import { getRandomBytes32, getParticipant, hashWithdrawalQuote, delay } from "@connext/vector-utils";
 import pino from "pino";
@@ -32,8 +35,9 @@ import Ajv from "ajv";
 import { Evt } from "evt";
 
 import { version } from "../package.json";
+import { v4 } from "uuid";
 
-import { DisputeError, IsAliveError, RpcError } from "./errors";
+import { AuctionError, DisputeError, IsAliveError, RpcError } from "./errors";
 import {
   convertConditionalTransferParams,
   convertResolveConditionParams,
@@ -1484,6 +1488,91 @@ export class VectorEngine implements IVectorEngine {
           error: jsonifyError(e),
         }),
       );
+    }
+  }
+
+  private async runAuction(
+    params: EngineParams.RunAuction,
+  ): Promise<Result<ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_runAuction], EngineError>> {
+    const validate = ajv.compile(EngineParams.RunAuctionSchema);
+    const valid = validate(params);
+    if (!valid) {
+      return Result.fail(
+        new RpcError(RpcError.reasons.InvalidParams, "", this.publicIdentifier, {
+          invalidParamsError: validate.errors?.map((e) => e.message).join(","),
+          invalidParams: params,
+        }),
+      );
+    }
+
+    const payload: RunAuctionPayload = {
+      amount: params.amount,
+      senderPublicIdentifier: this.publicIdentifier,
+      senderAssetId: params.assetId,
+      senderChainId: params.chainId,
+      receiverPublicIdentifier: params.recipient,
+      receiverAssetId: params.recipientAssetId,
+      receiverChainId: params.recipientChainId,
+    };
+    this.evts[EngineEvents.RUN_AUCTION_EVENT].post(payload);
+
+    const inbox = v4();
+    const from = this.signer.publicIdentifier;
+    let auctionResponses: Array<NodeResponses.RunAuction> = [];
+
+    // Call onReceiveAuctionMessage to listen on unique INBOX and collect responses for 5 seconds (will tweak and tune this number).
+    // Maybe something like wait for 5 responses or 5 seconds? Watch out for race conditions of setting listener after message is already sent.
+    try {
+      //Call publishStartAuction with provided data.
+      this.messaging.publishStartAuction(from, from, Result.ok(params), inbox);
+
+      await this.messaging.onReceiveAuctionMessage(this.publicIdentifier, inbox, (runAuction, from, inbox) => {
+        const method = "onReceiveAuctionMessage";
+        const methodId = getRandomBytes32();
+
+        if (runAuction.isError) {
+          this.logger.error({ error: runAuction.getError()?.message, method, methodId }, "Error received");
+          return;
+        }
+        const res = runAuction.getValue();
+        auctionResponses.push(res);
+      });
+
+      // wait for 5 responses or 3 secs
+      if (auctionResponses.length < 5) {
+        await delay(3000);
+      }
+
+      this.logger.info(auctionResponses, "Router Responses");
+
+      if (auctionResponses.length === 0) {
+        // TODO: Add error cases (reasons) to Error Class
+        return Result.fail(new AuctionError(AuctionError.reasons.NoResponses, this.publicIdentifier, params, {}));
+      }
+
+      // compare fees and return cheapest option
+      // TODO: compare swapRates also
+      let lowestFee = parseInt(auctionResponses[0].totalFee);
+      let lowestFeeIndex = 0;
+
+      for (const [i, elem] of auctionResponses.entries()) {
+        if (parseInt(elem.totalFee) < lowestFee) {
+          lowestFee = parseInt(elem.totalFee);
+          lowestFeeIndex = i;
+        }
+      }
+      this.logger.info(auctionResponses[lowestFeeIndex], "Chosen Router");
+      return Result.ok(auctionResponses[lowestFeeIndex]);
+    } catch (err) {
+      return Result.fail(
+        new RpcError(RpcError.reasons.InvalidParams, "", this.publicIdentifier, {
+          invalidParamsError: validate.errors?.map((e) => e.message).join(","),
+          invalidParams: params,
+        }),
+      );
+    } finally {
+      auctionResponses = [];
+      this.messaging.unsubscribe(inbox);
     }
   }
 

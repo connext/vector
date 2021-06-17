@@ -117,6 +117,18 @@ export type WithdrawalReconciledPayload = {
 export const RESTORE_STATE_EVENT = "RESTORE_STATE_EVENT";
 export type RestoreStatePayload = SetupPayload;
 
+// Emitted on Auction
+export const RUN_AUCTION_EVENT = "RUN_AUCTION_EVENT";
+export type RunAuctionPayload = {
+  amount: string;
+  senderPublicIdentifier: string;
+  senderAssetId: string;
+  senderChainId: number;
+  receiverPublicIdentifier: string;
+  receiverAssetId: string;
+  receiverChainId: number;
+};
+
 // Grouped event types
 export const EngineEvents = {
   [IS_ALIVE_EVENT]: IS_ALIVE_EVENT,
@@ -131,6 +143,7 @@ export const EngineEvents = {
   [WITHDRAWAL_CREATED_EVENT]: WITHDRAWAL_CREATED_EVENT,
   [WITHDRAWAL_RESOLVED_EVENT]: WITHDRAWAL_RESOLVED_EVENT,
   [WITHDRAWAL_RECONCILED_EVENT]: WITHDRAWAL_RECONCILED_EVENT,
+  [RUN_AUCTION_EVENT]: RUN_AUCTION_EVENT,
   ...ChainServiceEvents,
 } as const;
 export type EngineEvent = typeof EngineEvents[keyof typeof EngineEvents];
@@ -147,6 +160,7 @@ export interface EngineEventMap extends ChainServiceEventMap {
   [WITHDRAWAL_CREATED_EVENT]: WithdrawalCreatedPayload;
   [WITHDRAWAL_RESOLVED_EVENT]: WithdrawalResolvedPayload;
   [WITHDRAWAL_RECONCILED_EVENT]: WithdrawalReconciledPayload;
+  [RUN_AUCTION_EVENT]: RunAuctionPayload;
   // Add public identifiers to transaction events
   [ChainServiceEvents.TRANSACTION_SUBMITTED]: ChainServiceEventMap[typeof ChainServiceEvents.TRANSACTION_SUBMITTED] & {
     publicIdentifier: string;

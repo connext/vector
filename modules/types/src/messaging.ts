@@ -177,6 +177,19 @@ export interface IMessagingService extends IBasicMessaging {
     ) => void,
   ): Promise<void>;
 
+  publishStartAuction(
+    to: string,
+    from: string,
+    data: Result<EngineParams.RunAuction, NodeError>,
+    inbox: string,
+  ): Promise<void>;
+
+  onReceiveAuctionMessage(
+    myPublicIdentifier: string,
+    inbox,
+    callback: (runAuction: Result<NodeResponses.RunAuction, NodeError>, from: string, inbox: string) => void,
+  ): Promise<void>;
+
   publishWithdrawalSubmittedMessage(
     to: string,
     from: string,

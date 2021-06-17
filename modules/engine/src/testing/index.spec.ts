@@ -798,6 +798,181 @@ describe("VectorEngine", () => {
           overrides: { method: "chan_defundTransfer", params: { transferId: invalidAddress } },
           error: malformedTransactionId,
         },
+        {
+          name: "chan_runAuction malformed parameter amount",
+          overrides: {
+            method: "chan_runAuction",
+            params: {
+              amount: "-1",
+              assetId: validAddress,
+              chainId: validAddress,
+              recipient: counterpartyIdentifier,
+              recipientAssetId: validAddress,
+              recipientChainId: validAddress,
+            },
+          },
+          error: 'should match pattern "^([0-9])*$"',
+        },
+        {
+          name: "chan_runAuction missing parameter amount",
+          overrides: {
+            method: "chan_runAuction",
+            params: {
+              amount: undefined,
+              assetId: validAddress,
+              chainId: validAddress,
+              recipient: counterpartyIdentifier,
+              recipientAssetId: validAddress,
+              recipientChainId: validAddress,
+            },
+          },
+          error: missingParam("amount"),
+        },
+        {
+          name: "chan_runAuction missing parameter assetId",
+          overrides: {
+            method: "chan_runAuction",
+            params: {
+              amount: "1",
+              chainId: validAddress,
+              recipient: counterpartyIdentifier,
+              recipientAssetId: validAddress,
+              recipientChainId: validAddress,
+            },
+          },
+          error: missingParam("assetId"),
+        },
+        {
+          name: "chan_runAuction malformed parameter assetId",
+          overrides: {
+            method: "chan_runAuction",
+            params: {
+              amount: "1",
+              assetId: invalidAddress,
+              chainId: validAddress,
+              recipient: counterpartyIdentifier,
+              recipientAssetId: validAddress,
+              recipientChainId: validAddress,
+            },
+          },
+          error: malformedAddress,
+        },
+        {
+          name: "chan_runAuction missing parameter chainId",
+          overrides: {
+            method: "chan_runAuction",
+            params: {
+              amount: "1",
+              assetId: validAddress,
+              recipient: counterpartyIdentifier,
+              recipientAssetId: validAddress,
+              recipientChainId: validAddress,
+            },
+          },
+          error: missingParam("chainId"),
+        },
+        {
+          name: "chan_runAuction malformed parameter chainId",
+          overrides: {
+            method: "chan_runAuction",
+            params: {
+              amount: "1",
+              assetId: validAddress,
+              chainId: -1,
+              recipient: counterpartyIdentifier,
+              recipientAssetId: validAddress,
+              recipientChainId: validAddress,
+            },
+          },
+          error: "should be >= 1",
+        },
+        {
+          name: "chan_runAuction missing parameter recipient",
+          overrides: {
+            method: "chan_runAuction",
+            params: {
+              amount: "1",
+              assetId: validAddress,
+              chainId: 1,
+              recipientAssetId: validAddress,
+              recipientChainId: 1,
+            },
+          },
+          error: missingParam("recipient"),
+        },
+        {
+          name: "chan_runAuction malformed parameter recipient",
+          overrides: {
+            method: "chan_runAuction",
+            params: {
+              amount: "1",
+              assetId: validAddress,
+              chainId: 1,
+              recipient: invalidAddress,
+              recipientAssetId: validAddress,
+              recipientChainId: 1,
+            },
+          },
+          error: malformedPublicIdentifier,
+        },
+        {
+          name: "chan_runAuction missing parameter recipientChainId",
+          overrides: {
+            method: "chan_runAuction",
+            params: {
+              amount: "1",
+              assetId: validAddress,
+              chainId: 1,
+              recipient: counterpartyIdentifier,
+              recipientAssetId: validAddress,
+            },
+          },
+          error: missingParam("recipientChainId"),
+        },
+        {
+          name: "chan_runAuction malformed parameter recipientChainId",
+          overrides: {
+            method: "chan_runAuction",
+            params: {
+              amount: "1",
+              assetId: validAddress,
+              chainId: 1,
+              recipient: counterpartyIdentifier,
+              recipientChainId: -1,
+              recipientAssetId: validAddress,
+            },
+          },
+          error: "should be >= 1",
+        },
+        {
+          name: "chan_runAuction missing parameter recipientAssetId",
+          overrides: {
+            method: "chan_runAuction",
+            params: {
+              amount: "1",
+              assetId: validAddress,
+              chainId: 1,
+              recipient: counterpartyIdentifier,
+              recipientChainId: 1,
+            },
+          },
+          error: missingParam("recipientAssetId"),
+        },
+        {
+          name: "chan_runAuction malformed parameter recipientAssetId",
+          overrides: {
+            method: "chan_runAuction",
+            params: {
+              amount: "1",
+              assetId: validAddress,
+              chainId: 1,
+              recipient: counterpartyIdentifier,
+              recipientChainId: 1,
+              recipientAssetId: invalidAddress,
+            },
+          },
+          error: malformedAddress,
+        },
       ];
 
       for (const test of paramsTests) {

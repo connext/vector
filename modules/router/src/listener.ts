@@ -762,12 +762,14 @@ export async function setupListeners(
       BigNumber.from(amount),
       receiveExactAmount,
       assetId,
-      senderChannel,
+      senderChannel.networkContext.chainId,
       recipientAssetId,
-      recipientChannel,
+      recipientChannel.networkContext.chainId,
       chainReader,
       routerSigner.publicIdentifier,
       logger,
+      senderChannel,
+      recipientChannel,
     );
     if (feeRes.isError) {
       logger.error({ error: feeRes.getError() }, "Error in calculateFeeAmount");
@@ -805,6 +807,193 @@ export async function setupListeners(
       await messagingService.respondToTransferQuoteMessage(inbox, Result.ok({ ...quote, signature }));
     } catch (e) {
       await messagingService.respondToTransferQuoteMessage(
+        inbox,
+        Result.fail(
+          new QuoteError(QuoteError.reasons.CouldNotSignQuote, {
+            error: jsonifyError(e),
+            recipient,
+            recipientChainId,
+            recipientAssetId,
+            assetId,
+            chainId,
+            sender: from,
+            fee: quote.fee,
+            expiry: quote.expiry,
+          }),
+        ),
+      );
+    }
+  });
+  // TODO Refactoring, repeated code
+  await messagingService.onReceiveStartAuction(routerSigner.publicIdentifier, async (request, from, inbox) => {
+    const method = "onReceiveStartAuction";
+    const methodId = getRandomBytes32();
+    logger.debug({ method, methodId }, "Method started");
+    if (request.isError) {
+      logger.error(
+        { error: request.getError()!.toJson(), from, method, methodId },
+        "Received error, shouldn't happen!",
+      );
+      return;
+    }
+    const {
+      amount,
+      assetId,
+      chainId,
+      recipient: _recipient,
+      recipientChainId: _recipientChainId,
+      recipientAssetId: _recipientAssetId,
+      // receiveExactAmount: _receiveExactAmount,
+    } = request.getValue();
+
+    const recipient = _recipient ?? routerSigner.publicIdentifier;
+    const recipientChainId = _recipientChainId ?? chainId;
+    const recipientAssetId = _recipientAssetId ?? assetId;
+    // const receiveExactAmount = _receiveExactAmount ?? false;
+
+    const isSwap = recipientChainId !== chainId || recipientAssetId !== assetId;
+    const supported = isSwap
+      ? getMatchingSwap(assetId, chainId, recipientAssetId, recipientChainId)
+      : getRebalanceProfile(recipientChainId, recipientAssetId);
+
+    if (supported.isError) {
+      await messagingService.respondToAuctionMessage(
+        inbox,
+        Result.fail(
+          new QuoteError(QuoteError.reasons.TransferNotSupported, {
+            supportedError: jsonifyError(supported.getError()!),
+            recipient,
+            recipientChainId,
+            recipientAssetId,
+            assetId,
+            chainId,
+            sender: from,
+          }),
+        ),
+      );
+      return;
+    }
+
+    const supportedChains = Object.keys(config.chainProviders);
+    if (!supportedChains.includes(chainId.toString()) || !supportedChains.includes(recipientChainId.toString())) {
+      // recipient or sender chain not supported
+      await messagingService.respondToAuctionMessage(
+        inbox,
+        Result.fail(
+          new QuoteError(QuoteError.reasons.ChainNotSupported, {
+            supportedChains,
+            recipient,
+            recipientChainId,
+            recipientAssetId,
+            assetId,
+            chainId,
+            sender: from,
+          }),
+        ),
+      );
+      return;
+    }
+
+    const [senderChannelRes, recipientChannelRes] = await Promise.all([
+      nodeService.getStateChannelByParticipants({ counterparty: from, chainId }),
+      nodeService.getStateChannelByParticipants({
+        chainId: recipientChainId,
+        counterparty: recipient === routerSigner.publicIdentifier ? from : recipient,
+      }),
+    ]);
+
+    let senderChannel: FullChannelState | undefined;
+    let recipientChannel: FullChannelState | undefined;
+    if (senderChannelRes.isError || recipientChannelRes.isError) {
+      // if channel doesn't exist, dont error
+      if (
+        (senderChannelRes.isError &&
+          !senderChannelRes.getError()?.message.toLowerCase().includes("channel not found")) ||
+        (recipientChannelRes.isError &&
+          !recipientChannelRes.getError()?.message.toLowerCase().includes("channel not found"))
+      ) {
+        // return error to counterparty
+        await messagingService.respondToAuctionMessage(
+          inbox,
+          Result.fail(
+            new QuoteError(QuoteError.reasons.CouldNotGetChannel, {
+              senderChannelError: senderChannelRes.isError ? jsonifyError(senderChannelRes.getError()!) : undefined,
+              recipientChannelError: recipientChannelRes.isError
+                ? jsonifyError(recipientChannelRes.getError()!)
+                : undefined,
+              recipient,
+              recipientChainId,
+              recipientAssetId,
+              assetId,
+              chainId,
+              sender: from,
+            }),
+          ),
+        );
+        return;
+      }
+    } else {
+      senderChannel = senderChannelRes.getValue() as FullChannelState;
+      recipientChannel = recipientChannelRes.getValue() as FullChannelState;
+    }
+
+    const feeRes = await calculateFeeAmount(
+      BigNumber.from(amount),
+      false, // receive exact amount, to be reviewed
+      assetId,
+      chainId,
+      recipientAssetId,
+      recipientChainId,
+      chainReader,
+      routerSigner.publicIdentifier,
+      logger,
+      senderChannel,
+      recipientChannel,
+    );
+    if (feeRes.isError) {
+      logger.error({ error: feeRes.getError() }, "Error in calculateFeeAmount");
+      await messagingService.respondToAuctionMessage(
+        inbox,
+        Result.fail(
+          new QuoteError(QuoteError.reasons.CouldNotGetFee, {
+            feeError: jsonifyError(feeRes.getError()!),
+            recipient,
+            recipientChainId,
+            recipientAssetId,
+            assetId,
+            chainId,
+            sender: from,
+          }),
+        ),
+      );
+      return;
+    }
+    const { fee, amount: quoteAmount } = feeRes.getValue();
+    const quote = {
+      assetId,
+      amount: quoteAmount.toString(),
+      chainId,
+      routerIdentifier: routerSigner.publicIdentifier,
+      recipient,
+      recipientChainId,
+      recipientAssetId,
+      fee: fee.toString(),
+      expiry: (Date.now() + (getConfig().feeQuoteExpiry ?? DEFAULT_FEE_EXPIRY)).toString(), // valid for next 2 blocks
+    };
+
+    try {
+      const signature = await routerSigner.signMessage(quote.toString());
+      await messagingService.respondToAuctionMessage(
+        inbox,
+        Result.ok({
+          quote: { ...quote, signature },
+          routerPublicIdentifier: quote.routerIdentifier,
+          swapRate: "1",
+          totalFee: quote.fee,
+        }),
+      );
+    } catch (e) {
+      await messagingService.respondToAuctionMessage(
         inbox,
         Result.fail(
           new QuoteError(QuoteError.reasons.CouldNotSignQuote, {

@@ -3,7 +3,9 @@
 @carolUrl = http://localhost:8005
 @daveUrl = http://localhost:8006
 @rogerUrl = http://localhost:8007
-@aliceBobChannel = 0xD7b60870a3a0D52A2b9F7daBe5DCaB8EDC5bCD4e
+@roger1Url = http://localhost:8017
+@roger2Url = http://localhost:8027
+@aliceBobChannel = 0x47809CD3218c69aB21BeEe8ad6a7b7Ec5E026859
 @carolRogerChannel = 0x66920C67620b492C3FF7f904af6DC3a8B58D7C9C
 @daveRogerChannel = 0x7E513218D56ef4465208d587e9eff56e9035cd02
 @adminToken = cxt1234
@@ -12,20 +14,27 @@
 @carolPublicIdentifier = vector8ZaxNSdUM83kLXJSsmj5jrcq17CpZUwBirmboaNPtQMEXjVNrL
 @davePublicIdentifier = vector7mAydt3S3dDPWJMYSHZPdRo16Pru145qTNQYFoS8TrpXWW8HAj
 @rogerPublicIdentifier = vector8Uz1BdpA9hV5uTm6QUv5jj1PsUyCH8m8ciA94voCzsxVmrBRor
+@roger1PublicIdentifier = vector5ANRAPfyUHv5aFB4iUxZ8ABfCE8ykDn3d1qkoUVfW7qFmmegur
+@roger2PublicIdentifier = vector5jDmgMUxaSzqq6nqWXvxh1eN3kyofeJrBrJsMKUwS3zsQHPSzj
 @chainId = 1337
 
 @nodeUrl = {{carolUrl}}
 @nodePublicIdentifier = {{carolPublicIdentifier}}
 @counterpartyPublicIdentifier = {{rogerPublicIdentifier}}
+@channel = {{carolRogerChannel}}
 
 ##############
-### Setup Channel
-POST {{nodeUrl}}/setup
+### Start Auction
+
+POST {{carolUrl}}/run-auction
 Content-Type: application/json
 
 {
-  "counterpartyIdentifier": "{{counterpartyPublicIdentifier}}",
-  "publicIdentifier": "{{nodePublicIdentifier}}",
-  "chainId": "{{chainId}}",
-  "timeout": "100000"
-}
+  "amount": "1000000",
+  "publicIdentifier": "{{carolPublicIdentifier}}",
+  "assetId": "0x0000000000000000000000000000000000000000",
+  "chainId": 1337,
+  "recipient": "{{davePublicIdentifier}}",
+  "recipientAssetId": "0x0000000000000000000000000000000000000000",
+  "recipientChainId": 1337
+} 
