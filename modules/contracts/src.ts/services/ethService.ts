@@ -45,6 +45,8 @@ import { parseUnits } from "ethers/lib/utils";
 // The amount of time (ms) to wait before a confirmation polling period times out,
 // indiciating we should resubmit tx with higher gas if the tx is not confirmed.
 export const CONFIRMATION_TIMEOUT = 45_000;
+// Multiplier for timeout once we get at least 1 confirmation.
+const CONFIRMATION_MULTIPLIER = 4;
 // The min percentage to bump gas.
 export const GAS_BUMP_PERCENT = 20;
 // 1M gas should cover all Connext txs. Gas won't exceed this amount.
@@ -650,7 +652,10 @@ export class EthereumChainService extends EthereumChainReader implements IVector
     // NOTE: This loop won't execute if receipt is valid (not undefined).
     let timeElapsed: number = 0;
     const startMark = new Date().getTime();
-    while (!receipt && timeElapsed < (receivedConfirmation ? CONFIRMATION_TIMEOUT : CONFIRMATION_TIMEOUT * 2)) {
+    while (
+      !receipt &&
+      timeElapsed < (receivedConfirmation ? CONFIRMATION_TIMEOUT : CONFIRMATION_TIMEOUT * CONFIRMATION_MULTIPLIER)
+    ) {
       receipt = await pollForReceipt();
       // Update elapsed time.
       timeElapsed = new Date().getTime() - startMark;
