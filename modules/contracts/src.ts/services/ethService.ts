@@ -654,7 +654,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
     const startMark = new Date().getTime();
     while (
       !receipt &&
-      timeElapsed < (receivedConfirmation ? CONFIRMATION_TIMEOUT : CONFIRMATION_TIMEOUT * CONFIRMATION_MULTIPLIER)
+      timeElapsed < (receivedConfirmation ? CONFIRMATION_TIMEOUT * CONFIRMATION_MULTIPLIER : CONFIRMATION_TIMEOUT)
     ) {
       receipt = await pollForReceipt();
       // Update elapsed time.
