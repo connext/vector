@@ -5,6 +5,7 @@
 ## 0.2.5-beta.19
 
 - \[contracts\] Add internal nonce tracking `ethService`
+- \[contracts\] Hotfix for matic gas station service issues
 
 ## 0.2.5-beta.18
 
