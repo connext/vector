@@ -494,9 +494,6 @@ export class EthereumChainReader implements IVectorChainReader {
         } catch (e) {
           this.log.warn({ error: e }, "Gasnow failed, using provider");
         }
-      } else if (chainId === 137) {
-        // TODO: Temporary hotfix solution for Matic gas station issues.
-        gasPrice = parseUnits("4", "gwei");
       }
       if (!gasPrice) {
         try {
