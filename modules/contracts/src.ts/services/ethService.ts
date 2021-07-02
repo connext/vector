@@ -211,6 +211,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
       try {
         // If a nonce is supplied, use that
         if (typeof nonce !== "undefined") {
+          this.log.info({ nonce, chainId, gasPrice: gasPrice.toString() }, "Resubmitting tx");
           const response: TransactionResponse | undefined = await txFn(gasPrice, nonce);
           return Result.ok(response);
         }
@@ -219,6 +220,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
         const stored = this.nonces.get(chainId) ?? 0;
         const pending = await signer.getTransactionCount("pending");
         const nonceToUse = stored > pending ? stored : pending;
+        this.log.info({ nonce, chainId, gasPrice: gasPrice.toString() }, "Submitting tx");
         const response: TransactionResponse | undefined = await txFn(gasPrice, nonceToUse);
 
         // Store the incremented nonce
