@@ -209,19 +209,20 @@ export class EthereumChainService extends EthereumChainReader implements IVector
     // Define task to send tx with proper nonce
     const task = async (): Promise<Result<TransactionResponse | undefined, Error>> => {
       try {
-        // Send transaction using the passed in callback.
-        const stored = this.nonces.get(chainId);
-        const nonceToUse: number = nonce ?? stored ?? (await signer.getTransactionCount("pending"));
-        const response: TransactionResponse | undefined = await txFn(gasPrice, nonceToUse);
-        // After calling tx fn, set nonce to the greatest of
-        // stored, pending, or incremented
-        const pending = await signer.getTransactionCount("pending");
-        const incremented = (response?.nonce ?? nonceToUse) + 1;
-        // Ensure the nonce you store is *always* the greatest of the values
-        const toCompare = stored ?? 0;
-        if (toCompare < pending || toCompare < incremented) {
-          this.nonces.set(chainId, incremented > pending ? incremented : pending);
+        // If a nonce is supplied, use that
+        if (typeof nonce !== "undefined") {
+          const response: TransactionResponse | undefined = await txFn(gasPrice, nonce);
+          return Result.ok(response);
         }
+
+        // Otherwise, send tx using highest stored or pending nonce
+        const stored = this.nonces.get(chainId) ?? 0;
+        const pending = await signer.getTransactionCount("pending");
+        const nonceToUse = stored > pending ? stored : pending;
+        const response: TransactionResponse | undefined = await txFn(gasPrice, nonceToUse);
+
+        // Store the incremented nonce
+        this.nonces.set(chainId, nonceToUse + 1);
         return Result.ok(response);
       } catch (e) {
         return Result.fail(e);
