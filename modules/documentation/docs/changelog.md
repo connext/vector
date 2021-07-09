@@ -2,7 +2,7 @@
 
 ## Next Release
 
-## 0.2.5-beta.20
+## 0.2.5-beta.21
 
 - \[contracts\] Add information to `PAID` token
 
