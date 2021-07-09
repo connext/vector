@@ -10,42 +10,42 @@ registry_url="https://index.docker.io/v1/repositories/${registry#*/}"
 ########################################
 ## Run some sanity checks to make sure we're really ready to deploy
 
-# if [[ -n "$(git status -s)" ]]
-# then echo "Aborting: Make sure your git repo is clean" && exit 1
-# fi
+if [[ -n "$(git status -s)" ]]
+then echo "Aborting: Make sure your git repo is clean" && exit 1
+fi
 
 # TODO: remove when main is fixed
-# if [[ "$(git symbolic-ref HEAD | sed 's|.*/\(.*\)|\1|')" != "main" ]]
-# then echo "Aborting: Make sure you've checked out the main branch" && exit 1
-# fi
+if [[ "$(git symbolic-ref HEAD | sed 's|.*/\(.*\)|\1|')" != "main" ]]
+then echo "Aborting: Make sure you've checked out the main branch" && exit 1
+fi
 
-# if [[ -n "$(git diff origin/main)" ]]
-# then echo "Aborting: Make sure your branch is up to date with origin/main" && exit 1
-# fi
+if [[ -n "$(git diff origin/main)" ]]
+then echo "Aborting: Make sure your branch is up to date with origin/main" && exit 1
+fi
 
 if [[ ! -f "Makefile" ]]
 then echo "Aborting: Make sure you're in the $project project root" && exit 1
 fi
 
-# # Create patch to check for conflicts
-# # Thanks to: https://stackoverflow.com/a/6339869
-# set +e # temporarily handle errors manually
-# git checkout prod > /dev/null 2>&1
-# if ! git merge --no-commit --no-ff main
-# then
-#   git merge --abort && git checkout main > /dev/null 2>&1
-#   echo "Merge aborted & rolled back, your repo is clean again"
-#   echo
-#   echo "Error: merging main into prod would result in the above merge conflicts."
-#   echo "To deploy:"
-#   echo " 1. Merge prod into main ie: git checkout main && git merge prod"
-#   echo " 2. Take care of any merge conflicts & do post-merge testing if needed"
-#   echo " 3. Re-run this script"
-#   echo
-#   exit 0
-# fi
-# git merge --abort && git checkout main > /dev/null 2>&1
-# set -e
+# Create patch to check for conflicts
+# Thanks to: https://stackoverflow.com/a/6339869
+set +e # temporarily handle errors manually
+git checkout prod > /dev/null 2>&1
+if ! git merge --no-commit --no-ff main
+then
+  git merge --abort && git checkout main > /dev/null 2>&1
+  echo "Merge aborted & rolled back, your repo is clean again"
+  echo
+  echo "Error: merging main into prod would result in the above merge conflicts."
+  echo "To deploy:"
+  echo " 1. Merge prod into main ie: git checkout main && git merge prod"
+  echo " 2. Take care of any merge conflicts & do post-merge testing if needed"
+  echo " 3. Re-run this script"
+  echo
+  exit 0
+fi
+git merge --abort && git checkout main > /dev/null 2>&1
+set -e
 
 ########################################
 ## Gather info needed for deployment
@@ -109,7 +109,7 @@ git push --no-verify # origin prod --no-verify
 git tag "$tag"
 git push "$tag" --no-verify # origin "$tag" --no-verify
 
-# # Bring main up-to-date w prod for a cleaner git history
-# git checkout main
-# git merge prod
-# git push origin main --no-verify
+# Bring main up-to-date w prod for a cleaner git history
+git checkout main
+git merge prod
+git push origin main --no-verify
