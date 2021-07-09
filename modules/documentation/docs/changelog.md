@@ -2,6 +2,10 @@
 
 ## Next Release
 
+## 0.2.5-beta.20
+
+- \[contracts\] Add information to `PAID` token
+
 ## 0.2.5-beta.19
 
 - \[contracts\] Add internal nonce tracking `ethService`
