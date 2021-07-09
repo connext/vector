@@ -12,7 +12,7 @@ images="auth builder database ethprovider messaging_proxy nats node router test_
 # Also push a semver-tagged image if we're on prod
 if [[ "$(git rev-parse --abbrev-ref HEAD)" == "prod" || "${GITHUB_REF##*/}" == "prod" ]]
 then semver="$release"
-else semver="$release"
+else semver=""
 fi
 
 for image in $images
