@@ -1,0 +1,4018 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+      
+      <link rel="icon" href="assets/favicon.png">
+      <meta name="generator" content="mkdocs-1.2.1, mkdocs-material-7.1.9">
+    
+    
+      
+        <title>Vector Changelog - Connext Documentation</title>
+      
+    
+    
+      <link rel="stylesheet" href="assets/stylesheets/main.ca7ac06f.min.css">
+      
+        
+        <link rel="stylesheet" href="assets/stylesheets/palette.f1a3b89f.min.css">
+        
+          
+          
+          <meta name="theme-color" content="">
+        
+      
+    
+    
+    
+      
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Proxima+Nova:300,400,400i,700%7C&display=fallback">
+        <style>:root{--md-text-font-family:"Proxima Nova";--md-code-font-family:""}</style>
+      
+    
+    
+    
+    
+      
+
+
+    
+    
+  </head>
+  
+  
+    
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="" data-md-color-primary="#002868" data-md-color-accent="#fca311">
+  
+    
+    <script>function __prefix(e){return new URL(".",location).pathname+"."+e}function __get(e,t=localStorage){return JSON.parse(t.getItem(__prefix(e)))}</script>
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#vector-changelog" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="." title="Connext Documentation" class="md-header__button md-logo" aria-label="Connext Documentation" data-md-component="logo">
+      
+  <img src="assets/logo.png" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3V6m0 5h18v2H3v-2m0 5h18v2H3v-2z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Connext Documentation
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Vector Changelog
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+    
+      <label class="md-header__button md-icon" for="__search">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5z"/></svg>
+      </label>
+      
+<div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" data-md-state="active" required>
+      <label class="md-search__icon md-icon" for="__search">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5z"/></svg>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+      </label>
+      <button type="reset" class="md-search__icon md-icon" aria-label="Clear" tabindex="-1">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z"/></svg>
+      </button>
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+    
+      <div class="md-header__source">
+        
+<a href="https://github.com/connext/vector/" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81z"/></svg>
+  </div>
+  <div class="md-source__repository">
+    connext/vector
+  </div>
+</a>
+      </div>
+    
+  </nav>
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-tabs__inner md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+
+
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="index.html" class="md-tabs__link">
+        Intro
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+
+
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="quickStart/serverNode.html" class="md-tabs__link">
+        Quick Start
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+
+
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="node/basics.html" class="md-tabs__link">
+        Node Guides
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+
+
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="router/basics.html" class="md-tabs__link">
+        Router Guides
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+
+
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="reference/nodeAPI.html" class="md-tabs__link">
+        Reference
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+    
+  
+
+
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="changelog.html" class="md-tabs__link md-tabs__link--active">
+        Changelog
+      </a>
+    </li>
+  
+
+      
+    </ul>
+  </div>
+</nav>
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="." title="Connext Documentation" class="md-nav__button md-logo" aria-label="Connext Documentation" data-md-component="logo">
+      
+  <img src="assets/logo.png" alt="logo">
+
+    </a>
+    Connext Documentation
+  </label>
+  
+    <div class="md-nav__source">
+      
+<a href="https://github.com/connext/vector/" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81z"/></svg>
+  </div>
+  <div class="md-source__repository">
+    connext/vector
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+      
+
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_1" type="checkbox" id="__nav_1" >
+      
+      <label class="md-nav__link" for="__nav_1">
+        Intro
+        <span class="md-nav__icon md-icon"></span>
+      </label>
+      <nav class="md-nav" aria-label="Intro" data-md-level="1">
+        <label class="md-nav__title" for="__nav_1">
+          <span class="md-nav__icon md-icon"></span>
+          Intro
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="index.html" class="md-nav__link">
+        Welcome
+      </a>
+    </li>
+  
+
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_2" type="checkbox" id="__nav_2" >
+      
+      <label class="md-nav__link" for="__nav_2">
+        Quick Start
+        <span class="md-nav__icon md-icon"></span>
+      </label>
+      <nav class="md-nav" aria-label="Quick Start" data-md-level="1">
+        <label class="md-nav__title" for="__nav_2">
+          <span class="md-nav__icon md-icon"></span>
+          Quick Start
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="quickStart/serverNode.html" class="md-nav__link">
+        Server Node Quick Start
+      </a>
+    </li>
+  
+
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="quickStart/browserNode.html" class="md-nav__link">
+        Browser Node Quick Start
+      </a>
+    </li>
+  
+
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_3" type="checkbox" id="__nav_3" >
+      
+      <label class="md-nav__link" for="__nav_3">
+        Node Guides
+        <span class="md-nav__icon md-icon"></span>
+      </label>
+      <nav class="md-nav" aria-label="Node Guides" data-md-level="1">
+        <label class="md-nav__title" for="__nav_3">
+          <span class="md-nav__icon md-icon"></span>
+          Node Guides
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="node/basics.html" class="md-nav__link">
+        Basics
+      </a>
+    </li>
+  
+
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="node/configure.html" class="md-nav__link">
+        Configuration and Deployment
+      </a>
+    </li>
+  
+
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="node/transfers.html" class="md-nav__link">
+        Transfers
+      </a>
+    </li>
+  
+
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="node/events.html" class="md-nav__link">
+        Events
+      </a>
+    </li>
+  
+
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_4" type="checkbox" id="__nav_4" >
+      
+      <label class="md-nav__link" for="__nav_4">
+        Router Guides
+        <span class="md-nav__icon md-icon"></span>
+      </label>
+      <nav class="md-nav" aria-label="Router Guides" data-md-level="1">
+        <label class="md-nav__title" for="__nav_4">
+          <span class="md-nav__icon md-icon"></span>
+          Router Guides
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="router/basics.html" class="md-nav__link">
+        Basics
+      </a>
+    </li>
+  
+
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="router/configure.html" class="md-nav__link">
+        Configuring and Deploying a Routing Vector Node
+      </a>
+    </li>
+  
+
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="router/chains.html" class="md-nav__link">
+        Adding a Chain
+      </a>
+    </li>
+  
+
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_5" type="checkbox" id="__nav_5" >
+      
+      <label class="md-nav__link" for="__nav_5">
+        Reference
+        <span class="md-nav__icon md-icon"></span>
+      </label>
+      <nav class="md-nav" aria-label="Reference" data-md-level="1">
+        <label class="md-nav__title" for="__nav_5">
+          <span class="md-nav__icon md-icon"></span>
+          Reference
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="reference/nodeAPI.html" class="md-nav__link">
+        Node API Reference
+      </a>
+    </li>
+  
+
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="reference/hostedNodes.html" class="md-nav__link">
+        List of Hosted Routing Nodes
+      </a>
+    </li>
+  
+
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+    
+  
+  
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_6" type="checkbox" id="__nav_6" checked>
+      
+      <label class="md-nav__link" for="__nav_6">
+        Changelog
+        <span class="md-nav__icon md-icon"></span>
+      </label>
+      <nav class="md-nav" aria-label="Changelog" data-md-level="1">
+        <label class="md-nav__title" for="__nav_6">
+          <span class="md-nav__icon md-icon"></span>
+          Changelog
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+  
+  
+    
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" data-md-toggle="toc" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          Vector Changelog
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="changelog.html" class="md-nav__link md-nav__link--active">
+        Vector Changelog
+      </a>
+      
+        
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#next-release" class="md-nav__link">
+    Next Release
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#030-beta2" class="md-nav__link">
+    0.3.0-beta.2
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#030-beta1" class="md-nav__link">
+    0.3.0-beta.1
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#025-beta18" class="md-nav__link">
+    0.2.5-beta.18
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#025-beta17" class="md-nav__link">
+    0.2.5-beta.17
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#025-beta16" class="md-nav__link">
+    0.2.5-beta.16
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#025-beta14" class="md-nav__link">
+    0.2.5-beta.14
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#025-beta13" class="md-nav__link">
+    0.2.5-beta.13
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#025-beta12" class="md-nav__link">
+    0.2.5-beta.12
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#025-beta11" class="md-nav__link">
+    0.2.5-beta.11
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#025-beta10" class="md-nav__link">
+    0.2.5-beta.10
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#025-beta9" class="md-nav__link">
+    0.2.5-beta.9
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#025-beta8" class="md-nav__link">
+    0.2.5-beta.8
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#025-beta7" class="md-nav__link">
+    0.2.5-beta.7
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#025-beta6" class="md-nav__link">
+    0.2.5-beta.6
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#025-beta5" class="md-nav__link">
+    0.2.5-beta.5
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#025-beta4" class="md-nav__link">
+    0.2.5-beta.4
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#025-beta3" class="md-nav__link">
+    0.2.5-beta.3
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#025-beta2" class="md-nav__link">
+    0.2.5-beta.2
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#025-beta1" class="md-nav__link">
+    0.2.5-beta.1
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#025-beta0" class="md-nav__link">
+    0.2.5-beta.0
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#025-alpha4" class="md-nav__link">
+    0.2.5-alpha.4
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#025-alpha3" class="md-nav__link">
+    0.2.5-alpha.3
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#025-alpha2" class="md-nav__link">
+    0.2.5-alpha.2
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#025-alpha1" class="md-nav__link">
+    0.2.5-alpha.1
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#025-alpha0" class="md-nav__link">
+    0.2.5-alpha.0
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#024-beta3" class="md-nav__link">
+    0.2.4-beta.3
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#024-beta2" class="md-nav__link">
+    0.2.4-beta.2
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#024-beta1" class="md-nav__link">
+    0.2.4-beta.1
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#023" class="md-nav__link">
+    0.2.3
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#023-beta1" class="md-nav__link">
+    0.2.3-beta.1
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#022" class="md-nav__link">
+    0.2.2
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#022-beta8" class="md-nav__link">
+    0.2.2-beta.8
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#022-beta7" class="md-nav__link">
+    0.2.2-beta.7
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#022-beta6" class="md-nav__link">
+    0.2.2-beta.6
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#022-beta5" class="md-nav__link">
+    0.2.2-beta.5
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#022-beta4" class="md-nav__link">
+    0.2.2-beta.4
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#022-beta3" class="md-nav__link">
+    0.2.2-beta.3
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#022-beta2" class="md-nav__link">
+    0.2.2-beta.2
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#022-beta1" class="md-nav__link">
+    0.2.2-beta.1
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#021" class="md-nav__link">
+    0.2.1
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#021-beta24" class="md-nav__link">
+    0.2.1-beta.24
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#021-beta23" class="md-nav__link">
+    0.2.1-beta.23
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#021-beta22" class="md-nav__link">
+    0.2.1-beta.22
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#021-beta21" class="md-nav__link">
+    0.2.1-beta.21
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#021-beta20" class="md-nav__link">
+    0.2.1-beta.20
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#021-beta19" class="md-nav__link">
+    0.2.1-beta.19
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#021-beta15" class="md-nav__link">
+    0.2.1-beta.15
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#021-beta14" class="md-nav__link">
+    0.2.1-beta.14
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#021-beta13" class="md-nav__link">
+    0.2.1-beta.13
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#021-beta12" class="md-nav__link">
+    0.2.1-beta.12
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#021-beta11" class="md-nav__link">
+    0.2.1-beta.11
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#021-beta10" class="md-nav__link">
+    0.2.1-beta.10
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#021-beta9" class="md-nav__link">
+    0.2.1-beta.9
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#021-beta8" class="md-nav__link">
+    0.2.1-beta.8
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#021-beta7" class="md-nav__link">
+    0.2.1-beta.7
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#021-beta6" class="md-nav__link">
+    0.2.1-beta.6
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#021-beta5" class="md-nav__link">
+    0.2.1-beta.5
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#021-beta4" class="md-nav__link">
+    0.2.1-beta.4
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#021-beta3" class="md-nav__link">
+    0.2.1-beta.3
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#021-beta2" class="md-nav__link">
+    0.2.1-beta.2
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#021-beta1" class="md-nav__link">
+    0.2.1-beta.1
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#021-beta0" class="md-nav__link">
+    0.2.1-beta.0
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#020" class="md-nav__link">
+    0.2.0
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#020-beta9" class="md-nav__link">
+    0.2.0-beta.9
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#020-beta8" class="md-nav__link">
+    0.2.0-beta.8
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#020-beta7" class="md-nav__link">
+    0.2.0-beta.7
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#020-beta6" class="md-nav__link">
+    0.2.0-beta.6
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#020-beta5" class="md-nav__link">
+    0.2.0-beta.5
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#020-beta4" class="md-nav__link">
+    0.2.0-beta.4
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#020-beta3" class="md-nav__link">
+    0.2.0-beta.3
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#020-beta2" class="md-nav__link">
+    0.2.0-beta.2
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#020-beta1" class="md-nav__link">
+    0.2.0-beta.1
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#020-beta0" class="md-nav__link">
+    0.2.0-beta.0
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#0118-beta1" class="md-nav__link">
+    0.1.18-beta.1
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#0118-beta0" class="md-nav__link">
+    0.1.18-beta.0
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#0117" class="md-nav__link">
+    0.1.17
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#0116" class="md-nav__link">
+    0.1.16
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#0115" class="md-nav__link">
+    0.1.15
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#0115-beta21" class="md-nav__link">
+    0.1.15-beta.21
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#0115-beta20" class="md-nav__link">
+    0.1.15-beta.20
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#0115-beta19" class="md-nav__link">
+    0.1.15-beta.19
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#0115-beta18" class="md-nav__link">
+    0.1.15-beta.18
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#0115-beta17" class="md-nav__link">
+    0.1.15-beta.17
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#0115-beta16" class="md-nav__link">
+    0.1.15-beta.16
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#0115-beta15" class="md-nav__link">
+    0.1.15-beta.15
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#0115-beta14" class="md-nav__link">
+    0.1.15-beta.14
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#0115-beta13" class="md-nav__link">
+    0.1.15-beta.13
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#0115-beta12" class="md-nav__link">
+    0.1.15-beta.12
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#0115-beta11" class="md-nav__link">
+    0.1.15-beta.11
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#0115-beta10" class="md-nav__link">
+    0.1.15-beta.10
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#0115-beta9" class="md-nav__link">
+    0.1.15-beta.9
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#0115-beta8" class="md-nav__link">
+    0.1.15-beta.8
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#0115-beta7" class="md-nav__link">
+    0.1.15-beta.7
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#0115-beta6" class="md-nav__link">
+    0.1.15-beta.6
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#0115-beta5" class="md-nav__link">
+    0.1.15-beta.5
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#0115-beta4" class="md-nav__link">
+    0.1.15-beta.4
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#0115-beta3" class="md-nav__link">
+    0.1.15-beta.3
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#0115-beta2" class="md-nav__link">
+    0.1.15-beta.2
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#0115-beta1" class="md-nav__link">
+    0.1.15-beta.1
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#0115-beta0" class="md-nav__link">
+    0.1.15-beta.0
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#0114" class="md-nav__link">
+    0.1.14
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#0113" class="md-nav__link">
+    0.1.13
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#0113-beta0" class="md-nav__link">
+    0.1.13-beta.0
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#0112" class="md-nav__link">
+    0.1.12
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#0111" class="md-nav__link">
+    0.1.11
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#0110" class="md-nav__link">
+    0.1.10
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#019" class="md-nav__link">
+    0.1.9
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#018" class="md-nav__link">
+    0.1.8
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#018-beta6" class="md-nav__link">
+    0.1.8-beta.6
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#018-beta5" class="md-nav__link">
+    0.1.8-beta.5
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#018-beta4" class="md-nav__link">
+    0.1.8-beta.4
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#018-beta3" class="md-nav__link">
+    0.1.8-beta.3
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#018-beta2" class="md-nav__link">
+    0.1.8-beta.2
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#018-beta1" class="md-nav__link">
+    0.1.8-beta.1
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#018-beta0" class="md-nav__link">
+    0.1.8-beta.0
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#017" class="md-nav__link">
+    0.1.7
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#016" class="md-nav__link">
+    0.1.6
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#015" class="md-nav__link">
+    0.1.5
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#014" class="md-nav__link">
+    0.1.4
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#013" class="md-nav__link">
+    0.1.3
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#013-beta1" class="md-nav__link">
+    0.1.3-beta.1
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#012" class="md-nav__link">
+    0.1.2
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#011" class="md-nav__link">
+    0.1.1
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#010" class="md-nav__link">
+    0.1.0
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#010-rc25" class="md-nav__link">
+    0.1.0-rc.25
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#010-rc24" class="md-nav__link">
+    0.1.0-rc.24
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#010-rc23" class="md-nav__link">
+    0.1.0-rc.23
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#010-rc22" class="md-nav__link">
+    0.1.0-rc.22
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#010-rc21" class="md-nav__link">
+    0.1.0-rc.21
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#010-rc20" class="md-nav__link">
+    0.1.0-rc.20
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#010-rc19" class="md-nav__link">
+    0.1.0-rc.19
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#010-rc18" class="md-nav__link">
+    0.1.0-rc.18
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#010-rc17" class="md-nav__link">
+    0.1.0-rc.17
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#010-rc16" class="md-nav__link">
+    0.1.0-rc.16
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#010-rc9" class="md-nav__link">
+    0.1.0-rc.9
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#010-rc8" class="md-nav__link">
+    0.1.0-rc.8
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#010-rc7" class="md-nav__link">
+    0.1.0-rc.7
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#010-rc6" class="md-nav__link">
+    0.1.0-rc.6
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#010-rc4" class="md-nav__link">
+    0.1.0-rc.4
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#010-rc3" class="md-nav__link">
+    0.1.0-rc.3
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#010-rc1" class="md-nav__link">
+    0.1.0-rc.1
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#010-rc0" class="md-nav__link">
+    0.1.0-rc.0
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#0038" class="md-nav__link">
+    0.0.38
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#0037" class="md-nav__link">
+    0.0.37
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#0036" class="md-nav__link">
+    0.0.36
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#0035" class="md-nav__link">
+    0.0.35
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#0033" class="md-nav__link">
+    0.0.33
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#0032" class="md-nav__link">
+    0.0.32
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#0031" class="md-nav__link">
+    0.0.31
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#0028" class="md-nav__link">
+    0.0.28
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#0026" class="md-nav__link">
+    0.0.26
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#0023" class="md-nav__link">
+    0.0.23
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#0021" class="md-nav__link">
+    0.0.21
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#0020" class="md-nav__link">
+    0.0.20
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#0019" class="md-nav__link">
+    0.0.19
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#0018" class="md-nav__link">
+    0.0.18
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#0017" class="md-nav__link">
+    0.0.17
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#0016" class="md-nav__link">
+    0.0.16
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#0015" class="md-nav__link">
+    0.0.15
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#0014" class="md-nav__link">
+    0.0.14
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#0013" class="md-nav__link">
+    0.0.13
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#0012" class="md-nav__link">
+    0.0.12
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#0011" class="md-nav__link">
+    0.0.11
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#connexttypesutilscontractsprotocolenginebrowser-node009-connextserver-node0010" class="md-nav__link">
+    @connext/{types,utils,contracts,protocol,engine,browser-node}@0.0.9, @connext/{server-node}@0.0.10
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#connexttypesutilscontractsprotocolenginebrowser-node009-connextserver-node009" class="md-nav__link">
+    @connext/{types,utils,contracts,protocol,engine,browser-node}@0.0.9, @connext/{server-node}@0.0.9
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#connexttypesutilscontractsprotocolenginebrowser-node006-beta1-connextserver-node008" class="md-nav__link">
+    @connext/{types,utils,contracts,protocol,engine,browser-node}@0.0.6-beta.1, @connext/{server-node}@0.0.8
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#connexttypesutilscontractsprotocolenginebrowser-node004" class="md-nav__link">
+    @connext/{types,utils,contracts,protocol,engine,browser-node}@0.0.4
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#connexttypesutilscontractsprotocolenginebrowser-node003-beta5" class="md-nav__link">
+    @connext/{types,utils,contracts,protocol,engine,browser-node}@0.0.3-beta.5
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#connexttypesutilscontractsprotocolenginebrowser-node003-beta0" class="md-nav__link">
+    @connext/{types,utils,contracts,protocol,engine,browser-node}@0.0.3-beta.0
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#next-release" class="md-nav__link">
+    Next Release
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#030-beta2" class="md-nav__link">
+    0.3.0-beta.2
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#030-beta1" class="md-nav__link">
+    0.3.0-beta.1
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#025-beta18" class="md-nav__link">
+    0.2.5-beta.18
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#025-beta17" class="md-nav__link">
+    0.2.5-beta.17
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#025-beta16" class="md-nav__link">
+    0.2.5-beta.16
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#025-beta14" class="md-nav__link">
+    0.2.5-beta.14
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#025-beta13" class="md-nav__link">
+    0.2.5-beta.13
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#025-beta12" class="md-nav__link">
+    0.2.5-beta.12
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#025-beta11" class="md-nav__link">
+    0.2.5-beta.11
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#025-beta10" class="md-nav__link">
+    0.2.5-beta.10
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#025-beta9" class="md-nav__link">
+    0.2.5-beta.9
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#025-beta8" class="md-nav__link">
+    0.2.5-beta.8
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#025-beta7" class="md-nav__link">
+    0.2.5-beta.7
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#025-beta6" class="md-nav__link">
+    0.2.5-beta.6
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#025-beta5" class="md-nav__link">
+    0.2.5-beta.5
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#025-beta4" class="md-nav__link">
+    0.2.5-beta.4
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#025-beta3" class="md-nav__link">
+    0.2.5-beta.3
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#025-beta2" class="md-nav__link">
+    0.2.5-beta.2
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#025-beta1" class="md-nav__link">
+    0.2.5-beta.1
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#025-beta0" class="md-nav__link">
+    0.2.5-beta.0
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#025-alpha4" class="md-nav__link">
+    0.2.5-alpha.4
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#025-alpha3" class="md-nav__link">
+    0.2.5-alpha.3
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#025-alpha2" class="md-nav__link">
+    0.2.5-alpha.2
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#025-alpha1" class="md-nav__link">
+    0.2.5-alpha.1
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#025-alpha0" class="md-nav__link">
+    0.2.5-alpha.0
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#024-beta3" class="md-nav__link">
+    0.2.4-beta.3
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#024-beta2" class="md-nav__link">
+    0.2.4-beta.2
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#024-beta1" class="md-nav__link">
+    0.2.4-beta.1
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#023" class="md-nav__link">
+    0.2.3
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#023-beta1" class="md-nav__link">
+    0.2.3-beta.1
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#022" class="md-nav__link">
+    0.2.2
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#022-beta8" class="md-nav__link">
+    0.2.2-beta.8
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#022-beta7" class="md-nav__link">
+    0.2.2-beta.7
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#022-beta6" class="md-nav__link">
+    0.2.2-beta.6
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#022-beta5" class="md-nav__link">
+    0.2.2-beta.5
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#022-beta4" class="md-nav__link">
+    0.2.2-beta.4
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#022-beta3" class="md-nav__link">
+    0.2.2-beta.3
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#022-beta2" class="md-nav__link">
+    0.2.2-beta.2
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#022-beta1" class="md-nav__link">
+    0.2.2-beta.1
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#021" class="md-nav__link">
+    0.2.1
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#021-beta24" class="md-nav__link">
+    0.2.1-beta.24
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#021-beta23" class="md-nav__link">
+    0.2.1-beta.23
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#021-beta22" class="md-nav__link">
+    0.2.1-beta.22
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#021-beta21" class="md-nav__link">
+    0.2.1-beta.21
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#021-beta20" class="md-nav__link">
+    0.2.1-beta.20
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#021-beta19" class="md-nav__link">
+    0.2.1-beta.19
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#021-beta15" class="md-nav__link">
+    0.2.1-beta.15
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#021-beta14" class="md-nav__link">
+    0.2.1-beta.14
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#021-beta13" class="md-nav__link">
+    0.2.1-beta.13
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#021-beta12" class="md-nav__link">
+    0.2.1-beta.12
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#021-beta11" class="md-nav__link">
+    0.2.1-beta.11
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#021-beta10" class="md-nav__link">
+    0.2.1-beta.10
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#021-beta9" class="md-nav__link">
+    0.2.1-beta.9
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#021-beta8" class="md-nav__link">
+    0.2.1-beta.8
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#021-beta7" class="md-nav__link">
+    0.2.1-beta.7
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#021-beta6" class="md-nav__link">
+    0.2.1-beta.6
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#021-beta5" class="md-nav__link">
+    0.2.1-beta.5
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#021-beta4" class="md-nav__link">
+    0.2.1-beta.4
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#021-beta3" class="md-nav__link">
+    0.2.1-beta.3
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#021-beta2" class="md-nav__link">
+    0.2.1-beta.2
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#021-beta1" class="md-nav__link">
+    0.2.1-beta.1
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#021-beta0" class="md-nav__link">
+    0.2.1-beta.0
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#020" class="md-nav__link">
+    0.2.0
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#020-beta9" class="md-nav__link">
+    0.2.0-beta.9
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#020-beta8" class="md-nav__link">
+    0.2.0-beta.8
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#020-beta7" class="md-nav__link">
+    0.2.0-beta.7
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#020-beta6" class="md-nav__link">
+    0.2.0-beta.6
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#020-beta5" class="md-nav__link">
+    0.2.0-beta.5
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#020-beta4" class="md-nav__link">
+    0.2.0-beta.4
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#020-beta3" class="md-nav__link">
+    0.2.0-beta.3
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#020-beta2" class="md-nav__link">
+    0.2.0-beta.2
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#020-beta1" class="md-nav__link">
+    0.2.0-beta.1
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#020-beta0" class="md-nav__link">
+    0.2.0-beta.0
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#0118-beta1" class="md-nav__link">
+    0.1.18-beta.1
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#0118-beta0" class="md-nav__link">
+    0.1.18-beta.0
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#0117" class="md-nav__link">
+    0.1.17
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#0116" class="md-nav__link">
+    0.1.16
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#0115" class="md-nav__link">
+    0.1.15
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#0115-beta21" class="md-nav__link">
+    0.1.15-beta.21
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#0115-beta20" class="md-nav__link">
+    0.1.15-beta.20
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#0115-beta19" class="md-nav__link">
+    0.1.15-beta.19
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#0115-beta18" class="md-nav__link">
+    0.1.15-beta.18
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#0115-beta17" class="md-nav__link">
+    0.1.15-beta.17
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#0115-beta16" class="md-nav__link">
+    0.1.15-beta.16
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#0115-beta15" class="md-nav__link">
+    0.1.15-beta.15
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#0115-beta14" class="md-nav__link">
+    0.1.15-beta.14
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#0115-beta13" class="md-nav__link">
+    0.1.15-beta.13
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#0115-beta12" class="md-nav__link">
+    0.1.15-beta.12
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#0115-beta11" class="md-nav__link">
+    0.1.15-beta.11
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#0115-beta10" class="md-nav__link">
+    0.1.15-beta.10
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#0115-beta9" class="md-nav__link">
+    0.1.15-beta.9
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#0115-beta8" class="md-nav__link">
+    0.1.15-beta.8
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#0115-beta7" class="md-nav__link">
+    0.1.15-beta.7
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#0115-beta6" class="md-nav__link">
+    0.1.15-beta.6
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#0115-beta5" class="md-nav__link">
+    0.1.15-beta.5
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#0115-beta4" class="md-nav__link">
+    0.1.15-beta.4
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#0115-beta3" class="md-nav__link">
+    0.1.15-beta.3
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#0115-beta2" class="md-nav__link">
+    0.1.15-beta.2
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#0115-beta1" class="md-nav__link">
+    0.1.15-beta.1
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#0115-beta0" class="md-nav__link">
+    0.1.15-beta.0
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#0114" class="md-nav__link">
+    0.1.14
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#0113" class="md-nav__link">
+    0.1.13
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#0113-beta0" class="md-nav__link">
+    0.1.13-beta.0
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#0112" class="md-nav__link">
+    0.1.12
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#0111" class="md-nav__link">
+    0.1.11
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#0110" class="md-nav__link">
+    0.1.10
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#019" class="md-nav__link">
+    0.1.9
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#018" class="md-nav__link">
+    0.1.8
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#018-beta6" class="md-nav__link">
+    0.1.8-beta.6
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#018-beta5" class="md-nav__link">
+    0.1.8-beta.5
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#018-beta4" class="md-nav__link">
+    0.1.8-beta.4
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#018-beta3" class="md-nav__link">
+    0.1.8-beta.3
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#018-beta2" class="md-nav__link">
+    0.1.8-beta.2
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#018-beta1" class="md-nav__link">
+    0.1.8-beta.1
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#018-beta0" class="md-nav__link">
+    0.1.8-beta.0
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#017" class="md-nav__link">
+    0.1.7
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#016" class="md-nav__link">
+    0.1.6
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#015" class="md-nav__link">
+    0.1.5
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#014" class="md-nav__link">
+    0.1.4
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#013" class="md-nav__link">
+    0.1.3
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#013-beta1" class="md-nav__link">
+    0.1.3-beta.1
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#012" class="md-nav__link">
+    0.1.2
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#011" class="md-nav__link">
+    0.1.1
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#010" class="md-nav__link">
+    0.1.0
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#010-rc25" class="md-nav__link">
+    0.1.0-rc.25
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#010-rc24" class="md-nav__link">
+    0.1.0-rc.24
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#010-rc23" class="md-nav__link">
+    0.1.0-rc.23
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#010-rc22" class="md-nav__link">
+    0.1.0-rc.22
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#010-rc21" class="md-nav__link">
+    0.1.0-rc.21
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#010-rc20" class="md-nav__link">
+    0.1.0-rc.20
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#010-rc19" class="md-nav__link">
+    0.1.0-rc.19
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#010-rc18" class="md-nav__link">
+    0.1.0-rc.18
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#010-rc17" class="md-nav__link">
+    0.1.0-rc.17
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#010-rc16" class="md-nav__link">
+    0.1.0-rc.16
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#010-rc9" class="md-nav__link">
+    0.1.0-rc.9
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#010-rc8" class="md-nav__link">
+    0.1.0-rc.8
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#010-rc7" class="md-nav__link">
+    0.1.0-rc.7
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#010-rc6" class="md-nav__link">
+    0.1.0-rc.6
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#010-rc4" class="md-nav__link">
+    0.1.0-rc.4
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#010-rc3" class="md-nav__link">
+    0.1.0-rc.3
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#010-rc1" class="md-nav__link">
+    0.1.0-rc.1
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#010-rc0" class="md-nav__link">
+    0.1.0-rc.0
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#0038" class="md-nav__link">
+    0.0.38
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#0037" class="md-nav__link">
+    0.0.37
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#0036" class="md-nav__link">
+    0.0.36
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#0035" class="md-nav__link">
+    0.0.35
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#0033" class="md-nav__link">
+    0.0.33
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#0032" class="md-nav__link">
+    0.0.32
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#0031" class="md-nav__link">
+    0.0.31
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#0028" class="md-nav__link">
+    0.0.28
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#0026" class="md-nav__link">
+    0.0.26
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#0023" class="md-nav__link">
+    0.0.23
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#0021" class="md-nav__link">
+    0.0.21
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#0020" class="md-nav__link">
+    0.0.20
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#0019" class="md-nav__link">
+    0.0.19
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#0018" class="md-nav__link">
+    0.0.18
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#0017" class="md-nav__link">
+    0.0.17
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#0016" class="md-nav__link">
+    0.0.16
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#0015" class="md-nav__link">
+    0.0.15
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#0014" class="md-nav__link">
+    0.0.14
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#0013" class="md-nav__link">
+    0.0.13
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#0012" class="md-nav__link">
+    0.0.12
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#0011" class="md-nav__link">
+    0.0.11
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#connexttypesutilscontractsprotocolenginebrowser-node009-connextserver-node0010" class="md-nav__link">
+    @connext/{types,utils,contracts,protocol,engine,browser-node}@0.0.9, @connext/{server-node}@0.0.10
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#connexttypesutilscontractsprotocolenginebrowser-node009-connextserver-node009" class="md-nav__link">
+    @connext/{types,utils,contracts,protocol,engine,browser-node}@0.0.9, @connext/{server-node}@0.0.9
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#connexttypesutilscontractsprotocolenginebrowser-node006-beta1-connextserver-node008" class="md-nav__link">
+    @connext/{types,utils,contracts,protocol,engine,browser-node}@0.0.6-beta.1, @connext/{server-node}@0.0.8
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#connexttypesutilscontractsprotocolenginebrowser-node004" class="md-nav__link">
+    @connext/{types,utils,contracts,protocol,engine,browser-node}@0.0.4
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#connexttypesutilscontractsprotocolenginebrowser-node003-beta5" class="md-nav__link">
+    @connext/{types,utils,contracts,protocol,engine,browser-node}@0.0.3-beta.5
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#connexttypesutilscontractsprotocolenginebrowser-node003-beta0" class="md-nav__link">
+    @connext/{types,utils,contracts,protocol,engine,browser-node}@0.0.3-beta.0
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          <div class="md-content" data-md-component="content">
+            <article class="md-content__inner md-typeset">
+              
+                
+                  <a href="https://github.com/connext/vector/edit/master/docs/changelog.md" title="Edit this page" class="md-content__button md-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20.71 7.04c.39-.39.39-1.04 0-1.41l-2.34-2.34c-.37-.39-1.02-.39-1.41 0l-1.84 1.83 3.75 3.75M3 17.25V21h3.75L17.81 9.93l-3.75-3.75L3 17.25z"/></svg>
+                  </a>
+                
+                
+                <h1 id="vector-changelog">Vector Changelog<a class="headerlink" href="#vector-changelog" title="Permanent link">&para;</a></h1>
+<h2 id="next-release">Next Release<a class="headerlink" href="#next-release" title="Permanent link">&para;</a></h2>
+<h2 id="030-beta2">0.3.0-beta.2<a class="headerlink" href="#030-beta2" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[contracts] Use confirmed block for ethReader</li>
+</ul>
+<h2 id="030-beta1">0.3.0-beta.1<a class="headerlink" href="#030-beta1" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[contracts] Add internal nonce tracking <code>ethService</code></li>
+<li>[contracts] Add per-chain queues</li>
+<li>[contracts] Add a flag for nonce expired in chain service</li>
+<li>[protocol] Remove channel lock</li>
+<li>[protocol] Add protocol versioning</li>
+<li>[messaging] Remove lock messages</li>
+<li>[server-node] Remove <code>LockService</code></li>
+</ul>
+<h2 id="025-beta18">0.2.5-beta.18<a class="headerlink" href="#025-beta18" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[node] Save transaction hash to commitment properly</li>
+</ul>
+<h2 id="025-beta17">0.2.5-beta.17<a class="headerlink" href="#025-beta17" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[contracts] Use pending transaction count for nonce</li>
+</ul>
+<h2 id="025-beta16">0.2.5-beta.16<a class="headerlink" href="#025-beta16" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[contracts] Bump gas limit</li>
+<li>[test-runner] Working load tests</li>
+</ul>
+<h2 id="025-beta14">0.2.5-beta.14<a class="headerlink" href="#025-beta14" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[contracts] Add additional error message for nonce handling</li>
+</ul>
+<h2 id="025-beta13">0.2.5-beta.13<a class="headerlink" href="#025-beta13" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[engine] hotfix for withdraw retry schema</li>
+</ul>
+<h2 id="025-beta12">0.2.5-beta.12<a class="headerlink" href="#025-beta12" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[contracts] hotfix of race condition of resubmitted transactions</li>
+</ul>
+<h2 id="025-beta11">0.2.5-beta.11<a class="headerlink" href="#025-beta11" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[contracts] Improve handling of resubmitted transactions</li>
+</ul>
+<h2 id="025-beta10">0.2.5-beta.10<a class="headerlink" href="#025-beta10" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[engine] Improve withdrawal retry logic</li>
+</ul>
+<h2 id="025-beta9">0.2.5-beta.9<a class="headerlink" href="#025-beta9" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[server-node] Store resilient to restarts</li>
+</ul>
+<h2 id="025-beta8">0.2.5-beta.8<a class="headerlink" href="#025-beta8" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[server-node, browser-node] Schema/migration fixes</li>
+</ul>
+<h2 id="025-beta7">0.2.5-beta.7<a class="headerlink" href="#025-beta7" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[contracts] Tx service schema updates</li>
+</ul>
+<h2 id="025-beta6">0.2.5-beta.6<a class="headerlink" href="#025-beta6" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[utils] Add FTM chain</li>
+</ul>
+<h2 id="025-beta5">0.2.5-beta.5<a class="headerlink" href="#025-beta5" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[utils] Add PlotX token</li>
+</ul>
+<h2 id="025-beta4">0.2.5-beta.4<a class="headerlink" href="#025-beta4" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[utils] Bump non-mainnet confirmations from 3 to 10</li>
+</ul>
+<h2 id="025-beta3">0.2.5-beta.3<a class="headerlink" href="#025-beta3" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[contracts] Don't revitalize tx</li>
+<li>[tests] Fix integration tests with new default configs</li>
+</ul>
+<h2 id="025-beta2">0.2.5-beta.2<a class="headerlink" href="#025-beta2" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[all] upgrade prisma</li>
+<li>[router] Fix router reclaim</li>
+</ul>
+<h2 id="025-beta1">0.2.5-beta.1<a class="headerlink" href="#025-beta1" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[contracts] tx service hotfixes</li>
+</ul>
+<h2 id="025-beta0">0.2.5-beta.0<a class="headerlink" href="#025-beta0" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[contracts] robust tx service</li>
+</ul>
+<h2 id="025-alpha4">0.2.5-alpha.4<a class="headerlink" href="#025-alpha4" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[router] fix adjustCollateral for receiver channel.</li>
+</ul>
+<h2 id="025-alpha3">0.2.5-alpha.3<a class="headerlink" href="#025-alpha3" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[router] add adjustCollateral for receiver channel.</li>
+<li>[contracts] Add <code>ethReader</code> tests, Add min gas price, </li>
+<li>[utils] use static json provider</li>
+</ul>
+<h2 id="025-alpha2">0.2.5-alpha.2<a class="headerlink" href="#025-alpha2" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[router] fix router build error.</li>
+</ul>
+<h2 id="025-alpha1">0.2.5-alpha.1<a class="headerlink" href="#025-alpha1" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[router] fix amm config params.</li>
+</ul>
+<h2 id="025-alpha0">0.2.5-alpha.0<a class="headerlink" href="#025-alpha0" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[router] AMM implementation to get swap rate.</li>
+<li>[contracts] AMM contracts for swap rate.</li>
+<li>[server-node] Resave transaction hash for admin function</li>
+</ul>
+<h2 id="024-beta3">0.2.4-beta.3<a class="headerlink" href="#024-beta3" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[server-node] Improve withdrawal commitment retrieval</li>
+</ul>
+<h2 id="024-beta2">0.2.4-beta.2<a class="headerlink" href="#024-beta2" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[engine] TRANSFER_ROUTING_COMPLETE event emitted through to original sender.</li>
+<li>[router] Improvements to <code>autoRebalance</code> for better state machine. Separate sending tx and waiting for confirmation. Store tx hashes after tx submit.</li>
+</ul>
+<h2 id="024-beta1">0.2.4-beta.1<a class="headerlink" href="#024-beta1" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[iframe] Catch sig undefined error and propogate</li>
+</ul>
+<h2 id="023">0.2.3<a class="headerlink" href="#023" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[utils] Improve merkle tree</li>
+<li>[router] Add support for basis fees</li>
+</ul>
+<h2 id="023-beta1">0.2.3-beta.1<a class="headerlink" href="#023-beta1" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[router] Broadcast global metrics</li>
+<li>[contracts] Add <code>ethService</code> tests</li>
+</ul>
+<h2 id="022">0.2.2<a class="headerlink" href="#022" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[utils] Improve merkle root generation</li>
+</ul>
+<h2 id="022-beta8">0.2.2-beta.8<a class="headerlink" href="#022-beta8" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[iframe] Isolate signing to iframe</li>
+</ul>
+<h2 id="022-beta7">0.2.2-beta.7<a class="headerlink" href="#022-beta7" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[router] Convert <code>PROCESSING</code> status to in memory flag</li>
+</ul>
+<h2 id="022-beta6">0.2.2-beta.6<a class="headerlink" href="#022-beta6" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[router] Add <code>isAlive</code> tests</li>
+<li>[router] Properly handle cancelled withdrawals</li>
+</ul>
+<h2 id="022-beta5">0.2.2-beta.5<a class="headerlink" href="#022-beta5" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[iframe] Require iframe signature</li>
+<li>[router] Add 5min timeout to non-mainnet chains</li>
+<li>[ops] Remove the <code>server-node/src/generated</code> directory in <code>make clean</code></li>
+</ul>
+<h2 id="022-beta4">0.2.2-beta.4<a class="headerlink" href="#022-beta4" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[engine] Handle cancelled withdrawals</li>
+<li>[iframe] Improved signature handling for deterministic keys</li>
+<li>[utils] Add to <code>chains.json</code></li>
+</ul>
+<h2 id="022-beta3">0.2.2-beta.3<a class="headerlink" href="#022-beta3" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[protocol] Don't sync disputes</li>
+<li>[node] Expose sync dispute method</li>
+<li>[utils] Add HUSD and Huobi chain to <code>chains.json</code></li>
+<li>[contract,server-node] Add <code>speedUp</code> method to resend transaction with higher gas</li>
+</ul>
+<h2 id="022-beta2">0.2.2-beta.2<a class="headerlink" href="#022-beta2" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[browser-node] Fix dev-dependency</li>
+</ul>
+<h2 id="022-beta1">0.2.2-beta.1<a class="headerlink" href="#022-beta1" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[contracts, engine, protocol, server-node] Channel dispute MVP</li>
+<li>[engine] Remove withdrawal fees</li>
+</ul>
+<h2 id="021">0.2.1<a class="headerlink" href="#021" title="Permanent link">&para;</a></h2>
+<p>Non-beta release</p>
+<h2 id="021-beta24">0.2.1-beta.24<a class="headerlink" href="#021-beta24" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[router] Fix autorebalancing for multiple rebalance cycles</li>
+</ul>
+<h2 id="021-beta23">0.2.1-beta.23<a class="headerlink" href="#021-beta23" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[router] Fix autorebalancing approval tx schema</li>
+</ul>
+<h2 id="021-beta22">0.2.1-beta.22<a class="headerlink" href="#021-beta22" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[router] Fix autorebalancing</li>
+</ul>
+<h2 id="021-beta21">0.2.1-beta.21<a class="headerlink" href="#021-beta21" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[router] Potential double collateral edge case</li>
+</ul>
+<h2 id="021-beta20">0.2.1-beta.20<a class="headerlink" href="#021-beta20" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[node] Router config for cluster</li>
+</ul>
+<h2 id="021-beta19">0.2.1-beta.19<a class="headerlink" href="#021-beta19" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[node] Use upgraded messaging cluster</li>
+</ul>
+<h2 id="021-beta15">0.2.1-beta.15<a class="headerlink" href="#021-beta15" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[utils] Add bsc testnet to chains.json</li>
+</ul>
+<h2 id="021-beta14">0.2.1-beta.14<a class="headerlink" href="#021-beta14" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[engine] Add handling in case withdrawals are not immediately reconciled</li>
+</ul>
+<h2 id="021-beta13">0.2.1-beta.13<a class="headerlink" href="#021-beta13" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[contracts] Request collateral also adjusts</li>
+</ul>
+<h2 id="021-beta12">0.2.1-beta.12<a class="headerlink" href="#021-beta12" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[contracts] Wait at least 1 conf for all chains</li>
+</ul>
+<h2 id="021-beta11">0.2.1-beta.11<a class="headerlink" href="#021-beta11" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[utils] Coin gecko utility function exiting early if ETH used</li>
+<li>[router] Metrics not being able to convert matic</li>
+<li>[contracts] Handle weird error with transaction receipt fetching</li>
+</ul>
+<h2 id="021-beta10">0.2.1-beta.10<a class="headerlink" href="#021-beta10" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[engine] Change withdrawal fee calculations</li>
+</ul>
+<h2 id="021-beta9">0.2.1-beta.9<a class="headerlink" href="#021-beta9" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[router] Change fee calculations</li>
+</ul>
+<h2 id="021-beta8">0.2.1-beta.8<a class="headerlink" href="#021-beta8" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[contracts] Add retry logic to <code>ethReader</code></li>
+<li>[engine] Bug in fee calculation fix</li>
+</ul>
+<h2 id="021-beta7">0.2.1-beta.7<a class="headerlink" href="#021-beta7" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[all] Add confirmations for most chains</li>
+<li>[router] Use <code>estimateGas</code> instead of hardcoded estimates</li>
+</ul>
+<h2 id="021-beta6">0.2.1-beta.6<a class="headerlink" href="#021-beta6" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[all] Add confirmations for most chains</li>
+<li>[router] Improvements to fee stats</li>
+</ul>
+<h2 id="021-beta5">0.2.1-beta.5<a class="headerlink" href="#021-beta5" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[types] Update estimated gas fees</li>
+</ul>
+<h2 id="021-beta4">0.2.1-beta.4<a class="headerlink" href="#021-beta4" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[contracts] Result-ify waiting for transactions</li>
+</ul>
+<h2 id="021-beta3">0.2.1-beta.3<a class="headerlink" href="#021-beta3" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[router] Create queues for transfer creation races</li>
+<li>[engine, types] Make timeout parameter optional for setup, conditional transfer, and withdraw</li>
+</ul>
+<h2 id="021-beta2">0.2.1-beta.2<a class="headerlink" href="#021-beta2" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[engine] Remove time validation on engine</li>
+</ul>
+<h2 id="021-beta1">0.2.1-beta.1<a class="headerlink" href="#021-beta1" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[server-node, router] Increase max <code>request.body</code> size on fastify servers</li>
+</ul>
+<h2 id="021-beta0">0.2.1-beta.0<a class="headerlink" href="#021-beta0" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[engine] Fix error handler bug</li>
+</ul>
+<h2 id="020">0.2.0<a class="headerlink" href="#020" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[router] Rebalance from Matic -&gt; ETH Mainnet</li>
+<li>[node] Add <code>from</code> to send transactions</li>
+<li>[contracts] Deploy to lots of chains!</li>
+</ul>
+<h2 id="020-beta9">0.2.0-beta.9<a class="headerlink" href="#020-beta9" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[engine] Add <code>transaction</code> to <code>WITHDRAWAL_RESOLVED</code> event</li>
+<li>[node] Make <code>transaction</code> a non-optional return value</li>
+</ul>
+<h2 id="020-beta8">0.2.0-beta.8<a class="headerlink" href="#020-beta8" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[engine, router] Allow users to specify if they want to receive an exact amount when requesting a quote</li>
+</ul>
+<h2 id="020-beta7">0.2.0-beta.7<a class="headerlink" href="#020-beta7" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[engine] Fix transfer event balances</li>
+<li>[engine] Allow Bob to specify submitting their own withdrawals</li>
+</ul>
+<h2 id="020-beta6">0.2.0-beta.6<a class="headerlink" href="#020-beta6" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[engine] Only error if fees &gt; amount, not fees &gt;= amount</li>
+<li>[types, router, engine] Use <code>DEFAULT_FEE_EXPIRY</code> from types package</li>
+</ul>
+<h2 id="020-beta5">0.2.0-beta.5<a class="headerlink" href="#020-beta5" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[router, node] Bump up default fee expiry, make configurable</li>
+</ul>
+<h2 id="020-beta4">0.2.0-beta.4<a class="headerlink" href="#020-beta4" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[config] - Remove config overrides with defaults</li>
+</ul>
+<h2 id="020-beta3">0.2.0-beta.3<a class="headerlink" href="#020-beta3" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[router] Fix fees bugs</li>
+<li>[node] Remove fees from default config</li>
+<li>[router,engine] Fast exit if no fees configured</li>
+<li>[utils] Check for lower-cased token addresses from coingecko</li>
+</ul>
+<h2 id="020-beta2">0.2.0-beta.2<a class="headerlink" href="#020-beta2" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[router] Fix fees bugs</li>
+<li>[engine] Add fees tests</li>
+<li>[test-runner] Fix tests to work with fees</li>
+</ul>
+<h2 id="020-beta1">0.2.0-beta.1<a class="headerlink" href="#020-beta1" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[router] Fix fees bug</li>
+</ul>
+<h2 id="020-beta0">0.2.0-beta.0<a class="headerlink" href="#020-beta0" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[router] Add fee collection config</li>
+<li>[engine] Add fees automatically on transfer and withdrawals</li>
+<li>[engine] Add fees for withdrawal</li>
+</ul>
+<h2 id="0118-beta1">0.1.18-beta.1<a class="headerlink" href="#0118-beta1" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[router] Clean up hanging transfers on reconnect</li>
+</ul>
+<h2 id="0118-beta0">0.1.18-beta.0<a class="headerlink" href="#0118-beta0" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[browser-node] Beta feature: Sign in with login providers: Metamask + Magic.Link</li>
+</ul>
+<h2 id="0117">0.1.17<a class="headerlink" href="#0117" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[router] Fix collateral bug</li>
+<li>[contracts] Check if contract is deployed before calling <code>chainService.getWithdrawalStatus</code></li>
+</ul>
+<h2 id="0116">0.1.16<a class="headerlink" href="#0116" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[contracts] Fix <code>chainReader</code> balance bug</li>
+<li>[contracts] Fix <code>chainService</code> deposit bug</li>
+<li>[router] Update volume metric collections</li>
+</ul>
+<h2 id="0115">0.1.15<a class="headerlink" href="#0115" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[contracts] Add BSC deployment data</li>
+<li>[router] Dashboard update</li>
+</ul>
+<h2 id="0115-beta21">0.1.15-beta.21<a class="headerlink" href="#0115-beta21" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[router] Fix auto-rebalancing bug</li>
+</ul>
+<h2 id="0115-beta20">0.1.15-beta.20<a class="headerlink" href="#0115-beta20" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[router] Don't create 0 valued withdrawals</li>
+<li>[server-node] Ignore no-op withdrawals</li>
+</ul>
+<h2 id="0115-beta19">0.1.15-beta.19<a class="headerlink" href="#0115-beta19" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[server-node] Query chain instead of using error message</li>
+</ul>
+<h2 id="0115-beta18">0.1.15-beta.18<a class="headerlink" href="#0115-beta18" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[server-node] Remove unique condition for <code>onchainTransactionId</code></li>
+</ul>
+<h2 id="0115-beta17">0.1.15-beta.17<a class="headerlink" href="#0115-beta17" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[server-node] Filter transfers by definition when getting unsubmitted withdrawals</li>
+<li>[server-node] Improve logging for admin endpoint</li>
+</ul>
+<h2 id="0115-beta16">0.1.15-beta.16<a class="headerlink" href="#0115-beta16" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[server-node] Hold withdrawals as alice on mainnet</li>
+<li>[server-node] Add admin endpoint to resubmit all withdrawals</li>
+<li>[server-node] Submit withdrawals when gas price is low or commitments are &gt; 1 week old</li>
+</ul>
+<h2 id="0115-beta15">0.1.15-beta.15<a class="headerlink" href="#0115-beta15" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[router] Fix bug in auto-rebalance</li>
+</ul>
+<h2 id="0115-beta14">0.1.15-beta.14<a class="headerlink" href="#0115-beta14" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[router] Add auto-rebalance service for Matic deposit</li>
+</ul>
+<h2 id="0115-beta13">0.1.15-beta.13<a class="headerlink" href="#0115-beta13" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[ops] Add persistent storage for Grafana</li>
+<li>[contracts] Add <code>transactionHash</code> to withdrawal commitment</li>
+<li>[store] Add <code>transferDefinition</code> to filter options on <code>getTransfers</code></li>
+<li>[store] Add <code>getWithdrawalCommitmentByTransactionHash</code> method</li>
+<li>[types] Add <code>createdAt</code>/<code>resolvedAt</code> to <code>FullTransferState.meta</code> + make transfer meta types generic</li>
+</ul>
+<h2 id="0115-beta12">0.1.15-beta.12<a class="headerlink" href="#0115-beta12" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[contracts] Deploy contracts to BSC testnet</li>
+</ul>
+<h2 id="0115-beta11">0.1.15-beta.11<a class="headerlink" href="#0115-beta11" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[iframe] Allow <code>chainAddresses</code> and <code>messagingUrl</code> to be passed into iframe's node creation</li>
+</ul>
+<h2 id="0115-beta10">0.1.15-beta.10<a class="headerlink" href="#0115-beta10" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[router] Improve router dashboards</li>
+<li>[contracts] Add xdai deployment</li>
+</ul>
+<h2 id="0115-beta9">0.1.15-beta.9<a class="headerlink" href="#0115-beta9" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[router] Add router dashboards</li>
+</ul>
+<h2 id="0115-beta8">0.1.15-beta.8<a class="headerlink" href="#0115-beta8" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[types] Remove unique constraint from <code>TransferEncodingSchema</code></li>
+</ul>
+<h2 id="0115-beta7">0.1.15-beta.7<a class="headerlink" href="#0115-beta7" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[ops] Fix github actions.</li>
+</ul>
+<h2 id="0115-beta6">0.1.15-beta.6<a class="headerlink" href="#0115-beta6" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[node, router] Prisma upgrade.</li>
+</ul>
+<h2 id="0115-beta5">0.1.15-beta.5<a class="headerlink" href="#0115-beta5" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[contracts] Fix token approval bug</li>
+</ul>
+<h2 id="0115-beta4">0.1.15-beta.4<a class="headerlink" href="#0115-beta4" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[iframe] Improve error parsing</li>
+</ul>
+<h2 id="0115-beta3">0.1.15-beta.3<a class="headerlink" href="#0115-beta3" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[node] Expose <code>getTransfers</code> method.</li>
+</ul>
+<h2 id="0115-beta2">0.1.15-beta.2<a class="headerlink" href="#0115-beta2" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[utils] Create util for determining which participant</li>
+<li>[all] Don't use pino-pretty in prod mode</li>
+</ul>
+<h2 id="0115-beta1">0.1.15-beta.1<a class="headerlink" href="#0115-beta1" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[router] Do not forward if deposit balance is not present in channel</li>
+<li>[router] Fix start script to pass mnemonic secret into router</li>
+</ul>
+<h2 id="0115-beta0">0.1.15-beta.0<a class="headerlink" href="#0115-beta0" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[utils] Don't use <code>instanceof</code> operator</li>
+</ul>
+<h2 id="0114">0.1.14<a class="headerlink" href="#0114" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[server-node] Fix withdrawal commitment store bugs</li>
+<li>[server-node] Fix error handling (always use <code>jsonifyError</code>)</li>
+</ul>
+<h2 id="0113">0.1.13<a class="headerlink" href="#0113" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[router] Hotfix for gas price query errors</li>
+<li>[router] Admin endpoint to retry withdrawal txs</li>
+</ul>
+<h2 id="0113-beta0">0.1.13-beta.0<a class="headerlink" href="#0113-beta0" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[all] Update packages that were flagged by <code>npm audit</code></li>
+</ul>
+<h2 id="0112">0.1.12<a class="headerlink" href="#0112" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[all] Update packages that were flagged by <code>npm audit</code></li>
+</ul>
+<h2 id="0111">0.1.11<a class="headerlink" href="#0111" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[all] Update packages that were flagged by <code>npm audit</code></li>
+</ul>
+<h2 id="0110">0.1.10<a class="headerlink" href="#0110" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[utils] Pass in <code>chainId</code> when creating providers</li>
+</ul>
+<h2 id="019">0.1.9<a class="headerlink" href="#019" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[engine] Fix deposit reconciliation race condition evaluation</li>
+<li>[contracts] Use <code>gasNow</code> to get mainnet gas price over ethers</li>
+</ul>
+<h2 id="018">0.1.8<a class="headerlink" href="#018" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[node] Add <code>getTransfers</code> endpoint with filtering capabilities.</li>
+<li>[router] Add router dashboard with signer address balance monitoring.</li>
+</ul>
+<h2 id="018-beta6">0.1.8-beta.6<a class="headerlink" href="#018-beta6" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[protocol] Fix non-checksummed addresses</li>
+</ul>
+<h2 id="018-beta5">0.1.8-beta.5<a class="headerlink" href="#018-beta5" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[iframe] Allows connect on iframe to be called multiple times (i.e. with different chainProviders)</li>
+<li>[engine] Only updates disputes/sends isAlive messages if chain is supported</li>
+<li>[browser-node] Changes store prefix to be signer-specific, doesn't delete stores on start if signer key !== locally stored key</li>
+<li>[browser-node] Removes crossChainTransfer from browser-node</li>
+</ul>
+<h2 id="018-beta4">0.1.8-beta.4<a class="headerlink" href="#018-beta4" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[contracts] Add <code>drip</code> task to hardhat</li>
+<li>[engine] Ensure created withdrawals are resolved on startup</li>
+</ul>
+<h2 id="018-beta3">0.1.8-beta.3<a class="headerlink" href="#018-beta3" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[messaging] Fix for loop in message retry code</li>
+</ul>
+<h2 id="018-beta2">0.1.8-beta.2<a class="headerlink" href="#018-beta2" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[messaging] Fix for loop in message retry code</li>
+</ul>
+<h2 id="018-beta1">0.1.8-beta.1<a class="headerlink" href="#018-beta1" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[protocol] Remove retrying on protocol messages</li>
+<li>[protocol] Hard error for lock release</li>
+</ul>
+<p>(Kids -- don't debug on prod)</p>
+<h2 id="018-beta0">0.1.8-beta.0<a class="headerlink" href="#018-beta0" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[protocol] Retry sending messages</li>
+<li>[protocol] Do not throw error if lock is not released</li>
+<li>[messaging] Add retry logic</li>
+</ul>
+<h2 id="017">0.1.7<a class="headerlink" href="#017" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[router] Update status of processed stored updates</li>
+</ul>
+<h2 id="016">0.1.6<a class="headerlink" href="#016" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[browser-node] Save crossChainTransfer error state</li>
+</ul>
+<h2 id="015">0.1.5<a class="headerlink" href="#015" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[browser-node] Fix bug in <code>crossChainTransferStore</code> key</li>
+</ul>
+<h2 id="014">0.1.4<a class="headerlink" href="#014" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[contracts] Fix bug in <code>chainService</code></li>
+</ul>
+<h2 id="013">0.1.3<a class="headerlink" href="#013" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[browser-node] Remove from storage if transfer is cancelled.</li>
+<li>[browser-node] Register listener for sender cancellations once</li>
+<li>[browser-node] Don't hang on <code>crossChainTransfer</code> if sender-side transfer cancelled</li>
+<li>[router] Handle unverified (sent a single-signed) updates for transfer forwarding on check-in (using <code>reconcileDeposit</code> for state consensus)</li>
+<li>[contracts] Improvements with <code>gasPrice</code> and <code>gasLimit</code> in chain servce</li>
+</ul>
+<h2 id="013-beta1">0.1.3-beta.1<a class="headerlink" href="#013-beta1" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[browser-node] Remove from storage if transfer is cancelled.</li>
+</ul>
+<h2 id="012">0.1.2<a class="headerlink" href="#012" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[router] Add NATS client</li>
+<li>[browser-node, server-node] Add methods to get router config</li>
+<li>[browser-node] Verify swap supported before <code>crossChainTransfer</code></li>
+<li>[router] Hotfix <code>toString()</code> undefined</li>
+<li>[ops] Add LogDNA tag support to router config</li>
+</ul>
+<h2 id="011">0.1.1<a class="headerlink" href="#011" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[all] Improve logging</li>
+<li>[contracts] Add etherscan verification plugin</li>
+<li>[router] Correctly reclaim from the sender's channel</li>
+<li>[contracts] Check if channel is deployed right before deploying</li>
+<li>[router] Checksum config assetIds</li>
+<li>[engine] Checksum user input assetIds</li>
+</ul>
+<h2 id="010">0.1.0<a class="headerlink" href="#010" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[all] Mainnet release :tada:</li>
+<li>[all] Improve handling of non-vector errors</li>
+</ul>
+<h2 id="010-rc25">0.1.0-rc.25<a class="headerlink" href="#010-rc25" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[all] Improve error handling</li>
+</ul>
+<h2 id="010-rc24">0.1.0-rc.24<a class="headerlink" href="#010-rc24" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[utils] Update <code>eccrypto-js</code> to fix sig recovery bug</li>
+</ul>
+<h2 id="010-rc23">0.1.0-rc.23<a class="headerlink" href="#010-rc23" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[types] Restore signature length to 130</li>
+<li>[protocol] Add signature logging</li>
+</ul>
+<h2 id="010-rc22">0.1.0-rc.22<a class="headerlink" href="#010-rc22" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[types] Update signature regex</li>
+</ul>
+<h2 id="010-rc21">0.1.0-rc.21<a class="headerlink" href="#010-rc21" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[browser-node] Require <code>chainProviders</code> to be passed into iframe</li>
+</ul>
+<h2 id="010-rc20">0.1.0-rc.20<a class="headerlink" href="#010-rc20" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[engine] Retry on deposit race condition for inbound errors</li>
+</ul>
+<h2 id="010-rc19">0.1.0-rc.19<a class="headerlink" href="#010-rc19" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[router] Remove obtrusive metrics</li>
+<li>[messaging] Properly catch messaging timeouts</li>
+<li>[ops] Fix router logdna</li>
+</ul>
+<h2 id="010-rc18">0.1.0-rc.18<a class="headerlink" href="#010-rc18" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[all] Fix bad publishing</li>
+</ul>
+<h2 id="010-rc17">0.1.0-rc.17<a class="headerlink" href="#010-rc17" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[router] Allow payments that exceed <code>reclaimThreshold</code> to be collateralized just in time</li>
+<li>[router] Allow <code>profile.target</code> to be 0 (always use just in time collateralization)</li>
+<li>[messaging] Improve error context</li>
+</ul>
+<h2 id="010-rc16">0.1.0-rc.16<a class="headerlink" href="#010-rc16" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[engine] Retry on deposit race condition</li>
+<li>[router] Cleanup collateral transaction logic + more tests</li>
+<li>[browser-node] make crosschain transfers idempotent</li>
+</ul>
+<h2 id="010-rc9">0.1.0-rc.9<a class="headerlink" href="#010-rc9" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[router/server-node] optionally skip checkin on start</li>
+</ul>
+<h2 id="010-rc8">0.1.0-rc.8<a class="headerlink" href="#010-rc8" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[messaging] add <code>undefined</code> check on error handling</li>
+</ul>
+<h2 id="010-rc7">0.1.0-rc.7<a class="headerlink" href="#010-rc7" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[types] relax <code>transferResolver</code> schema to allow for ethers decoded values</li>
+</ul>
+<h2 id="010-rc6">0.1.0-rc.6<a class="headerlink" href="#010-rc6" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[router] fix prisma webpack</li>
+</ul>
+<h2 id="010-rc4">0.1.0-rc.4<a class="headerlink" href="#010-rc4" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[router] add logdna service</li>
+</ul>
+<h2 id="010-rc3">0.1.0-rc.3<a class="headerlink" href="#010-rc3" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[contracts] add deployment info for mainnet and matic mainnet</li>
+</ul>
+<h2 id="010-rc1">0.1.0-rc.1<a class="headerlink" href="#010-rc1" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[router] add isAlive check before forwarding transfer to increase odds of successful transfer</li>
+</ul>
+<h2 id="010-rc0">0.1.0-rc.0<a class="headerlink" href="#010-rc0" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[contracts] audit results implemented</li>
+<li>[router] store and process queued updates</li>
+<li>[engine] restore state from counterparty</li>
+<li>[engine] handle <code>isAlive</code> messages</li>
+<li>[router] fix rebalance profile getter to respect assetIds</li>
+<li>[router] cancel transfers if they are unsuccessful</li>
+<li>[contracts] added required <code>EncodedCancel</code> getter to transfer registry interface</li>
+<li>[engine] add rpc schema + param conversion tests</li>
+</ul>
+<h2 id="0038">0.0.38<a class="headerlink" href="#0038" title="Permanent link">&para;</a></h2>
+<ul>
+<li>propagate meta through updates</li>
+</ul>
+<h2 id="0037">0.0.37<a class="headerlink" href="#0037" title="Permanent link">&para;</a></h2>
+<ul>
+<li>refactor messaging service</li>
+</ul>
+<h2 id="0036">0.0.36<a class="headerlink" href="#0036" title="Permanent link">&para;</a></h2>
+<ul>
+<li>use correct withdrawal amount</li>
+</ul>
+<h2 id="0035">0.0.35<a class="headerlink" href="#0035" title="Permanent link">&para;</a></h2>
+<ul>
+<li>remove browser node <code>waitFor</code> calls</li>
+</ul>
+<h2 id="0033">0.0.33<a class="headerlink" href="#0033" title="Permanent link">&para;</a></h2>
+<ul>
+<li>add sign method to browser node</li>
+</ul>
+<h2 id="0032">0.0.32<a class="headerlink" href="#0032" title="Permanent link">&para;</a></h2>
+<ul>
+<li>add utility sign method</li>
+</ul>
+<h2 id="0031">0.0.31<a class="headerlink" href="#0031" title="Permanent link">&para;</a></h2>
+<ul>
+<li>fix browser node store issue</li>
+<li>fix <code>TFullTransferState</code> schema</li>
+<li>store <code>getChannelStateByParticipants</code> accepts identifiers instead of addresses</li>
+<li>make sure all rpc queries properly return <code>Result</code> types in error cases</li>
+<li>add <code>crossChainTransfer</code> to iframe</li>
+</ul>
+<h2 id="0028">0.0.28<a class="headerlink" href="#0028" title="Permanent link">&para;</a></h2>
+<ul>
+<li>use receiver payment name instead of transfer definition</li>
+<li>add protocol-level validation</li>
+<li>add <code>create</code> protocol integration tests</li>
+</ul>
+<h2 id="0026">0.0.26<a class="headerlink" href="#0026" title="Permanent link">&para;</a></h2>
+<ul>
+<li>fix cross-chain transfer bug</li>
+</ul>
+<h2 id="0023">0.0.23<a class="headerlink" href="#0023" title="Permanent link">&para;</a></h2>
+<ul>
+<li>add <code>sync</code> unit tests</li>
+<li>clean <code>sync</code> code</li>
+<li>remove syncing attempts on protocol startup</li>
+<li>add message schema validation to inbound protocol updates</li>
+<li>bring images and packages back in sync</li>
+</ul>
+<h2 id="0021">0.0.21<a class="headerlink" href="#0021" title="Permanent link">&para;</a></h2>
+<ul>
+<li>fix <code>iframe-app</code> docker image to not override env vars on start</li>
+</ul>
+<h2 id="0020">0.0.20<a class="headerlink" href="#0020" title="Permanent link">&para;</a></h2>
+<ul>
+<li>fix allowance bug in <code>chainReader</code> for token deposits</li>
+</ul>
+<h2 id="0019">0.0.19<a class="headerlink" href="#0019" title="Permanent link">&para;</a></h2>
+<ul>
+<li>republish due to browser-node error in 0.0.18</li>
+</ul>
+<h2 id="0018">0.0.18<a class="headerlink" href="#0018" title="Permanent link">&para;</a></h2>
+<ul>
+<li>public identifiers prefixed with <code>vector</code> instead of <code>indra</code></li>
+</ul>
+<h2 id="0017">0.0.17<a class="headerlink" href="#0017" title="Permanent link">&para;</a></h2>
+<ul>
+<li>update dispute contract events to be more verbose</li>
+<li>add <code>AliceDeposited</code> events</li>
+<li>add <code>TransferRegistered</code> and <code>TransferRemoved</code> events</li>
+<li>rename <code>emergencyWithdraw</code> to <code>exit</code></li>
+<li>update contract documentation (ready for audit)</li>
+</ul>
+<h2 id="0016">0.0.16<a class="headerlink" href="#0016" title="Permanent link">&para;</a></h2>
+<ul>
+<li>fix dockerfile in iframe-app</li>
+</ul>
+<h2 id="0015">0.0.15<a class="headerlink" href="#0015" title="Permanent link">&para;</a></h2>
+<ul>
+<li>fix db package issue which was causing migrations to break</li>
+</ul>
+<h2 id="0014">0.0.14<a class="headerlink" href="#0014" title="Permanent link">&para;</a></h2>
+<ul>
+<li>use individual ethers packages instead of ethers</li>
+<li>various smaller contract changes</li>
+<li>simplified inheritance hierarchy for channel mastercopy</li>
+<li>cheaper <code>onlyViaProxy</code> modifier</li>
+<li>saturated addition for emergency-withdrawable amounts</li>
+<li>dockerized iframe-app published with docker images</li>
+<li>add endpoint for getting ethprovider sync status</li>
+</ul>
+<h2 id="0013">0.0.13<a class="headerlink" href="#0013" title="Permanent link">&para;</a></h2>
+<ul>
+<li>chainId pulled from opcode if not provided on creation</li>
+<li>improve testing</li>
+<li>deploy contracts to Kovan</li>
+<li>refactor protocol to improve readability</li>
+<li>pass in array of assetIds to <code>defundChannel</code> (defund by assetId)</li>
+<li>add <code>getRegisteredTransfers</code> rpc + node methods</li>
+<li>move to withdrawal pattern</li>
+<li>move from block numbers to timestamps</li>
+<li>browser-node-sdk: generate entropy fully at iframe</li>
+<li>refactor channel factory</li>
+</ul>
+<h2 id="0012">0.0.12<a class="headerlink" href="#0012" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Browser node iframe functionality</li>
+</ul>
+<h2 id="0011">0.0.11<a class="headerlink" href="#0011" title="Permanent link">&para;</a></h2>
+<ul>
+<li>introduce and use commitment types</li>
+<li>reconcile hashing</li>
+<li>remove commitment type</li>
+</ul>
+<h2 id="connexttypesutilscontractsprotocolenginebrowser-node009-connextserver-node0010">@connext/{types,utils,contracts,protocol,engine,browser-node}@0.0.9, @connext/{server-node}@0.0.10<a class="headerlink" href="#connexttypesutilscontractsprotocolenginebrowser-node009-connextserver-node0010" title="Permanent link">&para;</a></h2>
+<ul>
+<li>implement generalized withdrawals</li>
+<li>fix and minor improvements around asset transfers</li>
+<li>move dispute methods into engine</li>
+<li>shorter revert message style and contract tests speedup</li>
+<li>minor cleanup and reorganization related to types and interfaces</li>
+<li>make transfer types generic</li>
+</ul>
+<h2 id="connexttypesutilscontractsprotocolenginebrowser-node009-connextserver-node009">@connext/{types,utils,contracts,protocol,engine,browser-node}@0.0.9, @connext/{server-node}@0.0.9<a class="headerlink" href="#connexttypesutilscontractsprotocolenginebrowser-node009-connextserver-node009" title="Permanent link">&para;</a></h2>
+<ul>
+<li>add deploy channel tx function to eth service</li>
+<li>add autodeployment after setup for some chains (currently only arbitrum)</li>
+<li>add arbitrum to address book</li>
+</ul>
+<h2 id="connexttypesutilscontractsprotocolenginebrowser-node006-beta1-connextserver-node008">@connext/{types,utils,contracts,protocol,engine,browser-node}@0.0.6-beta.1, @connext/{server-node}@0.0.8<a class="headerlink" href="#connexttypesutilscontractsprotocolenginebrowser-node006-beta1-connextserver-node008" title="Permanent link">&para;</a></h2>
+<ul>
+<li>fix <code>defundNonce</code> in server node store</li>
+<li>expose nats 4221 by default</li>
+<li>support trio and contract testing across remote chains</li>
+<li>improve asset handling</li>
+<li>minor changes in transfer definitions and transfer registry</li>
+</ul>
+<h2 id="connexttypesutilscontractsprotocolenginebrowser-node004">@connext/{types,utils,contracts,protocol,engine,browser-node}@0.0.4<a class="headerlink" href="#connexttypesutilscontractsprotocolenginebrowser-node004" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Fix webpack configs for browser node.</li>
+</ul>
+<h2 id="connexttypesutilscontractsprotocolenginebrowser-node003-beta5">@connext/{types,utils,contracts,protocol,engine,browser-node}@0.0.3-beta.5<a class="headerlink" href="#connexttypesutilscontractsprotocolenginebrowser-node003-beta5" title="Permanent link">&para;</a></h2>
+<ul>
+<li>add revert messages to <code>LibIterableMapping</code>.</li>
+<li>fix browser-node store <code>getChannelStateByParticipants</code> method.</li>
+</ul>
+<h2 id="connexttypesutilscontractsprotocolenginebrowser-node003-beta0">@connext/{types,utils,contracts,protocol,engine,browser-node}@0.0.3-beta.0<a class="headerlink" href="#connexttypesutilscontractsprotocolenginebrowser-node003-beta0" title="Permanent link">&para;</a></h2>
+<ul>
+<li>fix bug in onchain computation of channel address.</li>
+<li>simplify Proxy contract.</li>
+<li><code>@connext/vector-utils</code> dependency fixes.</li>
+<li>migrate buidler to hardhat.</li>
+</ul>
+                
+              
+              
+                
+
+
+              
+            </article>
+          </div>
+        </div>
+        
+      </main>
+      
+        
+<footer class="md-footer">
+  
+    <nav class="md-footer__inner md-grid" aria-label="Footer">
+      
+        
+        <a href="reference/hostedNodes.html" class="md-footer__link md-footer__link--prev" aria-label="Previous: List of Hosted Routing Nodes" rel="prev">
+          <div class="md-footer__button md-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+          </div>
+          <div class="md-footer__title">
+            <div class="md-ellipsis">
+              <span class="md-footer__direction">
+                Previous
+              </span>
+              List of Hosted Routing Nodes
+            </div>
+          </div>
+        </a>
+      
+      
+    </nav>
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-footer-copyright">
+        
+        Made with
+        <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+          Material for MkDocs
+        </a>
+        
+      </div>
+      
+  <div class="md-footer-social">
+    
+      
+      
+        
+        
+      
+      <a href="https://github.com/connext" target="_blank" rel="noopener" title="github.com" class="md-footer-social__link">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg>
+      </a>
+    
+      
+      
+        
+        
+      
+      <a href="https://twitter.com/ConnextNetwork" target="_blank" rel="noopener" title="twitter.com" class="md-footer-social__link">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path d="M459.37 151.716c.325 4.548.325 9.097.325 13.645 0 138.72-105.583 298.558-298.558 298.558-59.452 0-114.68-17.219-161.137-47.106 8.447.974 16.568 1.299 25.34 1.299 49.055 0 94.213-16.568 130.274-44.832-46.132-.975-84.792-31.188-98.112-72.772 6.498.974 12.995 1.624 19.818 1.624 9.421 0 18.843-1.3 27.614-3.573-48.081-9.747-84.143-51.98-84.143-102.985v-1.299c13.969 7.797 30.214 12.67 47.431 13.319-28.264-18.843-46.781-51.005-46.781-87.391 0-19.492 5.197-37.36 14.294-52.954 51.655 63.675 129.3 105.258 216.365 109.807-1.624-7.797-2.599-15.918-2.599-24.04 0-57.828 46.782-104.934 104.934-104.934 30.213 0 57.502 12.67 76.67 33.137 23.715-4.548 46.456-13.32 66.599-25.34-7.798 24.366-24.366 44.833-46.132 57.827 21.117-2.273 41.584-8.122 60.426-16.243-14.292 20.791-32.161 39.308-52.628 54.253z"/></svg>
+      </a>
+    
+      
+      
+        
+        
+      
+      <a href="https://medium.com/connext" target="_blank" rel="noopener" title="medium.com" class="md-footer-social__link">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path d="M0 32v448h448V32H0zm372.2 106.1-24 23c-2.1 1.6-3.1 4.2-2.7 6.7v169.3c-.4 2.6.6 5.2 2.7 6.7l23.5 23v5.1h-118V367l24.3-23.6c2.4-2.4 2.4-3.1 2.4-6.7V199.8l-67.6 171.6h-9.1L125 199.8v115c-.7 4.8 1 9.7 4.4 13.2l31.6 38.3v5.1H71.2v-5.1l31.6-38.3c3.4-3.5 4.9-8.4 4.1-13.2v-133c.4-3.7-1-7.3-3.8-9.8L75 138.1V133h87.3l67.4 148L289 133.1h83.2v5z"/></svg>
+      </a>
+    
+      
+      
+        
+        
+      
+      <a href="https://discord.gg/FTxQc8C" target="_blank" rel="noopener" title="discord.gg" class="md-footer-social__link">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path d="M297.216 243.2c0 15.616-11.52 28.416-26.112 28.416-14.336 0-26.112-12.8-26.112-28.416s11.52-28.416 26.112-28.416c14.592 0 26.112 12.8 26.112 28.416zm-119.552-28.416c-14.592 0-26.112 12.8-26.112 28.416s11.776 28.416 26.112 28.416c14.592 0 26.112-12.8 26.112-28.416.256-15.616-11.52-28.416-26.112-28.416zM448 52.736V512c-64.494-56.994-43.868-38.128-118.784-107.776l13.568 47.36H52.48C23.552 451.584 0 428.032 0 398.848V52.736C0 23.552 23.552 0 52.48 0h343.04C424.448 0 448 23.552 448 52.736zm-72.96 242.688c0-82.432-36.864-149.248-36.864-149.248-36.864-27.648-71.936-26.88-71.936-26.88l-3.584 4.096c43.52 13.312 63.744 32.512 63.744 32.512-60.811-33.329-132.244-33.335-191.232-7.424-9.472 4.352-15.104 7.424-15.104 7.424s21.248-20.224 67.328-33.536l-2.56-3.072s-35.072-.768-71.936 26.88c0 0-36.864 66.816-36.864 149.248 0 0 21.504 37.12 78.08 38.912 0 0 9.472-11.52 17.152-21.248-32.512-9.728-44.8-30.208-44.8-30.208 3.766 2.636 9.976 6.053 10.496 6.4 43.21 24.198 104.588 32.126 159.744 8.96 8.96-3.328 18.944-8.192 29.44-15.104 0 0-12.8 20.992-46.336 30.464 7.68 9.728 16.896 20.736 16.896 20.736 56.576-1.792 78.336-38.912 78.336-38.912z"/></svg>
+      </a>
+    
+  </div>
+
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    <script id="__config" type="application/json">{"base": ".", "features": ["navigation.tabs"], "translations": {"clipboard.copy": "Copy to clipboard", "clipboard.copied": "Copied to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.placeholder": "Type to start searching", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.term.missing": "Missing", "select.version.title": "Select version"}, "search": "assets/javascripts/workers/search.477d984a.min.js", "version": null}</script>
+    
+    
+      <script src="assets/javascripts/bundle.82b56eb2.min.js"></script>
+      
+    
+  </body>
+</html>
