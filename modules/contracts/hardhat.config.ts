@@ -13,6 +13,7 @@ import "./src.ts/tasks";
 
 const urlOverride = process.env.ETH_PROVIDER_URL;
 const chainId = parseInt(process.env.CHAIN_ID ?? "1337", 10);
+console.log("**** chainId", chainId);
 
 const mnemonic =
   process.env.SUGAR_DADDY ||
@@ -52,7 +53,7 @@ const config: HardhatUserConfig = {
   networks: {
     hardhat: {
       accounts: {
-        accountsBalance: "0x7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+        accountsBalance: "57896044618658097711785492504343953926634992332820282019728792003956564819967",
         mnemonic,
       },
       chainId,
@@ -61,7 +62,7 @@ const config: HardhatUserConfig = {
     },
     localhost: {
       accounts: {
-        accountsBalance: "0x7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+        accountsBalance: "57896044618658097711785492504343953926634992332820282019728792003956564819967",
         mnemonic,
       },
       chainId,

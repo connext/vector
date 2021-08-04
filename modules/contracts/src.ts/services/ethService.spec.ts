@@ -84,6 +84,8 @@ const txReceipt: TransactionReceipt = {
   transactionHash: txResponse.hash,
   transactionIndex: 1,
   status: 1,
+  type: 0,
+  effectiveGasPrice: BigNumber.from(21000),
 };
 
 const { log } = getTestLoggers("ethService");

@@ -21,7 +21,7 @@ rm -f "$chain_addresses"
 ## Start hardhat testnet
 
 echo "Starting hardhat node.."
-hardhat node --hostname 0.0.0.0 --port 8545 --no-deploy --as-network localhost > /tmp/hardhat.log &
+hardhat node --hostname 0.0.0.0 --port 8545 --no-deploy --network hardhat > /tmp/hardhat.log &
 pid=$!
 echo "Waiting for testnet to wake up.."
 wait-for -q -t 60 localhost:8545 2>&1 | sed '/nc: bad address/d'
@@ -29,11 +29,11 @@ echo "Good morning!"
 
 echo "Deploying contracts..."
 mkdir -p deployments
-hardhat deploy --network localhost --no-compile --export-all "$ADDRESS_BOOK" | pino-pretty --colorize --translateTime --ignore pid,level,hostname,module
+hardhat deploy --network hardhat --no-compile --export-all "$ADDRESS_BOOK" | pino-pretty --colorize --translateTime --ignore pid,level,hostname,module
 
 # jq docs: https://stedolan.github.io/jq/manual/v1.5/#Builtinoperatorsandfunctions
 jq '
-  .["'"$CHAIN_ID"'"].localhost.contracts
+  .["'"$CHAIN_ID"'"].hardhat.contracts
     | map_values(.address)
     | to_entries
     | map(.key = "\(.key)Address")
