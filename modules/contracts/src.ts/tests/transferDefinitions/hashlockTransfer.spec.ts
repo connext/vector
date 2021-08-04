@@ -110,7 +110,7 @@ describe("HashlockTransfer", function () {
       const preImage = getRandomBytes32();
       const { state, balance } = await createInitialState(preImage);
       const res = await createTransfer(balance, state);
-      expect((res as any)[0]).to.be.true;
+      expect(res).to.be.true;
     });
 
     it("should fail create if sender balance is zero", async () => {
@@ -146,7 +146,7 @@ describe("HashlockTransfer", function () {
       const { state, balance } = await createInitialState(preImage);
       state.expiry = (Date.now() + 30).toString();
       const res = await createTransfer(balance, state);
-      expect((res as any)[0]).to.be.true;
+      expect(res).to.be.true;
     });
   });
 

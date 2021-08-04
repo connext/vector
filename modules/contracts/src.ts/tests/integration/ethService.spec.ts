@@ -13,7 +13,6 @@ import {
   generateMerkleTreeData,
 } from "@connext/vector-utils";
 import { AddressZero } from "@ethersproject/constants";
-import { Contract } from "@ethersproject/contracts";
 import { parseEther } from "@ethersproject/units";
 import { BigNumber } from "@ethersproject/bignumber";
 import { deployments } from "hardhat";

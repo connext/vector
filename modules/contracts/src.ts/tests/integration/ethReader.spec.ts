@@ -1,10 +1,9 @@
 import { TransferNames, RegisteredTransfer } from "@connext/vector-types";
-import { expect } from "@connext/vector-utils";
+import { expect, getTestLoggers } from "@connext/vector-utils";
 import { AddressZero } from "@ethersproject/constants";
 import { deployments } from "hardhat";
-import pino from "pino";
 
-import { alice, bob, chainIdReq, provider } from "../../constants";
+import { alice, bob, chainIdReq, logger, provider } from "../../constants";
 import { getContract, createChannel } from "../../utils";
 
 import { EthereumChainReader } from "../../services/ethReader";
@@ -29,7 +28,7 @@ describe("EthereumChainReader", function () {
 
     channel = (await createChannel()).connect(alice);
     chainId = await chainIdReq;
-    chainReader = new EthereumChainReader({ [chainId]: provider }, pino());
+    chainReader = new EthereumChainReader({ [chainId]: provider }, logger);
   });
 
   it("getTotalDepositedA", async () => {
