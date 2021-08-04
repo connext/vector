@@ -10,7 +10,7 @@ import { getContract, createChannel } from "../utils";
 
 import { WithdrawCommitment } from "./withdraw";
 
-describe.only("withdrawCommitment", function () {
+describe("withdrawCommitment", function () {
   this.timeout(120_000);
   let channel: ChannelMastercopy;
   let token: ERC20;
