@@ -13,7 +13,6 @@ import "./src.ts/tasks";
 
 const urlOverride = process.env.ETH_PROVIDER_URL;
 const chainId = parseInt(process.env.CHAIN_ID ?? "1337", 10);
-console.log("**** chainId", chainId);
 
 const mnemonic =
   process.env.SUGAR_DADDY ||
