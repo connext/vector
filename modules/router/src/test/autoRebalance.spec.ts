@@ -7,7 +7,6 @@ import { JsonRpcProvider } from "@ethersproject/providers";
 import { BigNumber } from "@ethersproject/bignumber";
 import { parseEther } from "@ethersproject/units";
 import axios from "axios";
-import PriorityQueue from "p-queue";
 
 import { rebalanceIfNeeded } from "../services/autoRebalance";
 import { getConfig } from "../config";
@@ -15,6 +14,7 @@ import * as metrics from "../metrics";
 import { PrismaStore, RouterRebalanceStatus } from "../services/store";
 import { _createQueueForSwap } from "../services/rebalanceQueue";
 import { AutoRebalanceServiceError } from "../errors";
+import { One, Zero } from "@ethersproject/constants";
 
 const config = getConfig();
 
@@ -79,16 +79,18 @@ const setupForRebalance = (
       contractAddress: "",
       transactionIndex: 0,
       // root?: string,
-      gasUsed: BigNumber.from(0),
+      gasUsed: Zero,
       logsBloom: "",
       blockHash: "",
       transactionHash: "",
       logs: [],
       blockNumber: 0,
       confirmations: 10,
-      cumulativeGasUsed: BigNumber.from(0),
+      cumulativeGasUsed: Zero,
       byzantium: false,
-      status: 1
+      status: 1,
+      effectiveGasPrice: One,
+      type: 0
     });
   })
 
