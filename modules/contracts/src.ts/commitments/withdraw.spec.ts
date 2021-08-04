@@ -19,18 +19,14 @@ describe("withdrawCommitment", function () {
   beforeEach(async () => {
     await deployments.fixture(); // Start w fresh deployments
     token = await getContract("TestToken", alice);
-    console.log("got token");
     channel = await createChannel();
-    console.log("created channel");
     await (
       await alice.sendTransaction({
         to: channel.address,
         value: BigNumber.from(amount).mul(2),
       })
     ).wait();
-    console.log("sent eth");
     await (await token.transfer(channel.address, parseEther(amount))).wait();
-    console.log("sent token");
   });
 
   it("can successfully withdraw Eth", async () => {
