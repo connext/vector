@@ -2,9 +2,9 @@
 import { expect } from "@connext/vector-utils";
 import { BigNumber } from "@ethersproject/bignumber";
 import { AddressZero, One } from "@ethersproject/constants";
-import { Contract } from "@ethersproject/contracts";
 import { parseEther } from "@ethersproject/units";
 import { deployments } from "hardhat";
+import { ChannelMastercopy, FailingToken, ReentrantToken } from "../../../typechain";
 
 import { alice, bob } from "../../constants";
 import { getContract, createChannel } from "../../utils";
@@ -12,9 +12,9 @@ import { getContract, createChannel } from "../../utils";
 describe("CMCDeposit.sol", function () {
   this.timeout(120_000);
   const value = One;
-  let channel: Contract;
-  let failingToken: Contract;
-  let reentrantToken: Contract;
+  let channel: ChannelMastercopy;
+  let failingToken: FailingToken;
+  let reentrantToken: ReentrantToken;
 
   beforeEach(async () => {
     await deployments.fixture(); // Start w fresh deployments

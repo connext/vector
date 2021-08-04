@@ -2,26 +2,26 @@
 import { Balance } from "@connext/vector-types";
 import { BigNumber } from "@ethersproject/bignumber";
 import { AddressZero, Zero } from "@ethersproject/constants";
-import { Contract } from "@ethersproject/contracts";
 import { parseEther } from "@ethersproject/units";
 import { expect } from "chai";
 import { deployments } from "hardhat";
+import { CMCAsset, FailingToken, NonconformingToken, TestChannel, TestToken } from "../../../typechain";
 
 import { alice, bob, rando } from "../../constants";
 import { getContract, createChannel } from "../../utils";
 
 describe("CMCAsset", function () {
   this.timeout(120_000);
-  let assetTransfer: Contract;
-  let channel: Contract;
-  let token: Contract;
-  let failingToken: Contract;
-  let nonconformingToken: Contract;
+  let assetTransfer: CMCAsset;
+  let channel: TestChannel;
+  let token: TestToken;
+  let failingToken: FailingToken;
+  let nonconformingToken: NonconformingToken;
 
   beforeEach(async () => {
     await deployments.fixture(); // Start w fresh deployments
     assetTransfer = await getContract("CMCAsset", alice);
-    channel = await createChannel();
+    channel = (await createChannel()) as TestChannel;
 
     // Fund with all tokens
     token = await getContract("TestToken", alice);
@@ -113,7 +113,7 @@ describe("CMCAsset", function () {
       };
       const preTransferBob = await bob.getBalance();
       const preTransferRando = await rando.getBalance();
-      await channel.testMakeBalanceExitable(AddressZero, balance);
+      await channel.testMakeBalanceExitable(AddressZero, balance as any);
       expect(await bob.getBalance()).to.be.eq(preTransferBob);
       expect(await rando.getBalance()).to.be.eq(preTransferRando);
       expect(await channel.getTotalTransferred(AddressZero)).to.be.eq(Zero);

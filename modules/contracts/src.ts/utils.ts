@@ -1,5 +1,5 @@
-import { Contract } from "@ethersproject/contracts";
 import { ethers, run } from "hardhat";
+import { ChannelMastercopy, TransferDefinition } from "../typechain";
 
 import { alice, bob, defaultLogLevel, provider } from "./constants";
 
@@ -12,16 +12,14 @@ export const registerTransfer = (
   transferName: string,
   signerAddress: string = alice.address,
   logLevel = defaultLogLevel,
-): Promise<Contract> =>
-  run("register-transfer", { transferName, signerAddress, logLevel });
+): Promise<TransferDefinition> => run("register-transfer", { transferName, signerAddress, logLevel });
 
 export const createChannel = (
   aliceAddress: string = alice.address,
   bobAddress: string = bob.address,
   logLevel = defaultLogLevel,
   testMode = "yarp",
-): Promise<Contract> =>
-  run("create-channel", { aliceAddress, bobAddress, logLevel, testMode });
+): Promise<ChannelMastercopy> => run("create-channel", { aliceAddress, bobAddress, logLevel, testMode });
 
 ////////////////////////////////////////
 // Other Utils

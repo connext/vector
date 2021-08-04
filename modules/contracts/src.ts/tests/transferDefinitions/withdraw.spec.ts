@@ -19,15 +19,15 @@ import {
 } from "@connext/vector-utils";
 import { BigNumber } from "@ethersproject/bignumber";
 import { AddressZero, HashZero, Zero } from "@ethersproject/constants";
-import { Contract } from "@ethersproject/contracts";
 import { deployments } from "hardhat";
+import { Withdraw } from "../../../typechain";
 
 import { alice, bob } from "../../constants";
 import { getContract } from "../../utils";
 
 describe("Withdraw", function () {
   this.timeout(120_000);
-  let withdraw: Contract;
+  let withdraw: Withdraw;
 
   before(async () => {
     await deployments.fixture(); // Start w fresh deployments
