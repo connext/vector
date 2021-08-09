@@ -41,7 +41,7 @@ describe("Vector", () => {
     chainReader = Sinon.createStubInstance(VectorChainReader);
     chainReader.getChannelFactoryBytecode.resolves(Result.ok(mkHash()));
     chainReader.getChannelMastercopyAddress.resolves(Result.ok(mkAddress()));
-    chainReader.getChainProviders.returns(Result.ok(env.chainProviders));
+    chainReader.getChainRpcProviders.returns(Result.ok(env.chainProviders));
     lockService = Sinon.createStubInstance(MemoryLockService);
     messagingService = Sinon.createStubInstance(MemoryMessagingService);
     storeService = Sinon.createStubInstance(MemoryStoreService);

@@ -624,7 +624,7 @@ export class VectorEngine implements IVectorEngine {
       );
     }
 
-    const chainProviders = this.chainService.getChainProviders();
+    const chainProviders = this.chainService.getChainRpcProviders();
     if (chainProviders.isError) {
       return Result.fail(chainProviders.getError()!);
     }

@@ -7,7 +7,7 @@ import { Balance, FullChannelState, FullTransferState } from "./channel";
 import { ChannelDispute } from "./dispute";
 import { Result, Values, VectorError } from "./error";
 import { ChainServiceEvent, ChainServiceEventMap } from "./event";
-import { ChainProviders, HydratedProviders } from "./network";
+import { ChainRpcProviders, HydratedProviders } from "./network";
 import { RegisteredTransfer, TransferName, TransferState, WithdrawCommitmentJson } from "./transferDefinitions";
 
 export const GAS_ESTIMATES = {
@@ -186,7 +186,7 @@ export interface IVectorChainReader {
 
   getDecimals(assetId: string, chainId: number): Promise<Result<number, ChainError>>;
 
-  getChainProviders(): Result<ChainProviders, ChainError>;
+  getChainRpcProviders(): Result<ChainRpcProviders, ChainError>;
 
   getHydratedProviders(): Result<HydratedProviders, ChainError>;
 

@@ -20,7 +20,7 @@ export type RebalanceProfile = Static<typeof RebalanceProfileSchema>;
 const VectorRouterConfigSchema = Type.Object({
   adminToken: Type.String(),
   allowedSwaps: Type.Array(AllowedSwapSchema),
-  chainProviders: Type.Dict(TUrl),
+  chainProviders: Type.Dict(Type.String()),
   dbUrl: Type.Optional(TUrl),
   nodeUrl: TUrl,
   routerUrl: TUrl,

@@ -4,7 +4,7 @@ import fastify from "fastify";
 import pino from "pino";
 import { Evt } from "evt";
 import { VectorChainReader } from "@connext/vector-contracts";
-import { EventCallbackConfig, hydrateProviders, RestServerNodeService, ChannelSigner } from "@connext/vector-utils";
+import { EventCallbackConfig, hydrateProviders, parseProviders, RestServerNodeService, ChannelSigner } from "@connext/vector-utils";
 import {
   IsAlivePayload,
   ConditionalTransferCreatedPayload,
@@ -149,8 +149,8 @@ const server = fastify({
 collectDefaultMetrics({ prefix: "router_" });
 
 let router: IRouter;
-const store = new PrismaStore();
-const hydratedProviders = hydrateProviders(config.chainProviders);
+const store = new PrismaStore()
+const hydratedProviders = hydrateProviders(parseProviders(config.chainProviders));
 const chainService = new VectorChainReader(hydratedProviders, logger.child({ module: "RouterChainReader" }));
 const messagingService = new NatsRouterMessagingService({
   signer,

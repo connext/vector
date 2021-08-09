@@ -8,7 +8,7 @@ import {
   IVectorChainReader,
   Result,
   ChainError,
-  ChainProviders,
+  ChainRpcProviders,
   RegisteredTransfer,
   TransferName,
   ChannelDispute,
@@ -26,6 +26,7 @@ import {
   CoreChannelState,
   CoreTransferState,
   TransferDispute,
+  ChainRpcProvider,
 } from "@connext/vector-types";
 import axios from "axios";
 import { encodeBalance, encodeTransferResolver, encodeTransferState } from "@connext/vector-utils";
@@ -33,7 +34,7 @@ import { BigNumber } from "@ethersproject/bignumber";
 import { parseUnits } from "@ethersproject/units";
 import { AddressZero, HashZero } from "@ethersproject/constants";
 import { Contract } from "@ethersproject/contracts";
-import { JsonRpcProvider, TransactionRequest } from "@ethersproject/providers";
+import { TransactionRequest } from "@ethersproject/providers";
 import pino from "pino";
 
 import { ChannelFactory, ChannelMastercopy, TransferDefinition, TransferRegistry, VectorChannel } from "../artifacts";
@@ -59,14 +60,15 @@ export class EthereumChainReader implements IVectorChainReader {
   };
   private contracts: Map<string, Contract> = new Map();
   constructor(
-    public readonly chainProviders: { [chainId: string]: JsonRpcProvider },
+    // The chainProviders specified here are hydrated.
+    public readonly chainProviders: { [chainId: string]: ChainRpcProvider },
     public readonly log: pino.BaseLogger,
   ) {}
 
-  getChainProviders(): Result<ChainProviders, ChainError> {
-    const ret: ChainProviders = {};
+  getChainRpcProviders(): Result<ChainRpcProviders, ChainError> {
+    const ret: ChainRpcProviders = {};
     Object.entries(this.chainProviders).forEach(([name, value]) => {
-      ret[parseInt(name)] = value.connection.url;
+      ret[parseInt(name)] = value.providerUrls;
     });
     return Result.ok(ret);
   }

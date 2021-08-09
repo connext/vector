@@ -2,7 +2,7 @@ import {
   REDUCED_GAS_PRICE,
   Balance,
   ChainError,
-  ChainProviders,
+  ChainRpcProviders,
   ChannelDispute,
   FullTransferState,
   HydratedProviders,
@@ -157,7 +157,7 @@ class MockChainReader implements IVectorChainReader {
   ): Promise<Result<RegisteredTransfer[], ChainError>> {
     throw new Error("Method not implemented.");
   }
-  getChainProviders(): Result<ChainProviders, ChainError> {
+  getChainRpcProviders(): Result<ChainRpcProviders, ChainError> {
     throw new Error("Method not implemented.");
   }
   getHydratedProviders(): Result<HydratedProviders, ChainError> {

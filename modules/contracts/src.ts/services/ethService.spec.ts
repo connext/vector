@@ -1,5 +1,6 @@
 import {
   ChainError,
+  ChainRpcProvider,
   FullChannelState,
   IChainServiceStore,
   IChannelSigner,
@@ -19,7 +20,7 @@ import {
   mkHash,
 } from "@connext/vector-utils";
 import { AddressZero, One, Zero } from "@ethersproject/constants";
-import { JsonRpcProvider, TransactionReceipt, TransactionResponse } from "@ethersproject/providers";
+import { TransactionReceipt, TransactionResponse } from "@ethersproject/providers";
 import { BigNumber } from "ethers";
 import { parseUnits } from "ethers/lib/utils";
 import { restore, reset, createStubInstance, SinonStubbedInstance, stub, SinonStub } from "sinon";
@@ -30,8 +31,8 @@ import { BIG_GAS_PRICE, EthereumChainService } from "./ethService";
 let storeMock: SinonStubbedInstance<IChainServiceStore>;
 let signer: SinonStubbedInstance<IChannelSigner>;
 let ethService: EthereumChainService;
-let provider1337: SinonStubbedInstance<JsonRpcProvider>;
-let provider1338: SinonStubbedInstance<JsonRpcProvider>;
+let provider1337: SinonStubbedInstance<ChainRpcProvider>;
+let provider1338: SinonStubbedInstance<ChainRpcProvider>;
 
 let sendTxWithRetriesMock: SinonStub;
 let approveMock: SinonStub;
@@ -96,7 +97,7 @@ describe("ethService unit test", () => {
     signer.connect.returns(signer as any);
     (signer as any)._isSigner = true;
 
-    const _provider = createStubInstance(JsonRpcProvider);
+    const _provider = createStubInstance(ChainRpcProvider);
     _provider.getTransaction.resolves(txResponse);
     provider1337 = _provider;
     provider1338 = _provider;
