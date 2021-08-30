@@ -1,9 +1,9 @@
 import { signChannelMessage, expect } from "@connext/vector-utils";
 import { BigNumber } from "@ethersproject/bignumber";
 import { AddressZero } from "@ethersproject/constants";
-import { Contract } from "@ethersproject/contracts";
 import { parseEther } from "@ethersproject/units";
 import { deployments } from "hardhat";
+import { ChannelMastercopy, ERC20 } from "../../typechain";
 
 import { alice, bob, provider } from "../constants";
 import { getContract, createChannel } from "../utils";
@@ -12,8 +12,8 @@ import { WithdrawCommitment } from "./withdraw";
 
 describe("withdrawCommitment", function () {
   this.timeout(120_000);
-  let channel: Contract;
-  let token: Contract;
+  let channel: ChannelMastercopy;
+  let token: ERC20;
   const amount = "50";
 
   beforeEach(async () => {

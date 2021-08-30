@@ -1,14 +1,14 @@
 import { expect } from "@connext/vector-utils";
 import { AddressZero, HashZero, Zero } from "@ethersproject/constants";
-import { Contract } from "@ethersproject/contracts";
 import { deployments } from "hardhat";
+import { ChannelMastercopy } from "../../typechain";
 
 import { alice } from "../constants";
 import { getContract } from "../utils";
 
 describe("ChannelMastercopy", function () {
   this.timeout(120_000);
-  let mastercopy: Contract;
+  let mastercopy: ChannelMastercopy;
 
   beforeEach(async () => {
     await deployments.fixture(); // Start w fresh deployments
@@ -66,7 +66,7 @@ describe("ChannelMastercopy", function () {
       { name: "disputeTransfer", args: [CoreTransferStateZero, []] },
       { name: "defundTransfer", args: [CoreTransferStateZero, HashZero, HashZero, HashZero] },
     ]) {
-      await expect(mastercopy[method.name](...method.args)).to.be.revertedWith("Mastercopy: ONLY_VIA_PROXY");
+      await expect((mastercopy as any)[method.name](...method.args)).to.be.revertedWith("Mastercopy: ONLY_VIA_PROXY");
     }
   });
 

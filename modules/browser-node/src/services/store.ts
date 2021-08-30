@@ -391,7 +391,7 @@ export class BrowserStore implements IEngineStore, IChainServiceStore {
     attempts.push({
       // TransactionResponse fields (defined when submitted)
       gasLimit: response.gasLimit.toString(),
-      gasPrice: response.gasPrice.toString(),
+      gasPrice: (response.gasPrice ?? 0).toString(),
       transactionHash: response.hash,
 
       createdAt: new Date(),

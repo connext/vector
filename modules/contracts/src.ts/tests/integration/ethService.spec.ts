@@ -13,7 +13,6 @@ import {
   generateMerkleTreeData,
 } from "@connext/vector-utils";
 import { AddressZero } from "@ethersproject/constants";
-import { Contract } from "@ethersproject/contracts";
 import { parseEther } from "@ethersproject/units";
 import { BigNumber } from "@ethersproject/bignumber";
 import { deployments } from "hardhat";
@@ -22,18 +21,19 @@ import { alice, bob, chainIdReq, logger, provider, rando } from "../../constants
 import { advanceBlocktime, getContract, createChannel } from "../../utils";
 
 import { EthereumChainService } from "../../services/ethService";
+import { ChannelFactory, ChannelMastercopy, TestToken, TransferDefinition } from "../../../typechain";
 
 describe("ethService integration", function () {
   this.timeout(120_000);
   const aliceSigner = new ChannelSigner(alice.privateKey);
   const bobSigner = new ChannelSigner(bob.privateKey);
-  let channel: Contract;
-  let channelFactory: Contract;
-  let transferDefinition: Contract;
+  let channel: ChannelMastercopy;
+  let channelFactory: ChannelFactory;
+  let transferDefinition: TransferDefinition;
   let chainService: EthereumChainService;
   let channelState: FullChannelState;
   let transferState: FullTransferState;
-  let token: Contract;
+  let token: TestToken;
   let chainId: number;
 
   beforeEach(async () => {

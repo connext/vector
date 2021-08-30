@@ -7,10 +7,12 @@ import { deployments } from "hardhat";
 import { alice, rando } from "../constants";
 import { getContract } from "../utils";
 
+import { TransferRegistry, TransferDefinition } from "../../typechain";
+
 describe("TransferRegistry.sol", function () {
   this.timeout(120_000);
-  let transfer: Contract;
-  let registry: Contract;
+  let transfer: TransferDefinition;
+  let registry: TransferRegistry;
   let registryInfo: RegisteredTransfer;
 
   beforeEach(async () => {

@@ -3,9 +3,7 @@ import { BigNumber } from "@ethersproject/bignumber";
 
 import { mkAddress, mkHash } from "./util";
 
-export const createTestTxResponse = (
-  overrides: Partial<TransactionResponse> = {},
-): TransactionResponse => {
+export const createTestTxResponse = (overrides: Partial<TransactionResponse> = {}): TransactionResponse => {
   const to = overrides.to ?? mkAddress("0x1111");
   const from = overrides.from ?? mkAddress("0x2222");
   const hash = overrides.hash ?? mkHash("0xade134");
@@ -30,9 +28,7 @@ export const createTestTxResponse = (
   };
 };
 
-export const createTestTxReceipt = (
-  overrides: Partial<TransactionReceipt> = {},
-): TransactionReceipt => {
+export const createTestTxReceipt = (overrides: Partial<TransactionReceipt> = {}): TransactionReceipt => {
   return {
     transactionHash: mkHash("0xaecb"),
     to: mkAddress("0x1111"),
@@ -45,6 +41,8 @@ export const createTestTxReceipt = (
     gasUsed: BigNumber.from(1657639),
     logsBloom: "logs",
     logs: [],
+    type: 1,
+    effectiveGasPrice: BigNumber.from(1234678),
     cumulativeGasUsed: BigNumber.from(1657639),
     byzantium: true,
     confirmations: 15,

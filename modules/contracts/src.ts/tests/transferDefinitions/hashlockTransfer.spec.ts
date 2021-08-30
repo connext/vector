@@ -17,16 +17,16 @@ import {
 } from "@connext/vector-utils";
 import { BigNumber } from "@ethersproject/bignumber";
 import { HashZero, Zero } from "@ethersproject/constants";
-import { Contract } from "@ethersproject/contracts";
 import { sha256 as soliditySha256 } from "@ethersproject/solidity";
 import { deployments } from "hardhat";
+import { HashlockTransfer } from "../../../typechain";
 
 import { alice, provider } from "../../constants";
 import { getContract } from "../../utils";
 
 describe("HashlockTransfer", function () {
   this.timeout(120_000);
-  let transfer: Contract;
+  let transfer: HashlockTransfer;
 
   beforeEach(async () => {
     await deployments.fixture(); // Start w fresh deployments
@@ -53,7 +53,7 @@ describe("HashlockTransfer", function () {
   const createTransfer = async (balance: Balance, initialState: HashlockTransferState): Promise<boolean> => {
     const encodedState = encodeTransferState(initialState, HashlockTransferStateEncoding);
     const encodedBalance = encodeBalance(balance);
-    return transfer.functions.create(encodedBalance, encodedState);
+    return transfer.create(encodedBalance, encodedState);
   };
 
   const resolveTransfer = async (
@@ -110,7 +110,7 @@ describe("HashlockTransfer", function () {
       const preImage = getRandomBytes32();
       const { state, balance } = await createInitialState(preImage);
       const res = await createTransfer(balance, state);
-      expect((res as any)[0]).to.be.true;
+      expect(res).to.be.true;
     });
 
     it("should fail create if sender balance is zero", async () => {
@@ -146,7 +146,7 @@ describe("HashlockTransfer", function () {
       const { state, balance } = await createInitialState(preImage);
       state.expiry = (Date.now() + 30).toString();
       const res = await createTransfer(balance, state);
-      expect((res as any)[0]).to.be.true;
+      expect(res).to.be.true;
     });
   });
 

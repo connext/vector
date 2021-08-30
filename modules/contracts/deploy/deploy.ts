@@ -1,5 +1,5 @@
 import { BigNumber } from "@ethersproject/bignumber";
-import { EtherSymbol, Zero } from "@ethersproject/constants";
+import { EtherSymbol, One, Zero } from "@ethersproject/constants";
 import { formatEther, parseEther } from "@ethersproject/units";
 import { deployments, ethers, getNamedAccounts, getChainId, network } from "hardhat";
 import { DeployFunction } from "hardhat-deploy/types";
@@ -58,7 +58,7 @@ const func: DeployFunction = async () => {
     log.info(`Sent transaction to deploy ${name}, txHash: ${deployment.transactionHash}`);
     log.info(
       `Success! Consumed ${receipt?.gasUsed ?? "unknown"} gas worth ${EtherSymbol} ${formatEther(
-        (receipt?.gasUsed || Zero).mul(tx.gasPrice),
+        (receipt?.gasUsed ?? Zero).mul(tx.gasPrice ?? One),
       )} deploying ${name} to address: ${deployment.address}`,
     );
   };

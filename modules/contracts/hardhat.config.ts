@@ -52,7 +52,7 @@ const config: HardhatUserConfig = {
   networks: {
     hardhat: {
       accounts: {
-        accountsBalance: "0x7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+        accountsBalance: "57896044618658097711785492504343953926634992332820282019728792003956564819967",
         mnemonic,
       },
       chainId,
@@ -61,7 +61,7 @@ const config: HardhatUserConfig = {
     },
     localhost: {
       accounts: {
-        accountsBalance: "0x7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+        accountsBalance: "57896044618658097711785492504343953926634992332820282019728792003956564819967",
         mnemonic,
       },
       chainId,

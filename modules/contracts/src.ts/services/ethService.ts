@@ -126,7 +126,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
         channelAddress,
         reason,
         hash: response.hash,
-        gasPrice: response.gasPrice.toString(),
+        gasPrice: response.gasPrice?.toString() ?? "unknown",
         nonce: response.nonce,
       },
       "Tx submitted.",
@@ -428,7 +428,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
             this.log.info(
               {
                 hash: response.hash,
-                gas: response.gasPrice.toString(),
+                gas: response.gasPrice?.toString() ?? "unknown",
                 channelAddress,
                 method,
                 methodId,

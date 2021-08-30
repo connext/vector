@@ -1,17 +1,17 @@
 /* eslint-disable @typescript-eslint/no-empty-function */
 import { RegisteredTransfer } from "@connext/vector-types";
 import { BigNumber } from "@ethersproject/bignumber";
-import { Contract } from "@ethersproject/contracts";
 import { expect } from "chai";
 import { deployments } from "hardhat";
+import { TestLibIterableMapping, TransferDefinition } from "../../../typechain";
 
 import { alice } from "../../constants";
 import { getContract } from "../../utils";
 
 describe("LibIterableMapping.sol", function () {
   this.timeout(120_000);
-  let mapping: Contract;
-  let transferDefs: Contract[];
+  let mapping: TestLibIterableMapping;
+  let transferDefs: TransferDefinition[];
 
   // Helper function to load data into registry
   const loadMapping = async () => {

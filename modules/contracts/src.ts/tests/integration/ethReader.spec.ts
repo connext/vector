@@ -1,14 +1,13 @@
 import { TransferNames, RegisteredTransfer } from "@connext/vector-types";
-import { expect } from "@connext/vector-utils";
-import { AddressZero, Zero } from "@ethersproject/constants";
-import { Contract } from "@ethersproject/contracts";
+import { expect, getTestLoggers } from "@connext/vector-utils";
+import { AddressZero } from "@ethersproject/constants";
 import { deployments } from "hardhat";
-import pino from "pino";
 
-import { alice, bob, chainIdReq, provider } from "../../constants";
+import { alice, bob, chainIdReq, logger, provider } from "../../constants";
 import { getContract, createChannel } from "../../utils";
 
 import { EthereumChainReader } from "../../services/ethReader";
+import { ChannelFactory, ChannelMastercopy, TransferRegistry } from "../../../typechain";
 
 // TODO: check whether result is valid, not just whether it exists #432
 describe("EthereumChainReader", function () {
@@ -17,9 +16,9 @@ describe("EthereumChainReader", function () {
   const transfer = {} as any; // TODO
   let chainId: number;
   let chainReader: EthereumChainReader;
-  let channel: Contract;
-  let factory: Contract;
-  let transferRegistry: Contract;
+  let channel: ChannelMastercopy;
+  let factory: ChannelFactory;
+  let transferRegistry: TransferRegistry;
 
   before(async () => {
     await deployments.fixture(); // Start w fresh deployments
@@ -29,7 +28,7 @@ describe("EthereumChainReader", function () {
 
     channel = (await createChannel()).connect(alice);
     chainId = await chainIdReq;
-    chainReader = new EthereumChainReader({ [chainId]: provider }, pino());
+    chainReader = new EthereumChainReader({ [chainId]: provider }, logger);
   });
 
   it("getTotalDepositedA", async () => {
