@@ -23,8 +23,7 @@ import {
   encodeTransferResolver,
   encodeTransferState,
   getRandomBytes32,
-  generateMerkleTreeData,
-  hashCoreTransferState,
+  getMerkleProof,
 } from "@connext/vector-utils";
 import { Signer } from "@ethersproject/abstract-signer";
 import { BigNumber } from "@ethersproject/bignumber";
@@ -209,22 +208,19 @@ export class EthereumChainService extends EthereumChainReader implements IVector
     // Define task to send tx with proper nonce
     const task = async (): Promise<Result<TransactionResponse | undefined, Error>> => {
       try {
-        // If a nonce is supplied, use that
-        if (typeof nonce !== "undefined") {
-          this.log.info({ nonce, chainId, gasPrice: gasPrice.toString() }, "Resubmitting tx");
-          const response: TransactionResponse | undefined = await txFn(gasPrice, nonce);
-          return Result.ok(response);
-        }
-
-        // Otherwise, send tx using highest stored or pending nonce
-        const stored = this.nonces.get(chainId) ?? 0;
-        const pending = await signer.getTransactionCount("pending");
-        const nonceToUse = stored > pending ? stored : pending;
-        this.log.info({ nonce, chainId, gasPrice: gasPrice.toString() }, "Submitting tx");
+        // Send transaction using the passed in callback.
+        const stored = this.nonces.get(chainId);
+        const nonceToUse: number = nonce ?? stored ?? (await signer.getTransactionCount("pending"));
         const response: TransactionResponse | undefined = await txFn(gasPrice, nonceToUse);
-
-        // Store the incremented nonce
-        this.nonces.set(chainId, nonceToUse + 1);
+        // After calling tx fn, set nonce to the greatest of
+        // stored, pending, or incremented
+        const pending = await signer.getTransactionCount("pending");
+        const incremented = (response?.nonce ?? nonceToUse) + 1;
+        // Ensure the nonce you store is *always* the greatest of the values
+        const toCompare = stored ?? 0;
+        if (toCompare < pending || toCompare < incremented) {
+          this.nonces.set(chainId, incremented > pending ? incremented : pending);
+        }
         return Result.ok(response);
       } catch (e) {
         return Result.fail(e);
@@ -1378,7 +1374,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
     }
 
     // Generate merkle root
-    const { tree } = generateMerkleTreeData(activeTransfers);
+    const proof = getMerkleProof(activeTransfers, transferIdToDispute);
 
     const res = await this.sendTxWithRetries(
       transferState.channelAddress,
@@ -1386,7 +1382,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
       TransactionReason.disputeTransfer,
       (gasPrice, nonce) => {
         const channel = new Contract(transferState.channelAddress, VectorChannel.abi, signer);
-        return channel.disputeTransfer(transferState, tree.getHexProof(hashCoreTransferState(transferState)), {
+        return channel.disputeTransfer(transferState, proof, {
           gasPrice,
           nonce,
         });

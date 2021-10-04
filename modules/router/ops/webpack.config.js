@@ -52,6 +52,11 @@ module.exports = {
           },
         },
       },
+      {
+        test: /\.wasm$/,
+        type: "javascript/auto",
+        use: "wasm-loader",
+      },
     ],
   },
 
@@ -61,6 +66,10 @@ module.exports = {
         {
           from: path.join(__dirname, "../node_modules/@connext/vector-contracts/dist/pure-evm_bg.wasm"),
           to: path.join(__dirname, "../dist/pure-evm_bg.wasm"),
+        },
+        {
+          from: path.join(__dirname, "../../../node_modules/@connext/vector-merkle-tree/dist/node/index_bg.wasm"),
+          to: path.join(__dirname, "../dist/index_bg.wasm"),
         },
         {
           from: path.join(__dirname, "../prisma-postgres"),

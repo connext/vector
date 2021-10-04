@@ -17,10 +17,8 @@ import {
   GetTransfersFilterOpts,
   GetTransfersFilterOptsSchema,
   VectorErrorJson,
-  StoredTransaction,
 } from "@connext/vector-types";
 import { constructRpcRequest, getPublicIdentifierFromPublicKey, hydrateProviders } from "@connext/vector-utils";
-import { WithdrawCommitment } from "@connext/vector-contracts";
 import { Static, Type } from "@sinclair/typebox";
 import { Wallet } from "@ethersproject/wallet";
 

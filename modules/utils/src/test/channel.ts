@@ -15,6 +15,7 @@ import {
   FullTransferState,
   DEFAULT_TRANSFER_TIMEOUT,
 } from "@connext/vector-types";
+import { v4 as uuidV4 } from "uuid";
 
 import { ChannelSigner } from "../channelSigner";
 
@@ -44,6 +45,11 @@ export function createTestUpdateParams<T extends UpdateType>(
   const base = {
     channelAddress: overrides.channelAddress ?? mkAddress("0xccc"),
     type,
+    id: {
+      id: uuidV4(),
+      signature: mkSig("0xcceeffaa6655"),
+      ...(overrides.id ?? {}),
+    },
   };
 
   let details: any;
@@ -117,6 +123,10 @@ export function createTestChannelUpdate<T extends UpdateType>(
     bobSignature: mkSig("0x0002"),
     toIdentifier: mkPublicIdentifier("vectorB"),
     type,
+    id: {
+      id: uuidV4(),
+      signature: mkSig("0x00003"),
+    },
   };
 
   // Get details from overrides
@@ -143,7 +153,6 @@ export function createTestChannelUpdate<T extends UpdateType>(
       break;
     case UpdateType.create:
       const createDeets: CreateUpdateDetails = {
-        merkleProofData: [mkBytes32("0xproof")],
         merkleRoot: mkBytes32("0xeeeeaaaaa333344444"),
         transferDefinition: mkAddress("0xdef"),
         transferId: mkBytes32("0xaaaeee"),

@@ -1,18 +1,23 @@
-import React from "react";
+import React, { useEffect } from "react";
 
 import ConnextManager from "./ConnextManager";
 
-// eslint-disable-next-line
-const connextManager = new ConnextManager();
+function App() {
+  const loadWasmLibs = async () => {
+    const browser = await import("@connext/vector-browser-node");
+    const utils = await import("@connext/vector-utils");
+    new ConnextManager(browser, utils);
+  };
 
-class App extends React.Component {
-  render() {
-    return (
-      <div className="App">
-        <div className="Content">Testing</div>
-      </div>
-    );
-  }
+  useEffect(() => {
+    loadWasmLibs();
+  }, []);
+
+  return (
+    <div className="App">
+      <div className="Content"></div>
+    </div>
+  );
 }
 
 export default App;

@@ -79,6 +79,9 @@ model Channel {
 
 model Update {
   // COMMON PARAMS
+  id               String?
+  idSignature      String?
+  // id params optional for restoring transfers (needs create update)
   channelAddress   String?
   channel          Channel? @relation(fields: [channelAddress], references: [channelAddress])
   channelAddressId String // required for ID so that relation can be removed
@@ -114,7 +117,6 @@ model Update {
   transferTimeout      String?
   transferInitialState String? // JSON string
   transferEncodings    String?
-  merkleProofData      String? // proofs.join(",")
   meta                 String?
   responder            String?
 
@@ -128,6 +130,7 @@ model Update {
   resolvedTransfer Transfer? @relation("ResolvedTransfer")
 
   @@id([channelAddressId, nonce])
+  @@unique(id)
   @@map(name: "update")
 }
 
