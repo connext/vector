@@ -5,6 +5,9 @@ stack="chains"
 root=$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." >/dev/null 2>&1 && pwd )
 project=$(grep -m 1 '"name":' "$root/package.json" | cut -d '"' -f 4)
 
+
+echo "$project"
+
 # make sure a network for this project has been created
 docker swarm init 2> /dev/null || true
 docker network create --attachable --driver overlay "$project" 2> /dev/null || true
@@ -25,8 +28,8 @@ echo " - mnemonic=$mnemonic"
 echo " - chain_id_1=$chain_id_1"
 echo " - chain_id_2=$chain_id_2"
 
-evm_port_1="8545"
-evm_port_2="8546"
+evm_port_1="5545"
+evm_port_2="5546"
 echo "${stack} will be exposed on *:$evm_port_1 and *:$evm_port_2"
 
 chain_data="$root/.chaindata"
@@ -87,14 +90,18 @@ services:
 
 EOF
 
+echo "exported docker compose: $docker_compose"
+
 docker stack deploy -c "$docker_compose" "$stack"
 echo "The $stack stack has been deployed, waiting for it to wake up.."
 
-timeout=$(( $(date +%s) + 300 ))
+timeout=$(( $(date +%s) + 600 ))
 while 
   ! grep -qs "transferRegistryAddress" "$chain_addresses_1" ||\
   ! grep -qs "transferRegistryAddress" "$chain_addresses_2"
 do
+  # echo "chain_addresses_1: $chain_addresses_1"
+  # echo "chain_addresses_2: $chain_addresses_2"
   if [[ "$(date +%s)" -gt "$timeout" ]]
   then echo "Timed out waiting for $stack stack to wake up" && exit 1
   else sleep 1
@@ -103,9 +110,11 @@ done
 
 # Save multi-chain providers & addresses
 
+echo "Exporting chaindata to $chain_data"
+
 echo '{
-  "'$chain_id_1'":"http://evm_'$chain_id_1':8545",
-  "'$chain_id_2'":"http://evm_'$chain_id_2':8545"
+  "'$chain_id_1'":"http://evm_'$chain_id_1':'$evm_port_1'",
+  "'$chain_id_2'":"http://evm_'$chain_id_2':'$evm_port_2'"
 }' > "$chain_data/chain-providers.json"
 
 cat "$chain_data_1/address-book.json" "$chain_data_2/address-book.json" \

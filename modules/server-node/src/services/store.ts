@@ -22,6 +22,7 @@ import {
 import { getRandomBytes32, getSignerAddressFromPublicIdentifier, mkSig } from "@connext/vector-utils";
 import { BigNumber } from "@ethersproject/bignumber";
 import { TransactionResponse, TransactionReceipt } from "@ethersproject/providers";
+import { logger } from "..";
 
 import { config } from "../config";
 import {
@@ -312,7 +313,25 @@ export class PrismaStore implements IServerNodeStore {
       ? `${config.dbUrl}?connection_limit=1&socket_timeout=10`
       : config.dbUrl;
 
-    this.prisma = new PrismaClient(_dbUrl ? { datasources: { db: { url: _dbUrl } } } : undefined);
+    logger.info(`Creating PrismaClient with url: ${_dbUrl}`)
+
+    const dbConfig = { 
+      datasources: { 
+        db: { url: _dbUrl } 
+      },
+      log: ['query', 'info', 'warn', 'error'],
+      
+    } 
+
+    this.prisma = new PrismaClient(_dbUrl ? { 
+                                              datasources: { db: { url: _dbUrl } },
+                                              log: ['query', 'info', 'warn', 'error'],
+                                              
+                                            } 
+                                            : undefined);
+
+    // this.prisma = new PrismaClient(dbConfig)
+    
   }
 
   /// Retrieve transaction by id.

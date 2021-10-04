@@ -34,9 +34,13 @@ import {
   submitUnsubmittedWithdrawals,
 } from "./services/withdrawal";
 
+console.log("Console log working")
 const configuredIdentifier = getPublicIdentifierFromPublicKey(Wallet.fromMnemonic(config.mnemonic).publicKey);
 export const logger = pino({ name: configuredIdentifier, level: config.logLevel ?? "info" });
 logger.info("Loaded config from environment", { ...config, mnemonic: "", adminToken: "" });
+
+logger.info(config)
+
 const server = fastify({
   logger,
   pluginTimeout: 300_000,
@@ -49,7 +53,10 @@ server.register(fastifyCors, {
   preflightContinue: true,
 });
 
+logger.info("Creating PrismaStore");
 export const store = new PrismaStore();
+
+logger.info("hydrateProviders");
 
 export const _providers = hydrateProviders(config.chainProviders);
 
