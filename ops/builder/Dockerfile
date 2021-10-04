@@ -23,4 +23,6 @@ RUN apk add --no-cache bash curl g++ gcc git jq make python2 &&\
 
 # USER node
 
+# rebuild as the comment changes     
+
 ENTRYPOINT ["bash", "/entry.sh"]

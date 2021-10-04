@@ -352,7 +352,7 @@ then
   fi
 fi
 
-debug_node = "prisma:client"
+# debug_node="prisma:client"
 
 docker_compose=$root/.$stack.docker-compose.yml
 rm -f "$docker_compose"

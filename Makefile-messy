@@ -260,29 +260,136 @@ watch-routing-node: router test-runner
 # All rules from here on should only depend on rules that come before it
 # ie first no dependencies, last no dependents
 
+########################################
+# Common Prerequisites
 
+# builder: $(shell find ops/builder)
+# 	$(log_start)
+# 	docker build --file ops/builder/Dockerfile $(image_cache) --tag $(project)_builder ops/builder
+# 	docker tag ${project}_builder ${project}_builder:$(commit)
+# 	$(log_finish) && mv -f $(totalTime) .flags/$@
+
+# node-modules: builder package.json $(shell ls modules/*/package.json)
+# 	$(log_start)
+# 	$(docker_run) "lerna bootstrap --hoist --no-progress"
+# 	$(log_finish) && mv -f $(totalTime) .flags/$@
 include recipes/prerequisite.mk
 
+########################################
+# Build Core JS libs
+# Keep prerequisites synced w the @connext/* dependencies of each module's package.json
+
+# types: node-modules $(shell find modules/types $(find_options))
+# 	$(log_start)
+# 	$(docker_run) "cd modules/types && npm run build"
+# 	$(log_finish) && mv -f $(totalTime) .flags/$@
+
+# utils: types $(shell find modules/utils $(find_options))
+# 	$(log_start)
+# 	$(docker_run) "cd modules/utils && npm run build"
+# 	$(log_finish) && mv -f $(totalTime) .flags/$@
 include recipes/core_js.mk
+
+# contracts: contracts-js
+# ethprovider: contracts-img
+# contracts-js: utils modules/contracts/hardhat.config.ts $(shell find modules/contracts/src.sol modules/contracts/src.ts modules/contracts/deploy $(find_options))
+# 	$(log_start)
+# 	$(docker_run) "cd modules/contracts && npm run build"
+# 	$(log_finish) && mv -f $(totalTime) .flags/$@
+# contracts-img: contracts-js $(shell find modules/contracts/ops $(find_options))
+# 	$(log_start)
+# 	docker build --file modules/contracts/ops/Dockerfile $(image_cache) --tag $(project)_ethprovider modules/contracts
+# 	docker tag $(project)_ethprovider $(project)_ethprovider:$(commit)
+# 	$(log_finish) && mv -f $(totalTime) .flags/$@
 
 include recipes/contracts.mk
 
-include recipes/protocol.mk
+protocol: utils contracts-js $(shell find modules/protocol $(find_options))
+	$(log_start)
+	$(docker_run) "cd modules/protocol && npm run build"
+	$(log_finish) && mv -f $(totalTime) .flags/$@
 
-include recipes/engine.mk
+engine: utils protocol $(shell find modules/engine $(find_options))
+	$(log_start)
+	$(docker_run) "cd modules/engine && npm run build"
+	$(log_finish) && mv -f $(totalTime) .flags/$@
 
-include recipes/browser_node.mk
+browser-node: engine $(shell find modules/browser-node $(find_options))
+	$(log_start)
+	$(docker_run) "cd modules/browser-node && npm run build && touch src/index.ts"
+	$(log_finish) && mv -f $(totalTime) .flags/$@
 
-include recipes/auth.mk
+auth: auth-img
+auth-js: utils $(shell find modules/auth $(find_options))
+	$(log_start)
+	$(docker_run) "cd modules/auth && npm run build"
+	$(log_finish) && mv -f $(totalTime) .flags/$@
+auth-bundle: auth-js utils $(shell find modules/auth $(find_options))
+	$(log_start)
+	$(docker_run) "cd modules/auth && npm run build-bundle"
+	$(log_finish) && mv -f $(totalTime) .flags/$@
+auth-img: auth-bundle $(shell find modules/auth/ops $(find_options))
+	$(log_start)
+	docker build --file modules/auth/ops/Dockerfile $(image_cache) --tag $(project)_auth modules/auth
+	docker tag $(project)_auth $(project)_auth:$(commit)
+	$(log_finish) && mv -f $(totalTime) .flags/$@
 
-include recipes/server_node.mk
 
-include recipes/router.mk
+server-node: server-node-img
+server-node-js: engine $(shell find modules/server-node/src $(find_options))
+	$(log_start)
+	$(docker_run) "cd modules/server-node && npm run build && touch src/index.ts"
+	$(log_finish) && mv -f $(totalTime) .flags/$@
+server-node-bundle: contracts-js server-node-js $(shell find modules/server-node/src $(find_options))
+	$(log_start)
+	$(docker_run) "cd modules/server-node && npm run build-bundle"
+	$(log_finish) && mv -f $(totalTime) .flags/$@
+server-node-img: server-node-bundle $(shell find modules/server-node/ops $(find_options))
+	$(log_start)
+	docker build --file modules/server-node/ops/Dockerfile $(image_cache) --tag $(project)_node modules/server-node
+	docker tag $(project)_node $(project)_node:$(commit)
+	$(log_finish) && mv -f $(totalTime) .flags/$@
 
-include recipes/iframe_app.mk
+router-js: engine $(shell find modules/router $(find_options))
+	$(log_start)
+	$(docker_run) "cd modules/router && npm run build"
+	$(log_finish) && mv -f $(totalTime) .flags/$@
+router-bundle: contracts-js router-js $(shell find modules/router $(find_options))
+	$(log_start)
+	$(docker_run) "cd modules/router && npm run build-bundle"
+	$(log_finish) && mv -f $(totalTime) .flags/$@
+router-img: router-bundle $(shell find modules/router/ops $(find_options))
+	$(log_start)
+	docker build --file modules/router/ops/Dockerfile $(image_cache) --tag $(project)_router modules/router
+	docker tag $(project)_router $(project)_router:$(commit)
+	$(log_finish) && mv -f $(totalTime) .flags/$@
 
-include recipes/test_runner.mk
+iframe-app: iframe-app-img
+iframe-app-js: browser-node $(shell find modules/iframe-app $(find_options))
+	$(log_start)
+	$(docker_run) "cd modules/iframe-app && npm run build"
+	$(log_finish) && mv -f $(totalTime) .flags/$@
+iframe-app-img: iframe-app-js $(shell find modules/iframe-app/ops $(find_options))
+	$(log_start)
+	docker build --file modules/iframe-app/ops/Dockerfile $(image_cache) --tag $(project)_iframe_app modules/iframe-app
+	docker tag $(project)_iframe_app $(project)_iframe_app:$(commit)
+	$(log_finish) && mv -f $(totalTime) .flags/$@
 
+
+test-runner: test-runner-img
+test-runner-js: engine $(shell find modules/test-runner/src $(find_options))
+	$(log_start)
+	$(docker_run) "cd modules/test-runner && npm run build"
+	$(log_finish) && mv -f $(totalTime) .flags/$@
+test-runner-bundle: test-runner-js $(shell find modules/test-runner/src $(find_options))
+	$(log_start)
+	$(docker_run) "cd modules/test-runner && npm run build-bundle"
+	$(log_finish) && mv -f $(totalTime) .flags/$@
+test-runner-img: test-runner-bundle $(shell find modules/test-runner/ops $(find_options))
+	$(log_start)
+	docker build --file modules/test-runner/ops/Dockerfile $(image_cache) --tag $(project)_test_runner modules/test-runner
+	docker tag $(project)_test_runner $(project)_test_runner:$(commit)
+	$(log_finish) && mv -f $(totalTime) .flags/$@
 
 ########################################
 # Build More Docker Images
