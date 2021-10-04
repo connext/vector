@@ -165,7 +165,7 @@ export async function withdrawRetryForTransferId(
     const tx = await chainService.sendWithdrawTx(channel, commitment.getSignedTransaction());
     if (tx.isError) {
       logger.error(
-        { method, methodId, error: tx.getError()?.toJson(), commitment },
+        { method, methodId, error: tx.getError() ? jsonifyError(tx.getError()!) : undefined, commitment },
         "Error in chainService.sendWithdrawTx",
       );
     }
@@ -223,7 +223,7 @@ export async function submitUnsubmittedWithdrawals(
   );
   if (withdrawInfo.isError) {
     logger.error(
-      { method, methodId, error: withdrawInfo.getError()?.toJson() },
+      { method, methodId, error: withdrawInfo.getError() ? jsonifyError(withdrawInfo.getError()!) : undefined },
       "Error in chainService.getRegisteredTransferByName",
     );
   }

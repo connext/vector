@@ -44,6 +44,8 @@ import { parseUnits } from "ethers/lib/utils";
 // The amount of time (ms) to wait before a confirmation polling period times out,
 // indiciating we should resubmit tx with higher gas if the tx is not confirmed.
 export const CONFIRMATION_TIMEOUT = 45_000;
+// Multiplier for timeout once we get at least 1 confirmation.
+const CONFIRMATION_MULTIPLIER = 4;
 // The min percentage to bump gas.
 export const GAS_BUMP_PERCENT = 20;
 // 1M gas should cover all Connext txs. Gas won't exceed this amount.
@@ -591,8 +593,8 @@ export class EthereumChainService extends EthereumChainReader implements IVector
   /**
    * Will wait for any of the given TransactionResponses to return
    * a receipt. Once a receipt is returned by any of the responses,
-   * it will wait for 10 confirmations of the given receipt against
-   * a timeout. If within the timeout there are *not* 10 confirmations,
+   * it will wait for X confirmations of the given receipt against
+   * a timeout. If within the timeout there are *not* X confirmations,
    * the tx will be resubmitted at the same nonce.
    */
   public async waitForConfirmation(chainId: number, responses: TransactionResponse[]): Promise<TransactionReceipt> {
@@ -601,6 +603,9 @@ export class EthereumChainService extends EthereumChainReader implements IVector
       throw new ChainError(ChainError.reasons.ProviderNotFound);
     }
     const numConfirmations = getConfirmationsForChain(chainId);
+    // A flag for marking when we have received at least 1 confirmation. We'll extend the wait period by 2x
+    // if this is the case.
+    let receivedConfirmation: boolean = false;
 
     // An anon fn to get the tx receipts for all responses.
     // We must check for confirmation in all previous transactions. Although it's most likely
@@ -619,6 +624,8 @@ export class EthereumChainService extends EthereumChainReader implements IVector
                   reverted.push(r);
                 } else if (r.confirmations >= numConfirmations) {
                   return resolve(r);
+                } else if (r.confirmations >= 1) {
+                  receivedConfirmation = true;
                 }
               }
             });
@@ -644,7 +651,10 @@ export class EthereumChainService extends EthereumChainReader implements IVector
     // NOTE: This loop won't execute if receipt is valid (not undefined).
     let timeElapsed: number = 0;
     const startMark = new Date().getTime();
-    while (!receipt && timeElapsed < CONFIRMATION_TIMEOUT) {
+    while (
+      !receipt &&
+      timeElapsed < (receivedConfirmation ? CONFIRMATION_TIMEOUT * CONFIRMATION_MULTIPLIER : CONFIRMATION_TIMEOUT)
+    ) {
       receipt = await pollForReceipt();
       // Update elapsed time.
       timeElapsed = new Date().getTime() - startMark;

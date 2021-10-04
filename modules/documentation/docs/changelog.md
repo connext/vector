@@ -2,6 +2,7 @@
 
 ## Next Release
 
+
 ## 0.3.0-beta.2
 
 - \[contracts\] Use confirmed block for ethReader
