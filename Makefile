@@ -175,36 +175,8 @@ include recipes/tests.mk
 
 
 ########################################
-# Begin Real Build Rules
+# Build rules for images and npm builds 
 
-# All rules from here on should only depend on rules that come before it
-# ie first no dependencies, last no dependents
-
-
-#### Build rules for images and npm builds ############
-
-include recipes/prerequisite.mk
-
-include recipes/core_js.mk
-
-include recipes/contracts.mk
-
-include recipes/protocol.mk
-
-include recipes/engine.mk
-
-include recipes/browser_node.mk
-
-include recipes/auth.mk
-
-include recipes/server_node.mk
-
-include recipes/router.mk
-
-include recipes/iframe_app.mk
-
-include recipes/test_runner.mk
-
-include recipes/other_images.mk
+include recipes/images_and_builds.mk
 
 
