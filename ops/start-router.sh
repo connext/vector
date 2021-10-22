@@ -5,6 +5,8 @@ stack="router"
 root=$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." >/dev/null 2>&1 && pwd )
 project=$(grep -m 1 '"name":' "$root/package.json" | cut -d '"' -f 4)
 
+echo "$project"
+
 docker swarm init 2> /dev/null || true
 docker network create --attachable --driver overlay "$project" 2> /dev/null || true
 
@@ -52,6 +54,9 @@ if [[ "$chain_providers" == "$default_providers" ]]
 then use_local_evms=true
 else use_local_evms=false
 fi
+
+echo "Using local evms: $use_local_evms"
+echo "chain_providers: $chain_providers"
 
 if [[ "$production" == "true" ]]
 then
@@ -346,6 +351,8 @@ then
     external: true"
   fi
 fi
+
+# debug_node="prisma:client"
 
 docker_compose=$root/.$stack.docker-compose.yml
 rm -f "$docker_compose"

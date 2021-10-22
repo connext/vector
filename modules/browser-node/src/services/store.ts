@@ -1,5 +1,6 @@
 import {
   ChannelDispute,
+  ChannelUpdate,
   CoreChannelState,
   CoreTransferState,
   FullChannelState,
@@ -42,6 +43,7 @@ const getStoreName = (publicIdentifier: string) => {
 };
 const NON_NAMESPACED_STORE = "VectorIndexedDBDatabase";
 class VectorIndexedDBDatabase extends Dexie {
+  updates: Dexie.Table<ChannelUpdate, string>;
   channels: Dexie.Table<FullChannelState, string>;
   transfers: Dexie.Table<StoredTransfer, string>;
   transactions: Dexie.Table<StoredTransaction, string>;
@@ -142,6 +144,7 @@ class VectorIndexedDBDatabase extends Dexie {
       updates: "id.id, [channelAddress+nonce]",
     });
 
+    this.updates = this.table("updates");
     this.channels = this.table("channels");
     this.transfers = this.table("transfers");
     this.transactions = this.table("transactions");
@@ -253,8 +256,9 @@ export class BrowserStore implements IEngineStore, IChainServiceStore {
   }
 
   async saveChannelState(channelState: FullChannelState, transfer?: FullTransferState): Promise<void> {
-    await this.db.transaction("rw", this.db.channels, this.db.transfers, async () => {
+    await this.db.transaction("rw", this.db.channels, this.db.transfers, this.db.updates, async () => {
       await this.db.channels.put(channelState);
+      await this.db.updates.put(channelState.latestUpdate);
       if (channelState.latestUpdate.type === UpdateType.create) {
         await this.db.transfers.put({
           ...transfer!,
@@ -270,6 +274,11 @@ export class BrowserStore implements IEngineStore, IChainServiceStore {
         } as Partial<StoredTransfer>);
       }
     });
+  }
+
+  async getUpdateById(id: string): Promise<ChannelUpdate | undefined> {
+    const update = await this.db.updates.get(id);
+    return update;
   }
 
   async getChannelStates(): Promise<FullChannelState[]> {

@@ -28,6 +28,8 @@ function getConfig {
   fi
 }
 
+echo "$config"
+
 messaging_url=$(getConfig messagingUrl)
 mnemonic=$(getConfig mnemonic)
 production=$(getConfig production)

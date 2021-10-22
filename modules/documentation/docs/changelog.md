@@ -2,14 +2,21 @@
 
 ## Next Release
 
-## 0.2.5-beta.21
 
-- \[contracts\] Add information to `PAID` token
+## 0.3.0-beta.2
 
-## 0.2.5-beta.19
+- \[contracts\] Use confirmed block for ethReader
+
+## 0.3.0-beta.1
 
 - \[contracts\] Add internal nonce tracking `ethService`
-- \[contracts\] Hotfix for matic gas station service issues
+- \[contracts\] Add per-chain queues
+- \[contracts\] Add a flag for nonce expired in chain service
+- \[protocol\] Remove channel lock
+- \[protocol\] Add protocol versioning
+- \[messaging\] Remove lock messages
+- \[server-node\] Remove `LockService`
+
 
 ## 0.2.5-beta.18
 
